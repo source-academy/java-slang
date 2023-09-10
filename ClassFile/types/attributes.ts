@@ -72,56 +72,56 @@ export type VerificationTypeInfo =
   | ObjectVariableInfo
   | UninitializedVariableInfo;
 
-export interface sameFrame {
+export interface SameFrame {
   frameType: number /* 0-63 */;
 }
 
-export interface sameLocals1StackItemFrame {
+export interface SameLocals1StackItemFrame {
   frameType: number /* 64-127 */;
   stack: Array<VerificationTypeInfo>;
 }
 
-export interface sameLocals1StackItemFrameExtended {
+export interface SameLocals1StackItemFrameExtended {
   frameType: number /* 247 */;
   offsetDelta: number;
   stack: Array<VerificationTypeInfo>;
 }
 
-export interface chopFrame {
+export interface ChopFrame {
   frameType: number /* 248-250 */;
   offsetDelta: number;
 }
 
-export interface sameFrameExtended {
+export interface SameFrameExtended {
   frameType: number /* 251 */;
   offsetDelta: number;
 }
 
-export interface appendFrame {
+export interface AppendFrame {
   frameType: number /* 252-254 */;
   offsetDelta: number;
   stack: Array<VerificationTypeInfo>;
 }
 
-export interface fullFrame {
+export interface FullFrame {
   frameType: number /* 255 */;
   offsetDelta: number;
   locals: Array<VerificationTypeInfo>;
   stack: Array<VerificationTypeInfo>;
 }
 
-export type stackMapFrame =
-  | sameFrame
-  | sameLocals1StackItemFrame
-  | sameLocals1StackItemFrameExtended
-  | chopFrame
-  | sameFrameExtended
-  | appendFrame
-  | fullFrame;
+export type StackMapFrame =
+  | SameFrame
+  | SameLocals1StackItemFrame
+  | SameLocals1StackItemFrameExtended
+  | ChopFrame
+  | SameFrameExtended
+  | AppendFrame
+  | FullFrame;
 
 export interface AttributeStackMapTable {
   attributeNameIndex: number;
-  entries: Array<stackMapFrame>;
+  entries: Array<StackMapFrame>;
 }
 
 export interface AttributeExceptions {
