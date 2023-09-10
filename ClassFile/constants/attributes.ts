@@ -1,4 +1,4 @@
-export enum PREDEF_ATTRIB {
+export enum PREDEF_ATTRIBUTE {
   ConstantValue,
   Code,
   StackMapTable,

@@ -1,9 +1,9 @@
 import { AttributeType } from './attributes';
 
 export interface FieldType {
-  access_flags: number;
-  name_index: number;
-  descriptor_index: number;
+  accessFlags: number;
+  nameIndex: number;
+  descriptorIndex: number;
   attributes: Array<AttributeType>;
   data?: any;
 }

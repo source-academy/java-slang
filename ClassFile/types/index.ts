@@ -5,12 +5,12 @@ import { MethodType } from './methods';
 
 export interface ClassFile {
   magic: number;
-  minor_version: number;
-  major_version: number;
-  constant_pool: Array<ConstantType>;
-  access_flags: number;
-  this_class: number;
-  super_class: number;
+  minorVersion: number;
+  majorVersion: number;
+  constantPool: Array<ConstantType>;
+  accessFlags: number;
+  thisClass: number;
+  superClass: number;
   interfaces: Array<string>;
   fields: {
     [fieldName: string]: FieldType;
