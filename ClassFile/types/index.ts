@@ -9,8 +9,8 @@ export interface ClassFile {
   major_version: number;
   constant_pool: Array<ConstantType>;
   access_flags: number;
-  this_class: string;
-  super_class: string;
+  this_class: number;
+  super_class: number;
   interfaces: Array<string>;
   fields: {
     [fieldName: string]: FieldType;
