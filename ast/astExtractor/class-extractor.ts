@@ -6,7 +6,7 @@ import {
 } from "java-parser";
 
 import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { ClassModifier, Identifier, ClassBodyDeclaration, ClassDeclaration } from "../types/types";
+import { ClassModifier, Identifier, ClassBodyDeclaration, ClassDeclaration } from "../types/classes";
 import { MethodExtractor } from "./method-extractor";
 
 export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {

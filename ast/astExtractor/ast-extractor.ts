@@ -4,7 +4,7 @@ import {
 } from "java-parser";
 
 import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { AST } from "../types/types";
+import { AST } from "../types/packages-and-modules";
 import { ClassExtractor } from "./class-extractor";
 
 export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {

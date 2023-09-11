@@ -11,13 +11,13 @@ import {
 } from "java-parser";
 
 import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { MethodModifier, MethodBody, MethodDeclaration, Identifier, FormalParameterList } from "../types/types";
+import { MethodModifier, MethodBody, MethodDeclaration, Identifier, FormalParameter } from "../types/classes";
 
 export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
   private stack: Array<string> = [];
   private modifier: Array<MethodModifier>;
   private identifier: Identifier;
-  private params: FormalParameterList;
+  private params: Array<FormalParameter>;
   private body: MethodBody;
 
   constructor() {
