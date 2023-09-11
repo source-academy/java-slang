@@ -3,5 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "repository": "https://github.com/source-academy/java-slang.git",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
 }
