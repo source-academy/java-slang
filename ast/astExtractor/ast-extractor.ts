@@ -4,11 +4,11 @@ import {
 } from "java-parser";
 
 import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { ClassNode, AST } from "../ast/types";
+import { AST } from "../types/types";
 import { ClassExtractor } from "./class-extractor";
 
 export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
-  private ast: Array<ClassNode>;
+  private ast: AST;
 
   constructor() {
     super();

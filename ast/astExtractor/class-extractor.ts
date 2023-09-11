@@ -6,34 +6,31 @@ import {
 } from "java-parser";
 
 import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { ClassNode, Modifiers, MethodNode } from "../ast/types";
+import { ClassModifier, Identifier, ClassBodyDeclaration, ClassDeclaration } from "../types/types";
 import { MethodExtractor } from "./method-extractor";
 
 export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
-  private modifiers: Modifiers;
-  private name: string;
-  private methods: Array<MethodNode>;
+  private modifier: Array<ClassModifier>;
+  private identifier: Identifier;
+  private body: Array<ClassBodyDeclaration>;
 
   constructor() {
     super();
-    this.modifiers = [];
-    this.name = '';
-    this.methods = [];
+    this.modifier = [];
+    this.identifier = '';
+    this.body = [];
     this.validateVisitor();
   }
 
-  extract(cst: CstNode): ClassNode {
-    this.modifiers = [];
-    this.name = '';
-    this.methods = [];
+  extract(cst: CstNode): ClassDeclaration {
+    this.modifier = [];
+    this.identifier = '';
+    this.body = [];
     this.visit(cst);
     return {
-      type: 'class',
-      modifiers: this.modifiers,
-      name: this.name,
-      body: {
-        methods: this.methods
-      }
+      classModifier: this.modifier,
+      typeIdentifier: this.identifier,
+      classBody: this.body,
     };
   }
 
@@ -49,11 +46,11 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
       ctx.NonSealed,
       ctx.Strictfp
     ].filter(x => x !== undefined).map(x => x ? x[0].image : x);
-    this.modifiers.push(possibleModifiers[0] as string);
+    this.modifier.push(possibleModifiers[0] as ClassModifier);
   }
 
   typeIdentifier(ctx: TypeIdentifierCtx) {
-    this.name = ctx.Identifier[0].image;
+    this.identifier = ctx.Identifier[0].image;
   }
 
   classMemberDeclaration(ctx: ClassMemberDeclarationCtx) {
@@ -61,7 +58,7 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
       ctx.methodDeclaration.forEach(x => {
         const methodExtractor = new MethodExtractor();
         const methodNode = methodExtractor.extract(x);
-        this.methods.push(methodNode);
+        this.body.push(methodNode);
       })
     }
   }

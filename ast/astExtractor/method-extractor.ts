@@ -2,6 +2,7 @@ import {
   CstNode,
   DimsCtx,
   FormalParameterCtx,
+  FormalParameterListCtx,
   MethodDeclaratorCtx,
   MethodModifierCtx,
   ResultCtx,
@@ -10,22 +11,20 @@ import {
 } from "java-parser";
 
 import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { Modifiers, MethodNode, Param } from "../ast/types";
+import { MethodModifier, MethodBody, MethodDeclaration, Identifier, FormalParameterList } from "../types/types";
 
 export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
   private stack: Array<string> = [];
-  private modifiers: Modifiers = [];
-  private returnType: string = '';
-  private name: string = '';
-  private params: Array<Param> = [];
-  private body: Array<string> = [];
+  private modifier: Array<MethodModifier>;
+  private identifier: Identifier;
+  private params: FormalParameterList;
+  private body: MethodBody;
 
   constructor() {
     super();
     this.stack = [];
-    this.modifiers = [];
-    this.returnType = '';
-    this.name = '';
+    this.modifier = [];
+    this.identifier = '';
     this.params = [];
     this.body = [];
     this.validateVisitor();
@@ -37,21 +36,23 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     return res as string;
   }
 
-  extract(cst: CstNode): MethodNode {
+  extract(cst: CstNode): MethodDeclaration {
     this.stack = [];
-    this.modifiers = [];
-    this.returnType = '';
-    this.name = '';
+    this.modifier = [];
+    this.identifier = '';
     this.params = [];
     this.body = [];
     this.visit(cst);
     return {
-      type: 'method',
-      modifiers: this.modifiers,
-      returnType: this.returnType,
-      name: this.name,
-      params: this.params,
-      body: this.body
+      methodModifier: this.modifier,
+      methodHeader: {
+        result: "void",
+        methodDeclarator: {
+          identifier: this.identifier,
+          formalParameterList: this.params
+        }
+      },
+      methodBody: this.body,
     };
   }
 
@@ -67,17 +68,11 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
       ctx.Native,
       ctx.Strictfp
     ].filter(x => x !== undefined).map(x => x ? x[0].image : x);
-    this.modifiers.push(possibleModifiers[0] as string);
-  }
-
-  result(ctx: ResultCtx) {
-    if (ctx.Void) {
-      this.returnType = ctx.Void[0].image;
-    }
+    this.modifier.push(possibleModifiers[0] as MethodModifier);
   }
 
   methodDeclarator(ctx: MethodDeclaratorCtx) {
-    this.name = ctx.Identifier[0].image;
+    this.identifier = ctx.Identifier[0].image;
     if (ctx.formalParameterList) {
       this.visit(ctx.formalParameterList);
     }
@@ -93,8 +88,8 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     const argName = this.getAndPop();
     const typeName = this.getAndPop();
     this.params.push({
-      typeName: typeName,
-      argName: argName,
+      unannType: typeName,
+      variableDeclaratorId: argName,
     });
   }
 
