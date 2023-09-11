@@ -2,6 +2,7 @@
   "name": "java-slang",
   "version": "1.0.0",
   "main": "dist/index.js",
+  "types": "dist/main.d.ts",
   "repository": "https://github.com/source-academy/java-slang.git",
   "license": "Apache-2.0",
   "devDependencies": {
