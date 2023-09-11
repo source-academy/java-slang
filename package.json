@@ -1,0 +1,7 @@
+{
+  "name": "java-slang",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/source-academy/java-slang.git",
+  "license": "MIT"
+}
