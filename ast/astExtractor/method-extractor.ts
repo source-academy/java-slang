@@ -2,10 +2,8 @@ import {
   CstNode,
   DimsCtx,
   FormalParameterCtx,
-  FormalParameterListCtx,
   MethodDeclaratorCtx,
   MethodModifierCtx,
-  ResultCtx,
   UnannClassTypeCtx,
   VariableDeclaratorIdCtx,
 } from "java-parser";
