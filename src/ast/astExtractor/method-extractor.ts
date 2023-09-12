@@ -29,7 +29,7 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   private getAndPop() {
-    const res = this.stack.at(-1);
+    const res = this.stack[this.stack.length - 1];
     this.stack.pop();
     return res as string;
   }
