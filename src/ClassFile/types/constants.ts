@@ -61,15 +61,15 @@ export interface ConstantUtf8Info {
 }
 
 export enum REFERENCE_KIND {
-  REF_getField,
-  REF_getStatic,
-  REF_putField,
-  REF_putStatic,
-  REF_invokeVirtual,
-  REF_invokeStatic,
-  REF_invokeSpecial,
-  REF_newInvokeSpecial,
-  REF_invokeInterface,
+  GetField,
+  GetStatic,
+  PutField,
+  PutStatic,
+  InvokeVirtual,
+  InvokeStatic,
+  InvokeSpecial,
+  NewInvokeSpecial,
+  InvokeInterface,
 }
 
 export interface ConstantMethodHandleInfo {
