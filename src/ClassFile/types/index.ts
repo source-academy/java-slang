@@ -7,16 +7,17 @@ export interface ClassFile {
   magic: number;
   minorVersion: number;
   majorVersion: number;
+  constantPoolCount: number;
   constantPool: Array<ConstantType>;
   accessFlags: number;
   thisClass: number;
   superClass: number;
+  interfacesCount: number;
   interfaces: Array<string>;
-  fields: {
-    [fieldName: string]: FieldType;
-  };
-  methods: {
-    [methodName: string]: MethodType;
-  };
+  fieldsCount: number;
+  fields: Array<FieldType>;
+  methodsCount: number;
+  methods: Array<MethodType>;
+  attributesCount: number;
   attributes: Array<AttributeType>;
 }

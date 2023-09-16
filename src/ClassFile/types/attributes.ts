@@ -1,25 +1,30 @@
-export interface AttributeType {
-  [key: string]: any;
+export interface AttributeInfo {
+  [key: string]: AttributeType;
 }
 
-export interface AttributeConstantValue {
+export interface ConstantValueAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   constantvalueIndex: number;
 }
 
-export interface ExceptionType {
+export interface ExceptionHandler {
   startPc: number;
   endPc: number;
   handlerPc: number;
   catchType: number;
 }
 
-export interface AttributeCode {
+export interface CodeAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   maxStack: number;
   maxLocals: number;
+  codeLength: number;
   code: DataView;
-  exceptionTable: Array<ExceptionType>;
+  exceptionTableLength: number;
+  exceptionTable: Array<ExceptionHandler>;
+  attributesCount: number;
   attributes: Array<AttributeType>;
 }
 
@@ -119,18 +124,21 @@ export type StackMapFrame =
   | AppendFrame
   | FullFrame;
 
-export interface AttributeStackMapTable {
+export interface StackMapTableAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   entries: Array<StackMapFrame>;
 }
 
-export interface AttributeExceptions {
+export interface ExceptionsAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   exceptionIndexTable: Array<number>;
 }
 
-export interface AttributeInnerClasses {
+export interface InnerClassesAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   classes: Array<{
     innerClassInfoIndex: number;
     outerClassInfoIndex: number;
@@ -139,33 +147,39 @@ export interface AttributeInnerClasses {
   }>;
 }
 
-export interface AttributeEnclosingMethod {
+export interface EnclosingMethodAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   classIndex: number;
   methodIndex: number;
 }
 
-export interface AttributeSynthetic {
+export interface SyntheticAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
 }
 
-export interface AttributeSignature {
+export interface SignatureAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   signatureIndex: number;
 }
 
-export interface AttributeSourceFile {
+export interface SourceFileAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   sourcefileIndex: number;
 }
 
-export interface AttributeSourceDebugExtension {
+export interface SourceDebugExtensionAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   debugExtension: Array<number>;
 }
 
-export interface AttributeLineNumberTable {
+export interface LineNumberTableAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   lineNumberTableLength: number;
   lineNumberTable: Array<{
     startPc: number;
@@ -173,8 +187,9 @@ export interface AttributeLineNumberTable {
   }>;
 }
 
-export interface AttributeLocalVariableTable {
+export interface LocalVariableTableAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   localVariableTableLength: number;
   localVariableTable: Array<{
     startPc: number;
@@ -185,8 +200,9 @@ export interface AttributeLocalVariableTable {
   }>;
 }
 
-export interface AttributeLocalVariableTypeTable {
+export interface LocalVariableTypeTableAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   localVariableTypeTableLength: number;
   localVariableTypeTable: Array<{
     startPc: number;
@@ -197,8 +213,9 @@ export interface AttributeLocalVariableTypeTable {
   }>;
 }
 
-export interface AttributeDeprecated {
+export interface DeprecatedAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
 }
 
 export interface AnnotationType {
@@ -210,8 +227,9 @@ export interface AnnotationType {
   }>;
 }
 
-export interface AttributeBootstrapMethods {
+export interface BootstrapMethodsAttribute {
   attributeNameIndex: number;
+  attributeLength: number;
   numBootstrapMethods: number;
   bootstrapMethods: Array<BootstrapMethod>;
 }
@@ -221,3 +239,21 @@ export interface BootstrapMethod {
   numBootstrapArguments: number;
   bootstrapArguments: Array<number>;
 }
+
+
+export type AttributeType =
+  | ConstantValueAttribute
+  | CodeAttribute
+  | StackMapTableAttribute
+  | ExceptionsAttribute
+  | InnerClassesAttribute
+  | EnclosingMethodAttribute
+  | SyntheticAttribute
+  | SignatureAttribute
+  | SourceFileAttribute
+  | SourceDebugExtensionAttribute
+  | LineNumberTableAttribute
+  | LocalVariableTableAttribute
+  | LocalVariableTypeTableAttribute
+  | DeprecatedAttribute
+  | BootstrapMethodsAttribute 
