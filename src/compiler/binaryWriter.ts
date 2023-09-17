@@ -55,7 +55,7 @@ export class BinaryWriter {
   private write(value: number, numOfBytes: number = u1) {
     const bytes = [];
     for (let i = 0; i < numOfBytes; i++) {
-      bytes.push(value & ((1 << 8) - 1));
+      bytes.push(value & 0xff);
       value >>>= 8;
     }
     bytes.reverse().forEach(b => this.byteArray.push(b));
@@ -72,7 +72,7 @@ export class BinaryWriter {
   }
 
   private writeString(str: string) {
-    const bytes = Array.from(Buffer.from(str, 'utf8'));
+    const bytes = Array.from(Buffer.from(str, "utf8"));
     this.writeBytes(bytes);
   }
 
