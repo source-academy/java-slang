@@ -12,12 +12,15 @@ export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
 
   constructor() {
     super();
-    this.ast = [];
+    this.ast = {
+      type: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: []
+    };
     this.validateVisitor();
   }
 
   extract(cst: CstNode): AST {
-    this.ast = [];
+    this.ast.topLevelClassOrInterfaceDeclarations = [];
     this.visit(cst);
     return this.ast;
   }
@@ -26,7 +29,7 @@ export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
     if (ctx.classDeclaration) {
       ctx.classDeclaration.forEach(x => {
         const classExtractor = new ClassExtractor();
-        this.ast.push(classExtractor.extract(x));
+        this.ast.topLevelClassOrInterfaceDeclarations.push(classExtractor.extract(x));
       });
     }
   }

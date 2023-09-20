@@ -36,6 +36,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   extract(cst: BlockStatementCstNode): BlockStatement {
     this.visit(cst);
     return {
+      type: "LocalVariableDeclarationStatement",
       localVariableType: this.type,
       variableDeclarationList: {
         variableDeclaratorId: this.identifier,
@@ -77,12 +78,14 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   makeBinaryExpression(operators: IToken[], operands: UnaryExpressionCstNode[]): BinaryExpression {
     if (operators.length == 1 && operands.length == 2) {
       return {
+        type: "BinaryExpression",
         operator: operators[0].image,
         left: this.visit(operands[0]),
         right: this.visit(operands[1])
       }
     }
     return {
+      type: "BinaryExpression",
       operator: operators[operators.length - 1].image,
       left: this.makeBinaryExpression(operators.slice(0, -1), operands.slice(0, -1)),
       right: this.visit(operands[operands.length - 1])
@@ -113,7 +116,10 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   
   integerLiteral(ctx: IntegerLiteralCtx) {
     if (ctx.DecimalLiteral) {
-      return Number(ctx.DecimalLiteral[0].image);
+      return {
+        type: "Literal",
+        value: Number(ctx.DecimalLiteral[0].image)
+      };
     }
     return;
   }
