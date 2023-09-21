@@ -32,7 +32,6 @@ export default class ClassLoader extends AbstractClassLoader {
     try {
       classFile = this.nativeSystem.readFile(path);
     } catch (e) {
-      // Throw ClassNotFoundException isntead.
       return;
     }
 

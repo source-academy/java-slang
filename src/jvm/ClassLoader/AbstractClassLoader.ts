@@ -94,8 +94,6 @@ export default abstract class AbstractClassLoader {
   /**
    * Attempts to load a class file.
    * @param className name of class to load
-   * @param onFinish callback if successful
-   * @param onError callback if an error occurs
    */
   abstract load(className: string): ClassRef | undefined;
 }

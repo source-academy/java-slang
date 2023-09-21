@@ -53,12 +53,10 @@ export default class NativeThread {
   }
 
   pushStack(value: any) {
-    // check for stack overflow?
     this.stack[this.stackPointer].operandStack.push(value);
   }
 
   pushStack64(value: any) {
-    // check for stack overflow?
     this.stack[this.stackPointer].operandStack.push(value);
     this.stack[this.stackPointer].operandStack.push(value);
   }
