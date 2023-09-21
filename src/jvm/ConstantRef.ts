@@ -158,7 +158,6 @@ export class ClassRef {
         this.resolveMethodRef(thread, ref as ConstantMethodref);
         return;
       case CONSTANT_TAG.InterfaceMethodref:
-        // interface methods should be processed the same
         this.resolveMethodRef(thread, ref as ConstantMethodref);
         return;
       case CONSTANT_TAG.String:
@@ -209,7 +208,6 @@ export class ClassRef {
   }
 
   getSuperClass(thread: NativeThread): ClassRef {
-    // resolve superclass if not resolved
     if (typeof this.superClass === 'number') {
       const Class = this.getConstant(thread, this.superClass);
       this.resolveReference(thread, Class);
@@ -227,14 +225,10 @@ export class ClassRef {
   }
 
   getStatic(thread: NativeThread, fieldName: string): any {
-    // TODO: check initialised
-    // TODO: resolve ref if necessary
     return this.fields[fieldName].data;
   }
 
   getStatic64(thread: NativeThread, fieldName: string): any {
-    // TODO: check initialised
-    // TODO: resolve ref if necessary
     return this.fields[fieldName].data;
   }
 
@@ -242,12 +236,10 @@ export class ClassRef {
    * Setters
    */
   putStatic(thread: NativeThread, fieldName: string, value: any): void {
-    // TODO: check initialised
     this.fields[fieldName].data = value;
   }
 
   putStatic64(thread: NativeThread, fieldName: string, value: any): void {
-    // TODO: check initialised
     this.fields[fieldName].data = value;
   }
 }
