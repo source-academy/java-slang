@@ -76,20 +76,77 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   makeBinaryExpression(operators: IToken[], operands: UnaryExpressionCstNode[]): BinaryExpression {
-    if (operators.length == 1 && operands.length == 2) {
-      return {
+    const [processedOperators, processedOperands] = this.processPrecedence(operators, operands);
+
+    if (processedOperators.length == 0 && processedOperands.length == 1) {
+      return processedOperands[0];
+    }
+
+    let res = {
+      type: "BinaryExpression",
+      operator: processedOperators[0],
+      left: processedOperands[0],
+      right: processedOperands[1]
+    };
+
+    for (let i = 1; i < processedOperators.length; i++) {
+      res = {
         type: "BinaryExpression",
-        operator: operators[0].image,
-        left: this.visit(operands[0]),
-        right: this.visit(operands[1])
+        operator: processedOperators[i],
+        left: res,
+        right: processedOperands[i + 1]
       }
     }
-    return {
-      type: "BinaryExpression",
-      operator: operators[operators.length - 1].image,
-      left: this.makeBinaryExpression(operators.slice(0, -1), operands.slice(0, -1)),
-      right: this.visit(operands[operands.length - 1])
+
+    return res;
+  }
+
+  isMulOp(op: IToken) {
+    const mulOps = ['*', '/', '%'];
+    return mulOps.filter(mulOp => mulOp === op.image).length > 0;
+  }
+
+  processPrecedence(operators: IToken[], operands: UnaryExpressionCstNode[]) {
+    const newOperators = [];
+    const newOperands = [];
+
+    let accMulRes;
+    
+    for (let i = 0; i < operators.length; i++) {
+      if (this.isMulOp(operators[i])) {
+        if (accMulRes) {
+          accMulRes = {
+            type: "BinaryExpression",
+              operator: operators[i].image,
+              left: accMulRes,
+              right: this.visit(operands[i + 1])
+          };
+        } else {
+          accMulRes = {
+            type: "BinaryExpression",
+            operator: operators[i].image,
+            left: this.visit(operands[i]),
+            right: this.visit(operands[i + 1])
+          };
+        }
+      } else {
+        if (accMulRes) {
+          newOperands.push(accMulRes);
+          accMulRes = undefined;
+        } else {
+          newOperands.push(this.visit(operands[i]));
+        }
+        newOperators.push(operators[i].image);
+      }
     }
+    
+    if (this.isMulOp(operators[operators.length - 1])) {
+      newOperands.push(accMulRes);
+    } else {
+      newOperands.push(this.visit(operands[operands.length - 1]))
+    }
+    
+    return [newOperators, newOperands];
   }
 
   unaryExpression(ctx: UnaryExpressionCtx) {
