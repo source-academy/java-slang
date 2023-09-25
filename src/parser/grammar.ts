@@ -314,14 +314,21 @@ PrimitiveType
   / boolean
 
 ReferenceType
-  = (PrimitiveType / ClassType) Dims*
+  = t:(PrimitiveType / ClassType) d:Dims* {
+    return t + d;
+  }
 
 ClassType
-  = ((PackageName dot)? Annotation* TypeIdentifier TypeArguments?)
-    (dot Annotation* TypeIdentifier TypeArguments?)*
+  = head:(pn:(PackageName dot)? Annotation* id:TypeIdentifier TypeArguments?
+      { return (pn ?? "") + id; })
+    tail:(dot Annotation* @TypeIdentifier TypeArguments?)* {
+      return head + tail.join();
+    }
 
 Dims
-  = Annotation* lsquare rsquare (Dims)*
+  = Annotation* lsquare rsquare d:(Dims)* {
+    return "[]" + d.join();
+  }
 
 TypeArguments
   = lt TypeArgumentsList gt
@@ -402,11 +409,12 @@ ClassDeclaration
   = NormalClassDeclaration
 
 NormalClassDeclaration
-  = cm:ClassModifier* class tm:TypeIdentifier TypeParameters? ClassExtends? ClassImplements? ClassPermits? ClassBody {
+  = cm:ClassModifier* class tm:TypeIdentifier TypeParameters? ClassExtends? ClassImplements? ClassPermits? cb:ClassBody {
     return {
       kind: "NormalClassDeclaration",
       classModifier: cm,
       typeIdentifier: tm,
+      classBody: cb,
     }
   }
 
@@ -479,7 +487,12 @@ VariableDeclarator
   = VariableDeclaratorId (equal VariableInitializer)?
 
 VariableDeclaratorId
-  = Identifier Dims?
+  = id:Identifier d:Dims? {
+    return {
+      identifier: id,
+      dims: d ?? "",
+    }
+  }
 
 VariableInitializer = TO_BE_ADDED
 
@@ -487,7 +500,39 @@ UnannType
   = !Annotation @Type
 
 MethodDeclaration
-  = Result Identifier lparen (ReceiverParameter comma)? FormalParameterList? rparen Throws?
+  = mm:MethodModifier* mh:MethodHeader mb:MethodBody {
+    return {
+      kind: "MethodDeclaration",
+      methodModifier: mm,
+      methodHeader: mh,
+      methodBody: mb,
+    }
+  }
+
+MethodModifier
+  = public
+  / protected
+  / private
+  / abstract
+  / static
+  / final
+  / synchronized
+  / native
+  / strictfp
+
+MethodHeader
+  = r:Result id:Identifier lparen (ReceiverParameter comma)? fpl:FormalParameterList? rparen Throws? {
+    return {
+      kind: "MethodHeader",
+      result: r,
+      identifier: id,
+      formalParameterList: fpl,
+    }
+  }
+
+MethodBody
+  = Block
+  / semicolon
 
 Result
   = UnannType
@@ -497,16 +542,36 @@ ReceiverParameter
   = Annotation* UnannType (Identifier dot)? this
 
 FormalParameterList
-  = FormalParameter (comma FormalParameter)*
+  = fp:FormalParameter fps:(comma @FormalParameter)* {
+    return [fp, ...fps];
+  }
 
 FormalParameter
-  = VariableModifier* UnannType VariableDeclaratorId
+  = VariableModifier* ut:UnannType vdid:VariableDeclaratorId {
+    return {
+      kind: "FormalParameter",
+      unannType: ut + vdid.dims,
+      identifier: vdid.identifier,
+    }
+  }
 
 VariableModifier
   = final
 
 Throws
   = throw TO_BE_ADDED
+
+
+
+/*
+  Productions from §14 (Blocks, Statements, and Patterns)
+*/
+Block
+  = lcurly @BlockStatement* rcurly
+
+BlockStatement
+  = 'abc'
+
 
 // A placeholder that functions as TODO:
 TO_BE_ADDED

@@ -6,6 +6,5 @@ const parser = peggy.generate(javaPegGrammar, {
 });
 
 export function parse(input: string) {
-  console.log(input);
   return parser.parse(input);
 }
