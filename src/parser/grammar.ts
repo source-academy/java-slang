@@ -1,5 +1,18 @@
 export const javaPegGrammar = `
 
+{{
+  function buildBinaryExpression(head, tail) {
+    return tail.reduce((result, element) => {
+      return {
+        type: "BinaryExpression",
+        operator: element[0],
+        left: result,
+        right: element[1]
+      };
+    }, head);
+  }
+}}
+
 /*
   Productions from §3 (Lexical Structure)
 */
@@ -30,16 +43,20 @@ UnqualifiedMethodIdentifier
   = !yield @Identifier
 
 Literal
-  = FloatingPointLiteral
-  / IntegerLiteral
-  / BooleanLiteral
-  / CharacterLiteral
-  / TextBlock
-  / StringLiteral
-  / NullLiteral
+  = @(
+      FloatingPointLiteral
+    / IntegerLiteral
+    / BooleanLiteral
+    / CharacterLiteral
+    / TextBlock
+    / StringLiteral
+    / NullLiteral
+  ) _
 
 IntegerLiteral
-  = (HexNumeral / BinaryNumeral / OctalNumeral / DecimalNumeral) [lL]?
+  = head:(HexNumeral / BinaryNumeral / OctalNumeral / DecimalNumeral) tail:[lL]? {
+    return head + (tail ?? "");
+  }
 
 HexNumeral = ('0x' / '0X') HexDigits
 
@@ -47,7 +64,7 @@ BinaryNumeral = ('0b' / '0B') [01] ([_]* [01])*
 
 OctalNumeral = '0' ([_]* [0-7])+
 
-DecimalNumeral = '0' / [1-9] ([_]* [0-9])*
+DecimalNumeral = $('0' / [1-9] ([_]* [0-9])*)
 
 FloatingPointLiteral = HexadecimalFloatingPointLiteral / DecimalFloatingPointLiteral
 
@@ -349,26 +366,31 @@ Wildcard
   Productions from §6 (Names)
 */
 ModuleName
-  = Identifier (dot Identifier)*
+  = Name
 
 PackageName
-  = Identifier (dot Identifier)*
+  = Name
 
 TypeName
   = TypeIdentifier
   / Identifier dot TypeName
 
 ExpressionName
-  = Identifier (dot Identifier)*
+  = Name
 
 MethodName
   = UnqualifiedMethodIdentifier
 
 PackageOrTypeName
-  = Identifier (dot Identifier)*
+  = Name
 
 AmbiguousName
-  = Identifier (dot Identifier)*
+  = Name
+
+Name
+  = id:Identifier ids:(dot Identifier)* {
+    return [id, ...ids].join();
+  }
 
 
 
@@ -481,10 +503,15 @@ FieldModifier
   / volatile
 
 VariableDeclaratorList
-  = VariableDeclarator (comma VariableDeclarator)*
+  = vd:VariableDeclarator vds:(comma @VariableDeclarator)* {
+    return [vd, ...vds];
+  }
 
 VariableDeclarator
-  = VariableDeclaratorId (equal VariableInitializer)?
+  = vdid:VariableDeclaratorId vi:(assign @VariableInitializer)? {
+    if (vi) { vdid.variableInitializer = vi;}
+    return vdid;
+  }
 
 VariableDeclaratorId
   = id:Identifier d:Dims? {
@@ -494,7 +521,9 @@ VariableDeclaratorId
     }
   }
 
-VariableInitializer = TO_BE_ADDED
+VariableInitializer
+  = Expression
+  / ArrayInitializer
 
 UnannType
   = !Annotation @Type
@@ -526,13 +555,13 @@ MethodHeader
       kind: "MethodHeader",
       result: r,
       identifier: id,
-      formalParameterList: fpl,
+      formalParameterList: fpl ?? [],
     }
   }
 
 MethodBody
   = Block
-  / semicolon
+  / semicolon { return []; }
 
 Result
   = UnannType
@@ -547,9 +576,10 @@ FormalParameterList
   }
 
 FormalParameter
-  = VariableModifier* ut:UnannType vdid:VariableDeclaratorId {
+  = vm:VariableModifier* ut:UnannType vdid:VariableDeclaratorId {
     return {
       kind: "FormalParameter",
+      variableModifier: vm,
       unannType: ut + vdid.dims,
       identifier: vdid.identifier,
     }
@@ -564,13 +594,283 @@ Throws
 
 
 /*
+  Productions from §10 (Arrays)
+*/
+ArrayInitializer
+  = lcurly VariableInitializerList? comma? rcurly
+
+VariableInitializerList
+  = VariableInitializer (comma VariableInitializer)*
+
+
+
+/*
   Productions from §14 (Blocks, Statements, and Patterns)
 */
 Block
   = lcurly @BlockStatement* rcurly
 
 BlockStatement
-  = 'abc'
+  = LocalClassOrInterfaceDeclaration
+  / LocalVariableDeclarationStatement
+  / Statement
+
+LocalClassOrInterfaceDeclaration
+  = ClassDeclaration
+
+LocalVariableDeclarationStatement
+  = @LocalVariableDeclaration semicolon
+
+LocalVariableDeclaration
+  = vm:VariableModifier* ut:UnannType vdl:VariableDeclaratorList {
+    return {
+      kind: "LocalVariableDeclaration",
+      variableModifier: vm,
+      unannType: ut,
+      variableDeclaratorList: vdl,
+    }
+  }
+
+Statement
+  = Block
+  / EmptyStatement
+  / AssertStatement
+  / SwitchStatement
+  / DoStatement
+  / BreakStatement
+  / ContinueStatement
+  / YieldStatement
+  / ReturnStatement
+  / ThrowStatement
+  / SynchronizedStatement
+  / TryStatement
+  / IfStatement
+  / WhileStatement
+  / ForStatement
+  / ExpressionStatement
+
+EmptyStatement
+  = semicolon
+
+AssertStatement
+  = assert Expression (colon Expression) semicolon
+
+SwitchStatement
+  = TO_BE_ADDED
+
+DoStatement
+  = do Statement while lparen Expression rparen semicolon
+
+BreakStatement
+  = break semicolon
+
+ContinueStatement
+  = continue semicolon
+
+YieldStatement
+  = yield Expression semicolon
+
+ReturnStatement
+  = return Expression? semicolon
+
+ThrowStatement
+  = throw Expression semicolon
+
+SynchronizedStatement
+  = synchronized lparen Expression rparen Block
+
+TryStatement
+  = TO_BE_ADDED
+
+IfStatement
+  = if lparen Expression rparen Statement (else Statement)?
+
+WhileStatement
+  = while lparen Expression rparen Statement
+
+ForStatement
+  = for lparen ForInit? semicolon Expression? semicolon ForUpdate? rparen Statement
+  / for lparen LocalVariableDeclaration colon Expression rparen Statement
+
+ForInit
+  = LocalVariableDeclaration
+  / StatementExpressionList
+
+ForUpdate
+  = StatementExpressionList
+
+StatementExpressionList
+  = StatementExpression (comma @StatementExpression)*
+
+ExpressionStatement
+  = @StatementExpression semicolon
+
+StatementExpression
+  = Assignment
+  / &(increment / decrement) @UnaryExpression
+  / !PlusMinus @UnaryExpression
+//  / MethodInvocation
+//  / ClassInstanceCreationExpression
+
+
+/*
+  Productions from §15 (Expressions)
+*/
+Primary
+  = lparen @Expression rparen
+  / l:Literal { return { kind: "Literal", value: l }};
+
+Expression
+  = LambdaExpression
+  / Assignment
+  / ConditionalExpression
+
+
+LambdaExpression
+  = LambdaParameters arrow LambdaBody
+
+LambdaParameters
+  = lparen LambdaParameterList? rparen
+  / Identifier
+
+LambdaParameterList
+  = FormalParameter (comma FormalParameter)*
+  / Identifier (comma Identifier)*
+
+LambdaBody
+  = Block
+  / Expression
+
+Assignment
+  = lhs:LeftHandSide op:AssignmentOperator rhs:Expression {
+    return {
+      kind: "AssignmentExpression",
+      left: lhs,
+      op: op,
+      right: rhs,
+    }
+  }
+
+LeftHandSide
+  = ExpressionName
+
+AssignmentOperator
+  = assign
+  / muleq
+  / diveq
+  / modeq
+  / pluseq
+  / minuseq
+  / lshifteq
+  / rshifteq
+  / urshifteq
+  / andeq
+  / xoreq
+  / oreq
+
+ConditionalExpression
+  = test:ConditionalOrExpression tail:ConditionalRest? {
+      return {
+        kind: "ConditionalExpression",
+        test: test,
+        ... tail,
+      }
+    }
+
+ConditionalRest
+  = questionmark consequent:Expression colon alternate:(ConditionalExpression / LambdaExpression) {
+    return { consequent: consequent, alternate: alternate };
+  }
+
+ConditionalOrExpression
+  = head:ConditionalAndExpression tail:(oror ConditionalAndExpression)* {
+    return buildBinaryExpression(head, tail);
+  }
+
+ConditionalAndExpression
+  = head:InclusiveOrExpression tail:(andand InclusiveOrExpression)* {
+    return buildBinaryExpression(head, tail);
+  }
+
+InclusiveOrExpression
+  = head:ExclusiveOrExpression tail:(or ExclusiveOrExpression)* {
+    return buildBinaryExpression(head, tail);
+  }
+
+ExclusiveOrExpression
+  = head:AndExpression tail:(xor AndExpression)* {
+    return buildBinaryExpression(head, tail);
+  }
+
+AndExpression
+  = head:EqualityExpression tail:(and EqualityExpression)* {
+    return buildBinaryExpression(head, tail);
+  }
+
+EqualityExpression
+  = head:RelationalExpression tail:((equal / noteq) RelationalExpression)* {
+    return buildBinaryExpression(head, tail);
+  }
+
+RelationalExpression
+  = head:ShiftExpression 
+    tail:((lt / gt / leq / geq) ShiftExpression /
+          instanceof (LocalVariableDeclaration / ReferenceType))* {
+    return buildBinaryExpression(head, tail);
+  }
+
+ShiftExpression
+  = head:AdditiveExpression tail:((lshift / rshift / urshift) AdditiveExpression)* {
+    return buildBinaryExpression(head, tail);
+  }
+
+AdditiveExpression
+  = head:MultiplicativeExpression tail:((plus / minus) MultiplicativeExpression)* {
+    return buildBinaryExpression(head, tail);
+  }
+
+MultiplicativeExpression
+  = head:UnaryExpression tail:((mul / div / mod) UnaryExpression)* {
+    return buildBinaryExpression(head, tail);
+  }
+
+UnaryExpression
+  = op:PrefixOp expr:UnaryExpression {
+    return {
+      kind: "UnaryPrefixExpression",
+      op: op,
+      expr: expr,
+    }
+  }
+  / CastExpression
+  / SwitchExpression
+  / PostfixExpression
+
+PrefixOp
+  = plus / minus / increment / decrement / tilde / not
+
+PlusMinus
+  = plus / minus
+
+PostfixExpression
+  = expr:(Primary / name:ExpressionName { return { kind: "NameExpression", name: name } }) 
+    op:(increment / decrement)? {
+    return op ? {
+      kind: "UnaryPostfixExpression",
+      op: op,
+      expr: expr,
+    } : expr;
+  }
+
+CastExpression
+  = lparen PrimitiveType rparen UnaryExpression
+  / lparen ReferenceType rparen (LambdaExpression / !(PlusMinus) UnaryExpression)
+
+SwitchExpression
+  = SwitchStatement
+
+ConstantExpression
+  = Expression
 
 
 // A placeholder that functions as TODO:
