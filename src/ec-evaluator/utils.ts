@@ -1,6 +1,6 @@
 import { uniqueId } from "lodash"
 import { AgendaItem, Context, Environment, Frame, Instr, Value } from "./types"
-import { Node } from "../ast/astExtractor/types"
+import { Node } from "../ast/types/ast"
 import { 
   BlockStatement, 
   Literal, 

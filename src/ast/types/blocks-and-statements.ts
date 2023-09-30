@@ -1,4 +1,4 @@
-import { BaseNode } from "../../ec-evaluator/types";
+import { BaseNode } from "./ast";
 import { Identifier, UnannType } from "./classes";
 
 export type BlockStatement = LocalVariableDeclarationStatement;

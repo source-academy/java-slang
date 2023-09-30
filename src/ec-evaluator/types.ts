@@ -1,4 +1,4 @@
-import { Node } from "../ast/astExtractor/types";
+import { Node } from "../ast/types/ast";
 import { EnvTree } from "./createContext";
 import { Agenda, Stash } from "./interpreter"
 
@@ -49,10 +49,6 @@ export type Instr =
   | BaseInstr
   | AssmtInstr
   | BinOpInstr;
-
-export interface BaseNode {
-    type: string;
-}
 
 export type AgendaItem = Node | Instr
 

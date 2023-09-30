@@ -1,4 +1,4 @@
-import { Node } from "../ast/astExtractor/types"
+import { Node } from "../ast/types/ast"
 import { AssmtInstr, BinOpInstr, Instr, InstrType } from "./types"
 
 export const assmtInstr = (

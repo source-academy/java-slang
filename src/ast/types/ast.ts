@@ -2,9 +2,9 @@ import {
   BinaryExpression,
   Literal, 
   LocalVariableDeclarationStatement 
-} from "../types/blocks-and-statements";
+} from "./blocks-and-statements";
 import { Identifier } from "../types/classes";
-import { CompilationUnit } from "../types/packages-and-modules";
+import { CompilationUnit } from "./packages-and-modules";
 
 export interface ExpressionMap {
   BinaryExpression: BinaryExpression;
@@ -20,3 +20,7 @@ interface NodeMap {
 }
 
 export type Node = NodeMap[keyof NodeMap];
+
+export interface BaseNode {
+  type: string;
+}

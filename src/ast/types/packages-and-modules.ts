@@ -1,4 +1,4 @@
-import { BaseNode } from "../../ec-evaluator/types";
+import { BaseNode } from "./ast";
 import { ClassDeclaration } from "./classes";
 
 export type AST = CompilationUnit;
