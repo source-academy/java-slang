@@ -2,8 +2,10 @@ import { CONSTANT_TAG } from "../ClassFile/constants/constants";
 import { ConstantType } from "../ClassFile/types/constants";
 import {
   ConstantClassValue,
+  ConstantFieldrefValue,
   ConstantMethodrefValue,
   ConstantNameAndTypeValue,
+  ConstantStringValue,
   ConstantTypeValue,
   ConstantUtf8Value
 } from "./constant-value-types";
@@ -38,8 +40,16 @@ export class ConstantPoolManager {
     return this.writeIfAbsent(CONSTANT_TAG.Class, value);
   }
 
+  addStringInfo(value: ConstantStringValue) {
+    return this.writeIfAbsent(CONSTANT_TAG.String, value);
+  }
+
   addNameAndTypeInfo(value: ConstantNameAndTypeValue) {
     return this.writeIfAbsent(CONSTANT_TAG.NameAndType, value);
+  }
+
+  addFieldrefInfo(value: ConstantFieldrefValue) {
+    return this.writeIfAbsent(CONSTANT_TAG.Fieldref, value);
   }
 
   addMethodrefInfo(value: ConstantMethodrefValue) {
@@ -80,6 +90,12 @@ export class ConstantPoolManager {
       case CONSTANT_TAG.Class:
         this.writeClassInfo(task.value as ConstantClassValue);
         break;
+      case CONSTANT_TAG.String:
+        this.writeStringInfo(task.value as ConstantStringValue);
+        break;
+      case CONSTANT_TAG.Fieldref:
+        this.writeFieldrefInfo(task.value as ConstantFieldrefValue);
+        break;
       case CONSTANT_TAG.Methodref:
         this.writeMethodrefInfo(task.value as ConstantMethodrefValue);
         break;
@@ -106,6 +122,14 @@ export class ConstantPoolManager {
     });
   }
 
+  private writeStringInfo(val: ConstantStringValue) {
+    const stringIndex = this.addUtf8Info(val.string);
+    this.constantPool.push({
+      tag: CONSTANT_TAG.String,
+      stringIndex: stringIndex,
+    });
+  }
+
   private writeNameAndTypeInfo(val: ConstantNameAndTypeValue) {
     const nameIndex = this.addUtf8Info(val.name);
     const descriptorIndex = this.addUtf8Info(val.descriptor);
@@ -114,6 +138,16 @@ export class ConstantPoolManager {
       nameIndex: nameIndex,
       descriptorIndex: descriptorIndex,
     });
+  }
+
+  private writeFieldrefInfo(val: ConstantFieldrefValue) {
+    const classIndex = this.addClassInfo(val.class);
+    const nameAndTypeIndex = this.addNameAndTypeInfo(val.nameAndType);
+    this.constantPool.push({
+      tag: CONSTANT_TAG.Fieldref,
+      classIndex: classIndex,
+      nameAndTypeIndex: nameAndTypeIndex,
+    })
   }
 
   private writeMethodrefInfo(val: ConstantMethodrefValue) {

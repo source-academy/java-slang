@@ -7,9 +7,18 @@ export interface ConstantMethodrefValue {
   nameAndType: ConstantNameAndTypeValue;
 }
 
+export interface ConstantFieldrefValue {
+  class: ConstantClassValue;
+  nameAndType: ConstantNameAndTypeValue;
+}
+
 export interface ConstantNameAndTypeValue {
   name: ConstantUtf8Value;
   descriptor: ConstantUtf8Value;
+}
+
+export interface ConstantStringValue {
+  string: ConstantUtf8Value
 }
 
 export interface ConstantUtf8Value {
@@ -20,5 +29,6 @@ export type ConstantTypeValue =
   | ConstantClassValue
   | ConstantMethodrefValue
   | ConstantNameAndTypeValue
+  | ConstantStringValue
   | ConstantUtf8Value;
 

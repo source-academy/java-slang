@@ -5,7 +5,7 @@ import { AttributeType, CodeAttribute, ExceptionHandler } from "../ClassFile/typ
 import { FieldType } from "../ClassFile/types/fields";
 import { MethodType } from "../ClassFile/types/methods";
 import { ConstantPoolManager } from "./constant-pool-manager";
-import { generateClassAccessFlags, generateMethodAccessFlags, generateMethodDescriptor } from "./compiler-utils";
+import { generateClassAccessFlags, generateFieldDescriptor, generateMethodAccessFlags, generateMethodDescriptor } from "./compiler-utils";
 
 const MAGIC = 0xcafebabe;
 const MINOR_VERSION = 0;
@@ -35,7 +35,8 @@ export class Compiler {
   private compileClass(classNode: ClassDeclaration): ClassFile {
     const parentClassName = "java/lang/Object";
     const className = classNode.typeIdentifier;
-    const superClassIndex = this.addMethodrefInfo(parentClassName, "<init>", "()V");
+    this.addMethodrefInfo(parentClassName, "<init>", "()V");
+    const superClassIndex = this.addClassInfo(parentClassName);
     const thisClassIndex = this.addClassInfo(className);
     this.addUtf8Info("Code");
     classNode.classBody.forEach(m => this.compileMethod(m));
@@ -68,6 +69,24 @@ export class Compiler {
   private addClassInfo(className: string) {
     return this.constantPoolManager.addClassInfo({
       name: { value: className }
+    });
+  }
+
+  private addStringInfo(string: string) {
+    return this.constantPoolManager.addStringInfo({
+      string: { value: string }
+    })
+  }
+
+  private addFieldrefInfo(className: string, fieldName: string, descriptor: string) {
+    return this.constantPoolManager.addFieldrefInfo({
+      class: {
+        name: { value: className, }
+      },
+      nameAndType: {
+        name: { value: fieldName },
+        descriptor: { value: descriptor },
+      }
     });
   }
 
@@ -105,11 +124,26 @@ export class Compiler {
   }
 
   private addCodeAttribute(block: MethodBody): CodeAttribute {
-    const maxStack = 0;
-    const maxLocals = 1;
+    let maxStack = 0;
+    let maxLocals = 1;
     const code = [];
     const exceptionTable: Array<ExceptionHandler> = [];
     const attributes: Array<AttributeType> = [];
+
+    const out = this.addFieldrefInfo(
+      "java/lang/System", "out", generateFieldDescriptor("PrintStream"));
+    const println = this.addMethodrefInfo(
+      "java/io/PrintStream", "println", generateMethodDescriptor([{ unannType: "String", variableDeclaratorId: "" }], "void"));
+    const str = this.addStringInfo("Hello world!");
+    {
+      let stackSize = 0;
+      code.push(0xb2, 0, out);
+      stackSize++;
+      code.push(0x12, str);
+      stackSize++;
+      code.push(0xb6, 0, println);
+      maxStack = Math.max(maxStack, stackSize);
+    }
 
     code.push(0xb1);
     const codeBuf = new Uint8Array(code).buffer;

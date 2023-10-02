@@ -27,6 +27,10 @@ export function generateFieldDescriptor(typeName: UnannType) {
   typeName = typeName.slice(0, last);
   if (typeName === "String") {
     typeName = "java/lang/String";
+  } else if (typeName === "System") {
+    typeName = "java/lang/System";
+  } else if (typeName === "PrintStream") {
+    typeName = "java/io/PrintStream";
   }
   return "[".repeat(dim) + (typeMap.has(typeName) ? typeMap.get(typeName) : 'L' + typeName + ';');
 }
