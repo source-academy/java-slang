@@ -1,3 +1,5 @@
+import { BlockStatement } from "./blocks-and-statements";
+
 export type ClassDeclaration = NormalClassDeclaration;
 
 export interface NormalClassDeclaration {
@@ -23,7 +25,7 @@ export type ClassMemberDeclaration = MethodDeclaration;
 export interface MethodDeclaration {
   methodModifier: Array<MethodModifier>;
   methodHeader: MethodHeader;
-  methodBody: MethodBody;
+  methodBody: Array<BlockStatement>;
 }
 
 export type MethodModifier =
