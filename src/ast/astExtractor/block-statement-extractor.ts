@@ -36,7 +36,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   extract(cst: BlockStatementCstNode): BlockStatement {
     this.visit(cst);
     return {
-      type: "LocalVariableDeclarationStatement",
+      kind: "LocalVariableDeclarationStatement",
       localVariableType: this.type,
       variableDeclarationList: {
         variableDeclaratorId: this.identifier,
@@ -83,7 +83,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
     }
 
     let res = {
-      type: "BinaryExpression",
+      kind: "BinaryExpression",
       operator: processedOperators[0],
       left: processedOperands[0],
       right: processedOperands[1]
@@ -91,7 +91,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
     for (let i = 1; i < processedOperators.length; i++) {
       res = {
-        type: "BinaryExpression",
+        kind: "BinaryExpression",
         operator: processedOperators[i],
         left: res,
         right: processedOperands[i + 1]
@@ -116,14 +116,14 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
       if (this.isMulOp(operators[i])) {
         if (accMulRes) {
           accMulRes = {
-            type: "BinaryExpression",
+            kind: "BinaryExpression",
               operator: operators[i].image,
               left: accMulRes,
               right: this.visit(operands[i + 1])
           };
         } else {
           accMulRes = {
-            type: "BinaryExpression",
+            kind: "BinaryExpression",
             operator: operators[i].image,
             left: this.visit(operands[i]),
             right: this.visit(operands[i + 1])
@@ -174,7 +174,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   integerLiteral(ctx: IntegerLiteralCtx) {
     if (ctx.DecimalLiteral) {
       return {
-        type: "Literal",
+        kind: "Literal",
         value: Number(ctx.DecimalLiteral[0].image)
       };
     }

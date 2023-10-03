@@ -13,7 +13,7 @@ export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
   constructor() {
     super();
     this.ast = {
-      type: "CompilationUnit",
+      kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: []
     };
     this.validateVisitor();

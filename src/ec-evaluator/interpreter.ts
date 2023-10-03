@@ -72,7 +72,7 @@ export const evaluate = (compilationUnit: CompilationUnit): [any, AgendaItem[], 
   while (command) {
     agenda.pop()
     if (isNode(command)) {
-      cmdEvaluators[command.type](command, context, agenda, stash)
+      cmdEvaluators[command.kind](command, context, agenda, stash)
     } else {
       // Command is an instrucion
       cmdEvaluators[command.instrType](command, context, agenda, stash)
@@ -107,7 +107,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     if (command.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody.length == 1) {
       // If program only consists of one statement, evaluate it immediately
       const next = command.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody[0]
-      cmdEvaluators[next.type](next, context, agenda, stash)
+      cmdEvaluators[next.kind](next, context, agenda, stash)
       
       // console.log("----------------------------------------------------------------------------")
       // console.log("Agenda: ", agenda);

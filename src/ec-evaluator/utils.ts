@@ -80,7 +80,7 @@ export const isInstr = (command: AgendaItem): command is Instr => {
  * @returns true if the AgendaItem is an esNode and false if it is an instruction.
  */
 export const isNode = (command: AgendaItem): command is Node => {
-  return (command as Node).type !== undefined
+  return (command as Node).kind !== undefined
 }
 
 /**
@@ -137,7 +137,7 @@ export function declareVariables(
   environment: Environment
 ) {
   for (const statement of node.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody) {
-    if (statement.type === 'LocalVariableDeclarationStatement') {
+    if (statement.kind === 'LocalVariableDeclarationStatement') {
       if (environment.head.hasOwnProperty(statement.variableDeclarationList.variableDeclaratorId)) {
         throw new Error("Variable re-declared.");
       }

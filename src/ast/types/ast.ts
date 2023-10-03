@@ -22,5 +22,5 @@ interface NodeMap {
 export type Node = NodeMap[keyof NodeMap];
 
 export interface BaseNode {
-  type: string;
+  kind: string;
 }

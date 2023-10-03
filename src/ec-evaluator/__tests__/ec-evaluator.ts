@@ -23,7 +23,7 @@ it('evaluate local variable declaration to a literal correctly', () => {
     const expectedStashTrace = [1];
 
     expect(result).toMatchInlineSnapshot(`undefined`);
-    expect(agendaTrace.map(i => isNode(i) ? i.type : i.instrType)).toEqual(expectedAgendaTrace);
+    expect(agendaTrace.map(i => isNode(i) ? i.kind : i.instrType)).toEqual(expectedAgendaTrace);
     expect(stashTrace.map(i => i.value)).toEqual(expectedStashTrace);
   }
 })
@@ -52,7 +52,7 @@ it('evaluate local variable declaration to a basic arithmetic operation correctl
     const expectedStashTrace = [10, 2, 0];
     
     expect(result).toMatchInlineSnapshot(`undefined`);
-    expect(agendaTrace.map(i => isNode(i) ? i.type : i.instrType)).toEqual(expectedAgendaTrace);
+    expect(agendaTrace.map(i => isNode(i) ? i.kind : i.instrType)).toEqual(expectedAgendaTrace);
     expect(stashTrace.map(i => i.value)).toEqual(expectedStashTrace);
   }
 })
@@ -87,7 +87,7 @@ it('evaluate local variable declaration to a complex arithmetic operation correc
     const expectedStashTrace = [1, 2, 3, 6, 7, 4, 3];
     
     expect(result).toMatchInlineSnapshot(`undefined`);
-    expect(agendaTrace.map(i => isNode(i) ? i.type : i.instrType)).toEqual(expectedAgendaTrace);
+    expect(agendaTrace.map(i => isNode(i) ? i.kind : i.instrType)).toEqual(expectedAgendaTrace);
     expect(stashTrace.map(i => i.value)).toEqual(expectedStashTrace);
   }
 })
@@ -122,7 +122,7 @@ it('evaluate multiple local variable declarations correctly', () => {
     const expectedStashTrace = [1, 10, 2, 0];
 
     expect(result).toMatchInlineSnapshot(`undefined`);
-    expect(agendaTrace.map(i => isNode(i) ? i.type : i.instrType)).toEqual(expectedAgendaTrace);
+    expect(agendaTrace.map(i => isNode(i) ? i.kind : i.instrType)).toEqual(expectedAgendaTrace);
     expect(stashTrace.map(i => i.value)).toEqual(expectedStashTrace);
   }
 })
@@ -154,7 +154,7 @@ it('evaluate local variable declaration to a basic arithmetic expression without
     const expectedStashTrace = [1, 2, 3, 6, 7];
 
     expect(result).toMatchInlineSnapshot(`undefined`);
-    expect(agendaTrace.map(i => isNode(i) ? i.type : i.instrType)).toEqual(expectedAgendaTrace);
+    expect(agendaTrace.map(i => isNode(i) ? i.kind : i.instrType)).toEqual(expectedAgendaTrace);
     expect(stashTrace.map(i => i.value)).toEqual(expectedStashTrace);
   }
 })
@@ -195,7 +195,7 @@ it('evaluate local variable declaration to a complex arithmetic expression witho
     const expectedStashTrace = [2, 1, 2, 3, 5, 4, 1, 3, -1, 6, 5];
 
     expect(result).toMatchInlineSnapshot(`undefined`);
-    expect(agendaTrace.map(i => isNode(i) ? i.type : i.instrType)).toEqual(expectedAgendaTrace);
+    expect(agendaTrace.map(i => isNode(i) ? i.kind : i.instrType)).toEqual(expectedAgendaTrace);
     expect(stashTrace.map(i => i.value)).toEqual(expectedStashTrace);
   }
 })
