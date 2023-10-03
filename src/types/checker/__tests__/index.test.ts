@@ -1,6 +1,7 @@
-import { BadOperandTypesError } from "../../errors";
-import { Result } from "../index";
 import { parse } from "../../../ast/parser";
+import { Result } from "../index";
+import { Type } from "../../types";
+// import { BadOperandTypesError } from "../../errors";
 
 const createProgram = (statement: string) => `
   public class Main {
@@ -35,10 +36,10 @@ const testcases: { input: string; result: Result }[] = [
   //   input: '1 - "A"',
   //   result: { currentType: Type.String, errors: [] },
   // },
-  // {
-  //   input: '"A" - 1',
-  //   result: { currentType: Type.String, errors: [] },
-  // },
+  {
+    input: '"A" - 1',
+    result: { currentType: Type.String, errors: [] },
+  },
   // {
   //   input: '"A" - "A"',
   //   result: { currentType: Type.String, errors: [] },
@@ -83,10 +84,10 @@ const testcases: { input: string; result: Result }[] = [
   //   input: "1 + (1 + 1)",
   //   result: { currentType: Type.Integer, errors: [] },
   // },
-  {
-    input: '(1 + "A") + 1',
-    result: { currentType: null, errors: [new BadOperandTypesError()] },
-  },
+  // {
+  //   input: '(1 + "A") + 1',
+  //   result: { currentType: null, errors: [new BadOperandTypesError()] },
+  // },
   // {
   //   input: '1 + (1 + "A")',
   //   result: { currentType: null, errors: [new BadOperandTypesError()] },
