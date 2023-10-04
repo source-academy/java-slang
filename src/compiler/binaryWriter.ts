@@ -1,17 +1,17 @@
 import { CONSTANT_TAG } from "../ClassFile/constants/constants";
 import { ClassFile } from "../ClassFile/types";
-import { AttributeType, CodeAttribute, ExceptionHandler } from "../ClassFile/types/attributes";
+import { AttributeInfo, CodeAttribute, ExceptionHandler } from "../ClassFile/types/attributes";
 import {
   ConstantClassInfo,
   ConstantFieldrefInfo,
   ConstantIntegerInfo,
   ConstantNameAndTypeInfo,
   ConstantStringInfo,
-  ConstantType,
+  ConstantInfo,
   ConstantUtf8Info
 } from "../ClassFile/types/constants";
-import { FieldType } from "../ClassFile/types/fields";
-import { MethodType } from "../ClassFile/types/methods";
+import { FieldInfo } from "../ClassFile/types/fields";
+import { MethodInfo } from "../ClassFile/types/methods";
 
 const u1 = 1;
 const u2 = 2;
@@ -19,7 +19,7 @@ const u4 = 4;
 
 export class BinaryWriter {
   private byteArray: Array<number>;
-  private constantPool: Array<ConstantType>;
+  private constantPool: Array<ConstantInfo>;
 
   constructor() {
     this.byteArray = [];
@@ -76,7 +76,7 @@ export class BinaryWriter {
     this.writeBytes(bytes);
   }
 
-  private writeConstant(constant: ConstantType) {
+  private writeConstant(constant: ConstantInfo) {
     this.write(constant.tag);
     switch (constant.tag) {
       case CONSTANT_TAG.Utf8:
@@ -106,15 +106,15 @@ export class BinaryWriter {
     }
   }
 
-  private writeInterface(iface: string) {
+  private writeInterface(iface: number) {
     iface;
   }
 
-  private writeField(field: FieldType) {
+  private writeField(field: FieldInfo) {
     field;
   }
 
-  private writeMethod(method: MethodType) {
+  private writeMethod(method: MethodInfo) {
     this.write(method.accessFlags, u2);
     this.write(method.nameIndex, u2);
     this.write(method.descriptorIndex, u2);
@@ -122,7 +122,7 @@ export class BinaryWriter {
     method.attributes.forEach(attribute => this.writeAttribute(attribute));
   }
 
-  private writeAttribute(attribute: AttributeType) {
+  private writeAttribute(attribute: AttributeInfo) {
     this.write(attribute.attributeNameIndex, u2);
     this.write(attribute.attributeLength, u4);
     const attr = this.constantPool[attribute.attributeNameIndex - 1] as ConstantUtf8Info;

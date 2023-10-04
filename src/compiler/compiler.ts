@@ -28,7 +28,7 @@ export class Compiler {
 
   compile(ast: AST) {
     const classFiles: Array<ClassFile> = [];
-    ast.forEach(x => classFiles.push(this.compileClass(x)));
+    ast.topLevelClassOrInterfaceDeclarations.forEach(x => classFiles.push(this.compileClass(x)));
     return classFiles[0];
   }
 
@@ -126,24 +126,9 @@ export class Compiler {
   private addCodeAttribute(block: MethodBody): CodeAttribute {
     let maxStack = 0;
     let maxLocals = 1;
-    const code = [];
+    const code: number[] = [];
     const exceptionTable: Array<ExceptionHandler> = [];
     const attributes: Array<AttributeInfo> = [];
-
-    const out = this.addFieldrefInfo(
-      "java/lang/System", "out", generateFieldDescriptor("PrintStream"));
-    const println = this.addMethodrefInfo(
-      "java/io/PrintStream", "println", generateMethodDescriptor([{ unannType: "String", variableDeclaratorId: "" }], "void"));
-    const str = this.addStringInfo("I am Hello world!");
-    {
-      let stackSize = 0;
-      code.push(0xb2, 0, out);
-      stackSize++;
-      code.push(0x12, str);
-      stackSize++;
-      code.push(0xb6, 0, println);
-      maxStack = Math.max(maxStack, stackSize);
-    }
 
     code.push(0xb1);
     const codeBuf = new Uint8Array(code).buffer;

@@ -1,9 +1,8 @@
-import { 
+import {
   BinaryExpression,
-  Literal, 
-  LocalVariableDeclarationStatement 
+  Literal,
+  LocalVariableDeclarationStatement
 } from "./blocks-and-statements";
-import { Identifier } from "../types/classes";
 import { CompilationUnit } from "./packages-and-modules";
 
 export interface ExpressionMap {
