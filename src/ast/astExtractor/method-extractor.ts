@@ -1,4 +1,5 @@
 import {
+  BlockStatementsCtx,
   CstNode,
   DimsCtx,
   FormalParameterCtx,
@@ -9,14 +10,16 @@ import {
 } from "java-parser";
 
 import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { MethodModifier, MethodBody, MethodDeclaration, Identifier, FormalParameter } from "../types/classes";
+import { MethodModifier, MethodDeclaration, Identifier, FormalParameter } from "../types/classes";
+import { BlockStatementExtractor } from "./block-statement-extractor";
+import { BlockStatement } from "../types/blocks-and-statements";
 
 export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
   private stack: Array<string> = [];
   private modifier: Array<MethodModifier>;
   private identifier: Identifier;
   private params: Array<FormalParameter>;
-  private body: MethodBody;
+  private body: Array<BlockStatement>;
 
   constructor() {
     super();
@@ -101,5 +104,12 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {
     this.stack.push(ctx.Identifier[0].image);
+  }
+
+  blockStatements(ctx: BlockStatementsCtx) {
+    ctx.blockStatement.forEach(x => {
+      const blockStatementExtractor = new BlockStatementExtractor();
+      this.body.push(blockStatementExtractor.extract(x));
+    })
   }
 }
