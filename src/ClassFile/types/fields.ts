@@ -1,10 +1,11 @@
-import { AttributeType } from './attributes';
+import { AttributeInfo } from './attributes';
 
-export interface FieldType {
+export interface FieldInfo {
   accessFlags: number;
   nameIndex: number;
   descriptorIndex: number;
-  attributes: Array<AttributeType>;
+  attributesCount: number;
+  attributes: Array<AttributeInfo>;
   data?: any;
 }
 

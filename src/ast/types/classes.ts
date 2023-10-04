@@ -25,7 +25,7 @@ export type ClassMemberDeclaration = MethodDeclaration;
 export interface MethodDeclaration {
   methodModifier: Array<MethodModifier>;
   methodHeader: MethodHeader;
-  methodBody: Array<BlockStatement>;
+  methodBody: MethodBody;
 }
 
 export type MethodModifier =
@@ -58,5 +58,5 @@ export interface FormalParameter {
 export type UnannType = string;
 export type VariableDeclaratorId = Identifier;
 
-export type MethodBody = Array<string>;
+export type MethodBody = Array<BlockStatement>;
 export type Identifier = string;
