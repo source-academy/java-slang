@@ -5,7 +5,7 @@ import { AttributeInfo, CodeAttribute, ExceptionHandler } from "../ClassFile/typ
 import { FieldInfo } from "../ClassFile/types/fields";
 import { MethodInfo } from "../ClassFile/types/methods";
 import { ConstantPoolManager } from "./constant-pool-manager";
-import { generateClassAccessFlags, generateFieldDescriptor, generateMethodAccessFlags, generateMethodDescriptor } from "./compiler-utils";
+import { generateClassAccessFlags, generateMethodAccessFlags, generateMethodDescriptor } from "./compiler-utils";
 
 const MAGIC = 0xcafebabe;
 const MINOR_VERSION = 0;
@@ -69,24 +69,6 @@ export class Compiler {
   private addClassInfo(className: string) {
     return this.constantPoolManager.addClassInfo({
       name: { value: className }
-    });
-  }
-
-  private addStringInfo(string: string) {
-    return this.constantPoolManager.addStringInfo({
-      string: { value: string }
-    })
-  }
-
-  private addFieldrefInfo(className: string, fieldName: string, descriptor: string) {
-    return this.constantPoolManager.addFieldrefInfo({
-      class: {
-        name: { value: className, }
-      },
-      nameAndType: {
-        name: { value: fieldName },
-        descriptor: { value: descriptor },
-      }
     });
   }
 
