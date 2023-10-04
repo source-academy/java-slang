@@ -1,25 +1,25 @@
-import { AttributeType } from './attributes';
-import { ConstantType } from './constants';
-import { FieldType } from './fields';
-import { MethodType } from './methods';
+import { AttributeInfo } from './attributes';
+import { ConstantInfo } from './constants';
+import { FieldInfo } from './fields';
+import { MethodInfo } from './methods';
 
 export interface ClassFile {
   magic: number;
   minorVersion: number;
   majorVersion: number;
   constantPoolCount: number;
-  constantPool: Array<ConstantType>;
+  constantPool: Array<ConstantInfo>;
   accessFlags: number;
   thisClass: number;
   superClass: number;
   interfacesCount: number;
-  interfaces: Array<string>;
+  interfaces: Array<number>;
   fieldsCount: number;
-  fields: Array<FieldType>;
+  fields: Array<FieldInfo>;
   methodsCount: number;
-  methods: Array<MethodType>;
+  methods: Array<MethodInfo>;
   attributesCount: number;
-  attributes: Array<AttributeType>;
+  attributes: Array<AttributeInfo>;
 }
 
 export enum ACCESS_FLAGS {

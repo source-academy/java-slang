@@ -89,7 +89,7 @@ export interface ConstantInvokeDynamicInfo {
   nameAndTypeIndex: number;
 }
 
-export type ConstantType =
+export type ConstantInfo =
   | ConstantClassInfo
   | ConstantFieldrefInfo
   | ConstantMethodrefInfo

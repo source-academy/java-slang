@@ -1,9 +1,9 @@
 import { ClassFile } from "../ClassFile/types";
 import { AST } from "../ast/types/packages-and-modules";
 import { ClassDeclaration, MethodBody, MethodDeclaration } from "../ast/types/classes";
-import { AttributeType, CodeAttribute, ExceptionHandler } from "../ClassFile/types/attributes";
-import { FieldType } from "../ClassFile/types/fields";
-import { MethodType } from "../ClassFile/types/methods";
+import { AttributeInfo, CodeAttribute, ExceptionHandler } from "../ClassFile/types/attributes";
+import { FieldInfo } from "../ClassFile/types/fields";
+import { MethodInfo } from "../ClassFile/types/methods";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import { generateClassAccessFlags, generateFieldDescriptor, generateMethodAccessFlags, generateMethodDescriptor } from "./compiler-utils";
 
@@ -13,10 +13,10 @@ const MAJOR_VERSION = 61;
 
 export class Compiler {
   private constantPoolManager: ConstantPoolManager;
-  private interfaces: Array<string>;
-  private fields: Array<FieldType>;
-  private methods: Array<MethodType>;
-  private attributes: Array<AttributeType>;
+  private interfaces: Array<number>;
+  private fields: Array<FieldInfo>;
+  private methods: Array<MethodInfo>;
+  private attributes: Array<AttributeInfo>;
 
   constructor() {
     this.constantPoolManager = new ConstantPoolManager();
@@ -112,7 +112,7 @@ export class Compiler {
     const descriptor = generateMethodDescriptor(params, header.result);
     const descriptorIndex = this.addUtf8Info(descriptor);
 
-    const attributes: Array<AttributeType> = [];
+    const attributes: Array<AttributeInfo> = [];
     attributes.push(this.addCodeAttribute(body));
     this.methods.push({
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
@@ -128,13 +128,13 @@ export class Compiler {
     let maxLocals = 1;
     const code = [];
     const exceptionTable: Array<ExceptionHandler> = [];
-    const attributes: Array<AttributeType> = [];
+    const attributes: Array<AttributeInfo> = [];
 
     const out = this.addFieldrefInfo(
       "java/lang/System", "out", generateFieldDescriptor("PrintStream"));
     const println = this.addMethodrefInfo(
       "java/io/PrintStream", "println", generateMethodDescriptor([{ unannType: "String", variableDeclaratorId: "" }], "void"));
-    const str = this.addStringInfo("Hello world!");
+    const str = this.addStringInfo("I am Hello world!");
     {
       let stackSize = 0;
       code.push(0xb2, 0, out);

@@ -1,7 +1,3 @@
-export interface AttributeInfo {
-  [key: string]: AttributeType;
-}
-
 export interface ConstantValueAttribute {
   attributeNameIndex: number;
   attributeLength: number;
@@ -25,7 +21,7 @@ export interface CodeAttribute {
   exceptionTableLength: number;
   exceptionTable: Array<ExceptionHandler>;
   attributesCount: number;
-  attributes: Array<AttributeType>;
+  attributes: Array<AttributeInfo>;
 }
 
 export interface TopVariableInfo {
@@ -241,7 +237,7 @@ export interface BootstrapMethod {
 }
 
 
-export type AttributeType =
+export type AttributeInfo =
   | ConstantValueAttribute
   | CodeAttribute
   | StackMapTableAttribute

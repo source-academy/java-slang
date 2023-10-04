@@ -1,5 +1,5 @@
 import { CONSTANT_TAG } from "../ClassFile/constants/constants";
-import { ConstantType } from "../ClassFile/types/constants";
+import { ConstantInfo } from "../ClassFile/types/constants";
 import {
   ConstantClassValue,
   ConstantFieldrefValue,
@@ -16,7 +16,7 @@ type constantTask = {
 };
 
 export class ConstantPoolManager {
-  private constantPool: Array<ConstantType>;
+  private constantPool: Array<ConstantInfo>;
   private curIdx: number;
   private objectMap;
   private tasks: Array<constantTask>;
