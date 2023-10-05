@@ -1,3 +1,5 @@
+import { BlockStatement } from "./blocks-and-statements";
+
 export type ClassDeclaration = NormalClassDeclaration;
 
 export interface NormalClassDeclaration {
@@ -56,5 +58,5 @@ export interface FormalParameter {
 export type UnannType = string;
 export type VariableDeclaratorId = Identifier;
 
-export type MethodBody = Array<string>;
+export type MethodBody = Array<BlockStatement>;
 export type Identifier = string;
