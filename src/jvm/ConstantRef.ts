@@ -1,12 +1,20 @@
+import { CONSTANT_TAG } from "../ClassFile/constants/constants";
+import { ClassFile } from "../ClassFile/types";
+import { AttributeInfo, CodeAttribute, BootstrapMethodsAttribute } from "../ClassFile/types/attributes";
+import { ConstantInfo, ConstantClassInfo, ConstantUtf8Info, ConstantNameAndTypeInfo } from "../ClassFile/types/constants";
+import { FieldInfo } from "../ClassFile/types/fields";
+import AbstractClassLoader from "./ClassLoader/AbstractClassLoader";
+import NativeThread from "./NativeThread";
+import { JavaReference } from "./dataTypes";
 
-import { CONSTANT_TAG } from '../ClassFile/constants/constants';
-import { ClassFile } from '../ClassFile/types';
-import { AttributeBootstrapMethods, AttributeCode, AttributeType } from '../ClassFile/types/attributes';
-import { ConstantType, ConstantClassInfo, ConstantUtf8Info, ConstantNameAndTypeInfo } from '../ClassFile/types/constants';
-import { FieldType } from '../ClassFile/types/fields';
-import AbstractClassLoader from './ClassLoader/AbstractClassLoader';
-import NativeThread from './NativeThread';
-import { JavaReference } from './dataTypes';
+
+export interface MethodRef {
+  accessFlags: number;
+  name: string;
+  descriptor: string;
+  attributes: Array<AttributeInfo>;
+  code: CodeAttribute | null; // native methods have no code
+}
 
 export interface ConstantClass {
   tag: CONSTANT_TAG;
@@ -34,19 +42,21 @@ export interface ConstantString {
   ref: JavaReference;
 }
 
-export interface ConstantInvokeDynamic {
-  tag: CONSTANT_TAG;
-  bootstrapMethodAttrIndex: number;
-  nameAndTypeIndex: number;
-}
 
 export type ConstantRef =
-  | ConstantType
+  | ConstantInfo
   | ConstantClass
   | ConstantMethodref
   | ConstantInterfaceMethodref
-  | ConstantString
-  | ConstantInvokeDynamic;
+  | ConstantString;
+
+export interface FieldRef {
+  accessFlags: number;
+  nameIndex: number;
+  descriptorIndex: number;
+  attributes: Array<AttributeInfo>;
+  data?: any;
+}
 
 export class ClassRef {
   public isInitialized: boolean = false;
@@ -59,23 +69,24 @@ export class ClassRef {
   private thisClass: string;
   private superClass: number | ClassRef;
 
-  private interfaces: Array<string | ClassRef>;
+  private interfaces: Array<number | ClassRef>;
 
   private fields: {
-    [fieldName: string]: FieldType;
+    [fieldName: string]: FieldInfo;
   };
 
   private methods: {
     [methodName: string]: MethodRef;
   };
 
-  private bootstrapMethods?: AttributeBootstrapMethods;
-  private attributes: Array<AttributeType>;
+  private bootstrapMethods?: BootstrapMethodsAttribute;
+  private attributes: Array<AttributeInfo>;
 
   constructor(classfile: ClassFile, loader: AbstractClassLoader) {
     this.constantPool = classfile.constantPool;
     this.accessFlags = classfile.accessFlags;
 
+    // resolve classname
     const clsInfo = classfile.constantPool[
       classfile.thisClass
     ] as ConstantClassInfo;
@@ -88,9 +99,48 @@ export class ClassRef {
 
     this.interfaces = classfile.interfaces;
 
-    this.fields = classfile.fields;
-    // FIXME: resolve method names
-    this.methods = (classfile.methods as unknown) as {[method: string]: MethodRef};
+    // convert field array to object
+    this.fields = {};
+    classfile.fields.forEach(field => {
+      const fieldName = classfile.constantPool[
+        field.nameIndex
+      ] as ConstantUtf8Info;
+      const fieldDesc = classfile.constantPool[
+        field.descriptorIndex
+      ] as ConstantUtf8Info;
+      this.fields[fieldName.value + fieldDesc.value] = field;
+    });
+
+    this.methods = {};
+    classfile.methods.forEach(method => {
+      const methodRef: MethodRef = {
+        accessFlags: method.accessFlags,
+        name: '',
+        descriptor: '',
+        attributes: method.attributes,
+        code: null,
+      };
+
+      // get name and descriptor
+      methodRef.name = (
+        classfile.constantPool[method.nameIndex] as ConstantUtf8Info
+      ).value;
+      methodRef.descriptor = (
+        classfile.constantPool[method.descriptorIndex] as ConstantUtf8Info
+      ).value;
+
+      // get code attribute
+      methodRef.attributes.forEach(attr => {
+        const attrname = (
+          classfile.constantPool[attr.attributeNameIndex] as ConstantUtf8Info
+        ).value;
+        if (attrname === 'Code') {
+          methodRef.code = attr as CodeAttribute;
+        }
+      });
+
+      this.methods[methodRef.name + methodRef.descriptor] = methodRef;
+    });
 
     this.attributes = classfile.attributes;
 
@@ -99,6 +149,12 @@ export class ClassRef {
 
   private resolveClassRef(thread: NativeThread, clsRef: ConstantClass) {
     const className = this.constantPool[clsRef.nameIndex] as ConstantUtf8Info;
+
+    // array class, no need to resolve
+    if (className.value[0] === '[') {
+      return;
+    }
+
     const ref = this.loader.resolveClass(thread, className.value);
 
     if (!ref) {
@@ -141,7 +197,7 @@ export class ClassRef {
   }
 
   private resolveStringRef(thread: NativeThread, strRef: ConstantString) {
-    throw new Error("Not Implemented")
+    throw new Error('Method not implemented.');
   }
 
   resolveReference(thread: NativeThread, ref: ConstantRef) {
@@ -158,6 +214,7 @@ export class ClassRef {
         this.resolveMethodRef(thread, ref as ConstantMethodref);
         return;
       case CONSTANT_TAG.InterfaceMethodref:
+        // interface methods should be processed the same
         this.resolveMethodRef(thread, ref as ConstantMethodref);
         return;
       case CONSTANT_TAG.String:
@@ -208,6 +265,7 @@ export class ClassRef {
   }
 
   getSuperClass(thread: NativeThread): ClassRef {
+    // resolve superclass if not resolved
     if (typeof this.superClass === 'number') {
       const Class = this.getConstant(thread, this.superClass);
       this.resolveReference(thread, Class);
@@ -225,10 +283,14 @@ export class ClassRef {
   }
 
   getStatic(thread: NativeThread, fieldName: string): any {
+    // TODO: check initialised
+    // TODO: resolve ref if necessary
     return this.fields[fieldName].data;
   }
 
   getStatic64(thread: NativeThread, fieldName: string): any {
+    // TODO: check initialised
+    // TODO: resolve ref if necessary
     return this.fields[fieldName].data;
   }
 
@@ -236,19 +298,12 @@ export class ClassRef {
    * Setters
    */
   putStatic(thread: NativeThread, fieldName: string, value: any): void {
+    // TODO: check initialised
     this.fields[fieldName].data = value;
   }
 
   putStatic64(thread: NativeThread, fieldName: string, value: any): void {
+    // TODO: check initialised
     this.fields[fieldName].data = value;
   }
 }
-
-export interface MethodRef {
-  accessFlags: number;
-  name: string;
-  descriptor: string;
-  attributes: Array<AttributeType>;
-  code: AttributeCode | null; // native methods have no code
-}
-
