@@ -3,7 +3,6 @@ import { ClassRef } from '../ConstantRef';
 import AbstractClassLoader from './AbstractClassLoader';
 
 export default class ClassLoader extends AbstractClassLoader {
-  // TODO: store thisref here, Java ClassLoader Reference
   constructor(
     nativeSystem: AbstractSystem,
     classPath: string,
@@ -17,7 +16,6 @@ export default class ClassLoader extends AbstractClassLoader {
    * @param className name of class to load
    */
   load(className: string): ClassRef | undefined {
-    console.debug(`ClassLoader: loading ${className}`);
     const path = this.classPath ? this.classPath + '/' + className : className;
 
     if (this.parentLoader) {

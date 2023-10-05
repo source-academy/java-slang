@@ -283,14 +283,10 @@ export class ClassRef {
   }
 
   getStatic(thread: NativeThread, fieldName: string): any {
-    // TODO: check initialised
-    // TODO: resolve ref if necessary
     return this.fields[fieldName].data;
   }
 
   getStatic64(thread: NativeThread, fieldName: string): any {
-    // TODO: check initialised
-    // TODO: resolve ref if necessary
     return this.fields[fieldName].data;
   }
 
@@ -298,12 +294,10 @@ export class ClassRef {
    * Setters
    */
   putStatic(thread: NativeThread, fieldName: string, value: any): void {
-    // TODO: check initialised
     this.fields[fieldName].data = value;
   }
 
   putStatic64(thread: NativeThread, fieldName: string, value: any): void {
-    // TODO: check initialised
     this.fields[fieldName].data = value;
   }
 }
