@@ -32,28 +32,54 @@ export class ConstantPoolManager {
     return this.constantPool;
   }
 
-  addUtf8Info(value: ConstantUtf8Value) {
+  indexUtf8Info(value: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.Utf8, {
+      value: value
+    });
+  }
+
+  indexClassInfo(className: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.Class, {
+      name: { value: className }
+    });
+  }
+
+  indexStringInfo(string: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.String, {
+      string: { value: string }
+    });
+  }
+
+  indexMethodrefInfo(className: string, methodName: string, descriptor: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.Methodref, {
+      class: {
+        name: { value: className, }
+      },
+      nameAndType: {
+        name: { value: methodName },
+        descriptor: { value: descriptor },
+      }
+    });
+  }
+
+  indexNameAndTypeInfo(name: string, type: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.NameAndType, {
+      name: { value: name },
+      descriptor: { value: type }
+    });
+  }
+
+
+  private addUtf8Info(value: ConstantUtf8Value) {
     return this.writeIfAbsent(CONSTANT_TAG.Utf8, value);
   }
 
-  addClassInfo(value: ConstantClassValue) {
+  private addClassInfo(value: ConstantClassValue) {
     return this.writeIfAbsent(CONSTANT_TAG.Class, value);
   }
 
-  addStringInfo(value: ConstantStringValue) {
-    return this.writeIfAbsent(CONSTANT_TAG.String, value);
-  }
-
-  addNameAndTypeInfo(value: ConstantNameAndTypeValue) {
+  private addNameAndTypeInfo(value: ConstantNameAndTypeValue) {
     return this.writeIfAbsent(CONSTANT_TAG.NameAndType, value);
-  }
-
-  addFieldrefInfo(value: ConstantFieldrefValue) {
-    return this.writeIfAbsent(CONSTANT_TAG.Fieldref, value);
-  }
-
-  addMethodrefInfo(value: ConstantMethodrefValue) {
-    return this.writeIfAbsent(CONSTANT_TAG.Methodref, value);
   }
 
   private writeIfAbsent(tag: CONSTANT_TAG, value: ConstantTypeValue) {

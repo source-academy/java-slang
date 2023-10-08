@@ -35,10 +35,10 @@ export class Compiler {
   private compileClass(classNode: ClassDeclaration): ClassFile {
     const parentClassName = "java/lang/Object";
     const className = classNode.typeIdentifier;
-    this.addMethodrefInfo(parentClassName, "<init>", "()V");
-    const superClassIndex = this.addClassInfo(parentClassName);
-    const thisClassIndex = this.addClassInfo(className);
-    this.addUtf8Info("Code");
+    this.constantPoolManager.indexMethodrefInfo(parentClassName, "<init>", "()V");
+    const superClassIndex = this.constantPoolManager.indexClassInfo(parentClassName);
+    const thisClassIndex = this.constantPoolManager.indexClassInfo(className);
+    this.constantPoolManager.indexUtf8Info("Code");
     classNode.classBody.forEach(m => this.compileMethod(m));
 
     const constantPool = this.constantPoolManager.getPool();
@@ -62,37 +62,15 @@ export class Compiler {
     };
   }
 
-  private addUtf8Info(value: string) {
-    return this.constantPoolManager.addUtf8Info({ value: value });
-  }
-
-  private addClassInfo(className: string) {
-    return this.constantPoolManager.addClassInfo({
-      name: { value: className }
-    });
-  }
-
-  private addMethodrefInfo(className: string, methodName: string, descriptor: string) {
-    return this.constantPoolManager.addMethodrefInfo({
-      class: {
-        name: { value: className, }
-      },
-      nameAndType: {
-        name: { value: methodName },
-        descriptor: { value: descriptor },
-      }
-    });
-  }
-
   private compileMethod(methodNode: MethodDeclaration) {
     const header = methodNode.methodHeader;
     const body = methodNode.methodBody;
-    const methodName = header.methodDeclarator.identifier;
-    const params = header.methodDeclarator.formalParameterList;
+    const methodName = header.identifier;
+    const params = header.formalParameterList;
 
-    const nameIndex = this.addUtf8Info(methodName);
+    const nameIndex = this.constantPoolManager.indexUtf8Info(methodName);
     const descriptor = generateMethodDescriptor(params, header.result);
-    const descriptorIndex = this.addUtf8Info(descriptor);
+    const descriptorIndex = this.constantPoolManager.indexUtf8Info(descriptor);
 
     const attributes: Array<AttributeInfo> = [];
     attributes.push(this.addCodeAttribute(body));
@@ -120,7 +98,7 @@ export class Compiler {
     const attributeLength = 12 + code.length + 8 * exceptionTable.length +
       attributes.map(attr => attr.attributeLength + 6).reduce((acc, val) => acc + val, 0);
     return {
-      attributeNameIndex: this.addUtf8Info("Code"),
+      attributeNameIndex: this.constantPoolManager.indexUtf8Info("Code"),
       attributeLength: attributeLength,
       maxStack: maxStack,
       maxLocals: maxLocals,
