@@ -1,7 +1,15 @@
 import { OPCODE } from "../ClassFile/constants/instructions";
 import { ExceptionHandler, AttributeInfo } from "../ClassFile/types/attributes";
 import { BaseNode } from "../ast/types/ast";
-import { MethodInvocation, Literal, Block, BinaryExpression } from "../ast/types/blocks-and-statements";
+import {
+  MethodInvocation,
+  Literal,
+  Block,
+  BinaryExpression,
+  LocalVariableDeclarationStatement,
+  ExpressionName,
+  Assignment
+} from "../ast/types/blocks-and-statements";
 import { MethodDeclaration } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import { SymbolTable, SymbolType } from "./symbol-table"
@@ -30,6 +38,21 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return maxStack;
   },
 
+  LocalVariableDeclarationStatement: (node: BaseNode, cg: CodeGenerator) => {
+    let maxStack = 0;
+    const { variableDeclaratorList: lst } = node as LocalVariableDeclarationStatement;
+    lst.forEach(v => {
+      const { variableDeclaratorId: identifier, variableInitializer: vi } = v;
+      const curIdx = cg.maxLocals++;
+      cg.symbolTable.insert(identifier, SymbolType.VARIABLE, { index: curIdx });
+      if (vi) {
+        maxStack = Math.max(maxStack, codeGenerators[vi.kind](vi, cg));
+        cg.code.push(OPCODE.ISTORE, curIdx);
+      }
+    });
+    return maxStack;
+  },
+
   MethodInvocation: (node: BaseNode, cg: CodeGenerator) => {
     const n = node as MethodInvocation;
     let maxStack = 1;
@@ -48,12 +71,31 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return maxStack;
   },
 
+  Assignment: (node: BaseNode, cg: CodeGenerator) => {
+    const { left: left, operator: op, right: right } = node as Assignment;
+    let maxStack = op === "=" ? 0 : codeGenerators[left.kind](left, cg);
+    codeGenerators[right.kind](right, cg);
+    if (op !== "=") {
+      cg.code.push(opToOpcode[op.substring(0, op.length - 1)]);
+    }
+    const { index: idx } = cg.symbolTable.query(left.name, SymbolType.VARIABLE);
+    cg.code.push(OPCODE.ISTORE, idx as number);
+    return maxStack;
+  },
+
   BinaryExpression: (node: BaseNode, cg: CodeGenerator) => {
     const { left: left, right: right, operator: op } = node as BinaryExpression;
     const lsize = codeGenerators[left.kind](left, cg);
     const rsize = 1 + codeGenerators[right.kind](right, cg);
     cg.code.push(opToOpcode[op]);
     return Math.max(lsize, rsize);
+  },
+
+  ExpressionName: (node: BaseNode, cg: CodeGenerator) => {
+    const { name: name } = node as ExpressionName;
+    const { index: idx } = cg.symbolTable.query(name, SymbolType.VARIABLE);
+    cg.code.push(OPCODE.ILOAD, idx as number);
+    return 1;
   },
 
   StringLiteral: (node: BaseNode, cg: CodeGenerator) => {
@@ -64,8 +106,16 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
   },
 
   IntegerLiteral: (node: BaseNode, cg: CodeGenerator) => {
-    const n = node as Literal;
-    cg.code.push(OPCODE.BIPUSH, parseInt(n.value));
+    const { value: value } = node as Literal;
+    const n = parseInt(value);
+    if (-128 <= n && n < 128) {
+      cg.code.push(OPCODE.BIPUSH, n);
+    } else if (-32768 <= n && n < 32768) {
+      cg.code.push(OPCODE.SIPUSH, n >> 8, n & 0xff);
+    } else {
+      const idx = cg.constantPoolManager.indexIntegerInfo(n);
+      cg.code.push(OPCODE.LDC, idx);
+    }
     return 1;
   }
 }
@@ -102,6 +152,8 @@ class CodeGenerator {
 
     const attributeLength = 12 + this.code.length + 8 * exceptionTable.length +
       attributes.map(attr => attr.attributeLength + 6).reduce((acc, val) => acc + val, 0);
+    this.symbolTable.teardown();
+
     return {
       attributeNameIndex: this.constantPoolManager.indexUtf8Info("Code"),
       attributeLength: attributeLength,
