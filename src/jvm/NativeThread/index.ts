@@ -1,7 +1,7 @@
+import { CodeAttribute } from "../../ClassFile/types/attributes";
 import { ClassRef, MethodRef } from "../ConstantRef";
 import { JavaReference } from "../dataTypes";
 import { StackFrame } from "./types";
-
 
 export default class NativeThread {
   private stack: StackFrame[];
@@ -16,8 +16,8 @@ export default class NativeThread {
     this.stackPointer = -1;
   }
 
-  getCurrentInstruction(): any {
-    throw new Error('Method not implemented.');
+  isStackEmpty() {
+    return this.stack.length === 0;
   }
 
   getPC(): number {
@@ -48,15 +48,35 @@ export default class NativeThread {
     return this.stack[this.stackPointer].method;
   }
 
+  getCode(): DataView {
+    return (this.stack[this.stackPointer].method.code as CodeAttribute).code;
+  }
+
   peekStackFrame() {
     return this.stack[this.stackPointer];
   }
 
-  pushStack(value: any) {
+  pushStack(value: any, onError?: (e: string) => void) {
+    if (
+      this.stack[this.stackPointer].operandStack.length + 1 >
+      this.stack[this.stackPointer].maxStack
+    ) {
+      this.throwNewException('java/lang/StackOverflowError', '');
+      onError && onError('java/lang/StackOverflowError');
+      return;
+    }
     this.stack[this.stackPointer].operandStack.push(value);
   }
 
-  pushStack64(value: any) {
+  pushStack64(value: any, onError?: (e: string) => void) {
+    if (
+      this.stack[this.stackPointer].operandStack.length + 2 >
+      this.stack[this.stackPointer].maxStack
+    ) {
+      this.throwNewException('java/lang/StackOverflowError', '');
+      onError && onError('java/lang/StackOverflowError');
+      return;
+    }
     this.stack[this.stackPointer].operandStack.push(value);
     this.stack[this.stackPointer].operandStack.push(value);
   }
@@ -67,9 +87,6 @@ export default class NativeThread {
     }
     this.stack?.[this.stackPointer]?.operandStack?.pop();
     const value = this.stack?.[this.stackPointer]?.operandStack?.pop();
-    if (value === undefined) {
-      this.throwNewException('java/lang/RuntimeException', 'Stack Underflow');
-    }
     return value;
   }
 
@@ -81,13 +98,27 @@ export default class NativeThread {
     return value;
   }
 
-  popStackFrame() {
+  popStackFrame(): StackFrame {
     const sf = this.stack.pop();
     this.stackPointer -= 1;
+    if (this.stackPointer < -1 || sf === undefined) {
+      this.throwNewException('java/lang/RuntimeException', 'Stack Underflow');
+      throw new Error('Stack Underflow');
+    }
+    return sf;
   }
 
-  pushStackFrame(frame: StackFrame) {
-    this.stack.push(frame);
+  pushStackFrame(cls: ClassRef, method: MethodRef, pc: number, locals: any[]) {
+    const stackframe = {
+      operandStack: [],
+      maxStack: method.code?.maxStack ?? 0,
+      locals,
+      class: cls,
+      method,
+      pc,
+    };
+
+    this.stack.push(stackframe);
     this.stackPointer += 1;
   }
 
@@ -108,10 +139,10 @@ export default class NativeThread {
   }
 
   throwNewException(className: string, msg: string) {
-    throw new Error('Method not implemented.');
+    throw new Error('not implemented');
   }
 
   throwException(exception: any) {
-    throw new Error('Method not implemented.');
+    throw new Error('not implemented');
   }
 }

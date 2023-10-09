@@ -13,7 +13,7 @@ export interface MethodRef {
   name: string;
   descriptor: string;
   attributes: Array<AttributeInfo>;
-  code: CodeAttribute | null; // native methods have no code
+  code: CodeAttribute | null;
 }
 
 export interface ConstantClass {
@@ -86,7 +86,6 @@ export class ClassRef {
     this.constantPool = classfile.constantPool;
     this.accessFlags = classfile.accessFlags;
 
-    // resolve classname
     const clsInfo = classfile.constantPool[
       classfile.thisClass
     ] as ConstantClassInfo;
@@ -99,7 +98,6 @@ export class ClassRef {
 
     this.interfaces = classfile.interfaces;
 
-    // convert field array to object
     this.fields = {};
     classfile.fields.forEach(field => {
       const fieldName = classfile.constantPool[
@@ -121,7 +119,6 @@ export class ClassRef {
         code: null,
       };
 
-      // get name and descriptor
       methodRef.name = (
         classfile.constantPool[method.nameIndex] as ConstantUtf8Info
       ).value;
@@ -129,7 +126,6 @@ export class ClassRef {
         classfile.constantPool[method.descriptorIndex] as ConstantUtf8Info
       ).value;
 
-      // get code attribute
       methodRef.attributes.forEach(attr => {
         const attrname = (
           classfile.constantPool[attr.attributeNameIndex] as ConstantUtf8Info
@@ -150,7 +146,6 @@ export class ClassRef {
   private resolveClassRef(thread: NativeThread, clsRef: ConstantClass) {
     const className = this.constantPool[clsRef.nameIndex] as ConstantUtf8Info;
 
-    // array class, no need to resolve
     if (className.value[0] === '[') {
       return;
     }
@@ -201,7 +196,6 @@ export class ClassRef {
   }
 
   resolveReference(thread: NativeThread, ref: ConstantRef) {
-    // ref has been resolved, return
     if ((ref as ConstantMethodref).ref) {
       return;
     }
@@ -214,7 +208,6 @@ export class ClassRef {
         this.resolveMethodRef(thread, ref as ConstantMethodref);
         return;
       case CONSTANT_TAG.InterfaceMethodref:
-        // interface methods should be processed the same
         this.resolveMethodRef(thread, ref as ConstantMethodref);
         return;
       case CONSTANT_TAG.String:
@@ -265,7 +258,6 @@ export class ClassRef {
   }
 
   getSuperClass(thread: NativeThread): ClassRef {
-    // resolve superclass if not resolved
     if (typeof this.superClass === 'number') {
       const Class = this.getConstant(thread, this.superClass);
       this.resolveReference(thread, Class);
