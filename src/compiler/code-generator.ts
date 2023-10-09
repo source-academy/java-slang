@@ -1,10 +1,24 @@
 import { OPCODE } from "../ClassFile/constants/instructions";
 import { ExceptionHandler, AttributeInfo } from "../ClassFile/types/attributes";
 import { BaseNode } from "../ast/types/ast";
-import { MethodInvocation, Literal, Block } from "../ast/types/blocks-and-statements";
+import { MethodInvocation, Literal, Block, BinaryExpression } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import { SymbolTable, SymbolType } from "./symbol-table"
+
+const opToOpcode: { [type: string]: OPCODE } = {
+  "+": OPCODE.IADD,
+  "-": OPCODE.ISUB,
+  "*": OPCODE.IMUL,
+  "/": OPCODE.IDIV,
+  "%": OPCODE.IREM,
+  "|": OPCODE.IOR,
+  "&": OPCODE.IAND,
+  "^": OPCODE.IXOR,
+  "<<": OPCODE.ISHL,
+  ">>": OPCODE.ISHR,
+  ">>>": OPCODE.IUSHR,
+};
 
 const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => number } = {
   Block: (node: BaseNode, cg: CodeGenerator) => {
@@ -23,7 +37,8 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     const { parentClassName: p1, typeDescriptor: t1 } = cg.symbolTable.query("out", SymbolType.CLASS);
     const { parentClassName: p2, typeDescriptor: t2 } = cg.symbolTable.query("println", SymbolType.CLASS);
     const out = cg.constantPoolManager.indexFieldrefInfo(p1 as string, "out", t1 as string);
-    const println = cg.constantPoolManager.indexMethodrefInfo(p2 as string, "println", t2 as string);
+    const println = cg.constantPoolManager.indexMethodrefInfo(
+      p2 as string, "println", n.argumentList[0].kind === "StringLiteral" ? t2 as string : "(I)V");
 
     cg.code.push(OPCODE.GETSTATIC, 0, out);
     n.argumentList.forEach((x, i) => {
@@ -33,10 +48,24 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return maxStack;
   },
 
+  BinaryExpression: (node: BaseNode, cg: CodeGenerator) => {
+    const { left: left, right: right, operator: op } = node as BinaryExpression;
+    const lsize = codeGenerators[left.kind](left, cg);
+    const rsize = 1 + codeGenerators[right.kind](right, cg);
+    cg.code.push(opToOpcode[op]);
+    return Math.max(lsize, rsize);
+  },
+
   StringLiteral: (node: BaseNode, cg: CodeGenerator) => {
     const n = node as Literal;
     const strIdx = cg.constantPoolManager.indexStringInfo(n.value);
     cg.code.push(OPCODE.LDC, strIdx);
+    return 1;
+  },
+
+  IntegerLiteral: (node: BaseNode, cg: CodeGenerator) => {
+    const n = node as Literal;
+    cg.code.push(OPCODE.BIPUSH, parseInt(n.value));
     return 1;
   }
 }
@@ -55,7 +84,7 @@ class CodeGenerator {
   generateCode(methodNode: MethodDeclaration) {
     this.symbolTable.extend();
     methodNode.methodHeader.formalParameterList.forEach(p => {
-      this.symbolTable.insert(p.variableDeclaratorId, SymbolType.VARIABLE, {
+      this.symbolTable.insert(p.identifier, SymbolType.VARIABLE, {
         index: this.maxLocals
       });
       this.maxLocals++;
