@@ -1,4 +1,4 @@
-import { BlockStatement } from "./blocks-and-statements";
+import { Block } from "./blocks-and-statements";
 
 export type ClassDeclaration = NormalClassDeclaration;
 
@@ -41,14 +41,11 @@ export type MethodModifier =
 
 export interface MethodHeader {
   result: Result;
-  methodDeclarator: MethodDeclarator;
-}
-
-export type Result = "void";
-export interface MethodDeclarator {
   identifier: Identifier;
   formalParameterList: Array<FormalParameter>;
 }
+
+export type Result = "void";
 
 export interface FormalParameter {
   unannType: UnannType;
@@ -58,5 +55,5 @@ export interface FormalParameter {
 export type UnannType = string;
 export type VariableDeclaratorId = Identifier;
 
-export type MethodBody = Array<BlockStatement>;
+export type MethodBody = Block;
 export type Identifier = string;
