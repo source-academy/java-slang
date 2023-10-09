@@ -1,17 +1,25 @@
 import { ClassFile } from "../ClassFile/types";
 import { AST } from "../ast/types/packages-and-modules";
-import { ClassDeclaration, MethodBody, MethodDeclaration } from "../ast/types/classes";
-import { AttributeInfo, CodeAttribute, ExceptionHandler } from "../ClassFile/types/attributes";
+import { ClassDeclaration, MethodDeclaration } from "../ast/types/classes";
+import { AttributeInfo } from "../ClassFile/types/attributes";
 import { FieldInfo } from "../ClassFile/types/fields";
 import { MethodInfo } from "../ClassFile/types/methods";
 import { ConstantPoolManager } from "./constant-pool-manager";
-import { generateClassAccessFlags, generateMethodAccessFlags, generateMethodDescriptor } from "./compiler-utils";
+import {
+  generateClassAccessFlags,
+  generateFieldDescriptor,
+  generateMethodAccessFlags,
+  generateMethodDescriptor
+} from "./compiler-utils";
+import { SymbolTable, SymbolType } from "./symbol-table";
+import { generateCode } from "./code-generator";
 
 const MAGIC = 0xcafebabe;
 const MINOR_VERSION = 0;
 const MAJOR_VERSION = 61;
 
 export class Compiler {
+  private symbolTable: SymbolTable;
   private constantPoolManager: ConstantPoolManager;
   private interfaces: Array<number>;
   private fields: Array<FieldInfo>;
@@ -19,11 +27,24 @@ export class Compiler {
   private attributes: Array<AttributeInfo>;
 
   constructor() {
+    this.symbolTable = new SymbolTable();
     this.constantPoolManager = new ConstantPoolManager();
     this.interfaces = [];
     this.fields = [];
     this.methods = [];
     this.attributes = [];
+    this.setup();
+  }
+
+  private setup() {
+    this.symbolTable.insert("out", SymbolType.CLASS, {
+      parentClassName: "java/lang/System",
+      typeDescriptor: generateFieldDescriptor("java/io/PrintStream")
+    });
+    this.symbolTable.insert("println", SymbolType.CLASS, {
+      parentClassName: "java/io/PrintStream",
+      typeDescriptor: generateMethodDescriptor(["java/lang/String"], "void")
+    });
   }
 
   compile(ast: AST) {
@@ -64,16 +85,16 @@ export class Compiler {
 
   private compileMethod(methodNode: MethodDeclaration) {
     const header = methodNode.methodHeader;
-    const body = methodNode.methodBody;
     const methodName = header.identifier;
     const params = header.formalParameterList;
 
     const nameIndex = this.constantPoolManager.indexUtf8Info(methodName);
-    const descriptor = generateMethodDescriptor(params, header.result);
+    const descriptor = generateMethodDescriptor(params.map(x => x.unannType), header.result);
     const descriptorIndex = this.constantPoolManager.indexUtf8Info(descriptor);
 
     const attributes: Array<AttributeInfo> = [];
-    attributes.push(this.addCodeAttribute(body));
+    attributes.push(generateCode(this.symbolTable, this.constantPoolManager, methodNode));
+
     this.methods.push({
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
       nameIndex: nameIndex,
@@ -81,33 +102,5 @@ export class Compiler {
       attributesCount: attributes.length,
       attributes: attributes
     });
-  }
-
-  private addCodeAttribute(block: MethodBody): CodeAttribute {
-    let maxStack = 0;
-    let maxLocals = 1;
-    const code: number[] = [];
-    const exceptionTable: Array<ExceptionHandler> = [];
-    const attributes: Array<AttributeInfo> = [];
-
-    code.push(0xb1);
-    const codeBuf = new Uint8Array(code).buffer;
-    const dataView = new DataView(codeBuf);
-    code.forEach((x, i) => dataView.setUint8(i, x));
-
-    const attributeLength = 12 + code.length + 8 * exceptionTable.length +
-      attributes.map(attr => attr.attributeLength + 6).reduce((acc, val) => acc + val, 0);
-    return {
-      attributeNameIndex: this.constantPoolManager.indexUtf8Info("Code"),
-      attributeLength: attributeLength,
-      maxStack: maxStack,
-      maxLocals: maxLocals,
-      codeLength: code.length,
-      code: dataView,
-      exceptionTableLength: exceptionTable.length,
-      exceptionTable: exceptionTable,
-      attributesCount: attributes.length,
-      attributes: attributes
-    }
   }
 }

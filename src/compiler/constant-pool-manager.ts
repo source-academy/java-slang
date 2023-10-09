@@ -50,6 +50,18 @@ export class ConstantPoolManager {
     });
   }
 
+  indexFieldrefInfo(className: string, fieldName: string, descriptor: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.Fieldref, {
+      class: {
+        name: { value: className, }
+      },
+      nameAndType: {
+        name: { value: fieldName },
+        descriptor: { value: descriptor },
+      }
+    });
+  }
+
   indexMethodrefInfo(className: string, methodName: string, descriptor: string) {
     return this.writeIfAbsent(CONSTANT_TAG.Methodref, {
       class: {
