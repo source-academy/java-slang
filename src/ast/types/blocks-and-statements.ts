@@ -7,7 +7,7 @@ export interface Block extends BaseNode {
 export type BlockStatement = LocalVariableDeclarationStatement | Statement;
 export interface LocalVariableDeclarationStatement extends BaseNode {
   localVariableType: LocalVariableType;
-  variableDeclarationList: VariableDeclarator;
+  variableDeclaratorList: Array<VariableDeclarator>;
 }
 
 export type Statement = StatementWithoutTrailingSubstatement;
@@ -45,3 +45,11 @@ export interface Literal extends BaseNode {
 export interface ExpressionName extends BaseNode {
   name: string;
 }
+
+export interface Assignment extends BaseNode {
+  left: LeftHandSide;
+  operator: string;
+  right: Expression;
+}
+
+export type LeftHandSide = ExpressionName;
