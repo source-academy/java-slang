@@ -1,5 +1,5 @@
 import { Identifier, UnannType } from "../types/classes";
-import { NodeType } from "../types/node-types";
+import { LiteralType, NodeType } from "../types/node-types";
 import {
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
@@ -89,7 +89,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
       return processedOperands[0];
     }
 
-    let res = {
+    let res: BinaryExpression = {
       kind: NodeType.BinaryExpression,
       operator: processedOperators[0],
       left: processedOperands[0],
@@ -175,6 +175,14 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   literal(ctx: LiteralCtx) {
     if (ctx.integerLiteral) {
       return this.visit(ctx.integerLiteral);
+    } else if (ctx.StringLiteral) {
+      return {
+        kind: NodeType.Literal,
+        literalType: {
+          kind: LiteralType.StringLiteral,
+          value: ctx.StringLiteral[0].image,
+        },
+      };
     }
   }
 
@@ -182,7 +190,10 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
     if (ctx.DecimalLiteral) {
       return {
         kind: NodeType.Literal,
-        value: Number(ctx.DecimalLiteral[0].image),
+        literalType: {
+          kind: LiteralType.DecimalIntegerLiteral,
+          value: ctx.DecimalLiteral[0].image,
+        },
       };
     }
     return;
