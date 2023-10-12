@@ -96,11 +96,11 @@ export const check = (node: Node): Result => {
     case NodeType.LocalVariableDeclarationStatement: {
       const { variableInitializer } = node.variableDeclarationList;
       const { currentType, errors } = check(variableInitializer);
+      if (errors.length > 0) return { currentType: null, errors };
       if (currentType == null)
         throw new Error(
           "Variable initializer in local variable declaration statement should return a type."
         );
-      if (errors.length > 0) return { currentType: null, errors };
       if (currentType.name !== node.localVariableType)
         return newResult(null, [new IncompatibleTypesError()]);
       return OK_RESULT;

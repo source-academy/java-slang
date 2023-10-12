@@ -6,7 +6,7 @@ import { Type } from "../../types";
 const createProgram = (statement: string) => `
   public class Main {
     public static void main(String args[]) {
-      int test = ${statement};
+      ${statement}
     }
   }
 `;
@@ -14,92 +14,99 @@ const createProgram = (statement: string) => `
 const testcases: {
   input: string;
   result: { type: Type | null; errors: Error[] };
+  only?: boolean;
 }[] = [
   {
-    input: "1 + 1",
+    input: "int test = 0;",
     result: { type: null, errors: [] },
   },
   {
-    input: '1 + "A"',
+    input: "int test = 1 + 1;",
     result: { type: null, errors: [] },
   },
   {
-    input: '"A" + 1',
+    input: 'String test = 1 + "A";',
     result: { type: null, errors: [] },
   },
   {
-    input: '"A" + "A"',
+    input: 'String test = "A" + 1;',
     result: { type: null, errors: [] },
   },
   {
-    input: "1 - 1",
+    input: 'String test = "A" + "A";',
     result: { type: null, errors: [] },
   },
   {
-    input: '1 - "A"',
+    input: "int test = 1 - 1;",
     result: { type: null, errors: [] },
   },
   {
-    input: '"A" - 1',
+    input: 'String test = 1 - "A";',
     result: { type: null, errors: [] },
   },
   {
-    input: '"A" - "A"',
+    input: 'String test = "A" - 1;',
+    result: { type: null, errors: [] },
+  },
+  {
+    input: 'String test = "A" - "A";',
     result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
-    input: "1 * 1",
+    input: "int test = 1 * 1;",
     result: { type: null, errors: [] },
   },
   {
-    input: '1 * "A"',
+    input: 'String test = 1 * "A";',
     result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
-    input: '"A" * 1',
+    input: 'String test = "A" * 1;',
     result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
-    input: '"A" * "A"',
+    input: 'String test = "A" * "A";',
     result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
-    input: "1 / 1",
+    input: "int test = 1 / 1;",
     result: { type: null, errors: [] },
   },
   {
-    input: '1 / "A"',
+    input: 'String test = 1 / "A";',
     result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
-    input: '"A" / 1',
+    input: 'String test = "A" / 1;',
     result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
-    input: '"A" / "A"',
+    input: 'String test = "A" / "A";',
     result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
-    input: "(1 + 1) + 1",
+    input: "int test = (1 + 1) + 1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "1 + (1 + 1)",
+    input: "int test = 1 + (1 + 1); ",
     result: { type: null, errors: [] },
   },
   {
-    input: '(1 + "A") + 1',
+    input: 'String test = (1 + "A") + 1;',
     result: { type: null, errors: [] },
   },
   {
-    input: '1 + (1 + "A")',
+    input: 'String test = 1 + (1 + "A");',
     result: { type: null, errors: [] },
   },
 ];
 
 describe("Type Checker", () => {
   testcases.map((testcase) => {
-    test(`Checking binary expression ${testcase.input}`, () => {
+    let it = test;
+    if (testcase.only) it = test.only;
+    it(`Checking binary expression ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");
