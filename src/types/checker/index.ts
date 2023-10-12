@@ -1,5 +1,5 @@
-import { BadOperandTypesError } from "../errors";
-import { Integer, String, Type } from "../types";
+import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
+import { Int, String, Type } from "../types";
 import { LiteralType, NodeType } from "../../ast/types/node-types";
 import { Node } from "../../ast/types/ast";
 import { Operator } from "../../ast/types/blocks-and-statements";
@@ -32,17 +32,17 @@ export const check = (node: Node): Result => {
           if (leftType instanceof String && rightType instanceof String)
             return newResult(new String());
         case Operator.MINUS:
-          if (leftType instanceof Integer && rightType instanceof Integer)
-            return newResult(new Integer());
-          if (leftType instanceof Integer && rightType instanceof String)
+          if (leftType instanceof Int && rightType instanceof Int)
+            return newResult(new Int());
+          if (leftType instanceof Int && rightType instanceof String)
             return newResult(new String());
-          if (leftType instanceof String && rightType instanceof Integer)
+          if (leftType instanceof String && rightType instanceof Int)
             return newResult(new String());
           return newResult(null, [new BadOperandTypesError()]);
         case Operator.TIMES:
         case Operator.DIVIDE:
-          if (leftType instanceof Integer && rightType instanceof Integer)
-            return newResult(new Integer());
+          if (leftType instanceof Int && rightType instanceof Int)
+            return newResult(new Int());
           return newResult(null, [new BadOperandTypesError()]);
         default:
           throw new Error(
@@ -72,7 +72,7 @@ export const check = (node: Node): Result => {
         case LiteralType.DecimalFloatingPointLiteral:
           throw new Error(`Not implemented yet.`);
         case LiteralType.DecimalIntegerLiteral: {
-          const type = Integer.from(value);
+          const type = Int.from(value);
           return type instanceof Error
             ? newResult(null, [type])
             : newResult(type);
@@ -95,9 +95,14 @@ export const check = (node: Node): Result => {
     }
     case NodeType.LocalVariableDeclarationStatement: {
       const { variableInitializer } = node.variableDeclarationList;
-      const { errors } = check(variableInitializer);
+      const { currentType, errors } = check(variableInitializer);
+      if (currentType == null)
+        throw new Error(
+          "Variable initializer in local variable declaration statement should return a type."
+        );
       if (errors.length > 0) return { currentType: null, errors };
-      // TODO: Check variable initializer type against variable declaration type.
+      if (currentType.name !== node.localVariableType)
+        return newResult(null, [new IncompatibleTypesError()]);
       return OK_RESULT;
     }
     case NodeType.PrefixExpression: {
@@ -109,7 +114,7 @@ export const check = (node: Node): Result => {
             expression.literalType.kind === LiteralType.DecimalIntegerLiteral
           ) {
             const integerString = Operator.MINUS + expression.literalType.value;
-            const type = Integer.from(integerString);
+            const type = Int.from(integerString);
             return type instanceof Error
               ? newResult(null, [type])
               : newResult(type);

@@ -5,3 +5,9 @@ export class IntegerTooLargeError extends Error {
     super("integer number too large");
   }
 }
+
+export class IncompatibleTypesError extends Error {
+  constructor() {
+    super("incompatible types");
+  }
+}

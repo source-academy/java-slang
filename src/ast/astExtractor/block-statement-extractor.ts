@@ -13,6 +13,7 @@ import {
   PrimaryCtx,
   PrimaryPrefixCtx,
   TernaryExpressionCtx,
+  UnannClassTypeCtx,
   UnaryExpressionCstNode,
   UnaryExpressionCtx,
   VariableDeclaratorIdCtx,
@@ -209,5 +210,9 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   parenthesisExpression(ctx: ParenthesisExpressionCtx) {
     return this.visit(ctx.expression);
+  }
+
+  unannClassType(ctx: UnannClassTypeCtx) {
+    this.type = ctx.Identifier[0].image;
   }
 }
