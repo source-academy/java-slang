@@ -1,5 +1,4 @@
 import { Identifier, UnannType } from "../types/classes";
-import { LiteralType, NodeType } from "../types/node-types";
 import {
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
@@ -38,7 +37,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   extract(cst: BlockStatementCstNode): BlockStatement {
     this.visit(cst);
     return {
-      kind: NodeType.LocalVariableDeclarationStatement,
+      kind: "LocalVariableDeclarationStatement",
       localVariableType: this.type,
       variableDeclarationList: {
         variableDeclaratorId: this.identifier,
@@ -91,7 +90,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
     }
 
     let res: BinaryExpression = {
-      kind: NodeType.BinaryExpression,
+      kind: "BinaryExpression",
       operator: processedOperators[0],
       left: processedOperands[0],
       right: processedOperands[1],
@@ -99,7 +98,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
     for (let i = 1; i < processedOperators.length; i++) {
       res = {
-        kind: NodeType.BinaryExpression,
+        kind: "BinaryExpression",
         operator: processedOperators[i],
         left: res,
         right: processedOperands[i + 1],
@@ -124,14 +123,14 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
       if (this.isMulOp(operators[i])) {
         if (accMulRes) {
           accMulRes = {
-            kind: NodeType.BinaryExpression,
+            kind: "BinaryExpression",
             operator: operators[i].image,
             left: accMulRes,
             right: this.visit(operands[i + 1]),
           };
         } else {
           accMulRes = {
-            kind: NodeType.BinaryExpression,
+            kind: "BinaryExpression",
             operator: operators[i].image,
             left: this.visit(operands[i]),
             right: this.visit(operands[i + 1]),
@@ -161,7 +160,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
     const node = this.visit(ctx.primary);
     if (ctx.UnaryPrefixOperator) {
       return {
-        kind: NodeType.PrefixExpression,
+        kind: "PrefixExpression",
         operator: ctx.UnaryPrefixOperator[0].image,
         expression: node,
       };
@@ -186,9 +185,9 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
       return this.visit(ctx.integerLiteral);
     } else if (ctx.StringLiteral) {
       return {
-        kind: NodeType.Literal,
+        kind: "Literal",
         literalType: {
-          kind: LiteralType.StringLiteral,
+          kind: "StringLiteral",
           value: ctx.StringLiteral[0].image,
         },
       };
@@ -198,9 +197,9 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   integerLiteral(ctx: IntegerLiteralCtx) {
     if (ctx.DecimalLiteral) {
       return {
-        kind: NodeType.Literal,
+        kind: "Literal",
         literalType: {
-          kind: LiteralType.DecimalIntegerLiteral,
+          kind: "DecimalIntegerLiteral",
           value: ctx.DecimalLiteral[0].image,
         },
       };

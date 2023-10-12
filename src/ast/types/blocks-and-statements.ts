@@ -1,10 +1,8 @@
-import { BaseNode } from "./ast";
 import { Identifier, UnannType } from "./classes";
-import { LiteralType, NodeType } from "./node-types";
 
 export type BlockStatement = LocalVariableDeclarationStatement;
-export interface LocalVariableDeclarationStatement extends BaseNode {
-  kind: NodeType.LocalVariableDeclarationStatement;
+export interface LocalVariableDeclarationStatement {
+  kind: "LocalVariableDeclarationStatement";
   localVariableType: LocalVariableType;
   variableDeclarationList: VariableDeclarator;
 }
@@ -19,8 +17,8 @@ export type VariableDeclaratorId = Identifier;
 export type VariableInitializer = Expression;
 export type Expression = Literal | BinaryExpression | UnaryExpression;
 
-export interface Literal extends BaseNode {
-  kind: NodeType.Literal;
+export interface Literal {
+  kind: "Literal";
   literalType:
     | IntegerLiteral
     | FloatingPointLiteral
@@ -37,19 +35,19 @@ export type IntegerLiteral =
   | OctalIntegerLiteral
   | BinaryIntegerLiteral;
 export interface DecimalIntegerLiteral {
-  kind: LiteralType.DecimalIntegerLiteral;
+  kind: "DecimalIntegerLiteral";
   value: string;
 }
 export interface HexIntegerLiteral {
-  kind: LiteralType.HexIntegerLiteral;
+  kind: "HexIntegerLiteral";
   value: string;
 }
 export interface OctalIntegerLiteral {
-  kind: LiteralType.OctalIntegerLiteral;
+  kind: "OctalIntegerLiteral";
   value: string;
 }
 export interface BinaryIntegerLiteral {
-  kind: LiteralType.BinaryIntegerLiteral;
+  kind: "BinaryIntegerLiteral";
   value: string;
 }
 
@@ -57,57 +55,45 @@ export type FloatingPointLiteral =
   | DecimalFloatingPointLiteral
   | HexadecimalFloatingPointLiteral;
 export interface DecimalFloatingPointLiteral {
-  kind: LiteralType.DecimalFloatingPointLiteral;
+  kind: "DecimalFloatingPointLiteral";
   value: string;
 }
 export interface HexadecimalFloatingPointLiteral {
-  kind: LiteralType.HexadecimalFloatingPointLiteral;
+  kind: "HexadecimalFloatingPointLiteral";
   value: string;
 }
 
 export interface BooleanLiteral {
-  kind: LiteralType.BooleanLiteral;
+  kind: "BooleanLiteral";
   value: "true" | "false";
 }
 
 export interface CharacterLiteral {
-  kind: LiteralType.CharacterLiteral;
+  kind: "CharacterLiteral";
   value: string;
 }
 
 export type TextBlockLiteral = StringLiteral;
 export interface StringLiteral {
-  kind: LiteralType.StringLiteral;
+  kind: "StringLiteral";
   value: string;
 }
 
 export interface NullLiteral {
-  kind: LiteralType.NullLiteral;
+  kind: "NullLiteral";
   value: "null";
 }
 
-export enum Operator {
-  PLUS = "+",
-  MINUS = "-",
-  TIMES = "*",
-  DIVIDE = "/",
-}
-
-export interface BinaryExpression extends BaseNode {
-  kind: NodeType.BinaryExpression;
-  operator: Operator;
+export interface BinaryExpression {
+  kind: "BinaryExpression";
+  operator: "+" | "-" | "*" | "/";
   left: Expression;
   right: Expression;
 }
 
-export type UnaryExpression = PrefixExpression | PostfixExpression;
-export interface PrefixExpression extends BaseNode {
-  kind: NodeType.PrefixExpression;
-  operator: Operator;
-  expression: Expression;
-}
-export interface PostfixExpression extends BaseNode {
-  kind: NodeType.PostfixExpression;
-  operator: Operator;
+export type UnaryExpression = PrefixExpression;
+export interface PrefixExpression {
+  kind: "PrefixExpression";
+  operator: "-" | "+";
   expression: Expression;
 }

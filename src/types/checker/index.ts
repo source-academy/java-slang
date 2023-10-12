@@ -1,8 +1,6 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
 import { Int, String, Type } from "../types";
-import { LiteralType, NodeType } from "../../ast/types/node-types";
 import { Node } from "../../ast/types/ast";
-import { Operator } from "../../ast/types/blocks-and-statements";
 
 export type Result = {
   currentType: Type | null;
@@ -18,7 +16,7 @@ const newResult = (
 
 export const check = (node: Node): Result => {
   switch (node.kind) {
-    case NodeType.BinaryExpression: {
+    case "BinaryExpression": {
       const { left, operator, right } = node;
       const { currentType: leftType, errors: leftErrors } = check(left);
       if (leftErrors.length > 0)
@@ -28,10 +26,10 @@ export const check = (node: Node): Result => {
         return { currentType: null, errors: rightErrors };
 
       switch (operator) {
-        case Operator.PLUS:
+        case "+":
           if (leftType instanceof String && rightType instanceof String)
             return newResult(new String());
-        case Operator.MINUS:
+        case "-":
           if (leftType instanceof Int && rightType instanceof Int)
             return newResult(new Int());
           if (leftType instanceof Int && rightType instanceof String)
@@ -39,8 +37,8 @@ export const check = (node: Node): Result => {
           if (leftType instanceof String && rightType instanceof Int)
             return newResult(new String());
           return newResult(null, [new BadOperandTypesError()]);
-        case Operator.TIMES:
-        case Operator.DIVIDE:
+        case "*":
+        case "/":
           if (leftType instanceof Int && rightType instanceof Int)
             return newResult(new Int());
           return newResult(null, [new BadOperandTypesError()]);
@@ -50,7 +48,7 @@ export const check = (node: Node): Result => {
           );
       }
     }
-    case NodeType.CompilationUnit: {
+    case "CompilationUnit": {
       const blockStatements =
         node.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody;
       const errors = blockStatements.flatMap((blockStatement) => {
@@ -58,34 +56,34 @@ export const check = (node: Node): Result => {
       });
       return { currentType: null, errors };
     }
-    case NodeType.Literal: {
+    case "Literal": {
       const {
         literalType: { kind, value },
       } = node;
       switch (kind) {
-        case LiteralType.BinaryIntegerLiteral:
+        case "BinaryIntegerLiteral":
           throw new Error(`Not implemented yet.`);
-        case LiteralType.BooleanLiteral:
+        case "BooleanLiteral":
           throw new Error(`Not implemented yet.`);
-        case LiteralType.CharacterLiteral:
+        case "CharacterLiteral":
           throw new Error(`Not implemented yet.`);
-        case LiteralType.DecimalFloatingPointLiteral:
+        case "DecimalFloatingPointLiteral":
           throw new Error(`Not implemented yet.`);
-        case LiteralType.DecimalIntegerLiteral: {
+        case "DecimalIntegerLiteral": {
           const type = Int.from(value);
           return type instanceof Error
             ? newResult(null, [type])
             : newResult(type);
         }
-        case LiteralType.HexIntegerLiteral:
+        case "HexIntegerLiteral":
           throw new Error(`Not implemented yet.`);
-        case LiteralType.HexadecimalFloatingPointLiteral:
+        case "HexadecimalFloatingPointLiteral":
           throw new Error(`Not implemented yet.`);
-        case LiteralType.NullLiteral:
+        case "NullLiteral":
           throw new Error(`Not implemented yet.`);
-        case LiteralType.OctalIntegerLiteral:
+        case "OctalIntegerLiteral":
           throw new Error(`Not implemented yet.`);
-        case LiteralType.StringLiteral:
+        case "StringLiteral":
           return newResult(String.from(value));
         default:
           throw new Error(
@@ -93,7 +91,7 @@ export const check = (node: Node): Result => {
           );
       }
     }
-    case NodeType.LocalVariableDeclarationStatement: {
+    case "LocalVariableDeclarationStatement": {
       const { variableInitializer } = node.variableDeclarationList;
       const { currentType, errors } = check(variableInitializer);
       if (errors.length > 0) return { currentType: null, errors };
@@ -105,22 +103,22 @@ export const check = (node: Node): Result => {
         return newResult(null, [new IncompatibleTypesError()]);
       return OK_RESULT;
     }
-    case NodeType.PrefixExpression: {
+    case "PrefixExpression": {
       const { operator, expression } = node;
       switch (operator) {
-        case Operator.MINUS: {
+        case "-": {
           if (
-            expression.kind === NodeType.Literal &&
-            expression.literalType.kind === LiteralType.DecimalIntegerLiteral
+            expression.kind === "Literal" &&
+            expression.literalType.kind === "DecimalIntegerLiteral"
           ) {
-            const integerString = Operator.MINUS + expression.literalType.value;
+            const integerString = "-" + expression.literalType.value;
             const type = Int.from(integerString);
             return type instanceof Error
               ? newResult(null, [type])
               : newResult(type);
           }
         }
-        case Operator.PLUS:
+        case "+":
           return check(expression);
         default:
           throw new Error(
@@ -130,7 +128,7 @@ export const check = (node: Node): Result => {
     }
     default:
       throw new Error(
-        `Node type ${node.kind} is not recgonized by type checker.`
+        `Check is not implemented for this type of node. \n${node}`
       );
   }
 };

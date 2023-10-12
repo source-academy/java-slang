@@ -1,5 +1,4 @@
 import { CompilationUnit } from "./packages-and-modules";
-import { NodeType } from "./node-types";
 import {
   BinaryExpression,
   Literal,
@@ -22,7 +21,3 @@ interface NodeMap {
 }
 
 export type Node = NodeMap[keyof NodeMap];
-
-export interface BaseNode {
-  kind: NodeType;
-}
