@@ -3,6 +3,8 @@ export enum NodeType {
   CompilationUnit = "CompilationUnit",
   Literal = "Literal",
   LocalVariableDeclarationStatement = "LocalVariableDeclarationStatement",
+  PrefixExpression = "PrefixExpression",
+  PostfixExpression = "PostfixExpression",
 }
 
 export enum LiteralType {

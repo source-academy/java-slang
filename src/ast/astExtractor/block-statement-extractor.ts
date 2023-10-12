@@ -157,6 +157,14 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   unaryExpression(ctx: UnaryExpressionCtx) {
+    const node = this.visit(ctx.primary);
+    if (ctx.UnaryPrefixOperator) {
+      return {
+        kind: NodeType.PrefixExpression,
+        operator: ctx.UnaryPrefixOperator[0].image,
+        expression: node,
+      };
+    }
     return this.visit(ctx.primary);
   }
 

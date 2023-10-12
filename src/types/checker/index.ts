@@ -100,7 +100,32 @@ export const check = (node: Node): Result => {
       // TODO: Check variable initializer type against variable declaration type.
       return OK_RESULT;
     }
+    case NodeType.PrefixExpression: {
+      const { operator, expression } = node;
+      switch (operator) {
+        case Operator.MINUS: {
+          if (
+            expression.kind === NodeType.Literal &&
+            expression.literalType.kind === LiteralType.DecimalIntegerLiteral
+          ) {
+            const integerString = Operator.MINUS + expression.literalType.value;
+            const type = Integer.from(integerString);
+            return type instanceof Error
+              ? newResult(null, [type])
+              : newResult(type);
+          }
+        }
+        case Operator.PLUS:
+          return check(expression);
+        default:
+          throw new Error(
+            `Unrecgonized operator ${operator} found in prefix expression.`
+          );
+      }
+    }
     default:
-      throw new Error("Node type cannot is not recgonized by type checker.");
+      throw new Error(
+        `Node type ${node.kind} is not recgonized by type checker.`
+      );
   }
 };

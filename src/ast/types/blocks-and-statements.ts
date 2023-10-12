@@ -17,7 +17,7 @@ export interface VariableDeclarator {
 }
 export type VariableDeclaratorId = Identifier;
 export type VariableInitializer = Expression;
-export type Expression = Literal | BinaryExpression;
+export type Expression = Literal | BinaryExpression | UnaryExpression;
 
 export interface Literal extends BaseNode {
   kind: NodeType.Literal;
@@ -98,4 +98,16 @@ export interface BinaryExpression extends BaseNode {
   operator: Operator;
   left: Expression;
   right: Expression;
+}
+
+export type UnaryExpression = PrefixExpression | PostfixExpression;
+export interface PrefixExpression extends BaseNode {
+  kind: NodeType.PrefixExpression;
+  operator: Operator;
+  expression: Expression;
+}
+export interface PostfixExpression extends BaseNode {
+  kind: NodeType.PostfixExpression;
+  operator: Operator;
+  expression: Expression;
 }
