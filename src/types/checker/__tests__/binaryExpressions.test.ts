@@ -99,7 +99,7 @@ const testcases: {
 
 describe("Type Checker", () => {
   testcases.map((testcase) => {
-    test(`Checking expression ${testcase.input}`, () => {
+    test(`Checking binary expression ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");
