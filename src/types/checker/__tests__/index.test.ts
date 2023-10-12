@@ -100,6 +100,8 @@ describe("Type Checker", () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
 
+      console.log(ast);
+
       const mainMethodBody =
         ast?.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody[0];
 

@@ -1,33 +1,34 @@
-import { 
-  BaseJavaCstVisitorWithDefaults, 
-  BinaryExpressionCtx, 
-  BlockStatementCstNode, 
-  ExpressionCtx, 
-  IToken, 
-  IntegerLiteralCtx, 
-  IntegralTypeCtx, 
-  LiteralCtx, 
-  ParenthesisExpressionCtx, 
-  PrimaryCtx, 
-  PrimaryPrefixCtx, 
-  TernaryExpressionCtx, 
-  UnaryExpressionCstNode, 
-  UnaryExpressionCtx, 
-  VariableDeclaratorIdCtx, 
-  VariableInitializerCtx
-} from "java-parser";
-import { 
-  BinaryExpression, 
-  BlockStatement, 
-  Expression, 
-} from "../types/blocks-and-statements";
 import { Identifier, UnannType } from "../types/classes";
+import { NodeType } from "../types/node-types";
+import {
+  BaseJavaCstVisitorWithDefaults,
+  BinaryExpressionCtx,
+  BlockStatementCstNode,
+  ExpressionCtx,
+  IToken,
+  IntegerLiteralCtx,
+  IntegralTypeCtx,
+  LiteralCtx,
+  ParenthesisExpressionCtx,
+  PrimaryCtx,
+  PrimaryPrefixCtx,
+  TernaryExpressionCtx,
+  UnaryExpressionCstNode,
+  UnaryExpressionCtx,
+  VariableDeclaratorIdCtx,
+  VariableInitializerCtx,
+} from "java-parser";
+import {
+  BinaryExpression,
+  BlockStatement,
+  Expression,
+} from "../types/blocks-and-statements";
 
 export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   private type: UnannType;
   private identifier: Identifier;
   private value: Expression;
-  
+
   constructor() {
     super();
     this.validateVisitor();
@@ -36,12 +37,12 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   extract(cst: BlockStatementCstNode): BlockStatement {
     this.visit(cst);
     return {
-      kind: "LocalVariableDeclarationStatement",
+      kind: NodeType.LocalVariableDeclarationStatement,
       localVariableType: this.type,
       variableDeclarationList: {
         variableDeclaratorId: this.identifier,
-        variableInitializer: this.value
-      }
+        variableInitializer: this.value,
+      },
     };
   }
 
@@ -50,7 +51,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {
-    this.identifier = ctx.Identifier[0].image
+    this.identifier = ctx.Identifier[0].image;
   }
 
   variableInitializer(ctx: VariableInitializerCtx) {
@@ -75,35 +76,41 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
     }
   }
 
-  makeBinaryExpression(operators: IToken[], operands: UnaryExpressionCstNode[]): BinaryExpression {
-    const [processedOperators, processedOperands] = this.processPrecedence(operators, operands);
+  makeBinaryExpression(
+    operators: IToken[],
+    operands: UnaryExpressionCstNode[]
+  ): BinaryExpression {
+    const [processedOperators, processedOperands] = this.processPrecedence(
+      operators,
+      operands
+    );
 
     if (processedOperators.length == 0 && processedOperands.length == 1) {
       return processedOperands[0];
     }
 
     let res = {
-      kind: "BinaryExpression",
+      kind: NodeType.BinaryExpression,
       operator: processedOperators[0],
       left: processedOperands[0],
-      right: processedOperands[1]
+      right: processedOperands[1],
     };
 
     for (let i = 1; i < processedOperators.length; i++) {
       res = {
-        kind: "BinaryExpression",
+        kind: NodeType.BinaryExpression,
         operator: processedOperators[i],
         left: res,
-        right: processedOperands[i + 1]
-      }
+        right: processedOperands[i + 1],
+      };
     }
 
     return res;
   }
 
   isMulOp(op: IToken) {
-    const mulOps = ['*', '/', '%'];
-    return mulOps.filter(mulOp => mulOp === op.image).length > 0;
+    const mulOps = ["*", "/", "%"];
+    return mulOps.filter((mulOp) => mulOp === op.image).length > 0;
   }
 
   processPrecedence(operators: IToken[], operands: UnaryExpressionCstNode[]) {
@@ -111,22 +118,22 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
     const newOperands = [];
 
     let accMulRes;
-    
+
     for (let i = 0; i < operators.length; i++) {
       if (this.isMulOp(operators[i])) {
         if (accMulRes) {
           accMulRes = {
-            kind: "BinaryExpression",
-              operator: operators[i].image,
-              left: accMulRes,
-              right: this.visit(operands[i + 1])
+            kind: NodeType.BinaryExpression,
+            operator: operators[i].image,
+            left: accMulRes,
+            right: this.visit(operands[i + 1]),
           };
         } else {
           accMulRes = {
-            kind: "BinaryExpression",
+            kind: NodeType.BinaryExpression,
             operator: operators[i].image,
             left: this.visit(operands[i]),
-            right: this.visit(operands[i + 1])
+            right: this.visit(operands[i + 1]),
           };
         }
       } else {
@@ -139,13 +146,13 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
         newOperators.push(operators[i].image);
       }
     }
-    
+
     if (this.isMulOp(operators[operators.length - 1])) {
       newOperands.push(accMulRes);
     } else {
-      newOperands.push(this.visit(operands[operands.length - 1]))
+      newOperands.push(this.visit(operands[operands.length - 1]));
     }
-    
+
     return [newOperators, newOperands];
   }
 
@@ -170,17 +177,17 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
       return this.visit(ctx.integerLiteral);
     }
   }
-  
+
   integerLiteral(ctx: IntegerLiteralCtx) {
     if (ctx.DecimalLiteral) {
       return {
-        kind: "Literal",
-        value: Number(ctx.DecimalLiteral[0].image)
+        kind: NodeType.Literal,
+        value: Number(ctx.DecimalLiteral[0].image),
       };
     }
     return;
   }
-  
+
   parenthesisExpression(ctx: ParenthesisExpressionCtx) {
     return this.visit(ctx.expression);
   }
