@@ -16,41 +16,125 @@ const testcases: {
   only?: boolean;
 }[] = [
   {
-    input: "int test = 0;",
+    input: "int decimal = 0;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int test = 10;",
+    input: "int decimal = 10;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int test = 11;",
+    input: "int decimal = 11;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int test = 1_0;",
+    input: "int decimal = 1_0;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int test = 1__0;",
+    input: "int decimal = 1__0;",
     result: { type: null, errors: [] },
   },
   // TODO: For the following program, ast extractor returns undefined for variable initializer during the parsing.
   // {
-  //   input: "int test = _1;",
+  //   input: "int decimal = _1;",
   //   result: { type: null, errors: [new IllegalUnderscoreError()] },
   // },
   // TODO: For the following program, java-parser throws an error during the parsing.
   // {
-  //   input: "int test = 1_;",
+  //   input: "int decimal = 1_;",
   //   result: { type: null, errors: [new IllegalUnderscoreError()] },
   // },
   {
-    input: "long test = 0L;",
+    input: "long decimal = 0L;",
     result: { type: null, errors: [] },
   },
   {
-    input: "long test = 1_0L;",
+    input: "long decimal = 1_0L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int hex = 0x0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int hex = 0x10;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int hex = 0x11;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int hex = 0x1_0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int hex = 0x1__0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long hex = 0x0L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long hex = 0x1_0L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int octal = 00;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int octal = 010;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int octal = 011;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int octal = 01_0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int octal = 01__0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long octal = 00L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long octal = 01_0L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int binary = 0b0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int binary = 0b10;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int binary = 0b11;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int binary = 0b1_0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int binary = 0b1__0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long binary = 0b0L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long binary = 0b1_0L;",
     result: { type: null, errors: [] },
   },
 ];

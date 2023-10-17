@@ -61,15 +61,16 @@ export const check = (node: Node): Result => {
         literalType: { kind, value },
       } = node;
       switch (kind) {
-        case "BinaryIntegerLiteral":
-          throw new Error(`Not implemented yet.`);
         case "BooleanLiteral":
           throw new Error(`Not implemented yet.`);
         case "CharacterLiteral":
           throw new Error(`Not implemented yet.`);
         case "DecimalFloatingPointLiteral":
           throw new Error(`Not implemented yet.`);
-        case "DecimalIntegerLiteral": {
+        case "BinaryIntegerLiteral":
+        case "DecimalIntegerLiteral":
+        case "HexIntegerLiteral":
+        case "OctalIntegerLiteral": {
           const lastCharacter = value.charAt(value.length - 1);
           const Type =
             lastCharacter === "L" || lastCharacter === "l" ? Long : Int;
@@ -78,13 +79,9 @@ export const check = (node: Node): Result => {
             ? newResult(null, [type])
             : newResult(type);
         }
-        case "HexIntegerLiteral":
-          throw new Error(`Not implemented yet.`);
         case "HexadecimalFloatingPointLiteral":
           throw new Error(`Not implemented yet.`);
         case "NullLiteral":
-          throw new Error(`Not implemented yet.`);
-        case "OctalIntegerLiteral":
           throw new Error(`Not implemented yet.`);
         case "StringLiteral":
           return newResult(String.from(value));
@@ -114,7 +111,10 @@ export const check = (node: Node): Result => {
         case "-": {
           if (
             expression.kind === "Literal" &&
-            expression.literalType.kind === "DecimalIntegerLiteral"
+            (expression.literalType.kind === "BinaryIntegerLiteral" ||
+              expression.literalType.kind === "DecimalIntegerLiteral" ||
+              expression.literalType.kind === "HexIntegerLiteral" ||
+              expression.literalType.kind === "OctalIntegerLiteral")
           ) {
             const integerString = "-" + expression.literalType.value;
             const lastCharacter = integerString.charAt(

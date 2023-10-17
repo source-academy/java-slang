@@ -199,16 +199,29 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   integerLiteral(ctx: IntegerLiteralCtx) {
+    const literal = { kind: "Literal", literalType: {} };
     if (ctx.DecimalLiteral) {
-      return {
-        kind: "Literal",
-        literalType: {
-          kind: "DecimalIntegerLiteral",
-          value: ctx.DecimalLiteral[0].image,
-        },
+      literal.literalType = {
+        kind: "DecimalIntegerLiteral",
+        value: ctx.DecimalLiteral[0].image,
+      };
+    } else if (ctx.HexLiteral) {
+      literal.literalType = {
+        kind: "HexIntegerLiteral",
+        value: ctx.HexLiteral[0].image,
+      };
+    } else if (ctx.OctalLiteral) {
+      literal.literalType = {
+        kind: "OctalIntegerLiteral",
+        value: ctx.OctalLiteral[0].image,
+      };
+    } else if (ctx.BinaryLiteral) {
+      literal.literalType = {
+        kind: "BinaryIntegerLiteral",
+        value: ctx.BinaryLiteral[0].image,
       };
     }
-    return;
+    return literal;
   }
 
   parenthesisExpression(ctx: ParenthesisExpressionCtx) {
