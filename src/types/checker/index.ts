@@ -1,5 +1,5 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
-import { Int, String, Type } from "../types";
+import { Int, Long, String, Type } from "../types";
 import { Node } from "../../ast/types/ast";
 
 export type Result = {
@@ -70,7 +70,10 @@ export const check = (node: Node): Result => {
         case "DecimalFloatingPointLiteral":
           throw new Error(`Not implemented yet.`);
         case "DecimalIntegerLiteral": {
-          const type = Int.from(value);
+          const lastCharacter = value.charAt(value.length - 1);
+          const Type =
+            lastCharacter === "L" || lastCharacter === "l" ? Long : Int;
+          const type = Type.from(value);
           return type instanceof Error
             ? newResult(null, [type])
             : newResult(type);
@@ -114,7 +117,12 @@ export const check = (node: Node): Result => {
             expression.literalType.kind === "DecimalIntegerLiteral"
           ) {
             const integerString = "-" + expression.literalType.value;
-            const type = Int.from(integerString);
+            const lastCharacter = integerString.charAt(
+              integerString.length - 1
+            );
+            const Type =
+              lastCharacter === "L" || lastCharacter === "l" ? Long : Int;
+            const type = Type.from(integerString);
             return type instanceof Error
               ? newResult(null, [type])
               : newResult(type);

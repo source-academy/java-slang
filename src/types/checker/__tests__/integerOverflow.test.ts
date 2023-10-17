@@ -6,7 +6,7 @@ import { Type } from "../../types";
 const createProgram = (statement: string) => `
   public class Main {
     public static void main(String args[]) {
-      int test = ${statement};
+      ${statement}
     }
   }
 `;
@@ -14,60 +14,79 @@ const createProgram = (statement: string) => `
 const testcases: {
   input: string;
   result: { type: Type | null; errors: Error[] };
+  only?: boolean;
 }[] = [
   {
-    input: "2147483647",
+    input: "int test = 2147483647;",
     result: { type: null, errors: [] },
   },
   {
-    input: "-2147483648",
+    input: "int test = -2147483648;",
     result: { type: null, errors: [] },
   },
   {
-    input: "2147483648",
+    input: "int test = 2147483648;",
     result: { type: null, errors: [new IntegerTooLargeError()] },
   },
   {
-    input: "-2147483649",
+    input: "int test = -2147483649;",
     result: { type: null, errors: [new IntegerTooLargeError()] },
   },
   {
-    input: "1 + 2147483647",
+    input: "int test = 1 + 2147483647;",
     result: { type: null, errors: [] },
   },
   {
-    input: "1 + 2147483648",
+    input: "int test = 1 + 2147483648;",
     result: { type: null, errors: [new IntegerTooLargeError()] },
   },
   {
-    input: "1 - 2147483647",
+    input: "int test = 1 - 2147483647;",
     result: { type: null, errors: [] },
   },
   {
-    input: "1 - 2147483648",
+    input: "int test = 1 - 2147483648;",
     result: { type: null, errors: [new IntegerTooLargeError()] },
   },
   {
-    input: "1 + +2147483647",
+    input: "int test = 1 + +2147483647;",
     result: { type: null, errors: [] },
   },
   {
-    input: "1 + +2147483648",
+    input: "int test = 1 + +2147483648;",
     result: { type: null, errors: [new IntegerTooLargeError()] },
   },
   {
-    input: "1 + -2147483648",
+    input: "int test = 1 + -2147483648;",
     result: { type: null, errors: [] },
   },
   {
-    input: "1 + -2147483649",
+    input: "int test = 1 + -2147483649;",
+    result: { type: null, errors: [new IntegerTooLargeError()] },
+  },
+  {
+    input: "long test = 9223372036854775807L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long test = -9223372036854775808L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long test = 9223372036854775808L;",
+    result: { type: null, errors: [new IntegerTooLargeError()] },
+  },
+  {
+    input: "long test = -9223372036854775809L;",
     result: { type: null, errors: [new IntegerTooLargeError()] },
   },
 ];
 
 describe("Type Checker", () => {
   testcases.map((testcase) => {
-    test(`Checking integer overflow for ${testcase.input}`, () => {
+    let it = test;
+    if (testcase.only) it = test.only;
+    it(`Checking integer overflow for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");

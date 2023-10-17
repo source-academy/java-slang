@@ -5,7 +5,7 @@ import { Type } from "../../types";
 const createProgram = (statement: string) => `
   public class Main {
     public static void main(String args[]) {
-      int test = ${statement};
+      ${statement}
     }
   }
 `;
@@ -13,42 +13,53 @@ const createProgram = (statement: string) => `
 const testcases: {
   input: string;
   result: { type: Type | null; errors: Error[] };
+  only?: boolean;
 }[] = [
   {
-    input: "0",
+    input: "int test = 0;",
     result: { type: null, errors: [] },
   },
   {
-    input: "10",
+    input: "int test = 10;",
     result: { type: null, errors: [] },
   },
   {
-    input: "11",
+    input: "int test = 11;",
     result: { type: null, errors: [] },
   },
   {
-    input: "1_0",
+    input: "int test = 1_0;",
     result: { type: null, errors: [] },
   },
   {
-    input: "1__0",
+    input: "int test = 1__0;",
     result: { type: null, errors: [] },
   },
-  // TODO: For the following program, java-parser returns undefined for variable initializer during the parsing.
+  // TODO: For the following program, ast extractor returns undefined for variable initializer during the parsing.
   // {
-  //   input: "_1",
+  //   input: "int test = _1;",
   //   result: { type: null, errors: [new IllegalUnderscoreError()] },
   // },
   // TODO: For the following program, java-parser throws an error during the parsing.
   // {
-  //   input: "1_",
+  //   input: "int test = 1_;",
   //   result: { type: null, errors: [new IllegalUnderscoreError()] },
   // },
+  {
+    input: "long test = 0L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long test = 1_0L;",
+    result: { type: null, errors: [] },
+  },
 ];
 
 describe("Type Checker", () => {
   testcases.map((testcase) => {
-    test(`Checking integer literals for ${testcase.input}`, () => {
+    let it = test;
+    if (testcase.only) it = test.only;
+    it(`Checking integer literals for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");

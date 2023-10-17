@@ -47,7 +47,11 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   integralType(ctx: IntegralTypeCtx) {
+    ctx.Byte && (this.type = ctx.Byte[0].image);
+    ctx.Char && (this.type = ctx.Char[0].image);
     ctx.Int && (this.type = ctx.Int[0].image);
+    ctx.Long && (this.type = ctx.Long[0].image);
+    ctx.Short && (this.type = ctx.Short[0].image);
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {

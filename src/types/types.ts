@@ -22,6 +22,22 @@ export class Int {
   }
 }
 
+export class Long {
+  public name = "long";
+  private static LONG_MAX = BigInt("9223372036854775807");
+  private static LONG_MIN = BigInt("-9223372036854775808");
+
+  public static from(value: string): Int | Error {
+    if (!value.match(/\b\d+(?:_+\d+)*(l|L)\b/g))
+      return new Error(`Unrecognized long string ${value}.`);
+    value = value.replace(/(_|l|L)/g, "");
+    const long = BigInt(value);
+    if (long > this.LONG_MAX) return new IntegerTooLargeError();
+    if (long < this.LONG_MIN) return new IntegerTooLargeError();
+    return new Long();
+  }
+}
+
 export class String {
   public name = "String";
   public static from(value: string): String {
