@@ -48,7 +48,7 @@ const testcases: {
 
 describe("Type Checker", () => {
   testcases.map((testcase) => {
-    test(`Checking integer for ${testcase.input}`, () => {
+    test(`Checking integer literals for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");
