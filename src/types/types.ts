@@ -10,7 +10,12 @@ export class Int {
   public static from(value: number): Int | Error;
   public static from(value: string): Int | Error;
   public static from(value: number | string): Int | Error {
-    if (typeof value === "string") value = Number(value);
+    if (typeof value === "string") {
+      if (!value.match(/\b\d+(?:_+\d+)*\b/g))
+        return new Error(`Unrecognized integer string ${value}.`);
+      value = value.replace(/_/g, "");
+      value = Number(value);
+    }
     if (value > this.INTEGER_MAX) return new IntegerTooLargeError();
     if (value < this.INTEGER_MIN) return new IntegerTooLargeError();
     return new Int();

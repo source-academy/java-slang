@@ -93,6 +93,8 @@ export const check = (node: Node): Result => {
     }
     case "LocalVariableDeclarationStatement": {
       const { variableInitializer } = node.variableDeclarationList;
+      if (!variableInitializer)
+        throw new Error("Variable initializer is undefined.");
       const { currentType, errors } = check(variableInitializer);
       if (errors.length > 0) return { currentType: null, errors };
       if (currentType == null)
