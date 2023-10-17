@@ -1,16 +1,18 @@
+import { CompilationUnit } from "./packages-and-modules";
 import {
   BinaryExpression,
   Literal,
-  LocalVariableDeclarationStatement
+  LocalVariableDeclarationStatement,
+  UnaryExpression,
 } from "./blocks-and-statements";
-import { CompilationUnit } from "./packages-and-modules";
 
 export interface ExpressionMap {
   BinaryExpression: BinaryExpression;
   Literal: Literal;
+  UnaryExpression: UnaryExpression;
 }
 
-type Expression = ExpressionMap[keyof ExpressionMap]
+type Expression = ExpressionMap[keyof ExpressionMap];
 
 interface NodeMap {
   CompilationUnit: CompilationUnit;
@@ -19,7 +21,3 @@ interface NodeMap {
 }
 
 export type Node = NodeMap[keyof NodeMap];
-
-export interface BaseNode {
-  kind: string;
-}
