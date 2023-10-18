@@ -101,7 +101,7 @@ export interface SameFrameExtended {
 export interface AppendFrame {
   frameType: number /* 252-254 */;
   offsetDelta: number;
-  stack: Array<VerificationTypeInfo>;
+  locals: Array<VerificationTypeInfo>;
 }
 
 export interface FullFrame {

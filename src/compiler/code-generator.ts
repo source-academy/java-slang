@@ -8,11 +8,17 @@ import {
   BinaryExpression,
   LocalVariableDeclarationStatement,
   ExpressionName,
-  Assignment
+  Assignment,
+  IfStatement
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import { SymbolTable, SymbolType } from "./symbol-table"
+
+type Label = {
+  offset: number;
+  pointedBy: number[];
+};
 
 const opToOpcode: { [type: string]: OPCODE } = {
   "+": OPCODE.IADD,
@@ -26,13 +32,28 @@ const opToOpcode: { [type: string]: OPCODE } = {
   "<<": OPCODE.ISHL,
   ">>": OPCODE.ISHR,
   ">>>": OPCODE.IUSHR,
+
+  "==": OPCODE.IF_ICMPEQ,
+  "!=": OPCODE.IF_ICMPNE,
+  "<": OPCODE.IF_ICMPLT,
+  "<=": OPCODE.IF_ICMPLE,
+  ">": OPCODE.IF_ICMPGT,
+  ">=": OPCODE.IF_ICMPGE,
+};
+
+const reverseLogicalOp: { [type: string]: OPCODE } = {
+  "==": OPCODE.IF_ICMPNE,
+  "!=": OPCODE.IF_ICMPEQ,
+  "<": OPCODE.IF_ICMPGE,
+  "<=": OPCODE.IF_ICMPGT,
+  ">": OPCODE.IF_ICMPLE,
+  ">=": OPCODE.IF_ICMPLT,
 };
 
 const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => number } = {
   Block: (node: BaseNode, cg: CodeGenerator) => {
-    const n = node as Block;
     let maxStack = 0;
-    n.blockStatements.forEach(x => {
+    (node as Block).blockStatements.forEach(x => {
       maxStack = Math.max(maxStack, codeGenerators[x.kind](x, cg));
     })
     return maxStack;
@@ -51,6 +72,71 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
       }
     });
     return maxStack;
+  },
+
+  IfStatement: (node: BaseNode, cg: CodeGenerator) => {
+    let maxStack = 1;
+    const { test: condition, consequent: consequent, alternate: alternate } = node as IfStatement;
+
+    const elseLabel = cg.generateNewLabel();
+    maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg));
+    maxStack = Math.max(maxStack, codeGenerators[consequent.kind](consequent, cg));
+
+    const endLabel = cg.generateNewLabel();
+    if (alternate) {
+      cg.addBranchInstr(OPCODE.GOTO, endLabel);
+    }
+
+    elseLabel.offset = cg.code.length;
+    if (alternate) {
+      maxStack = Math.max(maxStack, codeGenerators[alternate.kind](alternate, cg));
+      endLabel.offset = cg.code.length;
+    }
+
+    return maxStack;
+  },
+
+  LogicalExpression: (node: BaseNode, cg: CodeGenerator) => {
+    const f = (node: BaseNode, targetLabel: Label, onTrue: boolean): number => {
+      if (node.kind === "BooleanLiteral") {
+        // TODO: implement handling of boolean literal
+      }
+
+      if (node.kind !== "BinaryExpression") {
+        return codeGenerators[node.kind](node, cg);
+      }
+
+      const { left: left, right: right, operator: op } = node as BinaryExpression;
+      let lsize = 0;
+      let rsize = 0;
+      if (op === "&&") {
+        if (onTrue) {
+          const falseLabel = cg.generateNewLabel();
+          lsize = f(left, falseLabel, false);
+          rsize = f(right, targetLabel, true);
+          falseLabel.offset = cg.code.length;
+        } else {
+          lsize = f(left, targetLabel, false);
+          rsize = f(right, targetLabel, false);
+        }
+      } else if (op === "||") {
+        if (onTrue) {
+          lsize = f(left, targetLabel, true);
+          rsize = f(right, targetLabel, true);
+        } else {
+          const falseLabel = cg.generateNewLabel();
+          lsize = f(left, falseLabel, true);
+          rsize = f(right, targetLabel, false);
+          falseLabel.offset = cg.code.length;
+        }
+      } else {
+        lsize = f(left, targetLabel, onTrue);
+        rsize = f(right, targetLabel, onTrue);
+        cg.addBranchInstr(onTrue ? opToOpcode[op] : reverseLogicalOp[op], targetLabel);
+      }
+      return Math.max(lsize, 1 + rsize);
+    }
+    return f(node, cg.labels[cg.labels.length - 1], false);
   },
 
   MethodInvocation: (node: BaseNode, cg: CodeGenerator) => {
@@ -86,9 +172,9 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
   BinaryExpression: (node: BaseNode, cg: CodeGenerator) => {
     const { left: left, right: right, operator: op } = node as BinaryExpression;
     const lsize = codeGenerators[left.kind](left, cg);
-    const rsize = 1 + codeGenerators[right.kind](right, cg);
+    const rsize = codeGenerators[right.kind](right, cg);
     cg.code.push(opToOpcode[op]);
-    return Math.max(lsize, rsize);
+    return Math.max(lsize, 1 + rsize);
   },
 
   ExpressionName: (node: BaseNode, cg: CodeGenerator) => {
@@ -99,8 +185,8 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
   },
 
   StringLiteral: (node: BaseNode, cg: CodeGenerator) => {
-    const n = node as Literal;
-    const strIdx = cg.constantPoolManager.indexStringInfo(n.value);
+    const { value: value } = node as Literal;
+    const strIdx = cg.constantPoolManager.indexStringInfo(value);
     cg.code.push(OPCODE.LDC, strIdx);
     return 1;
   },
@@ -123,12 +209,37 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
 class CodeGenerator {
   symbolTable: SymbolTable;
   constantPoolManager: ConstantPoolManager;
-  maxLocals = 0;
+  maxLocals: number = 0;
+  labels: Label[] = [];
   code: number[] = [];
 
   constructor(symbolTable: SymbolTable, constantPoolManager: ConstantPoolManager) {
     this.symbolTable = symbolTable;
     this.constantPoolManager = constantPoolManager;
+  }
+
+  generateNewLabel(): Label {
+    const lable = {
+      offset: 0,
+      pointedBy: [],
+    };
+    this.labels.push(lable);
+    return lable;
+  }
+
+  addBranchInstr(opcode: OPCODE, label: Label) {
+    label.pointedBy.push(this.code.length);
+    this.code.push(opcode, 0, 0);
+  }
+
+  resolveLabels() {
+    for (let label of this.labels) {
+      label.pointedBy.forEach(idx => {
+        const offset = label.offset - idx;
+        this.code[idx + 1] = offset >> 8;
+        this.code[idx + 2] = offset & 0xff;
+      });
+    }
   }
 
   generateCode(methodNode: MethodDeclaration) {
@@ -146,6 +257,7 @@ class CodeGenerator {
     const attributes: Array<AttributeInfo> = [];
 
     this.code.push(OPCODE.RETURN);
+    this.resolveLabels();
     const codeBuf = new Uint8Array(this.code).buffer;
     const dataView = new DataView(codeBuf);
     this.code.forEach((x, i) => dataView.setUint8(i, x));
