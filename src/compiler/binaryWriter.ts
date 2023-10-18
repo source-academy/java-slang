@@ -1,6 +1,15 @@
 import { CONSTANT_TAG } from "../ClassFile/constants/constants";
 import { ClassFile } from "../ClassFile/types";
-import { AttributeInfo, CodeAttribute, ExceptionHandler } from "../ClassFile/types/attributes";
+import {
+  AppendFrame,
+  AttributeInfo,
+  CodeAttribute,
+  ExceptionHandler,
+  ObjectVariableInfo,
+  StackMapTableAttribute,
+  UninitializedVariableInfo,
+  VerificationTypeInfo
+} from "../ClassFile/types/attributes";
 import {
   ConstantClassInfo,
   ConstantFieldrefInfo,
@@ -130,6 +139,9 @@ export class BinaryWriter {
       case "Code":
         this.writeCodeAttribute(attribute as CodeAttribute);
         break;
+      case "StackMapTable":
+        this.writeStackMapTableAttribute(attribute as StackMapTableAttribute);
+        break;
       default: ;
     }
   }
@@ -140,12 +152,37 @@ export class BinaryWriter {
     this.write(attribute.codeLength, u4);
     this.writeDataView(attribute.code);
     this.write(attribute.exceptionTableLength, u2);
-    attribute.exceptionTable.forEach(e => this.writeException(e));
+    attribute.exceptionTable.forEach(e => this.writeExceptionHandler(e));
     this.write(attribute.attributesCount, u2);
     attribute.attributes.forEach(a => this.writeAttribute(a));
   }
 
-  private writeException(e: ExceptionHandler) {
-    e;
+  private writeExceptionHandler(e: ExceptionHandler) {
+    this.write(e.startPc, u2);
+    this.write(e.endPc, u2);
+    this.write(e.handlerPc, u2);
+    this.write(e.catchType, u2);
+  }
+
+  private writeStackMapTableAttribute(attribute: StackMapTableAttribute) {
+    this.write(attribute.entries.length, u2);
+    attribute.entries.forEach(frame => {
+      const { frameType: frameType } = frame;
+      this.write(frameType);
+      if (252 <= frameType && frameType <= 254) {
+        const { offsetDelta: offsetDelta, locals: locals } = frame as AppendFrame;
+        this.write(offsetDelta, u2);
+        locals.forEach(l => this.writeVerificationTypeInfo(l));
+      }
+    });
+  }
+
+  private writeVerificationTypeInfo(vtInfo: VerificationTypeInfo) {
+    this.write(vtInfo.tag);
+    if (vtInfo.tag == 7) {
+      this.write((vtInfo as ObjectVariableInfo).cpoolIndex, u2);
+    } else if (vtInfo.tag == 8) {
+      this.write((vtInfo as UninitializedVariableInfo).offset, u2);
+    }
   }
 }
