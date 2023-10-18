@@ -10,9 +10,16 @@ export interface LocalVariableDeclarationStatement extends BaseNode {
   variableDeclaratorList: Array<VariableDeclarator>;
 }
 
-export type Statement = StatementWithoutTrailingSubstatement;
+export type Statement = StatementWithoutTrailingSubstatement | IfStatement;
+export interface IfStatement extends BaseNode {
+  test: Expression;
+  consequent: Statement;
+  alternate: Statement;
+}
 export type StatementWithoutTrailingSubstatement = ExpressionStatement;
+
 export type ExpressionStatement = MethodInvocation;
+
 export interface MethodInvocation extends BaseNode {
   identifier: Identifier
   argumentList: ArgumentList;
