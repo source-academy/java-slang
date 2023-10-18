@@ -1,17 +1,20 @@
-import { BaseNode } from "./ast";
 import { Identifier, UnannType } from "./classes";
 
-export interface Block extends BaseNode {
-  blockStatements: Array<BlockStatement>
+export interface Block {
+  kind: "Block";
+  blockStatements: Array<BlockStatement>;
 }
 export type BlockStatement = LocalVariableDeclarationStatement | Statement;
-export interface LocalVariableDeclarationStatement extends BaseNode {
+
+export interface LocalVariableDeclarationStatement {
+  kind: "LocalVariableDeclarationStatement";
   localVariableType: LocalVariableType;
   variableDeclaratorList: Array<VariableDeclarator>;
 }
 
 export type Statement = StatementWithoutTrailingSubstatement | IfStatement;
-export interface IfStatement extends BaseNode {
+export interface IfStatement {
+  kind: "IfStatement";
   test: Expression;
   consequent: Statement;
   alternate: Statement;
@@ -20,7 +23,8 @@ export type StatementWithoutTrailingSubstatement = ExpressionStatement;
 
 export type ExpressionStatement = MethodInvocation;
 
-export interface MethodInvocation extends BaseNode {
+export interface MethodInvocation {
+  kind: "MethodInvocation";
   identifier: Identifier
   argumentList: ArgumentList;
 }
@@ -30,33 +34,108 @@ export type ArgumentList = Array<Expression>;
 export type LocalVariableType = UnannType;
 
 export interface VariableDeclarator {
+  kind: "VariableDeclarator";
   variableDeclaratorId: VariableDeclaratorId;
   variableInitializer: VariableInitializer;
 }
+
 export type VariableDeclaratorId = Identifier;
 export type VariableInitializer = Expression;
-export type Expression = BinaryExpression | Primary;
 
-export interface BinaryExpression extends BaseNode {
-  operator: string;
+export type Expression = Primary | BinaryExpression | UnaryExpression;
+export type Primary = Literal | ExpressionName;
+
+export interface Literal {
+  kind: "Literal";
+  literalType:
+  | IntegerLiteral
+  | FloatingPointLiteral
+  | BooleanLiteral
+  | CharacterLiteral
+  | TextBlockLiteral
+  | StringLiteral
+  | NullLiteral;
+}
+
+export type IntegerLiteral =
+  | DecimalIntegerLiteral
+  | HexIntegerLiteral
+  | OctalIntegerLiteral
+  | BinaryIntegerLiteral;
+
+export interface DecimalIntegerLiteral {
+  kind: "DecimalIntegerLiteral";
+  value: string;
+}
+export interface HexIntegerLiteral {
+  kind: "HexIntegerLiteral";
+  value: string;
+}
+export interface OctalIntegerLiteral {
+  kind: "OctalIntegerLiteral";
+  value: string;
+}
+export interface BinaryIntegerLiteral {
+  kind: "BinaryIntegerLiteral";
+  value: string;
+}
+
+export type FloatingPointLiteral =
+  | DecimalFloatingPointLiteral
+  | HexadecimalFloatingPointLiteral;
+export interface DecimalFloatingPointLiteral {
+  kind: "DecimalFloatingPointLiteral";
+  value: string;
+}
+export interface HexadecimalFloatingPointLiteral {
+  kind: "HexadecimalFloatingPointLiteral";
+  value: string;
+}
+
+export interface BooleanLiteral {
+  kind: "BooleanLiteral";
+  value: "true" | "false";
+}
+
+export interface CharacterLiteral {
+  kind: "CharacterLiteral";
+  value: string;
+}
+
+export type TextBlockLiteral = StringLiteral;
+export interface StringLiteral {
+  kind: "StringLiteral";
+  value: string;
+}
+
+export interface NullLiteral {
+  kind: "NullLiteral";
+  value: "null";
+}
+
+export interface BinaryExpression {
+  kind: "BinaryExpression";
+  operator: "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "<<" | ">>" | ">>>" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||";
   left: Expression;
   right: Expression;
 }
 
-export type Primary = Literal | ExpressionName;
-
-export interface Literal extends BaseNode {
-  value: string
-};
-
-export interface ExpressionName extends BaseNode {
+export interface ExpressionName {
+  kind: "ExpressionName";
   name: string;
 }
 
-export interface Assignment extends BaseNode {
+export interface Assignment {
+  kind: "Assignment";
   left: LeftHandSide;
   operator: string;
   right: Expression;
 }
 
 export type LeftHandSide = ExpressionName;
+export type UnaryExpression = PrefixExpression;
+export interface PrefixExpression {
+  kind: "PrefixExpression";
+  operator: "-" | "+";
+  expression: Expression;
+}

@@ -1,6 +1,6 @@
 import { OPCODE } from "../ClassFile/constants/instructions";
 import { ExceptionHandler, AttributeInfo } from "../ClassFile/types/attributes";
-import { BaseNode } from "../ast/types/ast";
+import { Node } from "../ast/types/ast";
 import {
   MethodInvocation,
   Literal,
@@ -9,7 +9,9 @@ import {
   LocalVariableDeclarationStatement,
   ExpressionName,
   Assignment,
-  IfStatement
+  IfStatement,
+  StringLiteral,
+  IntegerLiteral
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -50,8 +52,8 @@ const reverseLogicalOp: { [type: string]: OPCODE } = {
   ">=": OPCODE.IF_ICMPLT,
 };
 
-const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => number } = {
-  Block: (node: BaseNode, cg: CodeGenerator) => {
+const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => number } = {
+  Block: (node: Node, cg: CodeGenerator) => {
     let maxStack = 0;
     (node as Block).blockStatements.forEach(x => {
       maxStack = Math.max(maxStack, codeGenerators[x.kind](x, cg));
@@ -59,7 +61,7 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return maxStack;
   },
 
-  LocalVariableDeclarationStatement: (node: BaseNode, cg: CodeGenerator) => {
+  LocalVariableDeclarationStatement: (node: Node, cg: CodeGenerator) => {
     let maxStack = 0;
     const { variableDeclaratorList: lst } = node as LocalVariableDeclarationStatement;
     lst.forEach(v => {
@@ -74,7 +76,7 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return maxStack;
   },
 
-  IfStatement: (node: BaseNode, cg: CodeGenerator) => {
+  IfStatement: (node: Node, cg: CodeGenerator) => {
     let maxStack = 1;
     const { test: condition, consequent: consequent, alternate: alternate } = node as IfStatement;
 
@@ -96,11 +98,11 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return maxStack;
   },
 
-  LogicalExpression: (node: BaseNode, cg: CodeGenerator) => {
-    const f = (node: BaseNode, targetLabel: Label, onTrue: boolean): number => {
-      if (node.kind === "BooleanLiteral") {
-        // TODO: implement handling of boolean literal
-      }
+  LogicalExpression: (node: Node, cg: CodeGenerator) => {
+    const f = (node: Node, targetLabel: Label, onTrue: boolean): number => {
+      //if (node.kind === "BooleanLiteral") {
+      // TODO: implement handling of boolean literal
+      //}
 
       if (node.kind !== "BinaryExpression") {
         return codeGenerators[node.kind](node, cg);
@@ -139,15 +141,17 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return f(node, cg.labels[cg.labels.length - 1], false);
   },
 
-  MethodInvocation: (node: BaseNode, cg: CodeGenerator) => {
+  MethodInvocation: (node: Node, cg: CodeGenerator) => {
     const n = node as MethodInvocation;
     let maxStack = 1;
 
     const { parentClassName: p1, typeDescriptor: t1 } = cg.symbolTable.query("out", SymbolType.CLASS);
     const { parentClassName: p2, typeDescriptor: t2 } = cg.symbolTable.query("println", SymbolType.CLASS);
     const out = cg.constantPoolManager.indexFieldrefInfo(p1 as string, "out", t1 as string);
-    const println = cg.constantPoolManager.indexMethodrefInfo(
-      p2 as string, "println", n.argumentList[0].kind === "StringLiteral" ? t2 as string : "(I)V");
+    const descriptor =
+      n.argumentList[0].kind === "Literal"
+        && (n.argumentList[0] as Literal).literalType.kind === "StringLiteral" ? t2 as string : "(I)V";
+    const println = cg.constantPoolManager.indexMethodrefInfo(p2 as string, "println", descriptor);
 
     cg.code.push(OPCODE.GETSTATIC, 0, out);
     n.argumentList.forEach((x, i) => {
@@ -157,7 +161,7 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return maxStack;
   },
 
-  Assignment: (node: BaseNode, cg: CodeGenerator) => {
+  Assignment: (node: Node, cg: CodeGenerator) => {
     const { left: left, operator: op, right: right } = node as Assignment;
     let maxStack = op === "=" ? 0 : codeGenerators[left.kind](left, cg);
     codeGenerators[right.kind](right, cg);
@@ -169,7 +173,7 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return maxStack;
   },
 
-  BinaryExpression: (node: BaseNode, cg: CodeGenerator) => {
+  BinaryExpression: (node: Node, cg: CodeGenerator) => {
     const { left: left, right: right, operator: op } = node as BinaryExpression;
     const lsize = codeGenerators[left.kind](left, cg);
     const rsize = codeGenerators[right.kind](right, cg);
@@ -177,22 +181,27 @@ const codeGenerators: { [type: string]: (node: BaseNode, cg: CodeGenerator) => n
     return Math.max(lsize, 1 + rsize);
   },
 
-  ExpressionName: (node: BaseNode, cg: CodeGenerator) => {
+  ExpressionName: (node: Node, cg: CodeGenerator) => {
     const { name: name } = node as ExpressionName;
     const { index: idx } = cg.symbolTable.query(name, SymbolType.VARIABLE);
     cg.code.push(OPCODE.ILOAD, idx as number);
     return 1;
   },
 
-  StringLiteral: (node: BaseNode, cg: CodeGenerator) => {
-    const { value: value } = node as Literal;
+  Literal: (node: Node, cg: CodeGenerator) => {
+    const { literalType: literal } = node as Literal;
+    return codeGenerators[literal.kind](literal, cg);
+  },
+
+  StringLiteral: (node: Node, cg: CodeGenerator) => {
+    const { value: value } = node as StringLiteral;
     const strIdx = cg.constantPoolManager.indexStringInfo(value);
     cg.code.push(OPCODE.LDC, strIdx);
     return 1;
   },
 
-  IntegerLiteral: (node: BaseNode, cg: CodeGenerator) => {
-    const { value: value } = node as Literal;
+  IntegerLiteral: (node: Node, cg: CodeGenerator) => {
+    const { value: value } = node as IntegerLiteral;
     const n = parseInt(value);
     if (-128 <= n && n < 128) {
       cg.code.push(OPCODE.BIPUSH, n);

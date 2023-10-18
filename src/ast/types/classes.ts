@@ -1,4 +1,3 @@
-import { BaseNode } from "./ast";
 import { Block } from "./blocks-and-statements";
 
 export type ClassDeclaration = NormalClassDeclaration;
@@ -48,7 +47,8 @@ export interface MethodHeader {
 
 export type Result = "void";
 
-export interface FormalParameter extends BaseNode {
+export interface FormalParameter {
+  kind: "FormalParameter";
   unannType: UnannType;
   identifier: Identifier;
 }
