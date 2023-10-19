@@ -28,7 +28,6 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     this.identifier = '';
     this.params = [];
     this.body = [];
-    this.validateVisitor();
   }
 
   private getAndPop() {
@@ -48,12 +47,13 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
       methodModifier: this.modifier,
       methodHeader: {
         result: "void",
-        methodDeclarator: {
-          identifier: this.identifier,
-          formalParameterList: this.params
-        }
+        identifier: this.identifier,
+        formalParameterList: this.params
       },
-      methodBody: this.body,
+      methodBody: {
+        kind: "Block",
+        blockStatements:this.body,
+      },
     };
   }
 
@@ -89,8 +89,9 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     const argName = this.getAndPop();
     const typeName = this.getAndPop();
     this.params.push({
+      kind: "FormalParameter",
       unannType: typeName,
-      variableDeclaratorId: argName,
+      identifier: argName,
     });
   }
 

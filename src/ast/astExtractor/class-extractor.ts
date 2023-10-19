@@ -19,7 +19,6 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
     this.modifier = [];
     this.identifier = '';
     this.body = [];
-    this.validateVisitor();
   }
 
   extract(cst: CstNode): ClassDeclaration {
