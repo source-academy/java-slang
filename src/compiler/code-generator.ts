@@ -11,7 +11,7 @@ import {
   Assignment,
   IfStatement,
   StringLiteral,
-  IntegerLiteral
+  DecimalIntegerLiteral
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -200,8 +200,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     return 1;
   },
 
-  IntegerLiteral: (node: Node, cg: CodeGenerator) => {
-    const { value: value } = node as IntegerLiteral;
+  DecimalIntegerLiteral: (node: Node, cg: CodeGenerator) => {
+    const { value: value } = node as DecimalIntegerLiteral;
     const n = parseInt(value);
     if (-128 <= n && n < 128) {
       cg.code.push(OPCODE.BIPUSH, n);
