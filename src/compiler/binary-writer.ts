@@ -37,8 +37,8 @@ export class BinaryWriter {
     this.constantPool = [];
   }
 
-  writeBinary(classFile: ClassFile) {
-    const filename = "Main.class";
+  writeBinary(classFile: ClassFile, filepath: string) {
+    const filename = filepath + "Main.class";
     const binary = this.toBinary(classFile);
     fs.writeFileSync(filename, binary);
   }
