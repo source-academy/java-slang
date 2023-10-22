@@ -27,16 +27,16 @@ export class Compiler {
   private attributes: Array<AttributeInfo>;
 
   constructor() {
-    this.symbolTable = new SymbolTable();
+    this.setup();
+  }
+
+  private setup() {
     this.constantPoolManager = new ConstantPoolManager();
     this.interfaces = [];
     this.fields = [];
     this.methods = [];
     this.attributes = [];
-    this.setup();
-  }
-
-  private setup() {
+    this.symbolTable = new SymbolTable();
     this.symbolTable.insert("out", SymbolType.CLASS, {
       parentClassName: "java/lang/System",
       typeDescriptor: generateFieldDescriptor("java/io/PrintStream")
@@ -48,6 +48,7 @@ export class Compiler {
   }
 
   compile(ast: AST) {
+    this.setup();
     const classFiles: Array<ClassFile> = [];
     ast.topLevelClassOrInterfaceDeclarations.forEach(x => classFiles.push(this.compileClass(x)));
     return classFiles[0];

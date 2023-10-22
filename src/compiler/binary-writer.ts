@@ -22,6 +22,8 @@ import {
 import { FieldInfo } from "../ClassFile/types/fields";
 import { MethodInfo } from "../ClassFile/types/methods";
 
+import * as fs from "fs";
+
 const u1 = 1;
 const u2 = 2;
 const u4 = 4;
@@ -35,7 +37,13 @@ export class BinaryWriter {
     this.constantPool = [];
   }
 
-  toBinary(classFile: ClassFile) {
+  writeBinary(classFile: ClassFile) {
+    const filename = "Main.class";
+    const binary = this.toBinary(classFile);
+    fs.writeFileSync(filename, binary);
+  }
+
+  private toBinary(classFile: ClassFile) {
     this.byteArray = [];
     this.constantPool = classFile.constantPool;
 
@@ -62,7 +70,7 @@ export class BinaryWriter {
 
 
   private write(value: number, numOfBytes: number = u1) {
-    const bytes = [];
+    const bytes: Array<number> = [];
     for (let i = 0; i < numOfBytes; i++) {
       bytes.push(value & 0xff);
       value >>>= 8;
