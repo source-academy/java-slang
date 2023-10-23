@@ -52,19 +52,8 @@ export class Int {
       const isNegative = value.startsWith("-");
       if (isNegative) value = value.substring(1);
       value = value.replace(/_/g, "").toLowerCase();
-      let base = 10;
-      if (value.length > 1) {
-        if (value.startsWith("0b")) {
-          base = 2;
-          value = value.substring(2);
-        } else if (value.startsWith("0x")) {
-          base = 16;
-          value = value.substring(2);
-        } else if (value.startsWith("0")) {
-          base = 8;
-          value = value.substring(1);
-        }
-      }
+      const base = getNumericBase(value);
+      value = removeNumericBasePrefix(value, base);
       const int = parseInt(value, base);
       value = isNegative ? int * -1 : int;
     }
@@ -83,13 +72,8 @@ export class Long {
     const isNegative = value.startsWith("-");
     if (isNegative) value = value.substring(1);
     value = value.replace(/(_|l|L)/g, "").toLowerCase();
-    if (
-      value.length > 1 &&
-      value.startsWith("0") &&
-      !value.startsWith("0b") &&
-      !value.startsWith("0x")
-    )
-      value = "0o" + value.substring(1);
+    if (getNumericBase(value) === 8)
+      value = "0o" + removeNumericBasePrefix(value, 8);
     const long = BigInt(value) * BigInt(isNegative ? -1 : 1);
     if (long > this.LONG_MAX) return new IntegerTooLargeError();
     if (long < this.LONG_MIN) return new IntegerTooLargeError();
@@ -103,3 +87,21 @@ export class String {
     return new String();
   }
 }
+
+type NumericBase = 2 | 8 | 10 | 16;
+
+const getNumericBase = (number: string): NumericBase => {
+  if (number.length < 2) return 10;
+  const firstCharacter = number.charAt(0);
+  if (firstCharacter !== "0") return 10;
+  const secondCharacter = number.charAt(1).toLowerCase();
+  if (secondCharacter === "b") return 2;
+  else if (secondCharacter === "x") return 16;
+  else return 8;
+};
+
+const removeNumericBasePrefix = (number: string, base: number): string => {
+  if (base === 2 || base === 16) return number.substring(2);
+  if (base === 8) return number.substring(1);
+  return number;
+};
