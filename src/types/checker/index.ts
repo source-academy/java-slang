@@ -1,5 +1,5 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
-import { Int, String, Type } from "../types";
+import { Int, Long, String, Type } from "../types";
 import { Node } from "../../ast/types/ast";
 
 export type Result = {
@@ -61,27 +61,27 @@ export const check = (node: Node): Result => {
         literalType: { kind, value },
       } = node;
       switch (kind) {
-        case "BinaryIntegerLiteral":
-          throw new Error(`Not implemented yet.`);
         case "BooleanLiteral":
           throw new Error(`Not implemented yet.`);
         case "CharacterLiteral":
           throw new Error(`Not implemented yet.`);
         case "DecimalFloatingPointLiteral":
           throw new Error(`Not implemented yet.`);
-        case "DecimalIntegerLiteral": {
-          const type = Int.from(value);
+        case "BinaryIntegerLiteral":
+        case "DecimalIntegerLiteral":
+        case "HexIntegerLiteral":
+        case "OctalIntegerLiteral": {
+          const lastCharacter = value.charAt(value.length - 1);
+          const Type =
+            lastCharacter === "L" || lastCharacter === "l" ? Long : Int;
+          const type = Type.from(value);
           return type instanceof Error
             ? newResult(null, [type])
             : newResult(type);
         }
-        case "HexIntegerLiteral":
-          throw new Error(`Not implemented yet.`);
         case "HexadecimalFloatingPointLiteral":
           throw new Error(`Not implemented yet.`);
         case "NullLiteral":
-          throw new Error(`Not implemented yet.`);
-        case "OctalIntegerLiteral":
           throw new Error(`Not implemented yet.`);
         case "StringLiteral":
           return newResult(String.from(value));
@@ -93,6 +93,8 @@ export const check = (node: Node): Result => {
     }
     case "LocalVariableDeclarationStatement": {
       const { variableInitializer } = node.variableDeclarationList;
+      if (!variableInitializer)
+        throw new Error("Variable initializer is undefined.");
       const { currentType, errors } = check(variableInitializer);
       if (errors.length > 0) return { currentType: null, errors };
       if (currentType == null)
@@ -109,10 +111,18 @@ export const check = (node: Node): Result => {
         case "-": {
           if (
             expression.kind === "Literal" &&
-            expression.literalType.kind === "DecimalIntegerLiteral"
+            (expression.literalType.kind === "BinaryIntegerLiteral" ||
+              expression.literalType.kind === "DecimalIntegerLiteral" ||
+              expression.literalType.kind === "HexIntegerLiteral" ||
+              expression.literalType.kind === "OctalIntegerLiteral")
           ) {
             const integerString = "-" + expression.literalType.value;
-            const type = Int.from(integerString);
+            const lastCharacter = integerString.charAt(
+              integerString.length - 1
+            );
+            const Type =
+              lastCharacter === "L" || lastCharacter === "l" ? Long : Int;
+            const type = Type.from(integerString);
             return type instanceof Error
               ? newResult(null, [type])
               : newResult(type);
