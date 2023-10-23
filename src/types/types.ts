@@ -2,6 +2,44 @@ import { IntegerTooLargeError } from "./errors";
 
 export type Type = Int | String;
 
+export class Double {
+  public name = "double";
+  // private static DOUBLE_MAX = 1.7976931348623157e308;
+  // private static DOUBLE_MIN = 4.9e-324;
+
+  public static from(value: number | string): Int | Error {
+    if (typeof value === "string") {
+      const isNegative = value.startsWith("-");
+      if (isNegative) value = value.substring(1);
+      value = value.replace(/_/g, "").toLowerCase();
+      const int = Number(value);
+      value = isNegative ? int * -1 : int;
+    }
+    // if (value > this.DOUBLE_MAX) return new FloatTooLargeError();
+    // if (value < this.DOUBLE_MIN) return new FloatTooLargeError();
+    return new Double();
+  }
+}
+
+export class Float {
+  public name = "float";
+  // private static FLOAT_MAX = 3.4028235e38;
+  // private static FLOAT_MIN = 1.4e-45;
+
+  public static from(value: number | string): Int | Error {
+    if (typeof value === "string") {
+      const isNegative = value.startsWith("-");
+      if (isNegative) value = value.substring(1);
+      value = value.replace(/_/g, "").toLowerCase();
+      const int = Number(value);
+      value = isNegative ? int * -1 : int;
+    }
+    // if (value > this.FLOAT_MAX) return new FloatTooLargeError();
+    // if (value < this.FLOAT_MIN) return new FloatTooLargeError();
+    return new Float();
+  }
+}
+
 export class Int {
   public name = "int";
   private static INTEGER_MAX = 2147483647;
@@ -13,7 +51,7 @@ export class Int {
     if (typeof value === "string") {
       const isNegative = value.startsWith("-");
       if (isNegative) value = value.substring(1);
-      value = value.replace(/_/g, "");
+      value = value.replace(/_/g, "").toLowerCase();
       let base = 10;
       if (value.length > 1) {
         if (value.startsWith("0b")) {
@@ -44,7 +82,7 @@ export class Long {
   public static from(value: string): Int | Error {
     const isNegative = value.startsWith("-");
     if (isNegative) value = value.substring(1);
-    value = value.replace(/(_|l|L)/g, "");
+    value = value.replace(/(_|l|L)/g, "").toLowerCase();
     if (
       value.length > 1 &&
       value.startsWith("0") &&
