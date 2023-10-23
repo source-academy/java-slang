@@ -3,6 +3,7 @@ import { ConstantInfo } from "../ClassFile/types/constants";
 import {
   ConstantClassValue,
   ConstantFieldrefValue,
+  ConstantIntegerValue,
   ConstantMethodrefValue,
   ConstantNameAndTypeValue,
   ConstantStringValue,
@@ -32,28 +33,72 @@ export class ConstantPoolManager {
     return this.constantPool;
   }
 
-  addUtf8Info(value: ConstantUtf8Value) {
+  indexUtf8Info(value: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.Utf8, {
+      value: value
+    });
+  }
+
+  indexIntegerInfo(value: number) {
+    return this.writeIfAbsent(CONSTANT_TAG.Integer, {
+      value: value
+    })
+  }
+
+  indexClassInfo(className: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.Class, {
+      name: { value: className }
+    });
+  }
+
+  indexStringInfo(string: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.String, {
+      string: { value: string }
+    });
+  }
+
+  indexFieldrefInfo(className: string, fieldName: string, descriptor: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.Fieldref, {
+      class: {
+        name: { value: className, }
+      },
+      nameAndType: {
+        name: { value: fieldName },
+        descriptor: { value: descriptor },
+      }
+    });
+  }
+
+  indexMethodrefInfo(className: string, methodName: string, descriptor: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.Methodref, {
+      class: {
+        name: { value: className, }
+      },
+      nameAndType: {
+        name: { value: methodName },
+        descriptor: { value: descriptor },
+      }
+    });
+  }
+
+  indexNameAndTypeInfo(name: string, type: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.NameAndType, {
+      name: { value: name },
+      descriptor: { value: type }
+    });
+  }
+
+
+  private addUtf8Info(value: ConstantUtf8Value) {
     return this.writeIfAbsent(CONSTANT_TAG.Utf8, value);
   }
 
-  addClassInfo(value: ConstantClassValue) {
+  private addClassInfo(value: ConstantClassValue) {
     return this.writeIfAbsent(CONSTANT_TAG.Class, value);
   }
 
-  addStringInfo(value: ConstantStringValue) {
-    return this.writeIfAbsent(CONSTANT_TAG.String, value);
-  }
-
-  addNameAndTypeInfo(value: ConstantNameAndTypeValue) {
+  private addNameAndTypeInfo(value: ConstantNameAndTypeValue) {
     return this.writeIfAbsent(CONSTANT_TAG.NameAndType, value);
-  }
-
-  addFieldrefInfo(value: ConstantFieldrefValue) {
-    return this.writeIfAbsent(CONSTANT_TAG.Fieldref, value);
-  }
-
-  addMethodrefInfo(value: ConstantMethodrefValue) {
-    return this.writeIfAbsent(CONSTANT_TAG.Methodref, value);
   }
 
   private writeIfAbsent(tag: CONSTANT_TAG, value: ConstantTypeValue) {
@@ -87,6 +132,9 @@ export class ConstantPoolManager {
       case CONSTANT_TAG.Utf8:
         this.writeUtf8Info(task.value as ConstantUtf8Value);
         break;
+      case CONSTANT_TAG.Integer:
+        this.writeIntegerInfo(task.value as ConstantIntegerValue);
+        break;
       case CONSTANT_TAG.Class:
         this.writeClassInfo(task.value as ConstantClassValue);
         break;
@@ -114,6 +162,13 @@ export class ConstantPoolManager {
     });
   }
 
+  private writeIntegerInfo(val: ConstantIntegerValue) {
+    this.constantPool.push({
+      tag: CONSTANT_TAG.Integer,
+      value: val.value,
+    });
+  }
+
   private writeClassInfo(val: ConstantClassValue) {
     const nameIndex = this.addUtf8Info(val.name);
     this.constantPool.push({
@@ -127,16 +182,6 @@ export class ConstantPoolManager {
     this.constantPool.push({
       tag: CONSTANT_TAG.String,
       stringIndex: stringIndex,
-    });
-  }
-
-  private writeNameAndTypeInfo(val: ConstantNameAndTypeValue) {
-    const nameIndex = this.addUtf8Info(val.name);
-    const descriptorIndex = this.addUtf8Info(val.descriptor);
-    this.constantPool.push({
-      tag: CONSTANT_TAG.NameAndType,
-      nameIndex: nameIndex,
-      descriptorIndex: descriptorIndex,
     });
   }
 
@@ -158,5 +203,15 @@ export class ConstantPoolManager {
       classIndex: classIndex,
       nameAndTypeIndex: nameAndTypeIndex,
     })
+  }
+
+  private writeNameAndTypeInfo(val: ConstantNameAndTypeValue) {
+    const nameIndex = this.addUtf8Info(val.name);
+    const descriptorIndex = this.addUtf8Info(val.descriptor);
+    this.constantPool.push({
+      tag: CONSTANT_TAG.NameAndType,
+      nameIndex: nameIndex,
+      descriptorIndex: descriptorIndex,
+    });
   }
 }

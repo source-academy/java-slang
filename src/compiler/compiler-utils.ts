@@ -1,6 +1,6 @@
 import { ACCESS_FLAGS } from "../ClassFile/types";
 import { METHOD_FLAGS } from "../ClassFile/types/methods";
-import { ClassModifier, FormalParameter, MethodModifier, UnannType } from "../ast/types/classes";
+import { ClassModifier, MethodModifier, UnannType } from "../ast/types/classes";
 
 const typeMap = new Map([
   ['byte', 'B'],
@@ -27,16 +27,12 @@ export function generateFieldDescriptor(typeName: UnannType) {
   typeName = typeName.slice(0, last);
   if (typeName === "String") {
     typeName = "java/lang/String";
-  } else if (typeName === "System") {
-    typeName = "java/lang/System";
-  } else if (typeName === "PrintStream") {
-    typeName = "java/io/PrintStream";
   }
   return "[".repeat(dim) + (typeMap.has(typeName) ? typeMap.get(typeName) : 'L' + typeName + ';');
 }
 
-export function generateMethodDescriptor(params: Array<FormalParameter>, result: string) {
-  const paramsDescriptor = params.map(p => generateFieldDescriptor(p.unannType)).join(",");
+export function generateMethodDescriptor(paramsType: Array<UnannType>, result: string) {
+  const paramsDescriptor = paramsType.map(generateFieldDescriptor).join(",");
   const resultDescriptor = generateFieldDescriptor(result);
 
   return '(' + paramsDescriptor + ')' + resultDescriptor;

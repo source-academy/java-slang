@@ -31,7 +31,6 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   constructor() {
     super();
-    this.validateVisitor();
   }
 
   extract(cst: BlockStatementCstNode): BlockStatement {
@@ -39,10 +38,13 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
     return {
       kind: "LocalVariableDeclarationStatement",
       localVariableType: this.type,
-      variableDeclarationList: {
-        variableDeclaratorId: this.identifier,
-        variableInitializer: this.value,
-      },
+      variableDeclaratorList: [
+        {
+          kind: "VariableDeclarator",
+          variableDeclaratorId: this.identifier,
+          variableInitializer: this.value,
+        }
+      ],
     };
   }
 

@@ -12,7 +12,6 @@ export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [],
     };
-    this.validateVisitor();
   }
 
   extract(cst: CstNode): AST {
