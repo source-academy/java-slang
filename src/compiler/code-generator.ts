@@ -100,43 +100,50 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
 
   LogicalExpression: (node: Node, cg: CodeGenerator) => {
     const f = (node: Node, targetLabel: Label, onTrue: boolean): number => {
-      //if (node.kind === "BooleanLiteral") {
-      // TODO: implement handling of boolean literal
-      //}
-
-      if (node.kind !== "BinaryExpression") {
-        return codeGenerators[node.kind](node, cg);
+      if (node.kind === "Literal") {
+        const { literalType: { kind: kind, value: value } } = node as Literal;
+        const boolValue = value === "true";
+        if (kind === "BooleanLiteral" && onTrue === boolValue) {
+          cg.addBranchInstr(OPCODE.GOTO, targetLabel);
+          return 0;
+        }
       }
 
-      const { left: left, right: right, operator: op } = node as BinaryExpression;
-      let lsize = 0;
-      let rsize = 0;
-      if (op === "&&") {
-        if (onTrue) {
-          const falseLabel = cg.generateNewLabel();
-          lsize = f(left, falseLabel, false);
-          rsize = f(right, targetLabel, true);
-          falseLabel.offset = cg.code.length;
-        } else {
-          lsize = f(left, targetLabel, false);
-          rsize = f(right, targetLabel, false);
+      if (node.kind === "BinaryExpression") {
+        const { left: left, right: right, operator: op } = node as BinaryExpression;
+        let lsize = 0;
+        let rsize = 0;
+        if (op === "&&") {
+          if (onTrue) {
+            const falseLabel = cg.generateNewLabel();
+            lsize = f(left, falseLabel, false);
+            rsize = f(right, targetLabel, true);
+            falseLabel.offset = cg.code.length;
+          } else {
+            lsize = f(left, targetLabel, false);
+            rsize = f(right, targetLabel, false);
+          }
+          return Math.max(lsize, 1 + rsize);
+        } else if (op === "||") {
+          if (onTrue) {
+            lsize = f(left, targetLabel, true);
+            rsize = f(right, targetLabel, true);
+          } else {
+            const falseLabel = cg.generateNewLabel();
+            lsize = f(left, falseLabel, true);
+            rsize = f(right, targetLabel, false);
+            falseLabel.offset = cg.code.length;
+          }
+          return Math.max(lsize, 1 + rsize);
+        } else if (op in reverseLogicalOp) {
+          lsize = f(left, targetLabel, onTrue);
+          rsize = f(right, targetLabel, onTrue);
+          cg.addBranchInstr(onTrue ? opToOpcode[op] : reverseLogicalOp[op], targetLabel);
+          return Math.max(lsize, 1 + rsize);
         }
-      } else if (op === "||") {
-        if (onTrue) {
-          lsize = f(left, targetLabel, true);
-          rsize = f(right, targetLabel, true);
-        } else {
-          const falseLabel = cg.generateNewLabel();
-          lsize = f(left, falseLabel, true);
-          rsize = f(right, targetLabel, false);
-          falseLabel.offset = cg.code.length;
-        }
-      } else {
-        lsize = f(left, targetLabel, onTrue);
-        rsize = f(right, targetLabel, onTrue);
-        cg.addBranchInstr(onTrue ? opToOpcode[op] : reverseLogicalOp[op], targetLabel);
       }
-      return Math.max(lsize, 1 + rsize);
+
+      return codeGenerators[node.kind](node, cg);
     }
     return f(node, cg.labels[cg.labels.length - 1], false);
   },
