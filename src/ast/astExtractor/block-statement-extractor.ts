@@ -4,6 +4,8 @@ import {
   BinaryExpressionCtx,
   BlockStatementCstNode,
   ExpressionCtx,
+  FloatingPointLiteralCtx,
+  FloatingPointTypeCtx,
   IToken,
   IntegerLiteralCtx,
   IntegralTypeCtx,
@@ -189,6 +191,8 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   literal(ctx: LiteralCtx) {
     if (ctx.integerLiteral) {
       return this.visit(ctx.integerLiteral);
+    } else if (ctx.floatingPointLiteral) {
+      return this.visit(ctx.floatingPointLiteral);
     } else if (ctx.StringLiteral) {
       return {
         kind: "Literal",
@@ -232,5 +236,26 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   unannClassType(ctx: UnannClassTypeCtx) {
     this.type = ctx.Identifier[0].image;
+  }
+
+  floatingPointType(ctx: FloatingPointTypeCtx) {
+    ctx.Double && (this.type = ctx.Double[0].image);
+    ctx.Float && (this.type = ctx.Float[0].image);
+  }
+
+  floatingPointLiteral(ctx: FloatingPointLiteralCtx) {
+    const literal = { kind: "Literal", literalType: {} };
+    if (ctx.FloatLiteral) {
+      literal.literalType = {
+        kind: "DecimalFloatingPointLiteral",
+        value: ctx.FloatLiteral[0].image,
+      };
+    } else if (ctx.HexFloatLiteral) {
+      literal.literalType = {
+        kind: "HexadecimalFloatingPointLiteral",
+        value: ctx.HexFloatLiteral[0].image,
+      };
+    }
+    return literal;
   }
 }

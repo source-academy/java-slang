@@ -1,5 +1,5 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
-import { Int, Long, String, Type } from "../types";
+import { Double, Float, Int, Long, String, Type } from "../types";
 import { Node } from "../../ast/types/ast";
 
 export type Result = {
@@ -61,25 +61,29 @@ export const check = (node: Node): Result => {
         literalType: { kind, value },
       } = node;
       switch (kind) {
-        case "BooleanLiteral":
-          throw new Error(`Not implemented yet.`);
-        case "CharacterLiteral":
-          throw new Error(`Not implemented yet.`);
-        case "DecimalFloatingPointLiteral":
-          throw new Error(`Not implemented yet.`);
         case "BinaryIntegerLiteral":
         case "DecimalIntegerLiteral":
         case "HexIntegerLiteral":
         case "OctalIntegerLiteral": {
-          const lastCharacter = value.charAt(value.length - 1);
-          const Type =
-            lastCharacter === "L" || lastCharacter === "l" ? Long : Int;
+          const lastCharacter = value.charAt(value.length - 1).toUpperCase();
+          const Type = lastCharacter === "L" ? Long : Int;
           const type = Type.from(value);
           return type instanceof Error
             ? newResult(null, [type])
             : newResult(type);
         }
-        case "HexadecimalFloatingPointLiteral":
+        case "DecimalFloatingPointLiteral":
+        case "HexadecimalFloatingPointLiteral": {
+          const lastCharacter = value.charAt(value.length - 1).toUpperCase();
+          const Type = lastCharacter === "F" ? Float : Double;
+          const type = Type.from(value);
+          return type instanceof Error
+            ? newResult(null, [type])
+            : newResult(type);
+        }
+        case "BooleanLiteral":
+          throw new Error(`Not implemented yet.`);
+        case "CharacterLiteral":
           throw new Error(`Not implemented yet.`);
         case "NullLiteral":
           throw new Error(`Not implemented yet.`);
@@ -117,11 +121,10 @@ export const check = (node: Node): Result => {
               expression.literalType.kind === "OctalIntegerLiteral")
           ) {
             const integerString = "-" + expression.literalType.value;
-            const lastCharacter = integerString.charAt(
-              integerString.length - 1
-            );
-            const Type =
-              lastCharacter === "L" || lastCharacter === "l" ? Long : Int;
+            const lastCharacter = integerString
+              .charAt(integerString.length - 1)
+              .toUpperCase();
+            const Type = lastCharacter === "L" ? Long : Int;
             const type = Type.from(integerString);
             return type instanceof Error
               ? newResult(null, [type])
