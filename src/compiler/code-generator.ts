@@ -10,9 +10,8 @@ import {
   ExpressionName,
   Assignment,
   IfStatement,
-  StringLiteral,
-  DecimalIntegerLiteral,
-  WhileStatement
+  WhileStatement,
+  BasicForStatement,
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -77,6 +76,29 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     return maxStack;
   },
 
+  BasicForStatement: (node: Node, cg: CodeGenerator) => {
+    let maxStack = 0;
+    const { forInit, condition, forUpdate, body: originalBody } = node as BasicForStatement;
+
+    if (forInit instanceof Array) {
+      forInit.forEach(e => maxStack = Math.max(maxStack, codeGenerators[e.kind](e, cg)));
+    } else {
+      maxStack = Math.max(maxStack, codeGenerators[forInit.kind](forInit, cg));
+    }
+
+    const whileNode: WhileStatement = {
+      kind: "WhileStatement",
+      condition: condition,
+      body: {
+        kind: "Block",
+        blockStatements: [originalBody, ...forUpdate],
+      }
+    };
+    maxStack = Math.max(maxStack, codeGenerators[whileNode.kind](whileNode, cg));
+
+    return maxStack;
+  },
+
   DoStatement: (node: Node, cg: CodeGenerator) => {
     const { body } = node as WhileStatement;
     codeGenerators[body.kind](body, cg);
@@ -86,7 +108,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
   },
 
   WhileStatement: (node: Node, cg: CodeGenerator) => {
-    let maxStack = 1;
+    let maxStack = 0;
     const { condition, body } = node as WhileStatement;
 
     const startLabel = cg.generateNewLabel();
@@ -102,7 +124,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
   },
 
   IfStatement: (node: Node, cg: CodeGenerator) => {
-    let maxStack = 1;
+    let maxStack = 0;
     const { condition: condition, consequent: consequent, alternate: alternate } = node as IfStatement;
 
     const elseLabel = cg.generateNewLabel();
@@ -221,30 +243,29 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
   },
 
   Literal: (node: Node, cg: CodeGenerator) => {
-    const { literalType: literal } = node as Literal;
-    return codeGenerators[literal.kind](literal, cg);
-  },
-
-  StringLiteral: (node: Node, cg: CodeGenerator) => {
-    const { value: value } = node as StringLiteral;
-    const strIdx = cg.constantPoolManager.indexStringInfo(value);
-    cg.code.push(OPCODE.LDC, strIdx);
-    return 1;
-  },
-
-  DecimalIntegerLiteral: (node: Node, cg: CodeGenerator) => {
-    const { value } = node as DecimalIntegerLiteral;
-    const n = parseInt(value);
-    if (-128 <= n && n < 128) {
-      cg.code.push(OPCODE.BIPUSH, n);
-    } else if (-32768 <= n && n < 32768) {
-      cg.code.push(OPCODE.SIPUSH, n >> 8, n & 0xff);
-    } else {
-      const idx = cg.constantPoolManager.indexIntegerInfo(n);
-      cg.code.push(OPCODE.LDC, idx);
+    const { kind, value } = (node as Literal).literalType;
+    switch (kind) {
+      case "StringLiteral": {
+        const strIdx = cg.constantPoolManager.indexStringInfo(value);
+        cg.code.push(OPCODE.LDC, strIdx);
+        return 1;
+      }
+      case "DecimalIntegerLiteral": {
+        const n = parseInt(value);
+        if (-128 <= n && n < 128) {
+          cg.code.push(OPCODE.BIPUSH, n);
+        } else if (-32768 <= n && n < 32768) {
+          cg.code.push(OPCODE.SIPUSH, n >> 8, n & 0xff);
+        } else {
+          const idx = cg.constantPoolManager.indexIntegerInfo(n);
+          cg.code.push(OPCODE.LDC, idx);
+        }
+        return 1;
+      }
     }
+
     return 1;
-  }
+  },
 }
 
 class CodeGenerator {
