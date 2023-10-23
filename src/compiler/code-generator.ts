@@ -11,7 +11,8 @@ import {
   Assignment,
   IfStatement,
   StringLiteral,
-  DecimalIntegerLiteral
+  DecimalIntegerLiteral,
+  WhileStatement
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -76,9 +77,33 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     return maxStack;
   },
 
+  DoStatement: (node: Node, cg: CodeGenerator) => {
+    const { body } = node as WhileStatement;
+    codeGenerators[body.kind](body, cg);
+
+    node.kind = "WhileStatement";
+    return codeGenerators[node.kind](node, cg);
+  },
+
+  WhileStatement: (node: Node, cg: CodeGenerator) => {
+    let maxStack = 1;
+    const { condition, body } = node as WhileStatement;
+
+    const startLabel = cg.generateNewLabel();
+    startLabel.offset = cg.code.length;
+    const endLabel = cg.generateNewLabel();
+
+    maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg));
+    maxStack = Math.max(maxStack, codeGenerators[body.kind](body, cg));
+
+    cg.addBranchInstr(OPCODE.GOTO, startLabel);
+    endLabel.offset = cg.code.length;
+    return maxStack;
+  },
+
   IfStatement: (node: Node, cg: CodeGenerator) => {
     let maxStack = 1;
-    const { test: condition, consequent: consequent, alternate: alternate } = node as IfStatement;
+    const { condition: condition, consequent: consequent, alternate: alternate } = node as IfStatement;
 
     const elseLabel = cg.generateNewLabel();
     maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg));
@@ -208,7 +233,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
   },
 
   DecimalIntegerLiteral: (node: Node, cg: CodeGenerator) => {
-    const { value: value } = node as DecimalIntegerLiteral;
+    const { value } = node as DecimalIntegerLiteral;
     const n = parseInt(value);
     if (-128 <= n && n < 128) {
       cg.code.push(OPCODE.BIPUSH, n);
