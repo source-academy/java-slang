@@ -5,7 +5,6 @@ import {
   VariableDeclaratorIdCtx,
   VariableInitializerCtx,
 } from "java-parser";
-
 import { BlockStatement, Expression } from "../types/blocks-and-statements";
 import { Identifier, UnannType } from "../types/classes";
 import { ExpressionExtractor } from "./expression-extractor";
@@ -32,7 +31,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
         ],
         location: cst.location,
       };
-    } else /* if (cst.children.statement) */ {
+    } /* if (cst.children.statement) */ else {
       const statementExtractor = new StatementExtractor();
       return statementExtractor.extract(cst.children.statement![0]);
     }
@@ -51,7 +50,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   variableInitializer(ctx: VariableInitializerCtx) {
     if (ctx.expression) {
-      const expressionExtractor = new ExpressionExtractor()
+      const expressionExtractor = new ExpressionExtractor();
       this.value = expressionExtractor.extract(ctx.expression[0]);
     }
   }
