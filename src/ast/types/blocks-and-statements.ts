@@ -12,13 +12,31 @@ export interface LocalVariableDeclarationStatement {
   variableDeclaratorList: Array<VariableDeclarator>;
 }
 
-export type Statement = StatementWithoutTrailingSubstatement | IfStatement;
+export type Statement = StatementWithoutTrailingSubstatement | IfStatement | WhileStatement | DoStatement | ForStatement;
+
 export interface IfStatement {
   kind: "IfStatement";
-  test: Expression;
+  condition: Expression;
   consequent: Statement;
   alternate: Statement;
 }
+
+export interface WhileStatement {
+  kind: "WhileStatement";
+  condition: Expression;
+  body: Statement;
+}
+
+export interface DoStatement {
+  kind: "DoStatement";
+  condition: Expression;
+  body: Statement;
+}
+
+export interface ForStatement {
+  kind: "ForStatement";
+}
+
 export type StatementWithoutTrailingSubstatement = ExpressionStatement;
 
 export type ExpressionStatement = MethodInvocation;
