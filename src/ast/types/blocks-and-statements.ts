@@ -12,7 +12,7 @@ export interface LocalVariableDeclarationStatement {
   variableDeclaratorList: Array<VariableDeclarator>;
 }
 
-export type Statement = StatementWithoutTrailingSubstatement | IfStatement | WhileStatement | DoStatement | ForStatement;
+export type Statement = StatementWithoutTrailingSubstatement | IfStatement | WhileStatement | ForStatement;
 
 export interface IfStatement {
   kind: "IfStatement";
@@ -33,13 +33,22 @@ export interface DoStatement {
   body: Statement;
 }
 
-export interface ForStatement {
-  kind: "ForStatement";
+export type ForStatement = BasicForStatement | EnhancedForStatement;
+export interface BasicForStatement {
+  kind: "BasicForStatement";
+  forInit: Array<ExpressionStatement> | LocalVariableDeclarationStatement;
+  condition: Expression;
+  forUpdate: Array<ExpressionStatement>;
+  body: Statement;
 }
 
-export type StatementWithoutTrailingSubstatement = ExpressionStatement;
+export interface EnhancedForStatement {
+  kind: "EnhancedForStatement";
+}
 
-export type ExpressionStatement = MethodInvocation;
+export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement;
+
+export type ExpressionStatement = MethodInvocation | Assignment;
 
 export interface MethodInvocation {
   kind: "MethodInvocation";
@@ -61,7 +70,7 @@ export type VariableDeclaratorId = Identifier;
 export type VariableInitializer = Expression;
 
 export type Expression = Primary | BinaryExpression | UnaryExpression;
-export type Primary = Literal | ExpressionName;
+export type Primary = Literal | ExpressionName | Assignment;
 
 export interface Literal {
   kind: "Literal";

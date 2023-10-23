@@ -1,28 +1,12 @@
 import { CompilationUnit } from "./packages-and-modules";
 import {
-  Assignment,
-  BinaryExpression,
   Block,
   BlockStatement,
-  BooleanLiteral,
-  CharacterLiteral,
+  Expression,
   ExpressionName,
-  FloatingPointLiteral,
-  IntegerLiteral,
   Literal,
   LocalVariableDeclarationStatement,
-  NullLiteral,
-  StringLiteral,
-  UnaryExpression,
 } from "./blocks-and-statements";
-
-export interface ExpressionMap {
-  BinaryExpression: BinaryExpression;
-  Literal: Literal;
-  UnaryExpression: UnaryExpression;
-}
-
-type Expression = ExpressionMap[keyof ExpressionMap];
 
 interface NodeMap {
   CompilationUnit: CompilationUnit;
@@ -31,13 +15,7 @@ interface NodeMap {
   BlockStatement: BlockStatement;
   Expression: Expression;
   ExpresssionName: ExpressionName;
-  Assignment: Assignment;
-  IntegerLiteral: IntegerLiteral;
-  FloatingPointLiteral: FloatingPointLiteral;
-  BooleanLiteral: BooleanLiteral;
-  CharacterLiteral: CharacterLiteral;
-  StringLiteral: StringLiteral;
-  NullLiteral: NullLiteral;
+  Literal: Literal;
 }
 
 export type Node = NodeMap[keyof NodeMap];
