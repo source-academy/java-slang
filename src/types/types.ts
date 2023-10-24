@@ -1,6 +1,6 @@
 import { IntegerTooLargeError } from "./errors";
 
-export type Type = Boolean | Double | Float | Int | Long | String;
+export type Type = Boolean | Character | Double | Float | Int | Long | String;
 
 export class Boolean {
   public name = "boolean";
@@ -9,6 +9,20 @@ export class Boolean {
     if (!["true", "false"].includes(value))
       throw new Error(`Unrecognized boolean ${value}.`);
     return new Boolean();
+  }
+}
+
+export class Character {
+  public name = "char";
+
+  public static from(value: string): Character | Error {
+    if (
+      value.length !== 3 ||
+      value.charAt(0) !== "'" ||
+      value.charAt(2) !== "'"
+    )
+      throw new Error(`Unrecognized character ${value}.`);
+    return new Character();
   }
 }
 
