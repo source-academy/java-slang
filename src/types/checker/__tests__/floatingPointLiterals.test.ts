@@ -16,51 +16,191 @@ const testcases: {
   only?: boolean;
 }[] = [
   {
-    input: "double decimaldouble = .0;",
+    input: "double decimaldouble = 1.;",
     result: { type: null, errors: [] },
   },
   {
-    input: "double decimaldouble = 0.0;",
+    input: "double decimaldouble = 1.1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "double decimaldouble = 0.0d;",
+    input: "double decimaldouble = 1.e1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "double decimaldouble = 0.0D;",
+    input: "double decimaldouble = 1.E1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "float decimalfloat = 0.0f;",
+    input: "double decimaldouble = 1.e+1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "float decimalfloat = 0.0F;",
+    input: "double decimaldouble = 1.E+1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "double decimaldouble = 0.0e0;",
+    input: "double decimaldouble = 1.e-1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "double decimaldouble = 1.1e+1;",
+    input: "double decimaldouble = 1.E-1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "double decimaldouble = 1.1e-1;",
+    input: "double decimaldouble = 1.d;",
     result: { type: null, errors: [] },
   },
   {
-    input: "double decimaldouble = 0.0E0;",
+    input: "double decimaldouble = 1.D;",
     result: { type: null, errors: [] },
   },
   {
-    input: "double decimaldouble = 1.1E+1;",
+    input: "float decimalfloat = 1.f;",
     result: { type: null, errors: [] },
   },
   {
-    input: "double decimaldouble = 1.1E-1;",
+    input: "float decimalfloat = 1.F;",
+    result: { type: null, errors: [] },
+  },
+  // TODO: For the following program, java-parser throws an error during the parsing.
+  // {
+  //   input: "double decimaldouble = .;",
+  //   result: { type: null, errors: [new Error()] },
+  // },
+  {
+    input: "double decimaldouble = .1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1e1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1E1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1e+1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1E+1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1e-1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1E-1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1d;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1D;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float decimalfloat = .1f;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float decimalfloat = .1F;",
+    result: { type: null, errors: [] },
+  },
+  // TODO: For the following program, java-parser throws an error during the parsing.
+  // {
+  //   input: "double hexdouble = 0x1.;",
+  //   result: { type: null, errors: [new Error()] },
+  // },
+  // TODO: For the following program, java-parser throws an error during the parsing.
+  // {
+  //   input: "double hexdouble = 0x1.1;",
+  //   result: { type: null, errors: [] },
+  // },
+  {
+    input: "double hexdouble = 0x1.p1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x1.P1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x1.p+1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x1.P+1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x1.p-1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x1.P-1;",
+    result: { type: null, errors: [] },
+  },
+
+  {
+    input: "double hexdouble = 0x1.p1d;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x1.p1D;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float hexfloat = 0x1.p1f;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float hexfloat = 0x1.p1F;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x.1p1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x.1P1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x.1p+1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x.1P+1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x.1p-1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x.1P-1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x.1p1d;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double hexdouble = 0x.1p1D;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float hexfloat = 0x.1p1f;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float hexfloat = 0x.1p1F;",
     result: { type: null, errors: [] },
   },
 ];

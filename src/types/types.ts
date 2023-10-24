@@ -4,38 +4,34 @@ export type Type = Int | String;
 
 export class Double {
   public name = "double";
-  // private static DOUBLE_MAX = 1.7976931348623157e308;
-  // private static DOUBLE_MIN = 4.9e-324;
 
   public static from(value: number | string): Int | Error {
     if (typeof value === "string") {
+      value = removeFloatTypeSuffix(value);
       const isNegative = value.startsWith("-");
       if (isNegative) value = value.substring(1);
       value = value.replace(/_/g, "").toLowerCase();
-      const int = Number(value);
-      value = isNegative ? int * -1 : int;
+      const base = getNumericBase(value);
+      const number = base === 16 ? parseHexFloat(value) : Number(value);
+      console.log(number); // TODO: Check limits of Double
     }
-    // if (value > this.DOUBLE_MAX) return new FloatTooLargeError();
-    // if (value < this.DOUBLE_MIN) return new FloatTooLargeError();
     return new Double();
   }
 }
 
 export class Float {
   public name = "float";
-  // private static FLOAT_MAX = 3.4028235e38;
-  // private static FLOAT_MIN = 1.4e-45;
 
   public static from(value: number | string): Int | Error {
     if (typeof value === "string") {
+      value = removeFloatTypeSuffix(value);
       const isNegative = value.startsWith("-");
       if (isNegative) value = value.substring(1);
       value = value.replace(/_/g, "").toLowerCase();
-      const int = Number(value);
-      value = isNegative ? int * -1 : int;
+      const base = getNumericBase(value);
+      const number = base === 16 ? parseHexFloat(value) : Number(value);
+      console.log(number); // TODO: Check limits of Float
     }
-    // if (value > this.FLOAT_MAX) return new FloatTooLargeError();
-    // if (value < this.FLOAT_MIN) return new FloatTooLargeError();
     return new Float();
   }
 }
@@ -88,6 +84,14 @@ export class String {
   }
 }
 
+type NumberType = "long" | "int";
+
+export const getNumberType = (number: string): NumberType => {
+  const lastCharacter = number.toLowerCase().charAt(-1);
+  if (lastCharacter === "l") return "long";
+  return "int";
+};
+
 type NumericBase = 2 | 8 | 10 | 16;
 
 const getNumericBase = (number: string): NumericBase => {
@@ -104,4 +108,33 @@ const removeNumericBasePrefix = (number: string, base: number): string => {
   if (base === 2 || base === 16) return number.substring(2);
   if (base === 8) return number.substring(1);
   return number;
+};
+
+type FloatType = "double" | "float";
+
+export const getFloatType = (float: string): FloatType => {
+  const lastCharacter = float.toLowerCase().charAt(float.length - 1);
+  if (lastCharacter === "f") return "float";
+  return "double";
+};
+
+const removeFloatTypeSuffix = (float: string): string => {
+  const lastCharacter = float.toLowerCase().charAt(float.length - 1);
+  if (["d", "f"].includes(lastCharacter))
+    return float.substring(0, float.length - 1);
+  return float;
+};
+
+const parseHexFloat = (float: string) => {
+  float = float.toLowerCase().replace(/_/g, "");
+  let floatTypeSuffix = float.charAt(-1);
+  if (!["d", "f"].includes(floatTypeSuffix)) floatTypeSuffix = "d";
+  else float = float.substring(0, float.length - 1);
+  const [hexSignificandString, exponentIntegerString] = float.split("p");
+  const exponentInteger = Number(exponentIntegerString);
+  const parts = hexSignificandString.split(".");
+  let number = parseInt(parts[0].length > 2 ? parts[0] : "0", 16);
+  if (parts[1])
+    number += parseInt(parts[1], 16) / Math.pow(16, parts[1].length);
+  return number * Math.pow(2, exponentInteger);
 };

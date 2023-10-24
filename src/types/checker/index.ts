@@ -1,5 +1,14 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
-import { Double, Float, Int, Long, String, Type } from "../types";
+import {
+  Double,
+  Float,
+  Int,
+  Long,
+  String,
+  Type,
+  getFloatType,
+  getNumberType,
+} from "../types";
 import { Node } from "../../ast/types/ast";
 
 export type Result = {
@@ -65,8 +74,7 @@ export const check = (node: Node): Result => {
         case "DecimalIntegerLiteral":
         case "HexIntegerLiteral":
         case "OctalIntegerLiteral": {
-          const lastCharacter = value.charAt(value.length - 1).toUpperCase();
-          const Type = lastCharacter === "L" ? Long : Int;
+          const Type = getNumberType(value) === "long" ? Long : Int;
           const type = Type.from(value);
           return type instanceof Error
             ? newResult(null, [type])
@@ -74,8 +82,7 @@ export const check = (node: Node): Result => {
         }
         case "DecimalFloatingPointLiteral":
         case "HexadecimalFloatingPointLiteral": {
-          const lastCharacter = value.charAt(value.length - 1).toUpperCase();
-          const Type = lastCharacter === "F" ? Float : Double;
+          const Type = getFloatType(value) === "float" ? Float : Double;
           const type = Type.from(value);
           return type instanceof Error
             ? newResult(null, [type])
