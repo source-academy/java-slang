@@ -191,13 +191,34 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   literal(ctx: LiteralCtx) {
-    if (ctx.integerLiteral) {
-      return this.visit(ctx.integerLiteral);
-    } else if (ctx.floatingPointLiteral) {
-      return this.visit(ctx.floatingPointLiteral);
-    } else if (ctx.booleanLiteral) {
-      return this.visit(ctx.booleanLiteral);
-    } else if (ctx.StringLiteral) {
+    if (ctx.integerLiteral) return this.visit(ctx.integerLiteral);
+    if (ctx.floatingPointLiteral) return this.visit(ctx.floatingPointLiteral);
+    if (ctx.booleanLiteral) return this.visit(ctx.booleanLiteral);
+    if (ctx.CharLiteral)
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "CharacterLiteral",
+          value: ctx.CharLiteral[0].image,
+        },
+      };
+    if (ctx.Null)
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "NullLiteral",
+          value: "null",
+        },
+      };
+    if (ctx.TextBlock)
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "StringLiteral",
+          value: ctx.TextBlock[0].image,
+        },
+      };
+    if (ctx.StringLiteral)
       return {
         kind: "Literal",
         literalType: {
@@ -205,7 +226,6 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
           value: ctx.StringLiteral[0].image,
         },
       };
-    }
   }
 
   integerLiteral(ctx: IntegerLiteralCtx) {
