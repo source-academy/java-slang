@@ -1,6 +1,7 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
 import { Node } from "../../ast/types/ast";
 import {
+  Boolean,
   Double,
   Float,
   Int,
@@ -89,7 +90,7 @@ export const check = (node: Node): Result => {
             : newResult(type);
         }
         case "BooleanLiteral":
-          throw new Error(`Not implemented yet.`);
+          return newResult(Boolean.from(value));
         case "CharacterLiteral":
           throw new Error(`Not implemented yet.`);
         case "NullLiteral":

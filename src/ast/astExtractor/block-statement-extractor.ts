@@ -3,6 +3,7 @@ import {
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
   BlockStatementCstNode,
+  BooleanLiteralCtx,
   ExpressionCtx,
   FloatingPointLiteralCtx,
   FloatingPointTypeCtx,
@@ -15,6 +16,7 @@ import {
   PrimaryPrefixCtx,
   TernaryExpressionCtx,
   UnannClassTypeCtx,
+  UnannPrimitiveTypeCtx,
   UnaryExpressionCstNode,
   UnaryExpressionCtx,
   VariableDeclaratorIdCtx,
@@ -193,6 +195,8 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
       return this.visit(ctx.integerLiteral);
     } else if (ctx.floatingPointLiteral) {
       return this.visit(ctx.floatingPointLiteral);
+    } else if (ctx.booleanLiteral) {
+      return this.visit(ctx.booleanLiteral);
     } else if (ctx.StringLiteral) {
       return {
         kind: "Literal",
@@ -257,5 +261,20 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
       };
     }
     return literal;
+  }
+
+  booleanLiteral(ctx: BooleanLiteralCtx) {
+    return {
+      kind: "Literal",
+      literalType: {
+        kind: "BooleanLiteral",
+        value: ctx.False ? "false" : ("true" as "true" | "false"),
+      },
+    };
+  }
+
+  unannPrimitiveType(ctx: UnannPrimitiveTypeCtx) {
+    ctx.Boolean && (this.type = ctx.Boolean[0].image);
+    ctx.numericType && this.visit(ctx.numericType);
   }
 }
