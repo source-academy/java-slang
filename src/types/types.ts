@@ -1,11 +1,21 @@
 import { IntegerTooLargeError } from "./errors";
 
-export type Type = Int | String;
+export type Type = Boolean | Double | Float | Int | Long | String;
+
+export class Boolean {
+  public name = "boolean";
+
+  public static from(value: string): Boolean | Error {
+    if (!["true", "false"].includes(value))
+      throw new Error(`Unrecognized boolean ${value}.`);
+    return new Boolean();
+  }
+}
 
 export class Double {
   public name = "double";
 
-  public static from(value: number | string): Int | Error {
+  public static from(value: number | string): Double | Error {
     if (typeof value === "string") {
       value = removeFloatTypeSuffix(value);
       const isNegative = value.startsWith("-");
@@ -22,7 +32,7 @@ export class Double {
 export class Float {
   public name = "float";
 
-  public static from(value: number | string): Int | Error {
+  public static from(value: number | string): Float | Error {
     if (typeof value === "string") {
       value = removeFloatTypeSuffix(value);
       const isNegative = value.startsWith("-");
@@ -64,7 +74,7 @@ export class Long {
   private static LONG_MAX = BigInt("9223372036854775807");
   private static LONG_MIN = BigInt("-9223372036854775808");
 
-  public static from(value: string): Int | Error {
+  public static from(value: string): Long | Error {
     const isNegative = value.startsWith("-");
     if (isNegative) value = value.substring(1);
     value = value.replace(/(_|l|L)/g, "").toLowerCase();
@@ -87,7 +97,7 @@ export class String {
 type NumberType = "long" | "int";
 
 export const getNumberType = (number: string): NumberType => {
-  const lastCharacter = number.toLowerCase().charAt(-1);
+  const lastCharacter = number.toLowerCase().charAt(number.length - 1);
   if (lastCharacter === "l") return "long";
   return "int";
 };
