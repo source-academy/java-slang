@@ -1,4 +1,5 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
+import { Node } from "../../ast/types/ast";
 import {
   Double,
   Float,
@@ -9,7 +10,6 @@ import {
   getFloatType,
   getNumberType,
 } from "../types";
-import { Node } from "../../ast/types/ast";
 
 export type Result = {
   currentType: Type | null;
