@@ -7,6 +7,7 @@ import {
   Float,
   Int,
   Long,
+  Null,
   String,
   Type,
   getFloatType,
@@ -95,7 +96,7 @@ export const check = (node: Node): Result => {
         case "CharacterLiteral":
           return newResult(Character.from(value));
         case "NullLiteral":
-          throw new Error(`Not implemented yet.`);
+          return newResult(Null.from(value));
         case "StringLiteral":
           return newResult(String.from(value));
         default:
@@ -114,6 +115,8 @@ export const check = (node: Node): Result => {
         throw new Error(
           "Variable initializer in local variable declaration statement should return a type."
         );
+      if (currentType.name !== node.localVariableType)
+        return newResult(null, [new IncompatibleTypesError()]);
       if (currentType.name !== node.localVariableType)
         return newResult(null, [new IncompatibleTypesError()]);
       return OK_RESULT;

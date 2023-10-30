@@ -16,11 +16,9 @@ export class Character {
   public name = "char";
 
   public static from(value: string): Character | Error {
-    if (
-      value.length !== 3 ||
-      value.charAt(0) !== "'" ||
-      value.charAt(2) !== "'"
-    )
+    if (value.charAt(0) !== "'")
+      throw new Error(`Unrecognized character ${value}.`);
+    if (value.charAt(value.length - 1) !== "'")
       throw new Error(`Unrecognized character ${value}.`);
     return new Character();
   }
@@ -36,8 +34,7 @@ export class Double {
       if (isNegative) value = value.substring(1);
       value = value.replace(/_/g, "").toLowerCase();
       const base = getNumericBase(value);
-      const number = base === 16 ? parseHexFloat(value) : Number(value);
-      console.log(number); // TODO: Check limits of Double
+      base === 16 ? parseHexFloat(value) : Number(value);
     }
     return new Double();
   }
@@ -53,8 +50,7 @@ export class Float {
       if (isNegative) value = value.substring(1);
       value = value.replace(/_/g, "").toLowerCase();
       const base = getNumericBase(value);
-      const number = base === 16 ? parseHexFloat(value) : Number(value);
-      console.log(number); // TODO: Check limits of Float
+      base === 16 ? parseHexFloat(value) : Number(value);
     }
     return new Float();
   }
@@ -101,9 +97,27 @@ export class Long {
   }
 }
 
+export class Null {
+  public name = "null";
+  public static from(value: string): Null {
+    if (value !== "null") throw new Error(`Unrecognized null ${value}.`);
+    return new Null();
+  }
+}
+
 export class String {
   public name = "String";
   public static from(value: string): String {
+    if (value.charAt(0) !== '"')
+      throw new Error(`Unrecognized string ${value}.`);
+    if (value.charAt(value.length - 1) !== '"')
+      throw new Error(`Unrecognized string ${value}.`);
+    if (
+      value.length > 6 &&
+      value.substring(0, 3) === '"""' &&
+      value.substring(value.length - 3, value.length) !== '"""'
+    )
+      throw new Error(`Unrecognized string ${value}.`);
     return new String();
   }
 }
