@@ -61,7 +61,7 @@ export const check = (node: Node): Result => {
       }
     }
     case "CompilationUnit": {
-      const blockStatements =
+      const { blockStatements } =
         node.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody;
       const errors = blockStatements.flatMap((blockStatement) => {
         return check(blockStatement).errors;
@@ -106,20 +106,29 @@ export const check = (node: Node): Result => {
       }
     }
     case "LocalVariableDeclarationStatement": {
-      const { variableInitializer } = node.variableDeclarationList;
-      if (!variableInitializer)
-        throw new Error("Variable initializer is undefined.");
-      const { currentType, errors } = check(variableInitializer);
-      if (errors.length > 0) return { currentType: null, errors };
-      if (currentType == null)
-        throw new Error(
-          "Variable initializer in local variable declaration statement should return a type."
-        );
-      if (currentType.name !== node.localVariableType)
-        return newResult(null, [new IncompatibleTypesError()]);
-      if (currentType.name !== node.localVariableType)
-        return newResult(null, [new IncompatibleTypesError()]);
-      return OK_RESULT;
+      if (!node.variableDeclaratorList)
+        throw new Error("Variable declarator list is undefined.");
+      const results = node.variableDeclaratorList.map((variableDeclarator) => {
+        const { variableInitializer } = variableDeclarator;
+        if (!variableInitializer)
+          throw new Error("Variable initializer is undefined.");
+        const { currentType, errors } = check(variableInitializer);
+        if (errors.length > 0) return { currentType: null, errors };
+        if (currentType == null)
+          throw new Error(
+            "Variable initializer in local variable declaration statement should return a type."
+          );
+        if (currentType.name !== node.localVariableType)
+          return newResult(null, [new IncompatibleTypesError()]);
+        return OK_RESULT;
+      });
+      return results.reduce((previousResult, currentResult) => {
+        if (currentResult.errors.length === 0) return previousResult;
+        return {
+          currentType: null,
+          errors: [...previousResult.errors, ...currentResult.errors],
+        };
+      }, OK_RESULT);
     }
     case "PrefixExpression": {
       const { operator, expression } = node;
