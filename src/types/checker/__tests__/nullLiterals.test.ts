@@ -16,15 +16,7 @@ const testcases: {
   only?: boolean;
 }[] = [
   {
-    input: "char test = 'a';",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "char test = 'A';",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "char test = '\\u0000';",
+    input: "String test = null;",
     result: { type: null, errors: [] },
   },
 ];
