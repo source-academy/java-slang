@@ -8,6 +8,7 @@ export type Type =
   | Float
   | Int
   | Long
+  | Short
   | String;
 
 export class Boolean {
