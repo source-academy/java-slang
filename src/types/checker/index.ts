@@ -1,7 +1,14 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
-import { Frame, GLOBAL_ENVIRONMENT, getType } from "./environment";
 import { Node } from "../../ast/types/ast";
+import { String } from "../types/nonPrimitives";
 import { Type } from "../types/type";
+import {
+  Frame,
+  GLOBAL_ENVIRONMENT,
+  createFrame,
+  getEnvironmentType,
+  setEnvironmentVariable,
+} from "./environment";
 import {
   Boolean,
   Char,
@@ -13,7 +20,6 @@ import {
   getFloatType,
   getNumberType,
 } from "../types/primitives";
-import { String } from "../types/nonPrimitives";
 
 export type Result = {
   currentType: Type | null;
@@ -71,9 +77,11 @@ export const check = (
     case "CompilationUnit": {
       const { blockStatements } =
         node.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody;
+      const newEnvironmentFrame = createFrame({}, environmentFrame);
       const errors = blockStatements.flatMap((blockStatement) => {
-        return check(blockStatement).errors;
+        return check(blockStatement, newEnvironmentFrame).errors;
       });
+      console.log(newEnvironmentFrame);
       return { currentType: null, errors };
     }
     case "Literal": {
@@ -125,7 +133,10 @@ export const check = (
       if (!node.variableDeclaratorList)
         throw new Error("Variable declarator list is undefined.");
       const results = node.variableDeclaratorList.map((variableDeclarator) => {
-        const declaredType = getType(environmentFrame, node.localVariableType);
+        const declaredType = getEnvironmentType(
+          environmentFrame,
+          node.localVariableType
+        );
         if (declaredType instanceof Error)
           return newResult(null, [declaredType]);
         const { variableInitializer } = variableDeclarator;
@@ -139,6 +150,11 @@ export const check = (
           );
         if (!declaredType.canBeAssigned(currentType))
           return newResult(null, [new IncompatibleTypesError()]);
+        setEnvironmentVariable(
+          environmentFrame,
+          variableDeclarator.variableDeclaratorId,
+          declaredType
+        );
         return OK_RESULT;
       });
       return results.reduce((previousResult, currentResult) => {
