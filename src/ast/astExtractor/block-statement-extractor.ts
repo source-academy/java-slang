@@ -26,12 +26,13 @@ import {
   BinaryExpression,
   BlockStatement,
   Expression,
+  VariableDeclarator,
 } from "../types/blocks-and-statements";
 
 export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   private type: UnannType;
-  private identifier: Identifier;
-  private value: Expression;
+  private identifier: Identifier[] = [];
+  private value: Expression[] = [];
 
   constructor() {
     super();
@@ -39,16 +40,17 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   extract(cst: BlockStatementCstNode): BlockStatement {
     this.visit(cst);
+    const variableDeclaratorList = this.identifier.map(
+      (identifier, index): VariableDeclarator => ({
+        kind: "VariableDeclarator",
+        variableDeclaratorId: identifier,
+        variableInitializer: this.value[index],
+      })
+    );
     return {
       kind: "LocalVariableDeclarationStatement",
       localVariableType: this.type,
-      variableDeclaratorList: [
-        {
-          kind: "VariableDeclarator",
-          variableDeclaratorId: this.identifier,
-          variableInitializer: this.value,
-        }
-      ],
+      variableDeclaratorList,
     };
   }
 
@@ -61,11 +63,11 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {
-    this.identifier = ctx.Identifier[0].image;
+    this.identifier.push(ctx.Identifier[0].image);
   }
 
   variableInitializer(ctx: VariableInitializerCtx) {
-    ctx.expression && (this.value = this.visit(ctx.expression));
+    ctx.expression && this.value.push(this.visit(ctx.expression));
   }
 
   expression(ctx: ExpressionCtx) {
