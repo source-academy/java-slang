@@ -1,4 +1,5 @@
 import { IntegerTooLargeError } from "../errors";
+import { Type as TypeClass } from "./type";
 
 export type Type =
   | Boolean
@@ -11,20 +12,28 @@ export type Type =
   | Short
   | String;
 
-export class Boolean {
-  public name = "boolean";
+export class Boolean extends TypeClass {
+  constructor() {
+    super("boolean");
+  }
 
   public static from(value: string): Boolean | Error {
     if (!["true", "false"].includes(value))
       throw new Error(`Unrecognized boolean ${value}.`);
     return new Boolean();
   }
+
+  public canBeAssigned(type: TypeClass): boolean {
+    return type instanceof Boolean;
+  }
 }
 
-export class Byte {
-  public name = "byte";
+export class Byte extends TypeClass {
   private static BYTE_MAX = 127;
   private static BYTE_MIN = -128;
+  constructor() {
+    super("byte");
+  }
 
   public static from(value: string): Byte | Error {
     const isNegative = value.startsWith("-");
@@ -38,10 +47,16 @@ export class Byte {
     if (byte < this.BYTE_MIN) return new IntegerTooLargeError();
     return new Byte();
   }
+
+  public canBeAssigned(type: TypeClass): boolean {
+    return type instanceof Byte;
+  }
 }
 
-export class Character {
-  public name = "char";
+export class Character extends TypeClass {
+  constructor() {
+    super("char");
+  }
 
   public static from(value: string): Character | Error {
     if (value.charAt(0) !== "'")
@@ -50,10 +65,18 @@ export class Character {
       throw new Error(`Unrecognized character ${value}.`);
     return new Character();
   }
+
+  public canBeAssigned(type: TypeClass): boolean {
+    return (
+      type instanceof Character || type instanceof Short || type instanceof Byte
+    );
+  }
 }
 
-export class Double {
-  public name = "double";
+export class Double extends TypeClass {
+  constructor() {
+    super("double");
+  }
 
   public static from(value: number | string): Double | Error {
     if (typeof value === "string") {
@@ -66,10 +89,24 @@ export class Double {
     }
     return new Double();
   }
+
+  public canBeAssigned(type: TypeClass): boolean {
+    return (
+      type instanceof Double ||
+      type instanceof Float ||
+      type instanceof Long ||
+      type instanceof Int ||
+      type instanceof Character ||
+      type instanceof Short ||
+      type instanceof Byte
+    );
+  }
 }
 
-export class Float {
-  public name = "float";
+export class Float extends TypeClass {
+  constructor() {
+    super("float");
+  }
 
   public static from(value: number | string): Float | Error {
     if (typeof value === "string") {
@@ -82,12 +119,25 @@ export class Float {
     }
     return new Float();
   }
+
+  public canBeAssigned(type: Type): boolean {
+    return (
+      type instanceof Float ||
+      type instanceof Long ||
+      type instanceof Int ||
+      type instanceof Character ||
+      type instanceof Short ||
+      type instanceof Byte
+    );
+  }
 }
 
-export class Int {
-  public name = "int";
+export class Int extends TypeClass {
   private static INTEGER_MAX = 2147483647;
   private static INTEGER_MIN = -2147483648;
+  constructor() {
+    super("int");
+  }
 
   public static from(value: string): Int | Error {
     const isNegative = value.startsWith("-");
@@ -101,12 +151,23 @@ export class Int {
     if (int < this.INTEGER_MIN) return new IntegerTooLargeError();
     return new Int();
   }
+
+  public canBeAssigned(type: TypeClass): boolean {
+    return (
+      type instanceof Int ||
+      type instanceof Character ||
+      type instanceof Short ||
+      type instanceof Byte
+    );
+  }
 }
 
-export class Long {
-  public name = "long";
+export class Long extends TypeClass {
   private static LONG_MAX = BigInt("9223372036854775807");
   private static LONG_MIN = BigInt("-9223372036854775808");
+  constructor() {
+    super("long");
+  }
 
   public static from(value: string): Long | Error {
     const isNegative = value.startsWith("-");
@@ -119,20 +180,39 @@ export class Long {
     if (long < this.LONG_MIN) return new IntegerTooLargeError();
     return new Long();
   }
+
+  public canBeAssigned(type: TypeClass): boolean {
+    return (
+      type instanceof Long ||
+      type instanceof Int ||
+      type instanceof Character ||
+      type instanceof Short ||
+      type instanceof Byte
+    );
+  }
 }
 
-export class Null {
-  public name = "null";
+export class Null extends TypeClass {
+  constructor() {
+    super("null");
+  }
+
   public static from(value: string): Null {
     if (value !== "null") throw new Error(`Unrecognized null ${value}.`);
     return new Null();
   }
+
+  public canBeAssigned(type: TypeClass): boolean {
+    return false;
+  }
 }
 
-export class Short {
-  public name = "short";
+export class Short extends TypeClass {
   private static SHORT_MAX = 32767;
   private static SHORT_MIN = -32768;
+  constructor() {
+    super("short");
+  }
 
   public static from(value: string): Short | Error {
     const isNegative = value.startsWith("-");
@@ -146,10 +226,17 @@ export class Short {
     if (short < this.SHORT_MIN) return new IntegerTooLargeError();
     return new Short();
   }
+
+  public canBeAssigned(type: TypeClass): boolean {
+    return type instanceof Short || type instanceof Byte;
+  }
 }
 
-export class String {
-  public name = "String";
+export class String extends TypeClass {
+  constructor() {
+    super("String");
+  }
+
   public static from(value: string): String {
     if (value.charAt(0) !== '"')
       throw new Error(`Unrecognized string ${value}.`);
@@ -162,6 +249,10 @@ export class String {
     )
       throw new Error(`Unrecognized string ${value}.`);
     return new String();
+  }
+
+  public canBeAssigned(type: TypeClass): boolean {
+    return type instanceof String || type instanceof Null;
   }
 }
 
