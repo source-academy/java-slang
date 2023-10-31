@@ -193,6 +193,14 @@ const testcases: {
     input: "long binary = 0B1_0L;",
     result: { type: null, errors: [] },
   },
+  {
+    input: "Integer decimal = 0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "Long decimal = 0L;",
+    result: { type: null, errors: [] },
+  },
 ];
 
 describe("Type Checker", () => {

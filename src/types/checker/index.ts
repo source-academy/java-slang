@@ -10,10 +10,10 @@ import {
   Int,
   Long,
   Null,
-  String,
   getFloatType,
   getNumberType,
 } from "../types/primitives";
+import { String } from "../types/nonPrimitives";
 
 export type Result = {
   currentType: Type | null;

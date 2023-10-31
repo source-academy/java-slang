@@ -1,5 +1,6 @@
-import { CannotFindSymbolError } from "../errors";
+import * as NonPrimitives from "../types/nonPrimitives";
 import * as Primitives from "../types/primitives";
+import { CannotFindSymbolError } from "../errors";
 import { Type } from "../types/type";
 
 export type Frame = {
@@ -24,7 +25,15 @@ export const GLOBAL_ENVIRONMENT: Frame = createFrame({
   int: new Primitives.Int(),
   long: new Primitives.Long(),
   short: new Primitives.Short(),
-  String: new Primitives.String(),
+  Boolean: new NonPrimitives.Boolean(),
+  Byte: new NonPrimitives.Byte(),
+  Character: new NonPrimitives.Character(),
+  Double: new NonPrimitives.Double(),
+  Float: new NonPrimitives.Float(),
+  Integer: new NonPrimitives.Integer(),
+  Long: new NonPrimitives.Long(),
+  Short: new NonPrimitives.Short(),
+  String: new NonPrimitives.String(),
 });
 
 export const getType = (
