@@ -25,7 +25,7 @@ describe("Type Checker", () => {
   testcases.map((testcase) => {
     let it = test;
     if (testcase.only) it = test.only;
-    it(`Checking characyer literals for ${testcase.input}`, () => {
+    it(`Checking string literals for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");
