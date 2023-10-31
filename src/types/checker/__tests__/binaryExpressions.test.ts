@@ -42,11 +42,11 @@ const testcases: {
   },
   {
     input: 'String test = 1 - "A";',
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
     input: 'String test = "A" - 1;',
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
     input: 'String test = "A" - "A";',

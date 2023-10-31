@@ -40,23 +40,27 @@ export const check = (
       const { currentType: rightType, errors: rightErrors } = check(right);
       if (rightErrors.length > 0)
         return { currentType: null, errors: rightErrors };
+      if (!leftType || !rightType)
+        throw new Error(
+          "Left and right of binary expression should have a type."
+        );
 
+      const doubleType = new Double();
       switch (operator) {
         case "+":
           if (leftType instanceof String && rightType instanceof String)
             return newResult(new String());
+          if (doubleType.canBeAssigned(leftType) && rightType instanceof String)
+            return newResult(new String());
+          if (leftType instanceof String && doubleType.canBeAssigned(rightType))
+            return newResult(new String());
         case "-":
-          if (leftType instanceof Int && rightType instanceof Int)
-            return newResult(new Int());
-          if (leftType instanceof Int && rightType instanceof String)
-            return newResult(new String());
-          if (leftType instanceof String && rightType instanceof Int)
-            return newResult(new String());
-          return newResult(null, [new BadOperandTypesError()]);
         case "*":
         case "/":
-          if (leftType instanceof Int && rightType instanceof Int)
-            return newResult(new Int());
+          if (leftType instanceof String && rightType instanceof String)
+            return newResult(null, [new BadOperandTypesError()]);
+          if (leftType.canBeAssigned(rightType)) return newResult(leftType);
+          if (rightType.canBeAssigned(leftType)) return newResult(rightType);
           return newResult(null, [new BadOperandTypesError()]);
         default:
           throw new Error(
