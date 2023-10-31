@@ -1,7 +1,7 @@
 import { check } from "..";
 import { IncompatibleTypesError } from "../../errors";
 import { parse } from "../../../ast/parser";
-import { Type } from "../../types";
+import { Type } from "../../types/primitives";
 
 const createProgram = (statement: string) => `
   public class Main {
