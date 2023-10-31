@@ -211,6 +211,14 @@ const testcases: {
     input: "Float decimalfloat = 1.f;",
     result: { type: null, errors: [] },
   },
+  {
+    input: "double decimaldouble = -1.;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float decimalfloat = -1.f;",
+    result: { type: null, errors: [] },
+  },
 ];
 
 describe("Type Checker", () => {
