@@ -5,7 +5,11 @@ import {
   VariableDeclaratorIdCtx,
   VariableInitializerCtx,
 } from "java-parser";
-import { BlockStatement, Expression } from "../types/blocks-and-statements";
+import {
+  BlockStatement,
+  Expression,
+  VariableDeclarator,
+} from "../types/blocks-and-statements";
 import { Identifier, UnannType } from "../types/classes";
 import { ExpressionExtractor } from "./expression-extractor";
 import { StatementExtractor } from "./statement-extractor";
@@ -13,22 +17,23 @@ import { TypeExtractor } from "./type-extractor";
 
 export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   private type: UnannType;
-  private identifier: Identifier;
-  private value: Expression;
+  private identifier: Identifier[] = [];
+  private value: Expression[] = [];
 
   extract(cst: BlockStatementCstNode): BlockStatement {
     this.visit(cst);
     if (cst.children.localVariableDeclarationStatement) {
+      const variableDeclaratorList = this.identifier.map(
+        (identifier, index): VariableDeclarator => ({
+          kind: "VariableDeclarator",
+          variableDeclaratorId: identifier,
+          variableInitializer: this.value[index],
+        })
+      );
       return {
         kind: "LocalVariableDeclarationStatement",
         localVariableType: this.type,
-        variableDeclaratorList: [
-          {
-            kind: "VariableDeclarator",
-            variableDeclaratorId: this.identifier,
-            variableInitializer: this.value,
-          },
-        ],
+        variableDeclaratorList,
         location: cst.location,
       };
     } /* if (cst.children.statement) */ else {
@@ -45,13 +50,15 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {
-    this.identifier = ctx.Identifier[0].image;
+    this.identifier.push(ctx.Identifier[0].image);
   }
 
   variableInitializer(ctx: VariableInitializerCtx) {
     if (ctx.expression) {
       const expressionExtractor = new ExpressionExtractor();
-      this.value = expressionExtractor.extract(ctx.expression[0]);
+      ctx.expression.forEach((expression) => {
+        this.value.push(expressionExtractor.extract(expression));
+      });
     }
   }
 }

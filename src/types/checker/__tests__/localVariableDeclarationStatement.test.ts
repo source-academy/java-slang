@@ -14,6 +14,7 @@ const createProgram = (statement: string) => `
 const testcases: {
   input: string;
   result: { type: Type | null; errors: Error[] };
+  only?: boolean;
 }[] = [
   {
     input: "int test = 0;",
@@ -31,11 +32,28 @@ const testcases: {
     input: 'String test = "A";',
     result: { type: null, errors: [] },
   },
+  {
+    input: "int test1 = 0, test2 = 0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int test1 = 0, test2 = 0, test3 = 'a';",
+    result: { type: null, errors: [new IncompatibleTypesError()] },
+  },
+  {
+    input: "int test1 = 'a', test2 = 0, test3 = 'a';",
+    result: {
+      type: null,
+      errors: [new IncompatibleTypesError(), new IncompatibleTypesError()],
+    },
+  },
 ];
 
 describe("Type Checker", () => {
   testcases.map((testcase) => {
-    test(`Checking local variable declaration for ${testcase.input}`, () => {
+    let it = test;
+    if (testcase.only) it = test.only;
+    it(`Checking local variable declaration for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");
