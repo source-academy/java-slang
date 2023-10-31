@@ -12,7 +12,7 @@ import {
   Type,
   getFloatType,
   getNumberType,
-} from "../types";
+} from "../types/primitives";
 
 export type Result = {
   currentType: Type | null;

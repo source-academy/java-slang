@@ -1,6 +1,6 @@
 import { check } from "..";
 import { parse } from "../../../ast/parser";
-import { Type } from "../../types";
+import { Type } from "../../types/primitives";
 
 const createProgram = (statement: string) => `
   public class Main {

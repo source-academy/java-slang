@@ -1,6 +1,14 @@
-import { IntegerTooLargeError } from "./errors";
+import { IntegerTooLargeError } from "../errors";
 
-export type Type = Boolean | Character | Double | Float | Int | Long | String;
+export type Type =
+  | Boolean
+  | Byte
+  | Character
+  | Double
+  | Float
+  | Int
+  | Long
+  | String;
 
 export class Boolean {
   public name = "boolean";
@@ -9,6 +17,25 @@ export class Boolean {
     if (!["true", "false"].includes(value))
       throw new Error(`Unrecognized boolean ${value}.`);
     return new Boolean();
+  }
+}
+
+export class Byte {
+  public name = "byte";
+  private static BYTE_MAX = 127;
+  private static BYTE_MIN = -128;
+
+  public static from(value: string): Byte | Error {
+    const isNegative = value.startsWith("-");
+    if (isNegative) value = value.substring(1);
+    value = value.replace(/_/g, "").toLowerCase();
+    const base = getNumericBase(value);
+    value = removeNumericBasePrefix(value, base);
+    let byte = parseInt(value, base);
+    byte = isNegative ? byte * -1 : byte;
+    if (byte > this.BYTE_MAX) return new IntegerTooLargeError();
+    if (byte < this.BYTE_MIN) return new IntegerTooLargeError();
+    return new Byte();
   }
 }
 
@@ -61,20 +88,16 @@ export class Int {
   private static INTEGER_MAX = 2147483647;
   private static INTEGER_MIN = -2147483648;
 
-  public static from(value: number): Int | Error;
-  public static from(value: string): Int | Error;
-  public static from(value: number | string): Int | Error {
-    if (typeof value === "string") {
-      const isNegative = value.startsWith("-");
-      if (isNegative) value = value.substring(1);
-      value = value.replace(/_/g, "").toLowerCase();
-      const base = getNumericBase(value);
-      value = removeNumericBasePrefix(value, base);
-      const int = parseInt(value, base);
-      value = isNegative ? int * -1 : int;
-    }
-    if (value > this.INTEGER_MAX) return new IntegerTooLargeError();
-    if (value < this.INTEGER_MIN) return new IntegerTooLargeError();
+  public static from(value: string): Int | Error {
+    const isNegative = value.startsWith("-");
+    if (isNegative) value = value.substring(1);
+    value = value.replace(/_/g, "").toLowerCase();
+    const base = getNumericBase(value);
+    value = removeNumericBasePrefix(value, base);
+    let int = parseInt(value, base);
+    int = isNegative ? int * -1 : int;
+    if (int > this.INTEGER_MAX) return new IntegerTooLargeError();
+    if (int < this.INTEGER_MIN) return new IntegerTooLargeError();
     return new Int();
   }
 }
@@ -102,6 +125,25 @@ export class Null {
   public static from(value: string): Null {
     if (value !== "null") throw new Error(`Unrecognized null ${value}.`);
     return new Null();
+  }
+}
+
+export class Short {
+  public name = "short";
+  private static SHORT_MAX = 32767;
+  private static SHORT_MIN = -32768;
+
+  public static from(value: string): Short | Error {
+    const isNegative = value.startsWith("-");
+    if (isNegative) value = value.substring(1);
+    value = value.replace(/_/g, "").toLowerCase();
+    const base = getNumericBase(value);
+    value = removeNumericBasePrefix(value, base);
+    let short = parseInt(value, base);
+    short = isNegative ? short * -1 : short;
+    if (short > this.SHORT_MAX) return new IntegerTooLargeError();
+    if (short < this.SHORT_MIN) return new IntegerTooLargeError();
+    return new Short();
   }
 }
 
