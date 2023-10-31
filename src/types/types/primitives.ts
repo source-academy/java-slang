@@ -1,18 +1,7 @@
 import { IntegerTooLargeError } from "../errors";
-import { Type as TypeClass } from "./type";
+import { Type } from "./type";
 
-export type Type =
-  | Boolean
-  | Byte
-  | Character
-  | Double
-  | Float
-  | Int
-  | Long
-  | Short
-  | String;
-
-export class Boolean extends TypeClass {
+export class Boolean extends Type {
   constructor() {
     super("boolean");
   }
@@ -23,12 +12,12 @@ export class Boolean extends TypeClass {
     return new Boolean();
   }
 
-  public canBeAssigned(type: TypeClass): boolean {
+  public canBeAssigned(type: Type): boolean {
     return type instanceof Boolean;
   }
 }
 
-export class Byte extends TypeClass {
+export class Byte extends Type {
   private static BYTE_MAX = 127;
   private static BYTE_MIN = -128;
   constructor() {
@@ -48,32 +37,32 @@ export class Byte extends TypeClass {
     return new Byte();
   }
 
-  public canBeAssigned(type: TypeClass): boolean {
+  public canBeAssigned(type: Type): boolean {
     return type instanceof Byte;
   }
 }
 
-export class Character extends TypeClass {
+export class Char extends Type {
   constructor() {
     super("char");
   }
 
-  public static from(value: string): Character | Error {
+  public static from(value: string): Char | Error {
     if (value.charAt(0) !== "'")
       throw new Error(`Unrecognized character ${value}.`);
     if (value.charAt(value.length - 1) !== "'")
       throw new Error(`Unrecognized character ${value}.`);
-    return new Character();
+    return new Char();
   }
 
-  public canBeAssigned(type: TypeClass): boolean {
+  public canBeAssigned(type: Type): boolean {
     return (
-      type instanceof Character || type instanceof Short || type instanceof Byte
+      type instanceof Char || type instanceof Short || type instanceof Byte
     );
   }
 }
 
-export class Double extends TypeClass {
+export class Double extends Type {
   constructor() {
     super("double");
   }
@@ -90,20 +79,20 @@ export class Double extends TypeClass {
     return new Double();
   }
 
-  public canBeAssigned(type: TypeClass): boolean {
+  public canBeAssigned(type: Type): boolean {
     return (
       type instanceof Double ||
       type instanceof Float ||
       type instanceof Long ||
       type instanceof Int ||
-      type instanceof Character ||
+      type instanceof Char ||
       type instanceof Short ||
       type instanceof Byte
     );
   }
 }
 
-export class Float extends TypeClass {
+export class Float extends Type {
   constructor() {
     super("float");
   }
@@ -125,14 +114,14 @@ export class Float extends TypeClass {
       type instanceof Float ||
       type instanceof Long ||
       type instanceof Int ||
-      type instanceof Character ||
+      type instanceof Char ||
       type instanceof Short ||
       type instanceof Byte
     );
   }
 }
 
-export class Int extends TypeClass {
+export class Int extends Type {
   private static INTEGER_MAX = 2147483647;
   private static INTEGER_MIN = -2147483648;
   constructor() {
@@ -152,17 +141,17 @@ export class Int extends TypeClass {
     return new Int();
   }
 
-  public canBeAssigned(type: TypeClass): boolean {
+  public canBeAssigned(type: Type): boolean {
     return (
       type instanceof Int ||
-      type instanceof Character ||
+      type instanceof Char ||
       type instanceof Short ||
       type instanceof Byte
     );
   }
 }
 
-export class Long extends TypeClass {
+export class Long extends Type {
   private static LONG_MAX = BigInt("9223372036854775807");
   private static LONG_MIN = BigInt("-9223372036854775808");
   constructor() {
@@ -181,18 +170,18 @@ export class Long extends TypeClass {
     return new Long();
   }
 
-  public canBeAssigned(type: TypeClass): boolean {
+  public canBeAssigned(type: Type): boolean {
     return (
       type instanceof Long ||
       type instanceof Int ||
-      type instanceof Character ||
+      type instanceof Char ||
       type instanceof Short ||
       type instanceof Byte
     );
   }
 }
 
-export class Null extends TypeClass {
+export class Null extends Type {
   constructor() {
     super("null");
   }
@@ -202,12 +191,12 @@ export class Null extends TypeClass {
     return new Null();
   }
 
-  public canBeAssigned(type: TypeClass): boolean {
+  public canBeAssigned(type: Type): boolean {
     return false;
   }
 }
 
-export class Short extends TypeClass {
+export class Short extends Type {
   private static SHORT_MAX = 32767;
   private static SHORT_MIN = -32768;
   constructor() {
@@ -227,12 +216,12 @@ export class Short extends TypeClass {
     return new Short();
   }
 
-  public canBeAssigned(type: TypeClass): boolean {
+  public canBeAssigned(type: Type): boolean {
     return type instanceof Short || type instanceof Byte;
   }
 }
 
-export class String extends TypeClass {
+export class String extends Type {
   constructor() {
     super("String");
   }
@@ -251,7 +240,7 @@ export class String extends TypeClass {
     return new String();
   }
 
-  public canBeAssigned(type: TypeClass): boolean {
+  public canBeAssigned(type: Type): boolean {
     return type instanceof String || type instanceof Null;
   }
 }

@@ -1,7 +1,7 @@
 import { BadOperandTypesError } from "../../errors";
 import { check } from "..";
 import { parse } from "../../../ast/parser";
-import { Type } from "../../types";
+import { Type } from "../../types/type";
 
 const createProgram = (statement: string) => `
   public class Main {

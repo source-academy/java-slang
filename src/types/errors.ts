@@ -1,5 +1,11 @@
 export class BadOperandTypesError extends Error {}
 
+export class CannotFindSymbolError extends Error {
+  constructor() {
+    super("cannot find symbol");
+  }
+}
+
 export class FloatTooLargeError extends Error {
   constructor() {
     super("floating-point number too large");
