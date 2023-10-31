@@ -81,7 +81,6 @@ export const check = (
       const errors = blockStatements.flatMap((blockStatement) => {
         return check(blockStatement, newEnvironmentFrame).errors;
       });
-      console.log(newEnvironmentFrame);
       return { currentType: null, errors };
     }
     case "Literal": {

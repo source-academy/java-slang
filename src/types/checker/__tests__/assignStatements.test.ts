@@ -16,28 +16,32 @@ const testcases: {
   only?: boolean;
 }[] = [
   {
-    input: "char test = 'a';",
+    input: `int test = 0;`,
     result: { type: null, errors: [] },
   },
-  {
-    input: "char test = 'A';",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "char test = '\\u0000';",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "Character test = 'a';",
-    result: { type: null, errors: [] },
-  },
+  // TODO: Not yet implemented in ast extractor
+  // {
+  //   input: `
+  //     int test = 0;
+  //     test = 1;
+  //   `,
+  //   result: { type: null, errors: [] },
+  // },
+  // {
+  //   input: `
+  //     int test = 0;
+  //     test = "A";
+  //   `,
+  //   result: { type: null, errors: [new IncompatibleTypesError()] },
+  //   only: true,
+  // },
 ];
 
 describe("Type Checker", () => {
   testcases.map((testcase) => {
     let it = test;
     if (testcase.only) it = test.only;
-    it(`Checking character literals for ${testcase.input}`, () => {
+    it(`Checking assign statements for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");
