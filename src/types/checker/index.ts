@@ -153,22 +153,24 @@ export const check = (
       const { operator, expression } = node;
       switch (operator) {
         case "-": {
-          if (
-            expression.kind === "Literal" &&
-            (expression.literalType.kind === "BinaryIntegerLiteral" ||
-              expression.literalType.kind === "DecimalIntegerLiteral" ||
-              expression.literalType.kind === "HexIntegerLiteral" ||
-              expression.literalType.kind === "OctalIntegerLiteral")
-          ) {
-            const integerString = "-" + expression.literalType.value;
-            const lastCharacter = integerString
-              .charAt(integerString.length - 1)
-              .toUpperCase();
-            const Type = lastCharacter === "L" ? Long : Int;
-            const type = Type.from(integerString);
-            return type instanceof Error
-              ? newResult(null, [type])
-              : newResult(type);
+          if (expression.kind === "Literal") {
+            switch (expression.literalType.kind) {
+              case "BinaryIntegerLiteral":
+              case "DecimalFloatingPointLiteral":
+              case "DecimalIntegerLiteral":
+              case "HexIntegerLiteral":
+              case "OctalIntegerLiteral":
+              case "HexadecimalFloatingPointLiteral": {
+                expression.literalType.value =
+                  "-" + expression.literalType.value;
+                return check(expression);
+              }
+              case "BooleanLiteral":
+              case "CharacterLiteral":
+              case "StringLiteral":
+              case "NullLiteral":
+                return newResult(null, [new BadOperandTypesError()]);
+            }
           }
         }
         case "+":
