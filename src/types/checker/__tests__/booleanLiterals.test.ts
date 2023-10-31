@@ -23,6 +23,10 @@ const testcases: {
     input: "boolean test = false;",
     result: { type: null, errors: [] },
   },
+  {
+    input: "Boolean test = true;",
+    result: { type: null, errors: [] },
+  },
 ];
 
 describe("Type Checker", () => {

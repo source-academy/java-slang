@@ -221,30 +221,6 @@ export class Short extends Type {
   }
 }
 
-export class String extends Type {
-  constructor() {
-    super("String");
-  }
-
-  public static from(value: string): String {
-    if (value.charAt(0) !== '"')
-      throw new Error(`Unrecognized string ${value}.`);
-    if (value.charAt(value.length - 1) !== '"')
-      throw new Error(`Unrecognized string ${value}.`);
-    if (
-      value.length > 6 &&
-      value.substring(0, 3) === '"""' &&
-      value.substring(value.length - 3, value.length) !== '"""'
-    )
-      throw new Error(`Unrecognized string ${value}.`);
-    return new String();
-  }
-
-  public canBeAssigned(type: Type): boolean {
-    return type instanceof String || type instanceof Null;
-  }
-}
-
 type NumberType = "long" | "int";
 
 export const getNumberType = (number: string): NumberType => {

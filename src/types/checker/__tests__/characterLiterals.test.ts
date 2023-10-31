@@ -27,6 +27,10 @@ const testcases: {
     input: "char test = '\\u0000';",
     result: { type: null, errors: [] },
   },
+  {
+    input: "Character test = 'a';",
+    result: { type: null, errors: [] },
+  },
 ];
 
 describe("Type Checker", () => {

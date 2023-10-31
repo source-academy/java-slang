@@ -203,6 +203,14 @@ const testcases: {
     input: "float hexfloat = 0x.1p1F;",
     result: { type: null, errors: [] },
   },
+  {
+    input: "Double decimaldouble = 1.;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "Float decimalfloat = 1.f;",
+    result: { type: null, errors: [] },
+  },
 ];
 
 describe("Type Checker", () => {
