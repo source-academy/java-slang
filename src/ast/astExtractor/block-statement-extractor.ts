@@ -3,7 +3,10 @@ import {
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
   BlockStatementCstNode,
+  BooleanLiteralCtx,
   ExpressionCtx,
+  FloatingPointLiteralCtx,
+  FloatingPointTypeCtx,
   IToken,
   IntegerLiteralCtx,
   IntegralTypeCtx,
@@ -13,6 +16,7 @@ import {
   PrimaryPrefixCtx,
   TernaryExpressionCtx,
   UnannClassTypeCtx,
+  UnannPrimitiveTypeCtx,
   UnaryExpressionCstNode,
   UnaryExpressionCtx,
   VariableDeclaratorIdCtx,
@@ -22,12 +26,13 @@ import {
   BinaryExpression,
   BlockStatement,
   Expression,
+  VariableDeclarator,
 } from "../types/blocks-and-statements";
 
 export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   private type: UnannType;
-  private identifier: Identifier;
-  private value: Expression;
+  private identifier: Identifier[] = [];
+  private value: Expression[] = [];
 
   constructor() {
     super();
@@ -35,16 +40,17 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   extract(cst: BlockStatementCstNode): BlockStatement {
     this.visit(cst);
+    const variableDeclaratorList = this.identifier.map(
+      (identifier, index): VariableDeclarator => ({
+        kind: "VariableDeclarator",
+        variableDeclaratorId: identifier,
+        variableInitializer: this.value[index],
+      })
+    );
     return {
       kind: "LocalVariableDeclarationStatement",
       localVariableType: this.type,
-      variableDeclaratorList: [
-        {
-          kind: "VariableDeclarator",
-          variableDeclaratorId: this.identifier,
-          variableInitializer: this.value,
-        }
-      ],
+      variableDeclaratorList,
     };
   }
 
@@ -57,11 +63,11 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {
-    this.identifier = ctx.Identifier[0].image;
+    this.identifier.push(ctx.Identifier[0].image);
   }
 
   variableInitializer(ctx: VariableInitializerCtx) {
-    ctx.expression && (this.value = this.visit(ctx.expression));
+    ctx.expression && this.value.push(this.visit(ctx.expression));
   }
 
   expression(ctx: ExpressionCtx) {
@@ -187,9 +193,34 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   literal(ctx: LiteralCtx) {
-    if (ctx.integerLiteral) {
-      return this.visit(ctx.integerLiteral);
-    } else if (ctx.StringLiteral) {
+    if (ctx.integerLiteral) return this.visit(ctx.integerLiteral);
+    if (ctx.floatingPointLiteral) return this.visit(ctx.floatingPointLiteral);
+    if (ctx.booleanLiteral) return this.visit(ctx.booleanLiteral);
+    if (ctx.CharLiteral)
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "CharacterLiteral",
+          value: ctx.CharLiteral[0].image,
+        },
+      };
+    if (ctx.Null)
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "NullLiteral",
+          value: "null",
+        },
+      };
+    if (ctx.TextBlock)
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "StringLiteral",
+          value: ctx.TextBlock[0].image,
+        },
+      };
+    if (ctx.StringLiteral)
       return {
         kind: "Literal",
         literalType: {
@@ -197,7 +228,6 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
           value: ctx.StringLiteral[0].image,
         },
       };
-    }
   }
 
   integerLiteral(ctx: IntegerLiteralCtx) {
@@ -232,5 +262,41 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   unannClassType(ctx: UnannClassTypeCtx) {
     this.type = ctx.Identifier[0].image;
+  }
+
+  floatingPointType(ctx: FloatingPointTypeCtx) {
+    ctx.Double && (this.type = ctx.Double[0].image);
+    ctx.Float && (this.type = ctx.Float[0].image);
+  }
+
+  floatingPointLiteral(ctx: FloatingPointLiteralCtx) {
+    const literal = { kind: "Literal", literalType: {} };
+    if (ctx.FloatLiteral) {
+      literal.literalType = {
+        kind: "DecimalFloatingPointLiteral",
+        value: ctx.FloatLiteral[0].image,
+      };
+    } else if (ctx.HexFloatLiteral) {
+      literal.literalType = {
+        kind: "HexadecimalFloatingPointLiteral",
+        value: ctx.HexFloatLiteral[0].image,
+      };
+    }
+    return literal;
+  }
+
+  booleanLiteral(ctx: BooleanLiteralCtx) {
+    return {
+      kind: "Literal",
+      literalType: {
+        kind: "BooleanLiteral",
+        value: ctx.False ? "false" : ("true" as "true" | "false"),
+      },
+    };
+  }
+
+  unannPrimitiveType(ctx: UnannPrimitiveTypeCtx) {
+    ctx.Boolean && (this.type = ctx.Boolean[0].image);
+    ctx.numericType && this.visit(ctx.numericType);
   }
 }
