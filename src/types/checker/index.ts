@@ -1,15 +1,16 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
+import { Frame, GLOBAL_ENVIRONMENT, getType } from "./environment";
 import { Node } from "../../ast/types/ast";
+import { Type } from "../types/type";
 import {
   Boolean,
-  Character,
+  Char,
   Double,
   Float,
   Int,
   Long,
   Null,
   String,
-  Type,
   getFloatType,
   getNumberType,
 } from "../types/primitives";
@@ -26,7 +27,10 @@ const newResult = (
   errors: Error[] = []
 ): Result => ({ currentType, errors });
 
-export const check = (node: Node): Result => {
+export const check = (
+  node: Node,
+  environmentFrame: Frame = GLOBAL_ENVIRONMENT
+): Result => {
   switch (node.kind) {
     case "BinaryExpression": {
       const { left, operator, right } = node;
@@ -91,10 +95,18 @@ export const check = (node: Node): Result => {
             ? newResult(null, [type])
             : newResult(type);
         }
-        case "BooleanLiteral":
-          return newResult(Boolean.from(value));
-        case "CharacterLiteral":
-          return newResult(Character.from(value));
+        case "BooleanLiteral": {
+          const type = Boolean.from(value);
+          return type instanceof Error
+            ? newResult(null, [type])
+            : newResult(type);
+        }
+        case "CharacterLiteral": {
+          const type = Char.from(value);
+          return type instanceof Error
+            ? newResult(null, [type])
+            : newResult(type);
+        }
         case "NullLiteral":
           return newResult(Null.from(value));
         case "StringLiteral":
@@ -109,6 +121,9 @@ export const check = (node: Node): Result => {
       if (!node.variableDeclaratorList)
         throw new Error("Variable declarator list is undefined.");
       const results = node.variableDeclaratorList.map((variableDeclarator) => {
+        const declaredType = getType(environmentFrame, node.localVariableType);
+        if (declaredType instanceof Error)
+          return newResult(null, [declaredType]);
         const { variableInitializer } = variableDeclarator;
         if (!variableInitializer)
           throw new Error("Variable initializer is undefined.");
@@ -118,7 +133,7 @@ export const check = (node: Node): Result => {
           throw new Error(
             "Variable initializer in local variable declaration statement should return a type."
           );
-        if (currentType.name !== node.localVariableType)
+        if (!declaredType.canBeAssigned(currentType))
           return newResult(null, [new IncompatibleTypesError()]);
         return OK_RESULT;
       });

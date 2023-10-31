@@ -1,7 +1,7 @@
 import { check } from "..";
 import { IncompatibleTypesError } from "../../errors";
 import { parse } from "../../../ast/parser";
-import { Type } from "../../types/primitives";
+import { Type } from "../../types/type";
 
 const createProgram = (statement: string) => `
   public class Main {
@@ -37,11 +37,11 @@ const testcases: {
     result: { type: null, errors: [] },
   },
   {
-    input: "int test1 = 0, test2 = 0, test3 = 'a';",
+    input: 'int test1 = 0, test2 = 0, test3 = "string";',
     result: { type: null, errors: [new IncompatibleTypesError()] },
   },
   {
-    input: "int test1 = 'a', test2 = 0, test3 = 'a';",
+    input: 'int test1 = "string", test2 = 0, test3 = "string";',
     result: {
       type: null,
       errors: [new IncompatibleTypesError(), new IncompatibleTypesError()],
