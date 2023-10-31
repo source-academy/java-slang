@@ -5,14 +5,16 @@ import { Type } from "../types/type";
 
 export type Frame = {
   types: Record<string, Type>;
-  previousFrame: Frame;
-} | null;
+  variables: Record<string, Type>;
+  previousFrame: Frame | null;
+};
 
 export const createFrame = (
   types: Record<string, Type>,
   previousFrame?: Frame
 ): Frame => ({
   types,
+  variables: {},
   previousFrame: previousFrame || null,
 });
 
@@ -36,7 +38,7 @@ export const GLOBAL_ENVIRONMENT: Frame = createFrame({
   String: new NonPrimitives.String(),
 });
 
-export const getType = (
+export const getEnvironmentType = (
   environmentFrame: Frame | null,
   typeName: string
 ): Type | Error => {
@@ -46,4 +48,24 @@ export const getType = (
     environmentFrame = environmentFrame.previousFrame;
   }
   return new CannotFindSymbolError();
+};
+
+export const getEnvironmentVariable = (
+  environmentFrame: Frame | null,
+  typeName: string
+): Type | Error => {
+  while (environmentFrame) {
+    const { variables } = environmentFrame;
+    if (variables[typeName]) return variables[typeName];
+    environmentFrame = environmentFrame.previousFrame;
+  }
+  return new CannotFindSymbolError();
+};
+
+export const setEnvironmentVariable = (
+  environmentFrame: Frame,
+  typeName: string,
+  type: Type
+) => {
+  environmentFrame.variables[typeName] = type;
 };
