@@ -1,3 +1,5 @@
+import { SymbolNotFoundError, SymbolRedeclarationError } from "./error";
+
 export type Symbol = {
   name: string,
   type: SymbolType
@@ -52,7 +54,7 @@ export class SymbolTable {
     const key = JSON.stringify(symbol);
 
     if (this.curTable.has(key)) {
-      throw new Error("Same symbol already exists in the table");
+      throw new SymbolRedeclarationError(name);
     }
 
     this.curTable.set(key, info);
@@ -72,6 +74,6 @@ export class SymbolTable {
       }
     }
 
-    throw new Error("Symbol " + name + " with type " + type + " is undefined");
+    throw new SymbolNotFoundError(name);
   }
 }
