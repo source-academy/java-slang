@@ -103,6 +103,7 @@ export class BinaryWriter {
       case CONSTANT_TAG.Integer:
       case CONSTANT_TAG.Float:
         this.write((constant as ConstantIntegerInfo).value, u4);
+        break;
       case CONSTANT_TAG.Class:
         this.write((constant as ConstantClassInfo).nameIndex, u2);
         break;
