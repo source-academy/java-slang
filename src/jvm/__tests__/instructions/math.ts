@@ -5,8 +5,8 @@ import { ClassData } from '../../types/class/ClassData';
 import { JvmObject } from '../../types/reference/Object';
 import { setupTest } from '../test-utils';
 
-const MAX_LONG = BigInt(9223372036854775807);
-const MIN_LONG = BigInt(-9223372036854775808);
+const MAX_LONG = BigInt('9223372036854775807');
+const MIN_LONG = BigInt('-9223372036854775808');
 const MAX_INT = 2147483647;
 const MIN_INT = -2147483648;
 
