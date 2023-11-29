@@ -1,6 +1,6 @@
 import Thread from "../../thread";
 import { Result } from "../Result";
-import { ClassData } from "../class/ClassData";
+import { ArrayClassData } from "../class/ClassData";
 import { JvmObject, JavaType } from "./Object";
 
 
@@ -8,7 +8,7 @@ export class JvmArray extends JvmObject {
   private primitiveType: ArrayPrimitiveType | null;
   private length: number;
   private array: any[];
-  constructor(cls: ClassData) {
+  constructor(cls: ArrayClassData) {
     super(cls);
     switch (cls.getClassname()[1]) {
       case JavaType.boolean:
@@ -109,7 +109,7 @@ export class JvmArray extends JvmObject {
   }
 
   clone(): JvmArray {
-    const clone = new JvmArray(this.getClass());
+    const clone = new JvmArray(this.getClass() as ArrayClassData);
     clone.length = this.length;
     clone.array = [...this.array]; // shallow copy
     return clone;

@@ -1,8 +1,7 @@
 import Thread from "../../thread";
-import { Result } from "../../utils/Result";
-import { ClassData } from "../class/ClassData";
+import { Result } from "../Result";
+import { ClassData, ReferenceClassData } from "../class/ClassData";
 import { Field } from "../class/Field";
-
 
 export class JvmObject {
   public initStatus = false;
@@ -45,19 +44,24 @@ export class JvmObject {
     if (this.initStatus) {
       return { result: this };
     }
-    
-    // Should check for other init methods
+
     const initMethod = this.cls.getMethod('<init>()V');
     if (!initMethod) {
       this.initStatus = true;
       return { result: this };
     }
 
-    thread._invokeInternal(this.cls, initMethod, 0, [this], (ret, err) => {
-      if (!err) {
-        this.initStatus = true;
+    thread._invokeInternal(
+      this.cls as ReferenceClassData,
+      initMethod,
+      0,
+      [this],
+      (ret, err) => {
+        if (!err) {
+          this.initStatus = true;
+        }
       }
-    });
+    );
     return { isDefer: true };
   }
 
@@ -96,6 +100,7 @@ export class JvmObject {
     value: any
   ) {
     const key = `${fieldClass}.${fieldName}${fieldDesc}`;
+
     if (key in this.fields) {
       this.fields[key].putValue(value);
       return;
@@ -112,7 +117,21 @@ export class JvmObject {
   }
 
   getFieldFromVMIndex(index: number): Field {
-    throw new Error('Not implemented');
+    const res = this.fieldArr.filter(f => {
+      const slot = f.ref.getSlot();
+      return slot === index;
+    });
+
+    if (res.length > 1) {
+      // will this happen?
+      throw new Error('Multiple matching slots. Need to check classname');
+    }
+
+    if (res.length === 0) {
+      throw new Error('Invalid slot');
+    }
+
+    return res[0].ref;
   }
 
   clone(): JvmObject {

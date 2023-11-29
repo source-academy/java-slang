@@ -1,15 +1,19 @@
 import { CONSTANT_TAG } from "../../../ClassFile/constants/constants";
+import { OPCODE } from "../../../ClassFile/constants/instructions";
+import { ClassFile } from "../../../ClassFile/types";
+import { CodeAttribute } from "../../../ClassFile/types/attributes";
+import { METHOD_FLAGS } from "../../../ClassFile/types/methods";
 import AbstractClassLoader from "../../ClassLoader/AbstractClassLoader";
+import { InternalStackFrame } from "../../stackframe";
 import Thread from "../../thread";
 import { parseMethodDescriptor, parseFieldDescriptor } from "../../utils";
-import { Result, checkError, checkSuccess, ErrorResult, ImmediateResult, SuccessResult } from "../../utils/Result";
+import { Result, checkError, checkSuccess, ErrorResult, ImmediateResult, SuccessResult } from "../Result";
 import { JvmArray } from "../reference/Array";
-import { JvmObject } from "../reference/Object";
-import { ClassData } from "./ClassData";
+import { JvmObject, JavaType } from "../reference/Object";
+import { ClassData, ReferenceClassData } from "./ClassData";
 import { Field } from "./Field";
 import { Method } from "./Method";
 import * as info from '../../../ClassFile/types/constants'
-import { InternalStackFrame } from "../../stackframe";
 
 export abstract class Constant {
   private tag: CONSTANT_TAG;
@@ -221,7 +225,13 @@ function createMethodType(
     return { exceptionCls: 'java/lang/NoSuchMethodError', msg: '' };
   }
   thread.invokeStackFrame(
-    new InternalStackFrame(mhnCls, toInvoke, 0, [retCls, paramClsArr], cb)
+    new InternalStackFrame(
+      mhnCls as ReferenceClassData,
+      toInvoke,
+      0,
+      [retCls, paramClsArr],
+      cb
+    )
   );
   // #endregion
 
@@ -314,94 +324,6 @@ export class ConstantMethodType extends Constant {
     });
   }
 
-  public tempResolve(thread: Thread): Result<JvmObject> {
-    if (this.result) {
-      return this.result;
-    }
-    this.result = { isDefer: true };
-    const descriptor = this.descriptor.get();
-    const loader = this.cls.getLoader();
-
-    const mtRef = loader.getClassRef('java/lang/invoke/MethodType');
-    if (checkError(mtRef)) {
-      return mtRef;
-    }
-    const mtCls = mtRef.result;
-    const initRes = mtCls.initialize(thread);
-    if (!checkSuccess(initRes)) {
-      if (checkError(initRes)) {
-        return initRes;
-      }
-      return { isDefer: true };
-    }
-
-    // #region create Class object array
-    const classes = parseMethodDescriptor(descriptor);
-    const classArray: JvmObject[] = [];
-    let error: ErrorResult | null = null;
-    const resolver = ({
-      type,
-      referenceCls,
-    }: {
-      type: string;
-      referenceCls: string | undefined;
-    }) => {
-      // primitive
-      if (!referenceCls) {
-        const pClsRes = loader.getPrimitiveClassRef(type);
-        classArray.push(pClsRes.getJavaObject());
-        return;
-      }
-      const clsRes = loader.getClassRef(referenceCls);
-      if (!checkSuccess(clsRes)) {
-        if (!error) {
-          error = clsRes;
-        }
-        return;
-      }
-      classArray.push(clsRes.result.getJavaObject());
-    };
-    classes.args.forEach(resolver);
-    resolver(classes.ret);
-    if (error) {
-      return error;
-    }
-
-    const clArrRes = loader.getClassRef('[Ljava/lang/Class;');
-    if (checkError(clArrRes)) {
-      if (!error) {
-        return clArrRes;
-      }
-      return error;
-    }
-    const paramClsArr = clArrRes.result.instantiate() as JvmArray;
-    const retCls = classArray.pop();
-    paramClsArr.initialize(thread, classArray.length, classArray);
-    // #endregion
-
-    // #region create MethodType object
-    const toInvoke = mtCls.getMethod(
-      'makeImpl(Ljava/lang/Class;[Ljava/lang/Class;Z)Ljava/lang/invoke/MethodType;'
-    );
-    if (!toInvoke) {
-      return { exceptionCls: 'java/lang/NoSuchMethodError', msg: '' };
-    }
-    thread.invokeStackFrame(
-      new InternalStackFrame(
-        mtCls,
-        toInvoke,
-        0,
-        [retCls, paramClsArr, 1],
-        (mt: JvmObject) => {
-          this.result = { result: mt };
-        }
-      )
-    );
-    // #endregion
-
-    return { isDefer: true };
-  }
-
   getDescriptor() {
     return this.descriptor.get();
   }
@@ -476,8 +398,265 @@ export class ConstantInvokeDynamic extends Constant {
   public constructCso(thread: Thread) {}
 
   public resolve(thread: Thread): Result<any> {
-    console.log(this.bootstrapMethodAttrIndex, this.nameAndType.get(), this.methodTypeObj, this.result);
     throw new Error('ConstantInvokeDynamic: resolve Method not implemented.');
+  }
+
+  public tempResolve(thread: Thread): Result<JvmObject> {
+    const nameAndTypeRes = this.nameAndType.get();
+
+    if (!this.cls.checkReference()) {
+      throw new Error('Indy resolution only on reference classes');
+    }
+
+    const bootstrapMethod = this.cls.getBootstrapMethod(
+      this.bootstrapMethodAttrIndex
+    );
+    const bootstrapMhConst = this.cls.getConstant(
+      bootstrapMethod.bootstrapMethodRef
+    ) as ConstantMethodHandle;
+
+    const constref = bootstrapMhConst.tempGetReference();
+    const refres = constref.resolve();
+    if (!checkSuccess<Field | Method>(refres)) {
+      if (checkError(refres)) {
+        return refres;
+      }
+      return { isDefer: true };
+    }
+    const res = refres.result;
+
+    const bsArgIdx = bootstrapMethod.bootstrapArguments;
+    const argConst = this.cls.getConstant(bsArgIdx[0]) as ConstantMethodType;
+    const mhConst = this.cls.getConstant(bsArgIdx[1]) as ConstantMethodHandle;
+    const invokeRes = mhConst.tempGetReference().resolve();
+    if (!checkSuccess<Field | Method>(invokeRes)) {
+      if (checkError(invokeRes)) {
+        return invokeRes;
+      }
+      return { isDefer: true };
+    }
+    const { ret } = parseMethodDescriptor(nameAndTypeRes.descriptor);
+
+    const clsName = ret.referenceCls;
+    if (!clsName) {
+      throw new Error('Only lambdas are supported at the moment');
+    }
+    const loader = this.cls.getLoader();
+    const clsRes = loader.getClassRef(clsName);
+    const objRes = loader.getClassRef('java/lang/Object');
+    if (checkError(clsRes) || checkError(objRes)) {
+      return (checkError(clsRes) ? clsRes : objRes) as ErrorResult;
+    }
+
+    const thisClsName = this.cls.getClassname();
+    const intercls = clsRes.result;
+    const erasedDesc = argConst.getDescriptor();
+    const methodName = nameAndTypeRes.name;
+    const toInvoke = invokeRes.result as Method;
+    const invokerName = toInvoke.getName();
+    const invokerDesc = toInvoke.getDescriptor();
+    const parsedDesc = parseMethodDescriptor(invokerDesc);
+    const methodArgs = parsedDesc.args;
+    const methodRet = parsedDesc.ret;
+
+    // #region Create code
+    // load(1) * n -> invoke(3) -> return(1)
+    const codeSize = 3 + methodArgs.length * 2 + 1;
+    const code = new DataView(new ArrayBuffer(codeSize));
+    let maxStack = methodArgs.length;
+    let invokeIndex = -1;
+    let ptr = 0;
+    // load params
+    methodArgs.forEach((arg, index) => {
+      switch (arg.type) {
+        case JavaType.char:
+        case JavaType.byte:
+        case JavaType.int:
+        case JavaType.boolean:
+        case JavaType.short:
+          code.setUint8(ptr, OPCODE.ILOAD);
+          code.setUint8(ptr + 1, index + 1);
+          break;
+        case JavaType.double:
+          maxStack += 1;
+          code.setUint8(ptr, OPCODE.DLOAD);
+          code.setUint8(ptr + 1, index + 1);
+          break;
+        case JavaType.float:
+          code.setUint8(ptr, OPCODE.FLOAD);
+          code.setUint8(ptr + 1, index + 1);
+          break;
+        case JavaType.long:
+          maxStack += 1;
+          code.setUint8(ptr, OPCODE.LLOAD);
+          code.setUint8(ptr + 1, index + 1);
+          break;
+        case JavaType.reference:
+          code.setUint8(ptr, OPCODE.ALOAD);
+          code.setUint8(ptr + 1, index + 1);
+          break;
+        case JavaType.array:
+          code.setUint8(ptr, OPCODE.ALOAD);
+          code.setUint8(ptr + 1, index + 1);
+          break;
+        case JavaType.void:
+          throw new Error('Void type in params');
+      }
+      ptr += 2;
+    });
+    // invoke lambda
+    code.setUint8(ptr, OPCODE.INVOKESTATIC);
+    invokeIndex = ptr + 1;
+    code.setUint16(ptr + 1, -1); // We fix this index later
+    ptr += 3;
+    // return value
+    let retStack = 1;
+    switch (methodRet.type) {
+      case JavaType.char:
+      case JavaType.byte:
+      case JavaType.int:
+      case JavaType.boolean:
+      case JavaType.short:
+        code.setUint8(ptr, OPCODE.IRETURN);
+        break;
+      case JavaType.double:
+        retStack += 1;
+        code.setUint8(ptr, OPCODE.DRETURN);
+        break;
+      case JavaType.float:
+        code.setUint8(ptr, OPCODE.FRETURN);
+        break;
+      case JavaType.long:
+        retStack += 1;
+        code.setUint8(ptr, OPCODE.LRETURN);
+        break;
+      case JavaType.reference:
+        code.setUint8(ptr, OPCODE.ARETURN);
+        break;
+      case JavaType.array:
+        code.setUint8(ptr, OPCODE.ARETURN);
+        break;
+      case JavaType.void:
+        retStack = 0;
+        code.setUint8(ptr, OPCODE.RETURN);
+    }
+    // empty args still requries stack for return
+    maxStack = Math.max(maxStack, retStack);
+    // #endregion
+
+    let methodRefIndex = -1;
+    const constantPool: info.ConstantInfo[] = [];
+    constantPool.push({
+      tag: CONSTANT_TAG.Utf8,
+      length: 0,
+      value: '',
+    } as info.ConstantUtf8Info);
+    constantPool.push({
+      tag: CONSTANT_TAG.Class,
+      nameIndex: 2,
+    } as info.ConstantClassInfo);
+    constantPool.push({
+      tag: CONSTANT_TAG.Utf8,
+      length: thisClsName.length,
+      value: thisClsName,
+    } as info.ConstantUtf8Info);
+    constantPool.push({
+      tag: CONSTANT_TAG.Utf8,
+      length: 4,
+      value: 'Code',
+    } as info.ConstantUtf8Info);
+    constantPool.push({
+      tag: CONSTANT_TAG.Class,
+      nameIndex: 5,
+    } as info.ConstantClassInfo);
+    constantPool.push({
+      tag: CONSTANT_TAG.Utf8,
+      length: 16,
+      value: 'java/lang/Object',
+    } as info.ConstantUtf8Info);
+    constantPool.push({
+      tag: CONSTANT_TAG.Class,
+      nameIndex: 7,
+    } as info.ConstantClassInfo);
+    constantPool.push({
+      tag: CONSTANT_TAG.Utf8,
+      length: clsName.length,
+      value: clsName,
+    } as info.ConstantUtf8Info);
+    constantPool.push({
+      tag: CONSTANT_TAG.Utf8,
+      value: invokerDesc,
+      length: invokerDesc.length,
+    });
+    constantPool.push({
+      tag: CONSTANT_TAG.Utf8,
+      value: invokerName,
+      length: invokerName.length,
+    });
+    constantPool.push({
+      tag: CONSTANT_TAG.NameAndType,
+      nameIndex: 9,
+      descriptorIndex: 8,
+    });
+    constantPool.push({
+      tag: CONSTANT_TAG.Methodref,
+      classIndex: 1,
+      nameAndTypeIndex: 10,
+    });
+
+    const clsFile: ClassFile = {
+      magic: 0xcafebabe,
+      minorVersion: 0,
+      majorVersion: 0,
+      constantPoolCount: constantPool.length,
+      constantPool: constantPool,
+      accessFlags: 0,
+      thisClass: 1,
+      superClass: 4,
+      interfacesCount: 0,
+      interfaces: [6],
+      fieldsCount: 0,
+      fields: [],
+      methodsCount: 0,
+      methods: [
+        {
+          accessFlags: METHOD_FLAGS.ACC_PUBLIC,
+          nameIndex: 9,
+          descriptorIndex: 8,
+          attributesCount: 0,
+          attributes: [
+            {
+              attributeLength: 999,
+              attributeNameIndex: 3,
+              info: code.buffer,
+              maxStack,
+              maxLocals: methodArgs.length * 2,
+              code,
+              codeLength: codeSize,
+              exceptionTable: [],
+              exceptionTableLength: 0,
+              attributesCount: 0,
+              attributes: [],
+            } as CodeAttribute,
+          ],
+        },
+      ],
+      attributesCount: 0,
+      attributes: [],
+    };
+    const anonCls = new ReferenceClassData(
+      clsFile,
+      this.cls.getLoader(),
+      thisClsName,
+      () => {}
+    );
+
+    // Fix constant index for invoke
+    code.setUint16(invokeIndex, methodRefIndex);
+
+    const lambdaObj = anonCls.instantiate();
+
+    return { result: lambdaObj };
   }
 }
 
@@ -691,7 +870,6 @@ export class ConstantMethodHandle extends Constant {
     if (this.result) {
       return this.result;
     }
-    this.result = { isDefer: true };
 
     // #region Step 1: resolve field/method
     const refRes = this.reference.resolve();
@@ -702,7 +880,6 @@ export class ConstantMethodHandle extends Constant {
       }
       return { isDefer: true };
     }
-    this.result = { isDefer: true };
     const ref = refRes.result;
     // #endregion
 
@@ -714,7 +891,7 @@ export class ConstantMethodHandle extends Constant {
           .getLoader()
           .getClassRef(
             'java/lang/invoke/MethodHandleNatives'
-          ) as SuccessResult<ClassData>
+          ) as SuccessResult<ReferenceClassData>
       ).result;
 
       const method = mhnCls.getMethod(
@@ -739,15 +916,14 @@ export class ConstantMethodHandle extends Constant {
             nameStr,
             obj,
           ],
-          (mh: JvmObject) => {
-            if (!mh) {
-              throw new Error('not implemented');
+          (mh: JvmObject, err?: any) => {
+            if (!mh || err) {
+              thread.throwException(err);
             }
             this.result = { result: mh };
           }
         )
       );
-      return;
     };
     // #endregion
 
@@ -794,7 +970,7 @@ export class ConstantMethodHandle extends Constant {
     }
     // #endregion
 
-    return this.result;
+    return { isDefer: true };
   }
 
   public tempGetReference() {

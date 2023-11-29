@@ -1,89 +1,71 @@
-import { CodeAttribute, AttributeInfo } from "../../../ClassFile/types/attributes";
 import { MethodInfo, METHOD_FLAGS } from "../../../ClassFile/types/methods";
+import { ConstantPool } from "../../constant-pool";
+import { NativeStackFrame, JavaStackFrame } from "../../stackframe";
 import Thread from "../../thread";
-import { parseMethodDescriptor } from "../../utils";
-import { JvmObject } from "../reference/Object";
+import { parseMethodDescriptor, asDouble, asFloat, attrInfo2Interface } from "../../utils";
 import { ImmediateResult, checkError, ErrorResult, checkSuccess } from "../Result";
-import { ArrayClassData } from "./ArrayClassData";
-import { ClassData } from "./ClassData";
+import { JvmObject } from "../reference/Object";
+import { Code, IAttribute } from "./Attributes";
+import { ReferenceClassData, ArrayClassData, ClassData } from "./ClassData";
 import { ConstantUtf8 } from "./Constants";
-
 
 export interface MethodHandler {
   startPc: number;
   endPc: number;
   handlerPc: number;
-  catchType: null | ClassData;
+  catchType: null | ReferenceClassData;
 }
 
 export class Method {
-  private cls: ClassData;
-  private code: CodeAttribute | null; // native methods have no code
+  private cls: ReferenceClassData;
+  private code: Code | null; // native methods have no code
   private accessFlags: number;
   private name: string;
   private descriptor: string;
-  private attributes: Array<AttributeInfo>;
-  private exceptionHandlers: MethodHandler[];
+  private attributes: { [attributeName: string]: IAttribute[] } = {};
 
-  private static reflectMethodClass: ClassData | null = null;
-  private static reflectConstructorClass: ClassData | null = null;
+  private static reflectMethodClass: ReferenceClassData | null = null;
+  private static reflectConstructorClass: ReferenceClassData | null = null;
   private javaObject?: JvmObject;
   private slot: number;
 
   constructor(
-    cls: ClassData,
-    code: CodeAttribute | null,
+    cls: ReferenceClassData,
     accessFlags: number,
     name: string,
     descriptor: string,
-    attributes: Array<AttributeInfo>,
-    exceptionHandlers: {
-      startPc: number;
-      endPc: number;
-      handlerPc: number;
-      catchType: null | ClassData;
-    }[],
+    attributes: { [attributeName: string]: IAttribute[] },
     slot: number
   ) {
     this.cls = cls;
-    this.code = code;
+    this.code = (attributes['Code']?.[0] as Code) ?? null;
     this.accessFlags = accessFlags;
     this.name = name;
     this.descriptor = descriptor;
     this.attributes = attributes;
-    this.exceptionHandlers = exceptionHandlers;
     this.slot = slot;
   }
 
   /**
    * factory method for class loaders to create a method
    */
-  static fromLinkedInfo(
-    cls: ClassData,
+  static fromInfo(
+    cls: ReferenceClassData,
     method: MethodInfo,
-    exceptionHandlers: MethodHandler[],
-    code: CodeAttribute | null,
-    slot: number
+    slot: number,
+    constantPool: ConstantPool
   ) {
     // get name and descriptor
     const name = (cls.getConstant(method.nameIndex) as ConstantUtf8).get();
     const descriptor = (
       cls.getConstant(method.descriptorIndex) as ConstantUtf8
     ).get();
-
     const accessFlags = method.accessFlags;
-    const attributes = method.attributes;
 
-    return new Method(
-      cls,
-      code,
-      accessFlags,
-      name,
-      descriptor,
-      attributes,
-      exceptionHandlers,
-      slot
-    );
+    // get attributes
+    const attributes = attrInfo2Interface(method.attributes, constantPool);
+
+    return new Method(cls, accessFlags, name, descriptor, attributes, slot);
   }
 
   /**
@@ -177,7 +159,7 @@ export class Method {
         if (checkError(fRes)) {
           return fRes;
         }
-        Method.reflectConstructorClass = fRes.result;
+        Method.reflectConstructorClass = fRes.result as ReferenceClassData;
       }
 
       javaObject = Method.reflectConstructorClass.instantiate();
@@ -197,7 +179,7 @@ export class Method {
         if (checkError(fRes)) {
           return fRes;
         }
-        Method.reflectMethodClass = fRes.result;
+        Method.reflectMethodClass = fRes.result as ReferenceClassData;
       }
 
       javaObject = Method.reflectMethodClass.instantiate();
@@ -222,11 +204,9 @@ export class Method {
         'java/lang/reflect/Method',
         returnType
       );
-
-      console.error('reflected method annotationDefault not initialized');
       javaObject._putField(
         'annotationDefault',
-        'Ljava/lang/annotation/Annotation;',
+        '[B',
         'java/lang/reflect/Method',
         null
       );
@@ -300,6 +280,8 @@ export class Method {
     );
     // #endregion
 
+    javaObject.putNativeField('methodRef', this);
+
     this.javaObject = javaObject;
     return { result: javaObject };
   }
@@ -329,14 +311,95 @@ export class Method {
   }
 
   getExceptionHandlers() {
-    if (this.exceptionHandlers === undefined) {
-      throw new Error('Class not initialized');
+    if (!this.code) {
+      return [];
     }
-    return this.exceptionHandlers;
+    return this.code.exceptionTable;
   }
 
-  getAttributes() {
-    return this.attributes;
+  getAccessFlags() {
+    return this.accessFlags;
+  }
+
+  getArgs(thread: Thread): any[] {
+    // We should memoize parsing in the future.
+    const methodDesc = parseMethodDescriptor(this.descriptor);
+    const isNative = this.checkNative();
+    const args = [];
+    for (let i = methodDesc.args.length - 1; i >= 0; i--) {
+      switch (methodDesc.args[i].type) {
+        case 'V':
+          break; // should not happen
+        case 'B':
+        case 'C':
+        case 'I':
+        case 'S':
+        case 'Z':
+          args.push(thread.popStack());
+          break;
+        case 'D':
+          const double = asDouble(thread.popStack64());
+          args.push(double);
+          if (!isNative) {
+            args.push(double);
+          }
+          break;
+        case 'F':
+          args.push(asFloat(thread.popStack()));
+          break;
+        case 'J':
+          const long = asDouble(thread.popStack64());
+          args.push(long);
+          if (!isNative) {
+            args.push(long);
+          }
+          break;
+        case '[':
+        default: // references + arrays
+          args.push(thread.popStack());
+      }
+    }
+
+    return args.reverse();
+  }
+
+  getBridgeMethod() {
+    return (thread: Thread) => {
+      let sf;
+
+      const args = this.getArgs(thread);
+      let locals;
+
+      // push object for non static invokes
+      if (!this.checkStatic()) {
+        const obj = thread.popStack();
+        if (obj === null) {
+          thread.throwNewException('java/lang/NullPointerException', '');
+          return;
+        }
+        locals = [obj, ...args];
+      } else {
+        locals = args;
+      }
+
+      if (this.checkNative()) {
+        const nativeMethod = thread
+          .getJVM()
+          .getJNI()
+          .getNativeMethod(
+            this.cls.getClassname(),
+            this.name + this.descriptor
+          );
+        if (!nativeMethod) {
+          thread.throwNewException('java/lang/UnsatisfiedLinkError', '');
+          return;
+        }
+        sf = new NativeStackFrame(this.cls, this, 0, locals, nativeMethod);
+      } else {
+        sf = new JavaStackFrame(this.cls, this, 0, locals);
+      }
+      thread.invokeStackFrame(sf);
+    };
   }
 
   /**
@@ -434,11 +497,8 @@ export class Method {
     }
 
     // R is private
-    // nestmate test se17 5.4.4. for inner classes
-    return (
-      accessingClass === declaringCls ||
-      declaringCls.getNestedHost() === accessingClass.getNestedHost()
-    );
+    // FIXME: test inner class
+    return accessingClass === declaringCls;
   }
 
   _getCode() {

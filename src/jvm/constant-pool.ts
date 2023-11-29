@@ -2,12 +2,13 @@ import { CONSTANT_TAG } from "../ClassFile/constants/constants";
 import { ConstantInfo, ConstantIntegerInfo, ConstantFloatInfo, ConstantLongInfo, ConstantDoubleInfo, ConstantUtf8Info, ConstantStringInfo, ConstantNameAndTypeInfo, ConstantMethodTypeInfo, ConstantClassInfo, ConstantInvokeDynamicInfo, ConstantFieldrefInfo, ConstantMethodrefInfo, ConstantInterfaceMethodrefInfo, ConstantMethodHandleInfo } from "../ClassFile/types/constants";
 import { ClassData } from "./types/class/ClassData";
 import { Constant, ConstantInteger, ConstantFloat, ConstantLong, ConstantDouble, ConstantUtf8, ConstantString, ConstantNameAndType, ConstantMethodType, ConstantClass, ConstantInvokeDynamic, ConstantFieldref, ConstantMethodref, ConstantInterfaceMethodref, ConstantMethodHandle } from "./types/class/Constants";
+import { JvmArray } from "./types/reference/Array";
 
 
 export class ConstantPool {
   private pool: Constant[];
 
-  constructor(cls: ClassData, infoArr: ConstantInfo[]) {
+  constructor(cls: ClassData, infoArr: ConstantInfo[], overrides?: JvmArray) {
     const pool: Constant[] = [];
 
     function init(index: number) {
@@ -49,6 +50,7 @@ export class ConstantPool {
           );
           return;
         // #endregion
+
         // #region utf8 dependency
         case CONSTANT_TAG.String:
           const strIndex = (constant as ConstantStringInfo).stringIndex;

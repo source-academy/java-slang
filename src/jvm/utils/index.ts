@@ -1,5 +1,9 @@
+import { AttributeInfo } from "../../ClassFile/types/attributes";
+import { ConstantPool } from "../constant-pool";
+import { IAttribute, info2Attribute } from "../types/class/Attributes";
 import { ClassData } from "../types/class/ClassData";
-import { JavaType, JvmObject } from "../types/reference/Object";
+import { ConstantUtf8 } from "../types/class/Constants";
+import { JvmObject, JavaType } from "../types/reference/Object";
 
 /**
  * Converts a Java String to a JS string
@@ -171,4 +175,32 @@ export function primitiveNameToType(pName: string) {
     default:
       return null;
   }
+}
+
+export function attrInfo2Interface(
+  infoArr: AttributeInfo[],
+  constantPool: ConstantPool
+) {
+  const attributes: { [attributeName: string]: IAttribute[] } = {};
+  // attributes
+  infoArr.forEach(attr => {
+    const attrName = (
+      constantPool.get(attr.attributeNameIndex) as ConstantUtf8
+    ).get();
+    if (!attributes[attrName]) {
+      attributes[attrName] = [];
+    }
+    attributes[attrName].push(info2Attribute(attr, constantPool));
+  });
+  return attributes;
+}
+
+export function autoBox(obj: any) {
+  console.warn('Auto boxing not implemented');
+  return obj;
+}
+
+export function autoUnbox(obj: any) {
+  console.warn('Auto unboxing not implemented');
+  return obj;
 }
