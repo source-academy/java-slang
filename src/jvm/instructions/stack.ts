@@ -1,4 +1,5 @@
-import Thread from '#jvm/components/thread';
+import Thread from "../thread";
+
 
 export function runPop(thread: Thread): void {
   thread.offsetPc(1);

@@ -1,5 +1,6 @@
 import Thread from "../thread";
 import { checkSuccess, checkError } from "../types/Result";
+import { ReferenceClassData } from "../types/class/ClassData";
 import { ConstantClass, ConstantDouble, ConstantLong } from "../types/class/Constants";
 
 
@@ -50,12 +51,12 @@ export function runIconst5(thread: Thread): void {
 
 export function runLconst0(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(0n);
+  thread.pushStack64(BigInt(0));
 }
 
 export function runLconst1(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(1n);
+  thread.pushStack64(BigInt(1));
 }
 
 export function runFconst0(thread: Thread): void {

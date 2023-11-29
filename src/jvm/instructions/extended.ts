@@ -1,10 +1,10 @@
-import Thread from '#jvm/components/thread';
-import { OPCODE } from '#jvm/external/ClassFile/constants/instructions';
-import { asFloat, asDouble } from '#utils/index';
-import { JvmArray } from '#types/reference/Array';
-import { JvmObject } from '#types/reference/Object';
-import { ConstantClass } from '#types/class/Constants';
-import { checkSuccess, checkError } from '#types/result';
+import { OPCODE } from "../../ClassFile/constants/instructions";
+import Thread from "../thread";
+import { checkSuccess, checkError } from "../types/Result";
+import { ConstantClass } from "../types/class/Constants";
+import { JvmArray } from "../types/reference/Array";
+import { JvmObject } from "../types/reference/Object";
+import { asFloat, asDouble } from "../utils";
 
 export function runWide(thread: Thread): void {
   thread.offsetPc(1);
