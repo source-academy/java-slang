@@ -134,8 +134,6 @@ export function runGetfield(thread: Thread): void {
     return;
   }
 
-  // FIXME: Store instance field data in the classref instead.
-  // If fieldRef is Parent.X, and object is Child, Parent.X is set not Child.X
   const value = objRef.getField(field);
   if (field.getFieldDesc() === 'J' || field.getFieldDesc() === 'D') {
     thread.pushStack64(value);
@@ -168,7 +166,6 @@ export function runPutfield(thread: Thread): void {
   }
 
   let value;
-  // FIXME: in theory it is legal to have 2 same field name, different type
   if (field.getFieldDesc() === 'J' || field.getFieldDesc() === 'D') {
     value = thread.popStack64();
   } else {

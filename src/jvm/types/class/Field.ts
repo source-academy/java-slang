@@ -248,7 +248,6 @@ export class Field {
 
     const invokerClass = thread.getClass();
     const fieldClass = this.getClass();
-    // FIXME: check innter classes if private
     if (this.checkPrivate() && invokerClass !== fieldClass) {
       return { exceptionCls: 'java/lang/IllegalAccessError', msg: '' };
     }

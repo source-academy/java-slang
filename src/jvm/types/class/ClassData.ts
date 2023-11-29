@@ -664,7 +664,6 @@ export class ReferenceClassData extends ClassData {
       this.status === CLASS_STATUS.INITIALIZED ||
       this.status === CLASS_STATUS.INITIALIZING
     ) {
-      // FIXME: check if current class is initializer
       return { result: this };
     }
 

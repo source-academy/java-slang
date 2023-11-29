@@ -1,13 +1,9 @@
 import { ClassFile } from "../../ClassFile/types";
-import { CodeAttribute } from "../../ClassFile/types/attributes";
-import { ConstantInfo, ConstantUtf8Info, ConstantClassInfo } from "../../ClassFile/types/constants";
-import { MethodInfo } from "../../ClassFile/types/methods";
-import AbstractSystem from "../utils/AbstractSystem";
-import { ClassData } from "../types/class/ClassData";
-import { MethodHandler } from "../types/class/Method";
+import { ConstantClassInfo, ConstantUtf8Info } from "../../ClassFile/types/constants";
+import { ErrorResult, ImmediateResult, checkError, checkSuccess } from "../types/Result";
+import { ClassData, ReferenceClassData, ArrayClassData, PrimitiveClassData } from "../types/class/ClassData";
 import { JvmObject } from "../types/reference/Object";
-import { ImmediateResult, checkError, checkSuccess } from "../utils/Result";
-import { ACCESS_FLAGS as CLASS_FLAGS } from "../../ClassFile/types";
+import AbstractSystem from "../utils/AbstractSystem";
 
 
 export default abstract class AbstractClassLoader {
@@ -38,155 +34,31 @@ export default abstract class AbstractClassLoader {
     return;
   }
 
-  private _linkMethod(
-    constantPool: ConstantInfo[],
-    method: MethodInfo
-  ): ImmediateResult<{
-    method: MethodInfo;
-    exceptionHandlers: MethodHandler[];
-    code: CodeAttribute | null;
-  }> {
-    // get code attribute
-    let code: CodeAttribute | null = null;
-    for (const attr of method.attributes) {
-      const attrname = (
-        constantPool[attr.attributeNameIndex] as ConstantUtf8Info
-      ).value;
-      if (attrname === 'Code') {
-        code = attr as CodeAttribute;
-      }
-    }
-
-    const handlderTable: MethodHandler[] = [];
-    if (code) {
-      for (const handler of code.exceptionTable) {
-        const ctIndex = handler.catchType;
-        if (ctIndex === 0) {
-          handlderTable.push({
-            startPc: handler.startPc,
-            endPc: handler.endPc,
-            handlerPc: handler.handlerPc,
-            catchType: null,
-          });
-          continue;
-        }
-
-        const catchType = constantPool[
-          (constantPool[ctIndex] as ConstantClassInfo).nameIndex
-        ] as ConstantUtf8Info;
-        const ctRes = this.getClassRef(catchType.value);
-        if (checkError(ctRes)) {
-          return { exceptionCls: 'java/lang/NoClassDefFoundError', msg: '' };
-        }
-        const clsRef = ctRes.result;
-
-        handlderTable.push({
-          startPc: handler.startPc,
-          endPc: handler.endPc,
-          handlerPc: handler.handlerPc,
-          catchType: clsRef,
-        });
-      }
-    }
-
-    return {
-      result: {
-        method,
-        exceptionHandlers: handlderTable,
-        code,
-      },
-    };
-  }
-
   /**
-   * Resolves symbolic references in the constant pool.
-   * @param cls class data to resolve
-   * @returns class data with resolved references
+   * Loads superclasses etc. for reference classes
    */
-  protected linkClass(cls: ClassFile): ClassData {
-    const constantPool = cls.constantPool;
-    const accessFlags = cls.accessFlags;
-
+  protected linkClass(cls: ClassFile): ReferenceClassData {
     // resolve classname
     const clsInfo = cls.constantPool[cls.thisClass] as ConstantClassInfo;
     const clsName = cls.constantPool[clsInfo.nameIndex] as ConstantUtf8Info;
     const thisClass = clsName.value;
 
-    // resolve superclass
-    let superClass = null;
-    if (cls.superClass !== 0) {
-      const superClassIndex = cls.constantPool[
-        cls.superClass
-      ] as ConstantClassInfo;
-      const superClassName = cls.constantPool[
-        superClassIndex.nameIndex
-      ] as ConstantUtf8Info;
-      const res = this.getClassRef(superClassName.value);
-
-      if (checkError(res)) {
-        throw new Error(res.exceptionCls);
-      }
-
-      superClass = res.result;
-    }
-
-    if ((accessFlags & CLASS_FLAGS.ACC_INTERFACE) !== 0 && !superClass) {
-      // Some compilers set superclass to object by default.
-      // We force it to be java/lang/Object if it's not set.
-      // assume object is loaded at initialization.
-      superClass = (this.getClassRef('java/lang/Object') as any)
-        .result as ClassData;
-    }
-
-    // resolve interfaces
-    const interfaces: ClassData[] = [];
-    cls.interfaces.forEach(interfaceIndex => {
-      const interfaceNameIdx = (
-        cls.constantPool[interfaceIndex] as ConstantClassInfo
-      ).nameIndex;
-      const interfaceName = (
-        cls.constantPool[interfaceNameIdx] as ConstantUtf8Info
-      ).value;
-      const res = this.getClassRef(interfaceName);
-      if (checkError(res)) {
-        throw new Error(res.exceptionCls);
-      }
-      interfaces.push(res.result);
-    });
-
-    const methods: {
-      method: MethodInfo;
-      exceptionHandlers: MethodHandler[];
-      code: CodeAttribute | null;
-    }[] = [];
-    cls.methods.forEach(method => {
-      const res = this._linkMethod(constantPool, method);
-      if (checkError(res)) {
-        throw new Error(res.exceptionCls);
-      }
-      const mData = res.result;
-      methods.push(mData);
-    });
-
-    const attributes = cls.attributes;
-
-    const data = new ClassData(
-      constantPool,
-      accessFlags,
+    let hasError: ErrorResult | null = null;
+    const data = new ReferenceClassData(
+      cls,
+      this,
       thisClass,
-      superClass,
-      interfaces,
-      cls.fields,
-      methods,
-      attributes,
-      this
+      e => (hasError = e)
     );
+
+    if (hasError) {
+      throw new Error((hasError as ErrorResult).exceptionCls);
+    }
     return data;
   }
 
   /**
-   * Adds the resolved class data to the memory area.
-   * @param cls resolved class data
+   * Stores the resolved class data.
    */
   protected loadClass(cls: ClassData): ClassData {
     this.loadedClasses[cls.getClassname()] = cls;
@@ -196,8 +68,7 @@ export default abstract class AbstractClassLoader {
   protected _loadArrayClass(
     className: string,
     componentCls: ClassData
-  ): ImmediateResult<ClassData> {
-    // array classes should be loaded by bootstrap loader
+  ): ImmediateResult<ArrayClassData> {
     if (!this.parentLoader) {
       throw new Error('ClassLoader has no parent loader');
     }
@@ -250,10 +121,8 @@ export default abstract class AbstractClassLoader {
   }
 
   /**
-   * Gets the class data given the classname, loads the class if not loaded.
-   *
-   * @param className
-   * @returns
+   * Gets the reference class data given the classname, loads the class if not loaded.
+   * Not for primitive classes, use getPrimitiveClassRef for primitive classes.
    */
   getClassRef(className: string): ImmediateResult<ClassData> {
     return this._getClassRef(className, this);
@@ -264,7 +133,7 @@ export default abstract class AbstractClassLoader {
    * @throws Error if class is not a primitive
    * @param className
    */
-  abstract getPrimitiveClassRef(className: string): ClassData;
+  abstract getPrimitiveClassRef(className: string): PrimitiveClassData;
 
   protected abstract load(className: string): ImmediateResult<ClassData>;
 

@@ -1,11 +1,12 @@
 import JVM from ".";
-import { CodeAttribute } from "../ClassFile/types/attributes";
+import { StackFrame, InternalStackFrame, JavaStackFrame } from "./stackframe";
 import { AbstractThreadPool } from "./threadpool";
-import { ClassData } from "./types/class/ClassData";
+import { checkError, checkSuccess } from "./types/Result";
+import { Code } from "./types/class/Attributes";
+import { ReferenceClassData, ClassData } from "./types/class/ClassData";
 import { Method } from "./types/class/Method";
 import { JvmObject } from "./types/reference/Object";
-import { checkError, checkSuccess } from "./utils/Result";
-import { StackFrame, InternalStackFrame, JavaStackFrame } from "./stackframe";
+
 
 export enum ThreadStatus {
   NEW,
@@ -21,13 +22,17 @@ export default class Thread {
   private stack: StackFrame[];
   private stackPointer: number;
   private javaObject: JvmObject;
-  private threadClass: ClassData;
+  private threadClass: ReferenceClassData;
   private jvm: JVM;
 
   private quantumLeft: number = 0;
   private tpool: AbstractThreadPool;
 
-  constructor(threadClass: ClassData, jvm: JVM, tpool: AbstractThreadPool) {
+  constructor(
+    threadClass: ReferenceClassData,
+    jvm: JVM,
+    tpool: AbstractThreadPool
+  ) {
     this.jvm = jvm;
     this.threadClass = threadClass;
     this.stack = [];
@@ -118,8 +123,7 @@ export default class Thread {
   }
 
   getCode(): DataView {
-    return (this.stack[this.stackPointer].method._getCode() as CodeAttribute)
-      .code;
+    return (this.stack[this.stackPointer].method._getCode() as Code).code;
   }
 
   // #endregion
@@ -237,7 +241,7 @@ export default class Thread {
   }
 
   _invokeInternal(
-    cls: ClassData,
+    cls: ReferenceClassData,
     method: Method,
     pc: number,
     locals: any[],
@@ -274,7 +278,7 @@ export default class Thread {
     if (checkError(clsRes)) {
       if (clsRes.exceptionCls === 'java/lang/ClassNotFoundException') {
         throw new Error(
-          'ClassNotFoundException not found'
+          'Infinite loop detected: ClassNotFoundException not found'
         );
       }
 
@@ -291,6 +295,13 @@ export default class Thread {
       return;
     }
 
+    console.error(
+      'throwing exception ',
+      exceptionCls.getClassname(),
+      msg,
+      this.getMethod().getName(),
+      this.getPC()
+    );
     this.throwException(exceptionCls.instantiate());
   }
 
@@ -312,12 +323,25 @@ export default class Thread {
       const pc = this.getPC();
 
       for (const handler of eTable) {
-        // compiler should ensure catch type is an instance of Throwable
+        let handlerCls: ClassData | null;
+        if (handler.catchType !== null) {
+          const clsResolution = handler.catchType.resolve();
+          if (checkError(clsResolution)) {
+            this.throwNewException(
+              clsResolution.exceptionCls,
+              clsResolution.msg
+            );
+            return;
+          }
+          handlerCls = clsResolution.result;
+        } else {
+          handlerCls = null;
+        }
+
         if (
           pc >= handler.startPc &&
-          pc <= handler.endPc &&
-          (handler.catchType === null ||
-            exceptionCls.checkCast(handler.catchType))
+          pc < handler.endPc &&
+          (handlerCls === null || exceptionCls.checkCast(handlerCls))
         ) {
           // clear the operand stack and push exception
           this.stack[this.stackPointer].operandStack = [exception];

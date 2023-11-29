@@ -1,4 +1,4 @@
-import Thread, { ThreadStatus } from './thread';
+import Thread, { ThreadStatus } from "./thread";
 
 export abstract class AbstractThreadPool {
   protected threads: Thread[] = [];
@@ -43,9 +43,7 @@ export abstract class AbstractThreadPool {
 
   hasThreads(): boolean {
     this.clearTerminated();
-    return (
-      this.threads.length > 0
-    );
+    return this.threads.length > 0;
   }
 
   clearTerminated() {

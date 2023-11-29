@@ -46,7 +46,7 @@ const checkOverride = (thread: Thread, method: Method) => {
 };
 
 const runInstruction = (thread: Thread, method: Method) => {
-  const opcode = (method._getCode() as CodeAttribute).code.getUint8(
+  const opcode = (method._getCode() as unknown as CodeAttribute).code.getUint8(
     thread.getPC()
   );
 

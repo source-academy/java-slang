@@ -373,9 +373,6 @@ export class ConstantClass extends Constant {
 export class ConstantInvokeDynamic extends Constant {
   private bootstrapMethodAttrIndex: number;
   private nameAndType: ConstantNameAndType;
-  private methodTypeObj?: JvmObject;
-  private result?: Result<JvmObject>;
-
   constructor(
     cls: ClassData,
     bootstrapMethodAttrIndex: number,
@@ -423,10 +420,8 @@ export class ConstantInvokeDynamic extends Constant {
       }
       return { isDefer: true };
     }
-    const res = refres.result;
 
     const bsArgIdx = bootstrapMethod.bootstrapArguments;
-    const argConst = this.cls.getConstant(bsArgIdx[0]) as ConstantMethodType;
     const mhConst = this.cls.getConstant(bsArgIdx[1]) as ConstantMethodHandle;
     const invokeRes = mhConst.tempGetReference().resolve();
     if (!checkSuccess<Field | Method>(invokeRes)) {
@@ -449,9 +444,6 @@ export class ConstantInvokeDynamic extends Constant {
     }
 
     const thisClsName = this.cls.getClassname();
-    const intercls = clsRes.result;
-    const erasedDesc = argConst.getDescriptor();
-    const methodName = nameAndTypeRes.name;
     const toInvoke = invokeRes.result as Method;
     const invokerName = toInvoke.getName();
     const invokerDesc = toInvoke.getDescriptor();
@@ -924,6 +916,7 @@ export class ConstantMethodHandle extends Constant {
           }
         )
       );
+      return {isDefer: true}
     };
     // #endregion
 

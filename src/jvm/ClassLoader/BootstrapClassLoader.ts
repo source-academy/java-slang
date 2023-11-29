@@ -1,9 +1,8 @@
-import AbstractSystem from "../utils/AbstractSystem";
-import { ArrayClassData } from "../types/class/ArrayClassData";
-import { ClassData, CLASS_TYPE } from "../types/class/ClassData";
+import { ImmediateResult, ErrorResult } from "../types/Result";
+import { PrimitiveClassData, ClassData, ArrayClassData } from "../types/class/ClassData";
 import { JavaType, JvmObject } from "../types/reference/Object";
 import { primitiveTypeToName } from "../utils";
-import { ImmediateResult, checkError } from "../utils/Result";
+import AbstractSystem from "../utils/AbstractSystem";
 import AbstractClassLoader from "./AbstractClassLoader";
 import { ACCESS_FLAGS as CLASS_FLAGS } from "../../ClassFile/types";
 
@@ -11,7 +10,7 @@ import { ACCESS_FLAGS as CLASS_FLAGS } from "../../ClassFile/types";
  * Reads classfile representation and loads it into memory area
  */
 export default class BootstrapClassLoader extends AbstractClassLoader {
-  private primitiveClasses: { [className: string]: ClassData } = {};
+  private primitiveClasses: { [className: string]: PrimitiveClassData } = {};
 
   constructor(nativeSystem: AbstractSystem, classPath: string) {
     super(nativeSystem, classPath, null);
@@ -20,34 +19,18 @@ export default class BootstrapClassLoader extends AbstractClassLoader {
   private loadArray(
     className: string,
     componentCls: ClassData
-  ): ImmediateResult<ClassData> {
-    // #region load array superclasses/interfaces
-    const objRes = this.getClassRef('java/lang/Object');
-    if (checkError(objRes)) {
-      return objRes;
-    }
-    const cloneableRes = this.getClassRef('java/lang/Cloneable');
-    if (checkError(cloneableRes)) {
-      return cloneableRes;
-    }
-    const serialRes = this.getClassRef('java/io/Serializable');
-    if (checkError(serialRes)) {
-      return serialRes;
-    }
-    // #endregion
-
+  ): ImmediateResult<ArrayClassData> {
+    let error: ErrorResult | null = null;
     const arrayClass = new ArrayClassData(
-      [],
       CLASS_FLAGS.ACC_PUBLIC,
       className,
-      objRes.result,
-      [cloneableRes.result, serialRes.result],
-      [],
-      [],
-      [],
-      this
+      this,
+      componentCls,
+      e => (error = e)
     );
-    arrayClass.setComponentClass(componentCls);
+    if (error) {
+      return error;
+    }
 
     this.loadClass(arrayClass);
     return { result: arrayClass };
@@ -58,6 +41,8 @@ export default class BootstrapClassLoader extends AbstractClassLoader {
    * @param className name of class to load
    */
   protected load(className: string): ImmediateResult<ClassData> {
+    console.debug(`BsCL: loading ${className}`);
+
     const path = this.classPath ? this.classPath + '/' + className : className;
 
     let classFile;
@@ -78,32 +63,27 @@ export default class BootstrapClassLoader extends AbstractClassLoader {
   protected _loadArrayClass(
     className: string,
     componentCls: ClassData
-  ): ImmediateResult<ClassData> {
+  ): ImmediateResult<ArrayClassData> {
     return this.loadArray(className, componentCls);
   }
 
-  getPrimitiveClassRef(className: string): ClassData {
-    if (this.primitiveClasses[className]) {
-      return this.primitiveClasses[className];
-    }
+  getPrimitiveClassRef(className: string): PrimitiveClassData {
     const internalName = primitiveTypeToName(className as JavaType);
     if (!internalName) {
       throw new Error(`Invalid primitive class name: ${className}`);
     }
 
-    const cls = new ClassData(
-      [],
-      CLASS_FLAGS.ACC_PUBLIC,
-      internalName,
-      null,
-      [],
-      [],
-      [],
-      [],
-      this,
-      CLASS_TYPE.PRIMITIVE
-    );
-    this.primitiveClasses[className] = cls;
+    if (this.primitiveClasses[internalName]) {
+      return this.primitiveClasses[internalName];
+    }
+
+    const cls = new PrimitiveClassData(this, internalName);
+    this.primitiveClasses[internalName] = cls;
+
+    if (internalName === 'char') {
+      console.log('CHAR PRIMITIVE LOADED');
+    }
+
     return cls;
   }
 

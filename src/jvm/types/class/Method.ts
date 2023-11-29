@@ -321,6 +321,10 @@ export class Method {
     return this.accessFlags;
   }
 
+  getAttributes() {
+    return this.attributes;
+  }
+
   getArgs(thread: Thread): any[] {
     // We should memoize parsing in the future.
     const methodDesc = parseMethodDescriptor(this.descriptor);
@@ -497,7 +501,6 @@ export class Method {
     }
 
     // R is private
-    // FIXME: test inner class
     return accessingClass === declaringCls;
   }
 
