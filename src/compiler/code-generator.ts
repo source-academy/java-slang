@@ -12,6 +12,8 @@ import {
   IfStatement,
   WhileStatement,
   BasicForStatement,
+  PostfixExpression,
+  PrefixExpression,
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -156,6 +158,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
         }
       }
 
+      if (node.kind === "PrefixExpression") {
+        const { expression: expr } = node as PrefixExpression;
+        return f(expr, targetLabel, !onTrue);
+      }
+
       if (node.kind === "BinaryExpression") {
         const { left: left, right: right, operator: op } = node as BinaryExpression;
         let lsize = 0;
@@ -235,6 +242,44 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     return Math.max(lsize, 1 + rsize);
   },
 
+  PrefixExpression: (node: Node, cg: CodeGenerator) => {
+    const { operator: op, expression: expr } = node as PostfixExpression;
+    if (op === "++" || op === "--") {
+      const { name: name } = expr as ExpressionName;
+      const { index: idx } = cg.symbolTable.query(name, SymbolType.VARIABLE);
+      cg.code.push(OPCODE.IINC, idx as number, op === "++" ? 1 : -1);
+      cg.code.push(OPCODE.ILOAD, idx as number);
+      return 1;
+    }
+
+    let maxStack = codeGenerators[expr.kind](expr, cg);
+    if (op === "-") {
+      cg.code.push(OPCODE.INEG);
+    } else if (op === "~") {
+      cg.code.push(OPCODE.ICONST_M1, OPCODE.IXOR);
+      maxStack = Math.max(maxStack, 2);
+    } else if (op === "!") {
+      const elseLabel = cg.generateNewLabel();
+      const endLabel = cg.generateNewLabel();
+      cg.addBranchInstr(OPCODE.IFEQ, elseLabel);
+      cg.code.push(OPCODE.ICONST_0);
+      cg.addBranchInstr(OPCODE.GOTO, endLabel);
+      elseLabel.offset = cg.code.length;
+      cg.code.push(OPCODE.ICONST_1);
+      endLabel.offset = cg.code.length;
+    }
+    return maxStack;
+  },
+
+  PostfixExpression: (node: Node, cg: CodeGenerator) => {
+    const { operator: op, expression: expr } = node as PostfixExpression;
+    const { name: name } = expr as ExpressionName;
+    const { index: idx } = cg.symbolTable.query(name, SymbolType.VARIABLE);
+    cg.code.push(OPCODE.ILOAD, idx as number);
+    cg.code.push(OPCODE.IINC, idx as number, op === "++" ? 1 : -1);
+    return 1;
+  },
+
   ExpressionName: (node: Node, cg: CodeGenerator) => {
     const { name: name } = node as ExpressionName;
     const { index: idx } = cg.symbolTable.query(name, SymbolType.VARIABLE);
@@ -281,12 +326,12 @@ class CodeGenerator {
   }
 
   generateNewLabel(): Label {
-    const lable = {
+    const label = {
       offset: 0,
       pointedBy: [],
     };
-    this.labels.push(lable);
-    return lable;
+    this.labels.push(label);
+    return label;
   }
 
   addBranchInstr(opcode: OPCODE, label: Label) {
