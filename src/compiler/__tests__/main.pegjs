@@ -378,9 +378,9 @@ Dims
   }
 
 TypeArguments
-  = lt TypeArgumentsList gt
+  = lt TypeArgumentList gt
 
-TypeArgumentsList
+TypeArgumentList
   = TypeArgument (comma TypeArgument)*
 
 TypeArgument
@@ -927,9 +927,9 @@ UnaryExpression
   = PostfixExpression
   / op:PrefixOp expr:UnaryExpression {
     return {
-      kind: "UnaryPrefixExpression",
-      op: op,
-      expr: expr,
+      kind: "PrefixExpression",
+      operator: op,
+      expression: expr,
     }
   }
   / CastExpression
@@ -945,9 +945,9 @@ PostfixExpression
   = expr:(Primary / @ExpressionName) 
     op:(increment / decrement)? {
     return op ? {
-      kind: "UnaryPostfixExpression",
-      op: op,
-      expr: expr,
+      kind: "PostfixExpression",
+      operator: op,
+      expression: expr,
     } : expr;
   }
 

@@ -39,7 +39,7 @@ const testCases: testCase[] = [
     expectedLines: ["15", "2", "14", "-1", "0", "-4"],
   },
   {
-    comment: "complex binary expression (int only)",
+    comment: "int only complex binary expression",
     program: `
       public class Main {
         public static void main(String[] args) {
@@ -47,10 +47,12 @@ const testCases: testCase[] = [
           System.out.println(10 * (7 - 4) / 2);
           System.out.println(3 * 4 * 5 - 100 / 2 / 5);
           System.out.println((4 | 6) & (10 ^ 24) + 100);
+          System.out.println(~3 >>> 2 & 5 << 1 + 2);
+          System.out.println((~3 >>> 2) & (5 << (1 + 2)));
         }
       }
     `,
-    expectedLines: ["3", "15", "50", "6"],
+    expectedLines: ["3", "15", "50", "6", "40", "40"],
   },
   {
     comment: "int boundaries",

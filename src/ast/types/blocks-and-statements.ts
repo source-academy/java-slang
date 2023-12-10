@@ -160,9 +160,16 @@ export interface Assignment {
 }
 
 export type LeftHandSide = ExpressionName;
-export type UnaryExpression = PrefixExpression;
+export type UnaryExpression = PrefixExpression | PostfixExpression;
+
 export interface PrefixExpression {
   kind: "PrefixExpression";
-  operator: "-" | "+";
+  operator: "-" | "+" | "++" | "--" | "!" | "~";
+  expression: Expression;
+}
+
+export interface PostfixExpression {
+  kind: "PostfixExpression";
+  operator: "++" | "--";
   expression: Expression;
 }

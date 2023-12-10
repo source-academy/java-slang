@@ -87,6 +87,22 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["0", "0", "0", "1", "0", "2", "1", "0", "1", "1", "1", "2", "2", "0", "2", "1", "2", "2",],
+  },
+  {
+    comment: "nested for loops",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          for (int x = -1; x <= 1; x++) {
+            for (int y = 1; y >= -1; y--) {
+              System.out.println(x);
+              System.out.println(y);
+            }
+          }
+        }
+      }
+    `,
+    expectedLines: ["-1", "1", "-1", "0", "-1", "-1", "0", "1", "0", "0", "0", "-1", "1", "1", "1", "0", "1", "-1",],
   }
 ];
 
