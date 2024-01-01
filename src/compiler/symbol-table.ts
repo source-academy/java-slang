@@ -1,22 +1,47 @@
 import { SymbolNotFoundError, SymbolRedeclarationError } from "./error";
 
-export type Symbol = {
-  name: string,
-  type: SymbolType
+type Symbol = string;
+type Table = Map<Symbol, SymbolNode>;
+
+export type SymbolNode = {
+  info: SymbolInfo,
+  children: Table
 };
 
 export enum SymbolType {
   CLASS,
-  VARIABLE
+  FIELD,
+  METHOD,
+  VARIABLE,
 }
 
-export interface SymbolInfo {
-  index?: number,
-  parentClassName?: string,
-  typeDescriptor?: string
+export type SymbolInfo = ClassInfo | FieldInfo | MethodInfo | VariableInfo;
+
+export interface ClassInfo {
+  accessControl: number,
+  parentClassName: string,
 };
 
-type Table = Map<string, SymbolInfo>;
+export interface FieldInfo {
+  accessControl: number,
+  parentClassName: string,
+};
+
+export interface MethodInfo {
+  typeDescriptor: string
+};
+
+export interface VariableInfo {
+  index: number
+};
+
+function generateSymbol(name: string, type: SymbolType) {
+  const symbol = {
+    name: name,
+    type: type
+  };
+  return JSON.stringify(symbol);
+}
 
 export class SymbolTable {
   private tables: Array<Table>;
@@ -27,10 +52,14 @@ export class SymbolTable {
     this.tables = [this.getNewTable()];
     this.curTable = this.tables[0];
     this.curIdx = 0;
+    this.setup();
+  }
+
+  private setup() {
   }
 
   private getNewTable() {
-    return new Map<string, SymbolInfo>();
+    return new Map<Symbol, SymbolNode>();
   }
 
   extend() {
@@ -47,30 +76,25 @@ export class SymbolTable {
   }
 
   insert(name: string, type: SymbolType, info: SymbolInfo) {
-    const symbol: Symbol = {
-      name: name,
-      type: type
-    };
-    const key = JSON.stringify(symbol);
+    const key = generateSymbol(name, type);
 
     if (this.curTable.has(key)) {
       throw new SymbolRedeclarationError(name);
     }
 
-    this.curTable.set(key, info);
+    this.curTable.set(key, {
+      info: info,
+      children: this.getNewTable()
+    });
   }
 
   query(name: string, type: SymbolType): SymbolInfo {
-    const symbol: Symbol = {
-      name: name,
-      type: type
-    };
-    const key = JSON.stringify(symbol);
+    const key = generateSymbol(name, type);
 
     for (let i = this.curIdx; i >= 0; i--) {
       const table = this.tables[i];
       if (table.has(key)) {
-        return table.get(key) as SymbolInfo;
+        return (table.get(key) as SymbolNode).info;
       }
     }
 
