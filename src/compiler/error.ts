@@ -15,3 +15,9 @@ export class SymbolRedeclarationError extends CompileError {
     super("\"" + name + "\"" + " has already been declared");
   }
 }
+
+export class ConstructNotSupportedError extends CompileError {
+  constructor(construct: string) {
+    super("\"" + construct + "\"" + " is currently not supported by the compiler");
+  }
+}
