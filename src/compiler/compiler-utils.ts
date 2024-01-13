@@ -1,55 +1,42 @@
 import { ACCESS_FLAGS } from "../ClassFile/types";
+import { FIELD_FLAGS } from "../ClassFile/types/fields";
 import { METHOD_FLAGS } from "../ClassFile/types/methods";
-import { ClassModifier, MethodModifier, UnannType } from "../ast/types/classes";
+import { ClassModifier, MethodModifier } from "../ast/types/classes";
 
-const typeMap = new Map([
-  ['byte', 'B'],
-  ['char', 'C'],
-  ['double', 'D'],
-  ['float', 'F'],
-  ['int', 'I'],
-  ['long', 'J'],
-  ['short', 'S'],
-  ['boolean', 'Z'],
-  ['void', 'V'],
+const classAccessFlagMap = new Map([
+  ["public", ACCESS_FLAGS.ACC_PUBLIC],
+  ["final", ACCESS_FLAGS.ACC_FINAL],
+  ["abstract", ACCESS_FLAGS.ACC_ABSTRACT],
 ]);
-
-export function generateFieldDescriptor(typeName: UnannType) {
-  let dim = 0;
-  let last = typeName.length;
-  for (let i = typeName.length - 1; i >= 0; i--) {
-    if (typeName[i] === '[') {
-      dim++;
-      last = i;
-    }
-  }
-
-  typeName = typeName.slice(0, last);
-  if (typeName === "String") {
-    typeName = "java/lang/String";
-  }
-  return "[".repeat(dim) + (typeMap.has(typeName) ? typeMap.get(typeName) : 'L' + typeName + ';');
-}
-
-export function generateMethodDescriptor(paramsType: Array<UnannType>, result: string) {
-  const paramsDescriptor = paramsType.map(generateFieldDescriptor).join(",");
-  const resultDescriptor = generateFieldDescriptor(result);
-
-  return '(' + paramsDescriptor + ')' + resultDescriptor;
-}
 
 export function generateClassAccessFlags(modifiers: Array<ClassModifier>) {
   let flag = ACCESS_FLAGS.ACC_SUPER;
 
-  if (modifiers.includes("public")) {
-    flag |= ACCESS_FLAGS.ACC_PUBLIC;
-  }
-  if (modifiers.includes("final")) {
-    flag |= ACCESS_FLAGS.ACC_FINAL;
-  }
-  if (modifiers.includes("abstract")) {
-    flag |= ACCESS_FLAGS.ACC_ABSTRACT;
-  }
+  modifiers.forEach(m => {
+    const value = classAccessFlagMap.get(m) ?? 0;
+    flag |= value;
+  });
+
+  return flag;
+}
+
+const fieldAccessFlagMap = new Map([
+  ["public", FIELD_FLAGS.ACC_PUBLIC],
+  ["protected", FIELD_FLAGS.ACC_PROTECTED],
+  ["private", FIELD_FLAGS.ACC_PRIVATE],
+  ["static", FIELD_FLAGS.ACC_STATIC],
+  ["final", FIELD_FLAGS.ACC_FINAL],
+  ["transient", FIELD_FLAGS.ACC_TRANSIENT],
+  ["volatile", FIELD_FLAGS.ACC_VOLATILE],
+]);
+
+export function generateFieldAccessFlags(modifiers: Array<MethodModifier>) {
+  let flag = 0;
+
+  modifiers.forEach(m => {
+    const value = fieldAccessFlagMap.get(m) ?? 0;
+    flag |= value;
+  });
 
   return flag;
 }
