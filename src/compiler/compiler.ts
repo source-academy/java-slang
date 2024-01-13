@@ -7,9 +7,7 @@ import { MethodInfo } from "../ClassFile/types/methods";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import {
   generateClassAccessFlags,
-  generateFieldDescriptor,
   generateMethodAccessFlags,
-  generateMethodDescriptor
 } from "./compiler-utils";
 import { SymbolTable, SymbolType } from "./symbol-table";
 import { generateCode } from "./code-generator";
@@ -37,14 +35,6 @@ export class Compiler {
     this.methods = [];
     this.attributes = [];
     this.symbolTable = new SymbolTable();
-    this.symbolTable.insert("out", SymbolType.CLASS, {
-      parentClassName: "java/lang/System",
-      typeDescriptor: generateFieldDescriptor("java/io/PrintStream")
-    });
-    this.symbolTable.insert("println", SymbolType.CLASS, {
-      parentClassName: "java/io/PrintStream",
-      typeDescriptor: generateMethodDescriptor(["java/lang/String"], "void")
-    });
   }
 
   compile(ast: AST) {
@@ -57,10 +47,14 @@ export class Compiler {
   private compileClass(classNode: ClassDeclaration): ClassFile {
     const parentClassName = "java/lang/Object";
     const className = classNode.typeIdentifier;
+    const accessFlags = generateClassAccessFlags(classNode.classModifier);
+    this.symbolTable.insert(className, SymbolType.CLASS, { accessFlags: accessFlags });
     this.constantPoolManager.indexMethodrefInfo(parentClassName, "<init>", "()V");
+
     const superClassIndex = this.constantPoolManager.indexClassInfo(parentClassName);
     const thisClassIndex = this.constantPoolManager.indexClassInfo(className);
     this.constantPoolManager.indexUtf8Info("Code");
+    classNode.classBody.forEach(m => this.recordMethodInfo(m));
     classNode.classBody.forEach(m => this.compileMethod(m));
 
     const constantPool = this.constantPoolManager.getPool();
@@ -70,7 +64,7 @@ export class Compiler {
       majorVersion: MAJOR_VERSION,
       constantPoolCount: constantPool.length + 1,
       constantPool: constantPool,
-      accessFlags: generateClassAccessFlags(classNode.classModifier),
+      accessFlags: accessFlags,
       thisClass: thisClassIndex,
       superClass: superClassIndex,
       interfacesCount: this.interfaces.length,
@@ -84,13 +78,27 @@ export class Compiler {
     };
   }
 
+  private recordMethodInfo(methodNode: MethodDeclaration) {
+    const header = methodNode.methodHeader;
+    const methodName = header.identifier;
+    const paramsType = header.formalParameterList.map(x => x.unannType);
+    const resultType = header.result;
+
+    const descriptor = this.symbolTable.generateMethodDescriptor(paramsType, resultType);
+    this.symbolTable.insert(methodName, SymbolType.METHOD, {
+      accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
+      typeDescriptor: descriptor
+    });
+  }
+
   private compileMethod(methodNode: MethodDeclaration) {
     const header = methodNode.methodHeader;
     const methodName = header.identifier;
-    const params = header.formalParameterList;
+    const paramsType = header.formalParameterList.map(x => x.unannType);
+    const resultType = header.result;
 
     const nameIndex = this.constantPoolManager.indexUtf8Info(methodName);
-    const descriptor = generateMethodDescriptor(params.map(x => x.unannType), header.result);
+    const descriptor = this.symbolTable.generateMethodDescriptor(paramsType, resultType);
     const descriptorIndex = this.constantPoolManager.indexUtf8Info(descriptor);
 
     const attributes: Array<AttributeInfo> = [];
