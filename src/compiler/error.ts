@@ -17,7 +17,13 @@ export class SymbolRedeclarationError extends CompileError {
 }
 
 export class ConstructNotSupportedError extends CompileError {
-  constructor(construct: string) {
-    super("\"" + construct + "\"" + " is currently not supported by the compiler");
+  constructor(name: string) {
+    super("\"" + name + "\"" + " is currently not supported by the compiler");
+  }
+}
+
+export class InvalidMethodCallError extends CompileError {
+  constructor(name: string) {
+    super("\"" + name + "\"" + " is not a valid method");
   }
 }

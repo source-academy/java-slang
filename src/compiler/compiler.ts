@@ -9,7 +9,7 @@ import {
   generateClassAccessFlags,
   generateMethodAccessFlags,
 } from "./compiler-utils";
-import { SymbolTable, SymbolType } from "./symbol-table";
+import { SymbolTable } from "./symbol-table";
 import { generateCode } from "./code-generator";
 
 const MAGIC = 0xcafebabe;
@@ -23,6 +23,7 @@ export class Compiler {
   private fields: Array<FieldInfo>;
   private methods: Array<MethodInfo>;
   private attributes: Array<AttributeInfo>;
+  private className: string;
 
   constructor() {
     this.setup();
@@ -46,13 +47,13 @@ export class Compiler {
 
   private compileClass(classNode: ClassDeclaration): ClassFile {
     const parentClassName = "java/lang/Object";
-    const className = classNode.typeIdentifier;
+    this.className = classNode.typeIdentifier;
     const accessFlags = generateClassAccessFlags(classNode.classModifier);
-    this.symbolTable.insert(className, SymbolType.CLASS, { accessFlags: accessFlags });
+    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags });
     this.constantPoolManager.indexMethodrefInfo(parentClassName, "<init>", "()V");
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(parentClassName);
-    const thisClassIndex = this.constantPoolManager.indexClassInfo(className);
+    const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className);
     this.constantPoolManager.indexUtf8Info("Code");
     classNode.classBody.forEach(m => this.recordMethodInfo(m));
     classNode.classBody.forEach(m => this.compileMethod(m));
@@ -85,8 +86,10 @@ export class Compiler {
     const resultType = header.result;
 
     const descriptor = this.symbolTable.generateMethodDescriptor(paramsType, resultType);
-    this.symbolTable.insert(methodName, SymbolType.METHOD, {
+    this.symbolTable.insertMethodInfo({
+      name: methodName,
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
+      parentClassName: this.className,
       typeDescriptor: descriptor
     });
   }

@@ -18,7 +18,7 @@ import {
 import { MethodDeclaration } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import { ConstructNotSupportedError } from "./error";
-import { SymbolTable, SymbolType, VariableInfo } from "./symbol-table"
+import { SymbolTable } from "./symbol-table"
 
 type Label = {
   offset: number;
@@ -77,7 +77,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     lst.forEach(v => {
       const { variableDeclaratorId: identifier, variableInitializer: vi } = v;
       const curIdx = cg.maxLocals++;
-      cg.symbolTable.insert(identifier, SymbolType.VARIABLE, { index: curIdx });
+      cg.symbolTable.insertVariableInfo({ name: identifier, index: curIdx });
       if (vi) {
         maxStack = Math.max(maxStack, compile(vi, cg));
         cg.code.push(OPCODE.ISTORE, curIdx);
@@ -237,7 +237,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     if (op !== "=") {
       cg.code.push(opToOpcode[op.substring(0, op.length - 1)]);
     }
-    const { index: idx } = cg.symbolTable.query(left.name, SymbolType.VARIABLE) as VariableInfo;
+    const { index: idx } = cg.symbolTable.queryVariable(left.name);
     cg.code.push(OPCODE.ISTORE, idx as number);
     return maxStack;
   },
@@ -254,7 +254,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     const { operator: op, expression: expr } = node as PostfixExpression;
     if (op === "++" || op === "--") {
       const { name: name } = expr as ExpressionName;
-      const { index: idx } = cg.symbolTable.query(name, SymbolType.VARIABLE) as VariableInfo;
+      const { index: idx } = cg.symbolTable.queryVariable(name);
       cg.code.push(OPCODE.IINC, idx as number, op === "++" ? 1 : -1);
       cg.code.push(OPCODE.ILOAD, idx as number);
       return 1;
@@ -282,7 +282,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
   PostfixExpression: (node: Node, cg: CodeGenerator) => {
     const { operator: op, expression: expr } = node as PostfixExpression;
     const { name: name } = expr as ExpressionName;
-    const { index: idx } = cg.symbolTable.query(name, SymbolType.VARIABLE) as VariableInfo;
+    const { index: idx } = cg.symbolTable.queryVariable(name);
     cg.code.push(OPCODE.ILOAD, idx as number);
     cg.code.push(OPCODE.IINC, idx as number, op === "++" ? 1 : -1);
     return 1;
@@ -290,7 +290,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
 
   ExpressionName: (node: Node, cg: CodeGenerator) => {
     const { name: name } = node as ExpressionName;
-    const { index: idx } = cg.symbolTable.query(name, SymbolType.VARIABLE) as VariableInfo;
+    const { index: idx } = cg.symbolTable.queryVariable(name);
     cg.code.push(OPCODE.ILOAD, idx as number);
     return 1;
   },
@@ -360,7 +360,8 @@ class CodeGenerator {
   generateCode(methodNode: MethodDeclaration) {
     this.symbolTable.extend();
     methodNode.methodHeader.formalParameterList.forEach(p => {
-      this.symbolTable.insert(p.identifier, SymbolType.VARIABLE, {
+      this.symbolTable.insertVariableInfo({
+        name: p.identifier,
         index: this.maxLocals
       });
       this.maxLocals++;
