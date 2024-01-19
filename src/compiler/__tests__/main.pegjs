@@ -627,10 +627,12 @@ Throws
   Productions from §10 (Arrays)
 */
 ArrayInitializer
-  = lcurly VariableInitializerList? comma? rcurly
+  = lcurly @VariableInitializerList? comma? rcurly
 
 VariableInitializerList
-  = VariableInitializer (comma VariableInitializer)*
+  = vi:VariableInitializer vis:(comma @VariableInitializer)* {
+    return [vi, ...vis];
+  }
 
 
 
@@ -661,7 +663,7 @@ LocalVariableDeclaration
     return {
       kind: "LocalVariableDeclarationStatement",
       variableModifier: vm,
-      unannType: ut,
+      localVariableType: ut,
       variableDeclaratorList: vdl,
     }
   }
