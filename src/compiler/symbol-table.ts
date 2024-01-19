@@ -2,7 +2,7 @@ import { UnannType } from "../ast/types/classes";
 import { generateClassAccessFlags, generateFieldAccessFlags, generateMethodAccessFlags } from "./compiler-utils";
 import { InvalidMethodCallError, SymbolNotFoundError, SymbolRedeclarationError } from "./error";
 
-const typeMap = new Map([
+export const typeMap = new Map([
   ['byte', 'B'],
   ['char', 'C'],
   ['double', 'D'],
@@ -45,7 +45,7 @@ export interface FieldInfo {
   typeDescriptor: string,
 };
 
-type MethodInfos = Array<MethodInfo>;
+export type MethodInfos = Array<MethodInfo>;
 
 export interface MethodInfo {
   name: string,
@@ -56,6 +56,7 @@ export interface MethodInfo {
 
 export interface VariableInfo {
   name: string,
+  typeDescriptor: string,
   index: number
 };
 
@@ -99,6 +100,12 @@ export class SymbolTable {
       accessFlags: generateMethodAccessFlags(["public"]),
       parentClassName: "java/io/PrintStream",
       typeDescriptor: this.generateMethodDescriptor(["java/lang/String"], "void")
+    });
+    this.insertMethodInfo({
+      name: "println",
+      accessFlags: generateMethodAccessFlags(["public"]),
+      parentClassName: "java/io/PrintStream",
+      typeDescriptor: this.generateMethodDescriptor(["int"], "void")
     });
     this.returnToRoot();
     this.insertClassInfo({
