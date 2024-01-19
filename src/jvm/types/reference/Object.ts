@@ -1,3 +1,4 @@
+import Monitor from "../../monitor";
 import Thread from "../../thread";
 import { Result } from "../Result";
 import { ClassData, ReferenceClassData } from "../class/ClassData";
@@ -13,8 +14,8 @@ export class JvmObject {
   protected nativeFields: {
     [key: string]: any;
   } = {};
+  private monitor?: Monitor;
   private fieldArr: { name: string; ref: Field }[];
-
   private static maxId = 0;
   private id;
 
@@ -45,7 +46,7 @@ export class JvmObject {
       return { result: this };
     }
 
-    const initMethod = this.cls.getMethod('<init>()V');
+    const initMethod = this.cls.getMethod("<init>()V");
     if (!initMethod) {
       this.initStatus = true;
       return { result: this };
@@ -67,6 +68,13 @@ export class JvmObject {
 
   getClass() {
     return this.cls;
+  }
+
+  getMonitor() {
+    if (!this.monitor) {
+      this.monitor = new Monitor();
+    }
+    return this.monitor;
   }
 
   getField(fieldRef: Field): any {
@@ -117,25 +125,25 @@ export class JvmObject {
   }
 
   getFieldFromVMIndex(index: number): Field {
-    const res = this.fieldArr.filter(f => {
+    const res = this.fieldArr.filter((f) => {
       const slot = f.ref.getSlot();
       return slot === index;
     });
 
     if (res.length > 1) {
       // will this happen?
-      throw new Error('Multiple matching slots. Need to check classname');
+      throw new Error("Multiple matching slots. Need to check classname");
     }
 
     if (res.length === 0) {
-      throw new Error('Invalid slot');
+      throw new Error("Invalid slot");
     }
 
     return res[0].ref;
   }
 
   clone(): JvmObject {
-    const clone = new JvmObject(this.cls);
+    const clone = this.cls.instantiate();
 
     for (const [key, field] of Object.entries(this.fields)) {
       clone.fields[key].putValue(field.getValue());
@@ -156,15 +164,15 @@ export class JvmObject {
 }
 
 export enum JavaType {
-  byte = 'B',
-  char = 'C',
-  double = 'D',
-  float = 'F',
-  int = 'I',
-  long = 'J',
-  short = 'S',
-  boolean = 'Z',
-  reference = 'L',
-  array = '[',
-  void = 'V',
+  byte = "B",
+  char = "C",
+  double = "D",
+  float = "F",
+  int = "I",
+  long = "J",
+  short = "S",
+  boolean = "Z",
+  reference = "L",
+  array = "[",
+  void = "V",
 }

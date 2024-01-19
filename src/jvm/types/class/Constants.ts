@@ -4,16 +4,30 @@ import { ClassFile } from "../../../ClassFile/types";
 import { CodeAttribute } from "../../../ClassFile/types/attributes";
 import { METHOD_FLAGS } from "../../../ClassFile/types/methods";
 import AbstractClassLoader from "../../ClassLoader/AbstractClassLoader";
+import { MethodHandleReferenceKind } from "../../constants";
 import { InternalStackFrame } from "../../stackframe";
 import Thread from "../../thread";
-import { parseMethodDescriptor, parseFieldDescriptor } from "../../utils";
-import { Result, checkError, checkSuccess, ErrorResult, ImmediateResult, SuccessResult } from "../Result";
+import {
+  parseMethodDescriptor,
+  js2jString,
+  parseFieldDescriptor,
+} from "../../utils";
+import {
+  Result,
+  checkError,
+  checkSuccess,
+  ErrorResult,
+  ImmediateResult,
+  checkDefer,
+  SuccessResult,
+} from "../Result";
 import { JvmArray } from "../reference/Array";
 import { JvmObject, JavaType } from "../reference/Object";
-import { ClassData, ReferenceClassData } from "./ClassData";
+import { BootstrapMethod } from "./Attributes";
+import { ClassData, ReferenceClassData, ArrayClassData } from "./ClassData";
 import { Field } from "./Field";
 import { Method } from "./Method";
-import * as info from '../../../ClassFile/types/constants'
+import * as info from "../../../ClassFile/types/constants";
 
 export abstract class Constant {
   private tag: CONSTANT_TAG;
@@ -25,7 +39,11 @@ export abstract class Constant {
     this.tag = tag;
   }
 
-  public resolve(...args: any[]): Result<any> {
+  public resolve(
+    thread?: Thread,
+    loader?: AbstractClassLoader,
+    ...args: any[]
+  ): Result<any> {
     return { result: this.get() };
   }
 
@@ -158,7 +176,7 @@ function createMethodType(
   descriptor: string,
   cb: (mt: JvmObject) => void
 ): Result<JvmObject> {
-  const mhnRes = loader.getClassRef('java/lang/invoke/MethodHandleNatives');
+  const mhnRes = loader.getClass("java/lang/invoke/MethodHandleNatives");
   if (checkError(mhnRes)) {
     return mhnRes;
   }
@@ -185,12 +203,12 @@ function createMethodType(
   }) => {
     // primitive
     if (!referenceCls) {
-      const pClsRes = loader.getPrimitiveClassRef(type);
+      const pClsRes = loader.getPrimitiveClass(type);
       classArray.push(pClsRes.getJavaObject());
       return;
     }
 
-    const clsRes = loader.getClassRef(referenceCls);
+    const clsRes = loader.getClass(referenceCls);
     if (!checkSuccess(clsRes)) {
       if (!error) {
         error = clsRes;
@@ -205,7 +223,7 @@ function createMethodType(
     return error;
   }
 
-  const clArrRes = loader.getClassRef('[Ljava/lang/Class;');
+  const clArrRes = loader.getClass("[Ljava/lang/Class;");
   if (checkError(clArrRes)) {
     if (!error) {
       return clArrRes;
@@ -219,10 +237,10 @@ function createMethodType(
 
   // #region create MethodType object
   const toInvoke = mhnCls.getMethod(
-    'findMethodHandleType(Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;'
+    "findMethodHandleType(Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;"
   );
   if (!toInvoke) {
-    return { exceptionCls: 'java/lang/NoSuchMethodError', msg: '' };
+    return { exceptionCls: "java/lang/NoSuchMethodError", msg: "" };
   }
   thread.invokeStackFrame(
     new InternalStackFrame(
@@ -254,19 +272,22 @@ export class ConstantString extends Constant {
     return c.getTag() === CONSTANT_TAG.String;
   }
 
-  public resolve(thread: Thread): Result<JvmObject> {
+  public resolve(
+    thread: Thread,
+    loader: AbstractClassLoader
+  ): Result<JvmObject> {
     if (this.result) {
       return this.result;
     }
 
     const strVal = this.str.get();
-    this.result = { result: thread.getJVM().getInternedString(strVal) };
+    this.result = { result: js2jString(loader, strVal) };
     return this.result;
   }
 
   public get() {
     if (!this.result || !checkSuccess(this.result)) {
-      throw new Error('Resolution incomplete or failed');
+      throw new Error("Resolution incomplete or failed");
     }
 
     return this.result.result;
@@ -310,7 +331,7 @@ export class ConstantMethodType extends Constant {
     if (this.result && checkSuccess(this.result)) {
       return this.result.result;
     }
-    throw new Error('Resolution incomplete or failed');
+    throw new Error("Resolution incomplete or failed");
   }
 
   public resolve(thread: Thread): Result<JvmObject> {
@@ -319,7 +340,7 @@ export class ConstantMethodType extends Constant {
     }
     const descriptor = this.descriptor.get();
     const loader = this.cls.getLoader();
-    return createMethodType(thread, loader, descriptor, mt => {
+    return createMethodType(thread, loader, descriptor, (mt) => {
       this.result = { result: mt };
     });
   }
@@ -359,7 +380,7 @@ export class ConstantClass extends Constant {
     }
 
     if (!this.result || !checkSuccess(this.result)) {
-      throw new Error('Resolution incomplete or failed');
+      throw new Error("Resolution incomplete or failed");
     }
 
     return this.result.result;
@@ -369,10 +390,13 @@ export class ConstantClass extends Constant {
 // #endregion
 
 // #region name and type dependency
-
 export class ConstantInvokeDynamic extends Constant {
   private bootstrapMethodAttrIndex: number;
   private nameAndType: ConstantNameAndType;
+  private methodTypeObj?: JvmObject;
+  private methodName?: JvmObject;
+  private result?: Result<JvmObject>;
+
   constructor(
     cls: ClassData,
     bootstrapMethodAttrIndex: number,
@@ -389,41 +413,176 @@ export class ConstantInvokeDynamic extends Constant {
   }
 
   public get(): JvmObject {
-    throw new Error('ConstantInvokeDynamic: get Method not implemented.');
+    throw new Error("ConstantInvokeDynamic: get Method not implemented.");
   }
 
   public constructCso(thread: Thread) {}
 
-  public resolve(thread: Thread): Result<any> {
-    throw new Error('ConstantInvokeDynamic: resolve Method not implemented.');
+  public resolve(thread: Thread): Result<JvmObject> {
+    if (this.result) {
+      return this.result;
+    }
+
+    // Get MethodType from NameAndType
+    if (!this.methodTypeObj) {
+      // resolve nameAndType
+      const nameAndTypeRes = this.nameAndType.get();
+      this.methodName = thread.getJVM().getInternedString(nameAndTypeRes.name);
+
+      createMethodType(
+        thread,
+        this.cls.getLoader(),
+        nameAndTypeRes.descriptor,
+        (mt) => {
+          this.methodTypeObj = mt;
+        }
+      );
+
+      return { isDefer: true };
+    }
+    const loader = this.cls.getLoader();
+
+    // #region bootstrap method
+    const bootstrapMethod = (this.cls as ReferenceClassData).getBootstrapMethod(
+      this.bootstrapMethodAttrIndex
+    ) as BootstrapMethod;
+
+    // resolve bootstrap method handle
+    const bootstrapMhConst = bootstrapMethod.bootstrapMethodRef;
+    const mhRes = bootstrapMhConst.resolve(thread);
+    if (!checkSuccess(mhRes)) {
+      if (checkError(mhRes)) {
+        this.result = mhRes;
+      }
+      return mhRes;
+    }
+    const bootstrapMhn = bootstrapMhConst.get();
+
+    // resolve args
+    const bootstrapArgs = bootstrapMethod.bootstrapArguments;
+    const resolvedArgs = [];
+    let shouldDefer = false;
+    for (const constant of bootstrapArgs) {
+      const constRes = constant.resolve(thread, loader);
+      if (checkDefer(constRes)) {
+        shouldDefer = true;
+      }
+      if (checkError(constRes)) {
+        this.result = constRes;
+        return constRes;
+      }
+      if (checkSuccess(constRes)) {
+        resolvedArgs.push(constRes.result);
+      }
+    }
+    if (shouldDefer) {
+      return { isDefer: true };
+    }
+    // #endregion
+
+    // #region get arguments
+    const objArrRes = loader.getClass("[Ljava/lang/Object;");
+    if (checkError(objArrRes)) {
+      return { exceptionCls: "java/lang/ClassNotFoundException", msg: "" };
+    }
+    const arrCls = objArrRes.result as ArrayClassData;
+    const argsArr = arrCls.instantiate();
+    argsArr.initArray(bootstrapArgs.length, resolvedArgs);
+
+    const appendixArr = arrCls.instantiate();
+    appendixArr.initArray(1);
+    // #endregion
+
+    // #region run bootstrap method
+    console.log("RUNNING LINK CALL SITE");
+
+    const mhnRes = loader.getClass("java/lang/invoke/MethodHandleNatives");
+    if (checkError(mhnRes)) {
+      return { exceptionCls: "java/lang/ClassNotFoundException", msg: "" };
+    }
+    const mhn = mhnRes.result as ClassData;
+    const mhnInitRes = mhn.initialize(thread);
+    if (!checkSuccess(mhnInitRes)) {
+      return mhnInitRes;
+    }
+
+    const linkCssMethod = mhn.getMethod(
+      "linkCallSite(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/invoke/MemberName;"
+    );
+    if (!linkCssMethod) {
+      this.result = { exceptionCls: "java/lang/NoSuchMethodError", msg: "" };
+      return this.result;
+    }
+
+    /**
+     *   * Do what all OpenJDK-based JVMs do: Call
+     * MethodHandleNatives.linkCallSite with:
+     * - The class w/ the invokedynamic instruction `this.cls.getJavaObject()`
+     * - The bootstrap method `bootstrapMhn`
+     * - The name string from the nameAndTypeInfo `methodNameStr`
+     * - The methodType object from the nameAndTypeInfo `methodType`
+     * - The static arguments from the bootstrap method. `argsArr`
+     * - A 1-length appendix box. `appendixArr`
+     *
+     * On finish:
+     * returns a MemberName object, which contains:
+     * - The class containing the invokedynamic instruction
+     * - method to be run
+     */
+    this.cls.getJavaObject(),
+      thread.invokeStackFrame(
+        new InternalStackFrame(
+          mhn,
+          linkCssMethod,
+          0,
+          [
+            this.cls.getJavaObject(),
+            bootstrapMhn,
+            this.methodName,
+            this.methodTypeObj,
+            argsArr,
+            appendixArr,
+          ],
+          (css) => {
+            console.log("LINK CSS FINISH. ", css);
+            this.result = { result: css };
+          }
+        )
+      );
+    return { isDefer: true };
+    // #endregion
   }
 
   public tempResolve(thread: Thread): Result<JvmObject> {
     const nameAndTypeRes = this.nameAndType.get();
 
     if (!this.cls.checkReference()) {
-      throw new Error('Indy resolution only on reference classes');
+      throw new Error("Indy resolution only on reference classes");
     }
 
     const bootstrapMethod = this.cls.getBootstrapMethod(
       this.bootstrapMethodAttrIndex
     );
-    const bootstrapMhConst = this.cls.getConstant(
-      bootstrapMethod.bootstrapMethodRef
-    ) as ConstantMethodHandle;
+    if (!bootstrapMethod) {
+      throw new Error("Bootstrap method not found");
+    }
 
+    console.log("BOOTSTRAP METHOD: ", bootstrapMethod);
+    const bootstrapMhConst = bootstrapMethod.bootstrapMethodRef;
     const constref = bootstrapMhConst.tempGetReference();
-    const refres = constref.resolve();
+    const refres = constref.resolve(thread);
     if (!checkSuccess<Field | Method>(refres)) {
       if (checkError(refres)) {
         return refres;
       }
       return { isDefer: true };
     }
+    const res = refres.result;
 
     const bsArgIdx = bootstrapMethod.bootstrapArguments;
-    const mhConst = this.cls.getConstant(bsArgIdx[1]) as ConstantMethodHandle;
-    const invokeRes = mhConst.tempGetReference().resolve();
+    const argConst = bsArgIdx[0] as ConstantMethodType;
+    const mhConst = bsArgIdx[1] as ConstantMethodHandle;
+    const invokeRes = mhConst.tempGetReference().resolve(thread);
     if (!checkSuccess<Field | Method>(invokeRes)) {
       if (checkError(invokeRes)) {
         return invokeRes;
@@ -434,16 +593,19 @@ export class ConstantInvokeDynamic extends Constant {
 
     const clsName = ret.referenceCls;
     if (!clsName) {
-      throw new Error('Only lambdas are supported at the moment');
+      throw new Error("Only lambdas are supported at the moment");
     }
     const loader = this.cls.getLoader();
-    const clsRes = loader.getClassRef(clsName);
-    const objRes = loader.getClassRef('java/lang/Object');
+    const clsRes = loader.getClass(clsName);
+    const objRes = loader.getClass("java/lang/Object");
     if (checkError(clsRes) || checkError(objRes)) {
       return (checkError(clsRes) ? clsRes : objRes) as ErrorResult;
     }
 
     const thisClsName = this.cls.getClassname();
+    const intercls = clsRes.result;
+    const erasedDesc = argConst.getDescriptor();
+    const methodName = nameAndTypeRes.name;
     const toInvoke = invokeRes.result as Method;
     const invokerName = toInvoke.getName();
     const invokerDesc = toInvoke.getDescriptor();
@@ -492,7 +654,7 @@ export class ConstantInvokeDynamic extends Constant {
           code.setUint8(ptr + 1, index + 1);
           break;
         case JavaType.void:
-          throw new Error('Void type in params');
+          throw new Error("Void type in params");
       }
       ptr += 2;
     });
@@ -541,7 +703,7 @@ export class ConstantInvokeDynamic extends Constant {
     constantPool.push({
       tag: CONSTANT_TAG.Utf8,
       length: 0,
-      value: '',
+      value: "",
     } as info.ConstantUtf8Info);
     constantPool.push({
       tag: CONSTANT_TAG.Class,
@@ -555,7 +717,7 @@ export class ConstantInvokeDynamic extends Constant {
     constantPool.push({
       tag: CONSTANT_TAG.Utf8,
       length: 4,
-      value: 'Code',
+      value: "Code",
     } as info.ConstantUtf8Info);
     constantPool.push({
       tag: CONSTANT_TAG.Class,
@@ -564,7 +726,7 @@ export class ConstantInvokeDynamic extends Constant {
     constantPool.push({
       tag: CONSTANT_TAG.Utf8,
       length: 16,
-      value: 'java/lang/Object',
+      value: "java/lang/Object",
     } as info.ConstantUtf8Info);
     constantPool.push({
       tag: CONSTANT_TAG.Class,
@@ -668,7 +830,7 @@ export class ConstantFieldref extends Constant {
   }
 
   public get() {
-    throw new Error('ConstantFieldref.get: Method not implemented.');
+    throw new Error("ConstantFieldref.get: Method not implemented.");
   }
 
   static check(c: Constant): c is ConstantFieldref {
@@ -688,14 +850,14 @@ export class ConstantFieldref extends Constant {
         return this.result;
       }
       // Should not happen
-      throw new Error('Class resolution should not defer');
+      throw new Error("Class resolution should not defer");
     }
     const fieldClass = clsRes.result;
     const { name, descriptor } = this.nameAndTypeConstant.get();
-    const fieldRef = fieldClass.getFieldRef(name + descriptor);
+    const fieldRef = fieldClass.lookupField(name + descriptor);
 
     if (fieldRef === null) {
-      this.result = { exceptionCls: 'java/lang/NoSuchFieldError', msg: '' };
+      this.result = { exceptionCls: "java/lang/NoSuchFieldError", msg: "" };
       return this.result;
     }
 
@@ -704,10 +866,144 @@ export class ConstantFieldref extends Constant {
   }
 }
 
+/**
+ * Resolves the vmtarget, appendix, and appendix for invoke and invokeExact
+ */
+function resolveSignaturePolymorphic(
+  thread: Thread,
+  symbolClass: ClassData,
+  selfClass: ClassData,
+  polyMethod: Method,
+  name: string,
+  descriptor: string,
+  onError: (err?: ErrorResult) => void,
+  onSuccess: (
+    method: Method,
+    appendix?: JvmObject,
+    memberName?: JvmObject
+  ) => void
+) {
+  // Check signature polymorphic methods
+  const polyName = polyMethod.getName();
+  // invokebasic
+  if (polyName !== "invoke" && polyName !== "invokeExact") {
+    onSuccess(polyMethod);
+    return;
+  }
+  const loader = selfClass.getLoader();
+
+  const mhnResolution = loader.getClass("java/lang/invoke/MethodHandleNatives");
+  if (checkError(mhnResolution)) {
+    return onError(mhnResolution);
+  }
+  const objArrResolution = loader.getClass("[Ljava/lang/Object;");
+  if (checkError(objArrResolution)) {
+    return onError(objArrResolution);
+  }
+  const clsArrResolution = loader.getClass("[Ljava/lang/Class;");
+  if (checkError(clsArrResolution)) {
+    return onError(clsArrResolution);
+  }
+
+  const mhn = mhnResolution.result;
+  const objArrCls = objArrResolution.result as ArrayClassData;
+  const clsArrCls = clsArrResolution.result as ArrayClassData;
+  const ptypes = clsArrCls.instantiate();
+  const appendix = objArrCls.instantiate();
+  appendix.initArray(1);
+  const mhnInitResult = mhn.initialize(thread);
+  if (!checkSuccess(mhnInitResult)) {
+    if (checkError(mhnInitResult)) {
+      return onError(mhnInitResult);
+    }
+    return;
+  }
+  const findMHType = mhn.getMethod(
+    "findMethodHandleType(Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;"
+  );
+  if (!findMHType) {
+    return onError({
+      exceptionCls: "java/lang/NoSuchMethodError",
+      msg: "findMethodHandleType(Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
+    });
+  }
+  const descriptorClasses = parseMethodDescriptor(descriptor);
+  let argResolutionError: ErrorResult | null = null;
+  const argsCls = descriptorClasses.args.map((arg) => {
+    if (arg.type === JavaType.reference || arg.type === JavaType.array) {
+      const loadResult = loader.getClass(arg.referenceCls as string);
+      if (checkError(loadResult)) {
+        argResolutionError = loadResult;
+        return null;
+      }
+      return loadResult.result.getJavaObject();
+    }
+    return loader.getPrimitiveClass(arg.type).getJavaObject();
+  });
+  if (argResolutionError) {
+    return onError(argResolutionError);
+  }
+  let rtype: JvmObject;
+  if (descriptorClasses.ret.referenceCls) {
+    const loadResult = loader.getClass(
+      descriptorClasses.ret.referenceCls as string
+    );
+    if (checkError(loadResult)) {
+      return onError(loadResult);
+    }
+    rtype = loadResult.result.getJavaObject();
+  } else {
+    rtype = loader
+      .getPrimitiveClass(descriptorClasses.ret.type)
+      .getJavaObject();
+  }
+  ptypes.initArray(argsCls.length, argsCls);
+
+  const linkMethod = mhn.getMethod(
+    "linkMethod(Ljava/lang/Class;ILjava/lang/Class;Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/invoke/MemberName;"
+  );
+  if (!linkMethod) {
+    return onError({
+      exceptionCls: "java/lang/NoSuchMethodError",
+      msg: "linkMethod(Ljava/lang/Class;ILjava/lang/Class;Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/invoke/MemberName;",
+    });
+  }
+  const linkFrame = new InternalStackFrame(
+    mhn,
+    linkMethod,
+    0,
+    [
+      selfClass.getJavaObject(),
+      MethodHandleReferenceKind.REF_invokeVirtual,
+      symbolClass.getJavaObject(),
+      thread.getJVM().getInternedString(name),
+      null, // findMHType sets this to the method type later
+      appendix,
+    ],
+    (mn, err) => {
+      if (err) {
+        return;
+      }
+      onSuccess(polyMethod, appendix.get(0), mn);
+    }
+  );
+  thread.invokeStackFrame(linkFrame);
+  thread.invokeStackFrame(
+    new InternalStackFrame(mhn, findMHType, 0, [rtype, ptypes], (mt, err) => {
+      if (err) {
+        return;
+      }
+      linkFrame.locals[4] = mt;
+    })
+  );
+}
+
 export class ConstantMethodref extends Constant {
   private classConstant: ConstantClass;
   private nameAndTypeConstant: ConstantNameAndType;
   private result?: Result<Method>;
+  private appendix?: any;
+  private memberName?: JvmObject;
 
   constructor(
     cls: ClassData,
@@ -720,14 +1016,14 @@ export class ConstantMethodref extends Constant {
   }
 
   public get() {
-    throw new Error('ConstantMethodref: get Method not implemented.');
+    throw new Error("ConstantMethodref: get Method not implemented.");
   }
 
   static check(c: Constant): c is ConstantMethodref {
     return c.getTag() === CONSTANT_TAG.Methodref;
   }
 
-  public resolve(): Result<Method> {
+  public resolve(thread: Thread): Result<Method> {
     // 5.4.3 if initial attempt to resolve a symbolic reference fails
     // then subsequent attempts to resolve the reference always fail with the same error
     if (this.result) {
@@ -747,22 +1043,79 @@ export class ConstantMethodref extends Constant {
 
     // resolve name and type
     if (!checkSuccess(this.nameAndTypeConstant.resolve())) {
-      throw new Error('Name and type resolution failed');
+      throw new Error("Name and type resolution failed");
     }
 
     // 5.4.3.3. Method Resolution
     // 1. If C is an interface, method resolution throws an IncompatibleClassChangeError
     if (symbolClass.checkInterface()) {
       this.result = {
-        exceptionCls: 'java/lang/IncompatibleClassChangeError',
-        msg: '',
+        exceptionCls: "java/lang/IncompatibleClassChangeError",
+        msg: "",
       };
       return this.result;
     }
 
     const nt = this.nameAndTypeConstant.get();
-    this.result = symbolClass.resolveMethod(nt.name + nt.descriptor, this.cls);
+    const resolutionResult = symbolClass.resolveMethod(
+      nt.name,
+      nt.descriptor,
+      this.cls
+    );
+
+    if (checkError(resolutionResult)) {
+      this.result = resolutionResult;
+      return this.result;
+    }
+
+    const resolvedMethod = resolutionResult.result;
+    if (resolvedMethod.checkSignaturePolymorphic()) {
+      const onSuccess = (
+        method: Method,
+        appendix?: JvmObject,
+        memberName?: JvmObject
+      ) => {
+        this.appendix = appendix ?? null;
+        this.memberName = memberName;
+        this.result = { result: method };
+      };
+      const onError = (err?: ErrorResult) => {
+        if (!err) {
+          this.result = resolutionResult;
+        }
+        this.result = err;
+      };
+      resolveSignaturePolymorphic(
+        thread,
+        symbolClass,
+        this.cls,
+        resolvedMethod,
+        nt.name,
+        nt.descriptor,
+        onError,
+        onSuccess
+      );
+      if (this.result) {
+        return this.result;
+      }
+      return { isDefer: true };
+    }
+
+    this.result = resolutionResult;
     return this.result;
+  }
+
+  public getPolymorphic() {
+    if (!this.result || !checkSuccess(this.result)) {
+      throw new Error("Not resolved");
+    }
+
+    return {
+      appendix: this.appendix,
+      memberName: this.memberName,
+      method: this.result.result,
+      originalDescriptor: this.nameAndTypeConstant.get().descriptor,
+    };
   }
 }
 
@@ -782,14 +1135,14 @@ export class ConstantInterfaceMethodref extends Constant {
   }
 
   public get() {
-    throw new Error('ConstantInterfaceMethodref: get Method not implemented.');
+    throw new Error("ConstantInterfaceMethodref: get Method not implemented.");
   }
 
   static check(c: Constant): c is ConstantInterfaceMethodref {
     return c.getTag() === CONSTANT_TAG.InterfaceMethodref;
   }
 
-  public resolve(): Result<Method> {
+  public resolve(thread: Thread): Result<Method> {
     // 5.4.3 if initial attempt to resolve a symbolic reference fails
     // then subsequent attempts to resolve the reference always fail with the same error
     if (this.result) {
@@ -809,22 +1162,37 @@ export class ConstantInterfaceMethodref extends Constant {
 
     // resolve name and type
     if (!checkSuccess(this.nameAndTypeConstant.resolve())) {
-      throw new Error('Name and type resolution failed');
+      throw new Error("Name and type resolution failed");
     }
 
     // 5.4.3.4. Interface Method Resolution
     // 1. If C is not an interface, interface method resolution throws an IncompatibleClassChangeError.
     if (!symbolClass.checkInterface()) {
       this.result = {
-        exceptionCls: 'java/lang/IncompatibleClassChangeError',
-        msg: '',
+        exceptionCls: "java/lang/IncompatibleClassChangeError",
+        msg: "",
       };
       return this.result;
     }
 
     const nt = this.nameAndTypeConstant.get();
-    this.result = symbolClass.resolveMethod(nt.name + nt.descriptor, this.cls);
+    const resolutionResult = symbolClass.resolveMethod(
+      nt.name,
+      nt.descriptor,
+      this.cls
+    );
+
+    this.result = resolutionResult;
     return this.result;
+  }
+
+  public getPolymorphic(): {
+    appendix: any;
+    memberName?: JvmObject;
+    method: Method;
+    originalDescriptor: string;
+  } {
+    throw new Error("Interface method not signature polymorphic");
   }
 }
 
@@ -855,7 +1223,10 @@ export class ConstantMethodHandle extends Constant {
   }
 
   public get(): JvmObject {
-    throw new Error('Method not implemented.');
+    if (this.result && checkSuccess(this.result)) {
+      return this.result.result;
+    }
+    throw new Error("methodhandle not resolved!");
   }
 
   public resolve(thread: Thread): Result<JvmObject> {
@@ -864,7 +1235,7 @@ export class ConstantMethodHandle extends Constant {
     }
 
     // #region Step 1: resolve field/method
-    const refRes = this.reference.resolve();
+    const refRes = this.reference.resolve(thread);
     if (!checkSuccess<Field | Method>(refRes)) {
       if (checkError(refRes)) {
         this.result = refRes;
@@ -881,16 +1252,16 @@ export class ConstantMethodHandle extends Constant {
       const mhnCls = (
         this.cls
           .getLoader()
-          .getClassRef(
-            'java/lang/invoke/MethodHandleNatives'
+          .getClass(
+            "java/lang/invoke/MethodHandleNatives"
           ) as SuccessResult<ReferenceClassData>
       ).result;
 
       const method = mhnCls.getMethod(
-        'linkMethodHandleConstant(Ljava/lang/Class;ILjava/lang/Class;Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/invoke/MethodHandle;'
+        "linkMethodHandleConstant(Ljava/lang/Class;ILjava/lang/Class;Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/invoke/MethodHandle;"
       );
       if (!method) {
-        this.result = { exceptionCls: 'java/lang/NoSuchMethodError', msg: '' };
+        this.result = { exceptionCls: "java/lang/NoSuchMethodError", msg: "" };
         return this.result;
       }
       // Should intern string here, i.e. same string value same object
@@ -916,7 +1287,6 @@ export class ConstantMethodHandle extends Constant {
           }
         )
       );
-      return {isDefer: true}
     };
     // #endregion
 
@@ -925,7 +1295,7 @@ export class ConstantMethodHandle extends Constant {
       // #region init MethodHandleNatives. MethodType initializes it already.
       const mhnRes = this.cls
         .getLoader()
-        .getClassRef('java/lang/invoke/MethodHandleNatives');
+        .getClass("java/lang/invoke/MethodHandleNatives");
       if (checkError(mhnRes)) {
         return mhnRes;
       }
@@ -942,13 +1312,13 @@ export class ConstantMethodHandle extends Constant {
         cb(
           this.cls
             .getLoader()
-            .getPrimitiveClassRef(parsedField.type)
+            .getPrimitiveClass(parsedField.type)
             .getJavaObject()
         );
       } else {
         const fieldClsRes = this.cls
           .getLoader()
-          .getClassRef(parsedField.referenceCls);
+          .getClass(parsedField.referenceCls);
         if (checkError(fieldClsRes)) {
           this.result = fieldClsRes;
           return this.result;

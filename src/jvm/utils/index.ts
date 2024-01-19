@@ -1,9 +1,18 @@
 import { AttributeInfo } from "../../ClassFile/types/attributes";
+import AbstractClassLoader from "../ClassLoader/AbstractClassLoader";
 import { ConstantPool } from "../constant-pool";
+import Thread from "../thread";
 import { IAttribute, info2Attribute } from "../types/class/Attributes";
-import { ClassData } from "../types/class/ClassData";
+import {
+  ArrayClassData,
+  ReferenceClassData,
+  ClassData,
+} from "../types/class/ClassData";
 import { ConstantUtf8 } from "../types/class/Constants";
+import { Field } from "../types/class/Field";
+import { JvmArray } from "../types/reference/Array";
 import { JvmObject, JavaType } from "../types/reference/Object";
+import { SuccessResult } from "./Result";
 
 /**
  * Converts a Java String to a JS string
@@ -11,9 +20,40 @@ import { JvmObject, JavaType } from "../types/reference/Object";
  */
 export const j2jsString = (str: JvmObject) => {
   return String.fromCharCode(
-    ...str._getField('value', '[C', 'java/lang/String').getJsArray()
+    ...str._getField("value", "[C", "java/lang/String").getJsArray()
   );
 };
+
+function newCharArr(loader: AbstractClassLoader, str: string): JvmArray {
+  // Assume char array loaded at init
+  const cArrRes = loader.getClass("[C") as SuccessResult<ArrayClassData>;
+  const cArrCls = cArrRes.result;
+  const cArr = cArrCls.instantiate() as JvmArray;
+  const jsArr = [];
+  for (let i = 0; i < str.length; i++) {
+    jsArr.push(str.charCodeAt(i));
+  }
+  cArr.initArray(str.length, jsArr);
+  return cArr;
+}
+
+/**
+ * Converts a JS string to a Java String. Assumes java/lang/String and [C is loaded.
+ */
+export function js2jString(
+  loader: AbstractClassLoader,
+  str: string
+): JvmObject {
+  const charArr = newCharArr(loader, str);
+  const strRes = loader.getClass(
+    "java/lang/String"
+  ) as SuccessResult<ReferenceClassData>;
+  const strCls = strRes.result;
+  const strObj = strCls.instantiate();
+  const fieldRef = strCls.lookupField("value[C") as Field;
+  strObj.putField(fieldRef as Field, charArr);
+  return strObj;
+}
 
 /**
  * Returns the number of bytes that a primitive or reference takes up in memory.
@@ -27,20 +67,20 @@ export const typeIndexScale = (cls: ClassData) => {
 
   const componentName = cls.getClassname();
   switch (componentName) {
-    case 'long':
-    case 'double':
+    case "long":
+    case "double":
       return 8;
 
-    case 'int':
-    case 'float':
+    case "int":
+    case "float":
       return 4;
 
-    case 'short':
-    case 'char':
+    case "short":
+    case "char":
       return 2;
 
-    case 'byte':
-    case 'boolean':
+    case "byte":
+    case "boolean":
       return 1;
 
     default:
@@ -75,11 +115,11 @@ export function parseFieldDescriptor(
     case JavaType.array:
       const res = parseFieldDescriptor(descriptor, index + 1);
       const clsName =
-        '[' + (res.referenceCls ? 'L' + res.referenceCls + ';' : res.type);
+        "[" + (res.referenceCls ? "L" + res.referenceCls + ";" : res.type);
       return { type: JavaType.array, referenceCls: clsName, index: res.index };
     case JavaType.reference:
       const sub = descriptor.substring(index);
-      const end = sub.indexOf(';');
+      const end = sub.indexOf(";");
       return {
         type: JavaType.reference,
         referenceCls: sub.substring(1, end),
@@ -93,7 +133,7 @@ export function parseFieldDescriptor(
 }
 
 export function parseMethodDescriptor(desc: string) {
-  let [args, ret] = desc.split(')');
+  let [args, ret] = desc.split(")");
   args = args.substring(1);
   const argTypes = [];
 
@@ -115,6 +155,51 @@ export function parseMethodDescriptor(desc: string) {
   };
 }
 
+export function getArgs(
+  thread: Thread,
+  descriptor: string,
+  isNative: boolean
+): any[] {
+  // We should memoize parsing in the future.
+  const methodDesc = parseMethodDescriptor(descriptor);
+  const args = [];
+  for (let i = methodDesc.args.length - 1; i >= 0; i--) {
+    switch (methodDesc.args[i].type) {
+      case "V":
+        break; // should not happen
+      case "B":
+      case "C":
+      case "I":
+      case "S":
+      case "Z":
+        args.push(thread.popStack());
+        break;
+      case "D":
+        const double = asDouble(thread.popStack64());
+        args.push(double);
+        if (!isNative) {
+          args.push(double);
+        }
+        break;
+      case "F":
+        args.push(asFloat(thread.popStack()));
+        break;
+      case "J":
+        const long = asDouble(thread.popStack64());
+        args.push(long);
+        if (!isNative) {
+          args.push(long);
+        }
+        break;
+      case "[":
+      default: // references + arrays
+        args.push(thread.popStack());
+    }
+  }
+
+  return args.reverse();
+}
+
 export function getField(ref: any, fieldName: string, type: JavaType) {
   ref.getField(fieldName, type);
 }
@@ -130,23 +215,23 @@ export function asFloat(value: number): number {
 export function primitiveTypeToName(type: JavaType) {
   switch (type) {
     case JavaType.byte:
-      return 'byte';
+      return "byte";
     case JavaType.char:
-      return 'char';
+      return "char";
     case JavaType.double:
-      return 'double';
+      return "double";
     case JavaType.float:
-      return 'float';
+      return "float";
     case JavaType.int:
-      return 'int';
+      return "int";
     case JavaType.long:
-      return 'long';
+      return "long";
     case JavaType.short:
-      return 'short';
+      return "short";
     case JavaType.boolean:
-      return 'boolean';
+      return "boolean";
     case JavaType.void:
-      return 'void';
+      return "void";
     default:
       return null;
   }
@@ -154,23 +239,23 @@ export function primitiveTypeToName(type: JavaType) {
 
 export function primitiveNameToType(pName: string) {
   switch (pName) {
-    case 'byte':
+    case "byte":
       return JavaType.byte;
-    case 'char':
+    case "char":
       return JavaType.char;
-    case 'double':
+    case "double":
       return JavaType.double;
-    case 'float':
+    case "float":
       return JavaType.float;
-    case 'int':
+    case "int":
       return JavaType.int;
-    case 'long':
+    case "long":
       return JavaType.long;
-    case 'short':
+    case "short":
       return JavaType.short;
-    case 'boolean':
+    case "boolean":
       return JavaType.boolean;
-    case 'void':
+    case "void":
       return JavaType.void;
     default:
       return null;
@@ -183,7 +268,7 @@ export function attrInfo2Interface(
 ) {
   const attributes: { [attributeName: string]: IAttribute[] } = {};
   // attributes
-  infoArr.forEach(attr => {
+  infoArr.forEach((attr) => {
     const attrName = (
       constantPool.get(attr.attributeNameIndex) as ConstantUtf8
     ).get();
@@ -196,11 +281,11 @@ export function attrInfo2Interface(
 }
 
 export function autoBox(obj: any) {
-  console.warn('Auto boxing not implemented');
+  console.warn("Auto boxing not implemented");
   return obj;
 }
 
 export function autoUnbox(obj: any) {
-  console.warn('Auto unboxing not implemented');
+  console.warn("Auto unboxing not implemented");
   return obj;
 }

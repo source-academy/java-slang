@@ -2,9 +2,9 @@ import { FieldInfo, FIELD_FLAGS } from "../../../ClassFile/types/fields";
 import { ConstantPool } from "../../constant-pool";
 import Thread from "../../thread";
 import { attrInfo2Interface } from "../../utils";
-import { ImmediateResult, checkError, Result } from "../Result";
+import { checkSuccess, ImmediateResult, checkError, Result } from "../Result";
 import { JvmObject, JavaType } from "../reference/Object";
-import { IAttribute } from "./Attributes";
+import { IAttribute, ConstantValue } from "./Attributes";
 import { ReferenceClassData } from "./ClassData";
 import { ConstantUtf8 } from "./Constants";
 
@@ -52,6 +52,18 @@ export class Field {
         this.value = null;
         break;
     }
+
+    if (this.checkStatic() && this.attributes["ConstantValue"]) {
+      const constantValue = (
+        this.attributes["ConstantValue"][0] as ConstantValue
+      ).constantvalue.resolve(null as any, cls.getLoader()); // String resolution does not need thread
+      if (!checkSuccess(constantValue)) {
+        return;
+      }
+
+      this.value = constantValue.result;
+      return;
+    }
   }
 
   static fromFieldInfo(
@@ -79,6 +91,10 @@ export class Field {
     return obj.fieldName !== undefined;
   }
 
+  getAccessFlags() {
+    return this.accessFlags;
+  }
+
   getSlot() {
     return this.slot;
   }
@@ -92,7 +108,7 @@ export class Field {
       const fRes = thread
         .getClass()
         .getLoader()
-        .getClassRef('java/lang/reflect/Field');
+        .getClass("java/lang/reflect/Field");
       if (checkError(fRes)) {
         return fRes;
       }
@@ -103,51 +119,51 @@ export class Field {
     this.javaObject.initialize(thread);
 
     this.javaObject._putField(
-      'clazz',
-      'Ljava/lang/Class;',
-      'java/lang/reflect/Field',
+      "clazz",
+      "Ljava/lang/Class;",
+      "java/lang/reflect/Field",
       Field.reflectedClass.getJavaObject()
     );
     this.javaObject._putField(
-      'name',
-      'Ljava/lang/String;',
-      'java/lang/reflect/Field',
+      "name",
+      "Ljava/lang/String;",
+      "java/lang/reflect/Field",
       thread.getJVM().getInternedString(this.fieldName)
     );
     this.javaObject._putField(
-      'type',
-      'Ljava/lang/Class;',
-      'java/lang/reflect/Field',
+      "type",
+      "Ljava/lang/Class;",
+      "java/lang/reflect/Field",
       this.cls.getJavaObject()
     );
     this.javaObject._putField(
-      'modifiers',
-      'I',
-      'java/lang/reflect/Field',
+      "modifiers",
+      "I",
+      "java/lang/reflect/Field",
       this.accessFlags
     );
     this.javaObject._putField(
-      'slot',
-      'I',
-      'java/lang/reflect/Field',
+      "slot",
+      "I",
+      "java/lang/reflect/Field",
       this.slot
     );
 
-    console.warn('getReflectedObject: not using signature, annotations');
+    console.warn("getReflectedObject: not using signature, annotations");
     this.javaObject._putField(
-      'signature',
-      'Ljava/lang/String;',
-      'java/lang/reflect/Field',
+      "signature",
+      "Ljava/lang/String;",
+      "java/lang/reflect/Field",
       null
     );
     this.javaObject._putField(
-      'annotations',
-      '[B',
-      'java/lang/reflect/Field',
+      "annotations",
+      "[B",
+      "java/lang/reflect/Field",
       null
     );
 
-    this.javaObject.putNativeField('fieldRef', this);
+    this.javaObject.putNativeField("fieldRef", this);
 
     return { result: this.javaObject };
   }
@@ -169,6 +185,9 @@ export class Field {
   }
 
   putValue(value: any) {
+    if (value === undefined) {
+      throw new Error("putValue: value is undefined");
+    }
     this.value = value;
   }
 
@@ -241,15 +260,16 @@ export class Field {
     // logical xor
     if (isStaticAccess !== this.checkStatic()) {
       return {
-        exceptionCls: 'java/lang/IncompatibleClassChangeError',
-        msg: '',
+        exceptionCls: "java/lang/IncompatibleClassChangeError",
+        msg: "",
       };
     }
 
     const invokerClass = thread.getClass();
     const fieldClass = this.getClass();
+    // FIXME: check innter classes if private
     if (this.checkPrivate() && invokerClass !== fieldClass) {
-      return { exceptionCls: 'java/lang/IllegalAccessError', msg: '' };
+      return { exceptionCls: "java/lang/IllegalAccessError", msg: "" };
     }
 
     if (
@@ -257,7 +277,7 @@ export class Field {
       !invokerClass.checkCast(fieldClass) &&
       invokerClass.getPackageName() !== this.getClass().getPackageName()
     ) {
-      return { exceptionCls: 'java/lang/IllegalAccessError', msg: '' };
+      return { exceptionCls: "java/lang/IllegalAccessError", msg: "" };
     }
 
     const invokerMethod = thread.getMethod();
@@ -265,9 +285,9 @@ export class Field {
       isPut &&
       this.checkFinal() &&
       (fieldClass !== invokerClass ||
-        invokerMethod.getName() !== (isStaticAccess ? '<clinit>' : '<init>'))
+        invokerMethod.getName() !== (isStaticAccess ? "<clinit>" : "<init>"))
     ) {
-      return { exceptionCls: 'java/lang/IllegalAccessError', msg: '' };
+      return { exceptionCls: "java/lang/IllegalAccessError", msg: "" };
     }
 
     return { result: this };

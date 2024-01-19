@@ -1,4 +1,5 @@
 import JVM from ".";
+import { ThreadStatus } from "./constants";
 import { StackFrame, InternalStackFrame, JavaStackFrame } from "./stackframe";
 import { AbstractThreadPool } from "./threadpool";
 import { checkError, checkSuccess } from "./types/Result";
@@ -7,46 +8,43 @@ import { ReferenceClassData, ClassData } from "./types/class/ClassData";
 import { Method } from "./types/class/Method";
 import { JvmObject } from "./types/reference/Object";
 
-
-export enum ThreadStatus {
-  NEW,
-  RUNNABLE,
-  BLOCKED,
-  WAITING,
-  TIMED_WAITING,
-  TERMINATED,
-}
-
 export default class Thread {
+  private static threadIdCounter = 0;
+
   private status: ThreadStatus = ThreadStatus.NEW;
   private stack: StackFrame[];
   private stackPointer: number;
   private javaObject: JvmObject;
   private threadClass: ReferenceClassData;
   private jvm: JVM;
+  private threadId: number;
 
   private quantumLeft: number = 0;
   private tpool: AbstractThreadPool;
 
+  private isShuttingDown = false;
+
   constructor(
     threadClass: ReferenceClassData,
     jvm: JVM,
-    tpool: AbstractThreadPool
+    tpool: AbstractThreadPool,
+    threadObj: JvmObject
   ) {
     this.jvm = jvm;
     this.threadClass = threadClass;
     this.stack = [];
     this.stackPointer = -1;
-    this.javaObject = threadClass.instantiate();
-    // call init?
-    this.javaObject.putNativeField('thread', this);
+    this.javaObject = threadObj;
     this.tpool = tpool;
+
+    this.threadId = Thread.threadIdCounter;
+    Thread.threadIdCounter += 1;
   }
 
   initialize(thread: Thread) {
-    const init = this.threadClass.getMethod('<init>()V') as Method;
+    const init = this.threadClass.getMethod("<init>()V") as Method;
     if (!init) {
-      throw new Error('Thread constructor not found');
+      throw new Error("Thread constructor not found");
     }
 
     thread.invokeStackFrame(
@@ -70,10 +68,10 @@ export default class Thread {
     ) {
       this.peekStackFrame().run(this);
       this.quantumLeft -= 1;
-    }
 
-    if (this.stack.length === 0) {
-      this.status = ThreadStatus.TERMINATED;
+      if (this.stack.length === 0 && !this.isShuttingDown) {
+        this._exit();
+      }
     }
 
     this.tpool.quantumOver(this);
@@ -86,6 +84,35 @@ export default class Thread {
     while (this.stack.length > 0) {
       this.peekStackFrame().run(this);
     }
+  }
+
+  _exit() {
+    if (this.isShuttingDown) {
+      return;
+    }
+
+    this.isShuttingDown = true;
+    const monitor = this.javaObject.getMonitor();
+    monitor.enter(this, () => {
+      const exitMethod = this.threadClass.getMethod("exit()V");
+      if (!exitMethod) {
+        throw new Error("Thread exit method not found");
+      }
+
+      this.invokeStackFrame(
+        new InternalStackFrame(
+          this.threadClass,
+          exitMethod,
+          0,
+          [this.javaObject],
+          () => {
+            monitor.notifyAll(this);
+            monitor.exit(this);
+            this.setStatus(ThreadStatus.TERMINATED);
+          }
+        )
+      );
+    });
   }
 
   // #region getters
@@ -108,6 +135,10 @@ export default class Thread {
 
   getPC(): number {
     return this.stack[this.stackPointer].pc;
+  }
+
+  getThreadPool(): AbstractThreadPool {
+    return this.tpool;
   }
 
   /**
@@ -137,6 +168,13 @@ export default class Thread {
   }
 
   offsetPc(pc: number) {
+    const sf = this.stack[this.stackPointer];
+
+    // no more stackframes or native method
+    if (!sf || sf.checkNative()) {
+      return;
+    }
+
     this.stack[this.stackPointer].pc += pc;
   }
 
@@ -164,8 +202,8 @@ export default class Thread {
       this.stack[this.stackPointer].operandStack.length + 1 >
       this.stack[this.stackPointer].maxStack
     ) {
-      this.throwNewException('java/lang/StackOverflowError', '');
-      onError && onError('java/lang/StackOverflowError');
+      this.throwNewException("java/lang/StackOverflowError", "");
+      onError && onError("java/lang/StackOverflowError");
       return;
     }
     this.stack[this.stackPointer].operandStack.push(value);
@@ -176,8 +214,8 @@ export default class Thread {
       this.stack[this.stackPointer].operandStack.length + 2 >
       this.stack[this.stackPointer].maxStack
     ) {
-      this.throwNewException('java/lang/StackOverflowError', '');
-      onError && onError('java/lang/StackOverflowError');
+      this.throwNewException("java/lang/StackOverflowError", "");
+      onError && onError("java/lang/StackOverflowError");
       return;
     }
     this.stack[this.stackPointer].operandStack.push(value);
@@ -186,7 +224,7 @@ export default class Thread {
 
   popStack64() {
     if (this.stack?.[this.stackPointer]?.operandStack?.length <= 1) {
-      this.throwNewException('java/lang/RuntimeException', 'Stack Underflow');
+      this.throwNewException("java/lang/RuntimeException", "Stack Underflow");
     }
     this.stack?.[this.stackPointer]?.operandStack?.pop();
     const value = this.stack?.[this.stackPointer]?.operandStack?.pop();
@@ -195,18 +233,19 @@ export default class Thread {
 
   popStack() {
     if (this.stack?.[this.stackPointer]?.operandStack?.length <= 0) {
-      this.throwNewException('java/lang/RuntimeException', 'Stack Underflow');
+      this.throwNewException("java/lang/RuntimeException", "Stack Underflow");
     }
     const value = this.stack?.[this.stackPointer]?.operandStack?.pop();
     return value;
   }
 
-  returnStackFrame(ret?: any, err?: JvmObject): StackFrame {
+  private _returnSF(ret?: any, err?: JvmObject, isWide?: boolean) {
     const sf = this.stack.pop();
     this.stackPointer -= 1;
+
     if (this.stackPointer < -1 || sf === undefined) {
-      this.throwNewException('java/lang/RuntimeException', 'Stack Underflow');
-      throw new Error('Stack Underflow');
+      this.throwNewException("java/lang/RuntimeException", "Stack Underflow");
+      throw new Error("Stack Underflow");
     }
 
     if (err) {
@@ -214,32 +253,71 @@ export default class Thread {
       return sf;
     }
 
-    sf.onReturn(this, ret);
+    if (sf.method.getName() === "extendWith") {
+      console.log("extendWith", ret);
+    }
+
+    console.debug(
+      sf.class.getClassname() +
+        "." +
+        sf.method.getName() +
+        sf.method.getDescriptor() +
+        " return: " +
+        (ret === null
+          ? "null"
+          : ret?.getClass
+          ? (ret?.getClass() as ReferenceClassData).getClassname()
+          : ret)
+    );
+
+    isWide ? sf.onReturn64(this, ret) : sf.onReturn(this, ret);
     return sf;
+  }
+
+  returnStackFrame(ret?: any, err?: JvmObject): StackFrame {
+    return this._returnSF(ret, err, false);
   }
 
   returnStackFrame64(ret?: any, err?: JvmObject): StackFrame {
-    const sf = this.stack.pop();
-    this.stackPointer -= 1;
-    if (this.stackPointer < -1 || sf === undefined) {
-      this.throwNewException('java/lang/RuntimeException', 'Stack Underflow');
-      throw new Error('Stack Underflow');
-    }
-
-    if (err) {
-      sf.onError(this, err);
-      return sf;
-    }
-
-    sf.onReturn64(this, ret);
-    return sf;
+    return this._returnSF(ret, err, true);
   }
 
   invokeStackFrame(sf: StackFrame) {
-    this.stack.push(sf);
+    console.debug(
+      "".padEnd(this.stackPointer + 2, "#") +
+        sf.class.getClassname() +
+        "." +
+        sf.method.getName() +
+        sf.method.getDescriptor() +
+        ": [" +
+        sf.locals
+          .map((v) => {
+            return v === null
+              ? "null"
+              : v?.getClass
+              ? (v?.getClass() as ReferenceClassData).getClassname()
+              : v;
+          })
+          .join(", ") +
+        "]"
+    );
+
+    if (sf.method.checkSynchronized()) {
+      if (sf.method.checkStatic()) {
+        sf.method.getClass().getJavaObject().getMonitor().enter(this);
+      } else {
+        sf.locals[0].getMonitor().enter(this);
+      }
+    }
+
+    if (sf) this.stack.push(sf);
     this.stackPointer += 1;
   }
 
+  /**
+   * Creates an InternalStackFrame and pushes it onto the stack.
+   * Workaround for circular dependencies in JvmObject
+   */
   _invokeInternal(
     cls: ReferenceClassData,
     method: Method,
@@ -274,11 +352,12 @@ export default class Thread {
 
   throwNewException(className: string, msg: string) {
     // Initialize exception
-    const clsRes = this.getClass().getLoader().getClassRef(className);
+    // FIXME: push msg to stack
+    const clsRes = this.getClass().getLoader().getClass(className);
     if (checkError(clsRes)) {
-      if (clsRes.exceptionCls === 'java/lang/ClassNotFoundException') {
+      if (clsRes.exceptionCls === "java/lang/ClassNotFoundException") {
         throw new Error(
-          'Infinite loop detected: ClassNotFoundException not found'
+          "Infinite loop detected: ClassNotFoundException not found"
         );
       }
 
@@ -295,18 +374,28 @@ export default class Thread {
       return;
     }
 
-    console.error(
-      'throwing exception ',
-      exceptionCls.getClassname(),
-      msg,
-      this.getMethod().getName(),
-      this.getPC()
-    );
     this.throwException(exceptionCls.instantiate());
   }
 
   throwException(exception: JvmObject) {
     const exceptionCls = exception.getClass();
+
+    console.log(
+      this.stack.map(
+        (frame) =>
+          frame.class.getClassname() +
+          "." +
+          frame.method.getName() +
+          frame.method.getDescriptor()
+      )
+    );
+
+    console.error(
+      "throwing exception ",
+      exceptionCls.getClassname(),
+      this.getMethod().getName(),
+      this.getPC()
+    );
 
     // Find a stackframe with appropriate exception handlers
     while (this.stack.length > 0) {
@@ -315,7 +404,6 @@ export default class Thread {
       // Native methods cannot handle exceptions
       if (method.checkNative()) {
         this.returnStackFrame(null, exception);
-        this.stackPointer -= 1;
         continue;
       }
 
@@ -343,21 +431,40 @@ export default class Thread {
           pc < handler.endPc &&
           (handlerCls === null || exceptionCls.checkCast(handlerCls))
         ) {
+          console.log(
+            "EXCEPTION CAUGHT: @",
+            method.getClass().getClassname(),
+            " FOR: ",
+            exceptionCls.getClassname()
+          );
           // clear the operand stack and push exception
           this.stack[this.stackPointer].operandStack = [exception];
           this.setPc(handler.handlerPc);
           return;
         }
       }
+
+      // No handler found, unwind stack
+      if (method.checkSynchronized()) {
+        if (method.checkStatic()) {
+          method.getClass().getJavaObject().getMonitor().exit(this);
+        } else {
+          this.loadLocal(0).getMonitor().exit(this);
+        }
+      }
       this.returnStackFrame(null, exception);
     }
 
+    if (!this.getJVM().checkInitialized()) {
+      throw new Error("Exception in JVM initialization");
+    }
+
     const unhandledMethod = this.threadClass.getMethod(
-      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
+      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
     );
     if (unhandledMethod === null) {
       throw new Error(
-        'Uncaught exception could not be thrown: dispatchUncaughtException(Ljava/lang/Throwable;)V not found'
+        "Uncaught exception could not be thrown: dispatchUncaughtException(Ljava/lang/Throwable;)V not found"
       );
     }
 

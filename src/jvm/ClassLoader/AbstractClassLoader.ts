@@ -1,10 +1,22 @@
 import { ClassFile } from "../../ClassFile/types";
-import { ConstantClassInfo, ConstantUtf8Info } from "../../ClassFile/types/constants";
-import { ErrorResult, ImmediateResult, checkError, checkSuccess } from "../types/Result";
-import { ClassData, ReferenceClassData, ArrayClassData, PrimitiveClassData } from "../types/class/ClassData";
+import {
+  ConstantClassInfo,
+  ConstantUtf8Info,
+} from "../../ClassFile/types/constants";
+import {
+  ErrorResult,
+  ImmediateResult,
+  checkError,
+  checkSuccess,
+} from "../types/Result";
+import {
+  ClassData,
+  ReferenceClassData,
+  ArrayClassData,
+  PrimitiveClassData,
+} from "../types/class/ClassData";
 import { JvmObject } from "../types/reference/Object";
 import AbstractSystem from "../utils/AbstractSystem";
-
 
 export default abstract class AbstractClassLoader {
   protected nativeSystem: AbstractSystem;
@@ -25,18 +37,25 @@ export default abstract class AbstractClassLoader {
     this.parentLoader = parentLoader;
   }
 
-  /**
-   * Prepares the class data by checking jvm constraints.
-   * @param cls class data to check
-   * @returns Error, if any
-   */
-  protected prepareClass(cls: ClassFile): void | Error {
-    return;
+  getClassPath(): string {
+    return this.classPath;
   }
 
   /**
-   * Loads superclasses etc. for reference classes
+   * Loads a given classfile. Used to support Unsafe operations.
+   * @param classFile
+   * @returns
    */
+  defineClass(classFile: ClassFile): ClassData {
+    const cls = this.linkClass(classFile);
+    return this.loadClass(cls);
+  }
+
+  /**
+   * Resolves symbolic references in the classfile. Eagerly loads
+   * @param classFile
+   * @returns
+   * */
   protected linkClass(cls: ClassFile): ReferenceClassData {
     // resolve classname
     const clsInfo = cls.constantPool[cls.thisClass] as ConstantClassInfo;
@@ -48,7 +67,7 @@ export default abstract class AbstractClassLoader {
       cls,
       this,
       thisClass,
-      e => (hasError = e)
+      (e) => (hasError = e)
     );
 
     if (hasError) {
@@ -58,7 +77,8 @@ export default abstract class AbstractClassLoader {
   }
 
   /**
-   * Stores the resolved class data.
+   * Stores the resolved class data in the classloader.
+   * The same class loaded by a different classloader is considered a different class.
    */
   protected loadClass(cls: ClassData): ClassData {
     this.loadedClasses[cls.getClassname()] = cls;
@@ -70,13 +90,13 @@ export default abstract class AbstractClassLoader {
     componentCls: ClassData
   ): ImmediateResult<ArrayClassData> {
     if (!this.parentLoader) {
-      throw new Error('ClassLoader has no parent loader');
+      throw new Error("ClassLoader has no parent loader");
     }
 
     return this.parentLoader._loadArrayClass(className, componentCls);
   }
 
-  protected _getClassRef(
+  protected _getClass(
     className: string,
     initiator: AbstractClassLoader
   ): ImmediateResult<ClassData> {
@@ -84,25 +104,23 @@ export default abstract class AbstractClassLoader {
       return { result: this.loadedClasses[className] };
     }
 
-    // We might need the current loader to load its component class
-    if (className.startsWith('[')) {
+    if (className.startsWith("[")) {
       const itemClsName = className.slice(1);
       let arrayObjCls;
-      // link array component class
-      if (itemClsName.startsWith('L')) {
-        const itemRes = this._getClassRef(itemClsName.slice(1, -1), initiator);
+      if (itemClsName.startsWith("L")) {
+        const itemRes = this._getClass(itemClsName.slice(1, -1), initiator);
         if (checkError(itemRes)) {
           return itemRes;
         }
         arrayObjCls = itemRes.result;
-      } else if (itemClsName.startsWith('[')) {
-        const itemRes = this._getClassRef(itemClsName, initiator);
+      } else if (itemClsName.startsWith("[")) {
+        const itemRes = this._getClass(itemClsName, initiator);
         if (checkError(itemRes)) {
           return itemRes;
         }
         arrayObjCls = itemRes.result;
       } else {
-        arrayObjCls = this.getPrimitiveClassRef(itemClsName);
+        arrayObjCls = this.getPrimitiveClass(itemClsName);
       }
 
       const res = this._loadArrayClass(className, arrayObjCls);
@@ -110,7 +128,7 @@ export default abstract class AbstractClassLoader {
     }
 
     if (this.parentLoader) {
-      const res = this.parentLoader._getClassRef(className, initiator);
+      const res = this.parentLoader._getClass(className, initiator);
       if (checkSuccess(res)) {
         return res;
       }
@@ -124,18 +142,56 @@ export default abstract class AbstractClassLoader {
    * Gets the reference class data given the classname, loads the class if not loaded.
    * Not for primitive classes, use getPrimitiveClassRef for primitive classes.
    */
-  getClassRef(className: string): ImmediateResult<ClassData> {
-    return this._getClassRef(className, this);
+  getClass(className: string): ImmediateResult<ClassData> {
+    return this._getClass(className, this);
   }
 
   /**
-   * Special method for loading primitive classes.
+   * Special method for loading primitive classes. Overriden by BootstrapClassLoader.
    * @throws Error if class is not a primitive
    * @param className
    */
-  abstract getPrimitiveClassRef(className: string): PrimitiveClassData;
+  getPrimitiveClass(className: string): PrimitiveClassData {
+    if (this.parentLoader === null) {
+      throw new Error("Primitive class not found");
+    }
+    return this.parentLoader.getPrimitiveClass(className);
+  }
 
-  protected abstract load(className: string): ImmediateResult<ClassData>;
+  /**
+   * Attempts to load a class file
+   * @param className name of class to load, e.g. [Ljava/lang/Object;
+   * @returns
+   */
+  protected load(className: string): ImmediateResult<ClassData> {
+    const path = this.classPath ? this.classPath + "/" + className : className;
 
-  abstract getJavaObject(): JvmObject | null;
+    let classFile;
+    try {
+      classFile = this.nativeSystem.readFile(path);
+    } catch (e) {
+      return {
+        exceptionCls: "java/lang/ClassNotFoundException",
+        msg: className,
+      };
+    }
+
+    const classData = this.linkClass(classFile);
+    return { result: this.loadClass(classData) };
+  }
+
+  getJavaObject(): JvmObject | null {
+    console.error("ApplicationClassloader: Java object not created");
+    return null;
+  }
+}
+
+export class ApplicationClassLoader extends AbstractClassLoader {
+  constructor(
+    nativeSystem: AbstractSystem,
+    classPath: string,
+    parentLoader: AbstractClassLoader
+  ) {
+    super(nativeSystem, classPath, parentLoader);
+  }
 }
