@@ -5,6 +5,7 @@ import { ifElseTest } from "./tests/ifElse.test";
 import { whileTest } from "./tests/while.test";
 import { forTest } from "./tests/for.test";
 import { unaryExpressionTest } from "./tests/unaryExpression.test";
+import { methodInvocationTest } from "./tests/methodInvocation.test";
 
 describe("compiler tests", () => {
   printlnTest();
@@ -14,4 +15,5 @@ describe("compiler tests", () => {
   ifElseTest();
   whileTest();
   forTest();
+  methodInvocationTest();
 })

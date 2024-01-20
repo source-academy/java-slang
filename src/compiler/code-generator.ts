@@ -1,5 +1,7 @@
 import { OPCODE } from "../ClassFile/constants/instructions";
 import { ExceptionHandler, AttributeInfo } from "../ClassFile/types/attributes";
+import { FIELD_FLAGS } from "../ClassFile/types/fields";
+import { METHOD_FLAGS } from "../ClassFile/types/methods";
 import { Node } from "../ast/types/ast";
 import {
   MethodInvocation,
@@ -236,7 +238,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     for (let i = 0; i < symbolInfos.length - 1; i++) {
       const fieldInfo = (symbolInfos[i] as FieldInfo);
       const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
-      cg.code.push(OPCODE.GETSTATIC, 0, field);
+      cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
     }
 
     const argTypes: Array<UnannType> = [];
@@ -252,7 +254,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const methodInfo = methodInfos[i];
       if (methodInfo.typeDescriptor.includes(argDescriptor)) {
         const method = cg.constantPoolManager.indexMethodrefInfo(methodInfo.parentClassName, methodInfo.name, methodInfo.typeDescriptor);
-        cg.code.push(OPCODE.INVOKEVIRTUAL, 0, method);
+        cg.code.push((methodInfo.accessFlags & METHOD_FLAGS.ACC_STATIC) ? OPCODE.INVOKESTATIC : OPCODE.INVOKEVIRTUAL, 0, method);
         resultType = methodInfo.typeDescriptor.slice(argDescriptor.length);
         break;
       }

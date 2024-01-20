@@ -56,7 +56,7 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["404", "303", "202", "101"],
-  }
+  },
 ];
 
 export const whileTest = () => describe("while statements", () => {
