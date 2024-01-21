@@ -2688,7 +2688,6 @@ function readcheckcast(
   view: DataView,
   offset: number
 ): { result: InstructionType; offset: number } {
-  // FIXME: may have to use type checker project?
   const indexbyte = view.getUint16(offset);
 
   offset += 2;
@@ -2706,7 +2705,6 @@ function readinstanceof(
   view: DataView,
   offset: number
 ): { result: InstructionType; offset: number } {
-  // FIXME: may have to use type checker project?
   const indexbyte = view.getUint16(offset);
 
   offset += 2;
