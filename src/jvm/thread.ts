@@ -9,15 +9,12 @@ import { Method } from "./types/class/Method";
 import { JvmObject } from "./types/reference/Object";
 
 export default class Thread {
-  private static threadIdCounter = 0;
-
   private status: ThreadStatus = ThreadStatus.NEW;
   private stack: StackFrame[];
   private stackPointer: number;
   private javaObject: JvmObject;
   private threadClass: ReferenceClassData;
   private jvm: JVM;
-  private threadId: number;
 
   private quantumLeft: number = 0;
   private tpool: AbstractThreadPool;
@@ -36,9 +33,6 @@ export default class Thread {
     this.stackPointer = -1;
     this.javaObject = threadObj;
     this.tpool = tpool;
-
-    this.threadId = Thread.threadIdCounter;
-    Thread.threadIdCounter += 1;
   }
 
   initialize(thread: Thread) {
@@ -253,23 +247,6 @@ export default class Thread {
       return sf;
     }
 
-    if (sf.method.getName() === "extendWith") {
-      console.log("extendWith", ret);
-    }
-
-    console.debug(
-      sf.class.getClassname() +
-        "." +
-        sf.method.getName() +
-        sf.method.getDescriptor() +
-        " return: " +
-        (ret === null
-          ? "null"
-          : ret?.getClass
-          ? (ret?.getClass() as ReferenceClassData).getClassname()
-          : ret)
-    );
-
     isWide ? sf.onReturn64(this, ret) : sf.onReturn(this, ret);
     return sf;
   }
@@ -283,25 +260,6 @@ export default class Thread {
   }
 
   invokeStackFrame(sf: StackFrame) {
-    console.debug(
-      "".padEnd(this.stackPointer + 2, "#") +
-        sf.class.getClassname() +
-        "." +
-        sf.method.getName() +
-        sf.method.getDescriptor() +
-        ": [" +
-        sf.locals
-          .map((v) => {
-            return v === null
-              ? "null"
-              : v?.getClass
-              ? (v?.getClass() as ReferenceClassData).getClassname()
-              : v;
-          })
-          .join(", ") +
-        "]"
-    );
-
     if (sf.method.checkSynchronized()) {
       if (sf.method.checkStatic()) {
         sf.method.getClass().getJavaObject().getMonitor().enter(this);
@@ -352,7 +310,6 @@ export default class Thread {
 
   throwNewException(className: string, msg: string) {
     // Initialize exception
-    // FIXME: push msg to stack
     const clsRes = this.getClass().getLoader().getClass(className);
     if (checkError(clsRes)) {
       if (clsRes.exceptionCls === "java/lang/ClassNotFoundException") {
@@ -379,23 +336,6 @@ export default class Thread {
 
   throwException(exception: JvmObject) {
     const exceptionCls = exception.getClass();
-
-    console.log(
-      this.stack.map(
-        (frame) =>
-          frame.class.getClassname() +
-          "." +
-          frame.method.getName() +
-          frame.method.getDescriptor()
-      )
-    );
-
-    console.error(
-      "throwing exception ",
-      exceptionCls.getClassname(),
-      this.getMethod().getName(),
-      this.getPC()
-    );
 
     // Find a stackframe with appropriate exception handlers
     while (this.stack.length > 0) {
@@ -431,12 +371,6 @@ export default class Thread {
           pc < handler.endPc &&
           (handlerCls === null || exceptionCls.checkCast(handlerCls))
         ) {
-          console.log(
-            "EXCEPTION CAUGHT: @",
-            method.getClass().getClassname(),
-            " FOR: ",
-            exceptionCls.getClassname()
-          );
           // clear the operand stack and push exception
           this.stack[this.stackPointer].operandStack = [exception];
           this.setPc(handler.handlerPc);

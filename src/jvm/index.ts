@@ -45,7 +45,7 @@ export default class JVM {
       this.nativeSystem,
       this.jvmOptions.javaClassPath
     );
-    this.jni = new JNI();
+    this.jni = new JNI(this.jvmOptions.javaClassPath);
     this.threadpool = new RoundRobinThreadPool(() => {});
     this.applicationClassLoader = new ApplicationClassLoader(
       this.nativeSystem,

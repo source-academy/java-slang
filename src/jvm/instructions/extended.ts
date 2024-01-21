@@ -1,6 +1,7 @@
 import { OPCODE } from "../../ClassFile/constants/instructions";
 import Thread from "../thread";
 import { checkSuccess, checkError } from "../types/Result";
+import { ArrayClassData } from "../types/class/ClassData";
 import { ConstantClass } from "../types/class/Constants";
 import { JvmArray } from "../types/reference/Array";
 import { JvmObject } from "../types/reference/Object";
@@ -56,7 +57,7 @@ export function runWide(thread: Thread): void {
       );
       return;
   }
-  throw new Error('Invalid opcode');
+  throw new Error("Invalid opcode");
 }
 
 export function runMultianewarray(thread: Thread): void {
@@ -75,8 +76,8 @@ export function runMultianewarray(thread: Thread): void {
 
     if (dim < 0) {
       thread.throwNewException(
-        'java/lang/NegativeArraySizeException',
-        'Negative array size'
+        "java/lang/NegativeArraySizeException",
+        "Negative array size"
       );
       return;
     }
@@ -91,7 +92,7 @@ export function runMultianewarray(thread: Thread): void {
     return;
   }
 
-  const arrayCls = clsRes.result;
+  const arrayCls = clsRes.result as ArrayClassData;
   const res = arrayCls.instantiate() as JvmArray;
   res.initArray(dimArray[0]);
 
@@ -106,7 +107,7 @@ export function runMultianewarray(thread: Thread): void {
     const classResolutionResult = thread
       .getClass()
       .getLoader()
-      .getClassRef(currentType);
+      .getClass(currentType);
     if (checkError(classResolutionResult)) {
       thread.throwNewException(
         classResolutionResult.exceptionCls,

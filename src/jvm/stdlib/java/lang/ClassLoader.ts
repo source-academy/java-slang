@@ -14,8 +14,6 @@ const functions = {
       (locals[0] as JvmObject).getNativeField("$loader") ??
       thread.getJVM().getBootstrapClassLoader();
 
-    console.log("findLoadedClass0: ", className);
-
     const res = loader.getClass(className);
 
     if (checkError(res)) {

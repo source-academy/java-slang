@@ -31,7 +31,6 @@ export class Method {
   private accessFlags: number;
   private name: string;
   private descriptor: string;
-  private attributes: { [attributeName: string]: IAttribute[] } = {};
 
   private static reflectMethodClass: ReferenceClassData | null = null;
   private static reflectConstructorClass: ReferenceClassData | null = null;
@@ -51,7 +50,6 @@ export class Method {
     this.accessFlags = accessFlags;
     this.name = name;
     this.descriptor = descriptor;
-    this.attributes = attributes;
     this.slot = slot;
   }
 
@@ -148,22 +146,18 @@ export class Method {
     // create exception class array
     const exceptionTypes = caCls.instantiate();
     exceptionTypes.initArray(0, []);
-    console.error("reflected method exception array not initialized");
 
     // modifiers
     const modifiers = this.accessFlags;
 
     // signature
     const signature = null;
-    console.error("reflected method signature not initialized");
 
     // annotations
     const annotations = null;
-    console.error("reflected method annotations not initialized");
 
     // parameter annotations
     const parameterAnnotations = null;
-    console.error("reflected method parameter annotations not initialized");
 
     let javaObject: JvmObject;
 

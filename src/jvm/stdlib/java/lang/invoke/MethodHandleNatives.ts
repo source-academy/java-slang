@@ -34,9 +34,6 @@ const functions = {
       ) as number;
       const method = classData.getMethodFromSlot(methodSlot);
       if (!method) {
-        console.error(
-          "init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V: Method not found"
-        );
         thread.returnStackFrame();
         return;
       }
@@ -182,12 +179,6 @@ const functions = {
         );
 
         if (checkError(lookupRes)) {
-          console.log(
-            "failed resolution::: ",
-            clsRef.getClassname(),
-            "@",
-            name + methodDesc
-          );
           thread.throwNewException(
             "java/lang/NoSuchMethodError",
             `Invalid method ${methodDesc}`
@@ -197,9 +188,6 @@ const functions = {
         const method = lookupRes.result;
 
         const methodFlags = method.getAccessFlags();
-        console.warn(
-          "MethodHandle resolution: CALLER_SENSITIVE not implemented"
-        ); // FIXME: check method caller sensitive and |= caller sensitive flag.
         const refKind = flags >>> MemberNameFlags.MN_REFERENCE_KIND_SHIFT;
         memberName._putField(
           "flags",
@@ -216,7 +204,6 @@ const functions = {
           type.getNativeField("classRef") as ReferenceClassData
         ).getDescriptor();
         const field = clsRef.lookupField(name + descriptor);
-        console.log("Lookup field: ", name, descriptor);
         if (field === null) {
           thread.throwNewException(
             "java/lang/NoSuchFieldError",
@@ -235,7 +222,6 @@ const functions = {
         thread.returnStackFrame(memberName);
         return;
       } else {
-        console.log("Unknown member name");
         thread.throwNewException(
           "java/lang/LinkageError",
           `Could not resolve member name`

@@ -15,7 +15,6 @@ const functions = {
     locals: any[]
   ) => {
     const clsObj = locals[0] as JvmObject;
-    console.warn("Class.desiredAssertionStatus0: assertions disabled");
     thread.returnStackFrame(0);
   },
 
@@ -116,7 +115,6 @@ const functions = {
     const clsRef = clsObj.getNativeField("classRef") as ClassData;
     // Replace slashes with ., Class splits by . to get simple name
     const name = clsRef.getClassname().replaceAll("/", ".");
-    console.log("getName0: ", name);
     const strRes = thread.getJVM().getInternedString(name);
     thread.returnStackFrame(strRes);
   },
@@ -142,7 +140,6 @@ const functions = {
       const callerClassObj = locals[3] as JvmObject;
 
       const name = j2jsString(nameJStr).replaceAll(".", "/");
-      console.log("forname0 w/ ", j2jsString(nameJStr));
 
       let loader: AbstractClassLoader;
       if (loaderObj) {
@@ -288,9 +285,6 @@ const functions = {
       thread.returnStackFrame(null);
       return;
     }
-    console.error(
-      "native method missing: Class.getEnclosingMethod0() for reference class"
-    );
     thread.returnStackFrame(null);
   },
 
@@ -315,9 +309,6 @@ const functions = {
       return;
     }
 
-    console.error(
-      "native method missing: Class.getDeclaredClasses0() for inner class"
-    );
     const innerclasses: any[] = [];
     clsArr.initArray(innerclasses.length, innerclasses);
     thread.returnStackFrame(clsArr);

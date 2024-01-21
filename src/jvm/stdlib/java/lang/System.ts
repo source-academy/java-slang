@@ -65,7 +65,6 @@ const functions = {
         dest.set(destPos + i, data[i + srcPos]);
       }
     } else {
-      // FIXME: we should check if the types are actually compatible
       for (let i = 0; i < length; i++) {
         dest.set(destPos + i, data[i + srcPos]);
       }
@@ -78,13 +77,8 @@ const functions = {
     locals: any[]
   ) => {
     const props = locals[0] as JvmObject;
-    // FIXME: use actual values
     const systemProperties = {
       "java.class.path": "example",
-      "java.home": "natives",
-      "java.ext.dirs": "natives/lib/ext",
-      "java.io.tmpdir": "temp",
-      "sun.boot.class.path": "natives",
       "file.encoding": "UTF-8",
       "java.vendor": "Source Academy",
       "java.version": "1.0",
@@ -103,11 +97,9 @@ const functions = {
       "java.vm.name": "Source Academy JVM",
       "java.vm.version": "0.1",
       "java.vm.vendor": "Source Academy",
-      "java.awt.headless": "true", // true if we're using the console frontend
-      "java.awt.graphicsenv": "classes.awt.CanvasGraphicsEnvironment",
-      "jline.terminal": "jline.UnsupportedTerminal", // we can't shell out to `stty`,
-      "sun.arch.data.model": "32", // Identify as 32-bit, because that's how we act.
-      "sun.jnu.encoding": "UTF-8", // Determines how Java parses command line options.
+      "jline.terminal": "jline.UnsupportedTerminal",
+      "sun.arch.data.model": "32",
+      "sun.jnu.encoding": "UTF-8",
     };
 
     const loader = thread.getClass().getLoader();

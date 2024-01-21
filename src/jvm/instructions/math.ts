@@ -2,13 +2,13 @@ import Thread from "../thread";
 import { asFloat, asDouble } from "../utils";
 
 const MIN_INT = -2147483648;
-const MIN_LONG = BigInt('-9223372036854775808');
+const MIN_LONG = BigInt("-9223372036854775808");
 
 export function runIadd(thread: Thread): void {
   thread.offsetPc(1);
   const value2 = thread.popStack();
   const value1 = thread.popStack();
-  // 2 * MAX_INT is within JS max safe int
+  // 2 * MAX_INT is within max type safe int
   thread.pushStack((value1 + value2) | 0);
 }
 
@@ -52,8 +52,8 @@ export function runIsub(thread: Thread): void {
 
 export function runLsub(thread: Thread): void {
   thread.offsetPc(1);
-  const value2: bigint = thread.popStack();
-  const value1: bigint = thread.popStack();
+  const value2: bigint = thread.popStack64();
+  const value1: bigint = thread.popStack64();
   thread.pushStack64(BigInt.asIntN(64, value1 - value2));
 }
 
@@ -114,7 +114,7 @@ export function runIdiv(thread: Thread): void {
   const value1 = thread.popStack();
 
   if (value2 === 0) {
-    thread.throwNewException('java/lang/ArithmeticException', 'Division by 0');
+    thread.throwNewException("java/lang/ArithmeticException", "Division by 0");
     return;
   }
 
@@ -132,11 +132,11 @@ export function runLdiv(thread: Thread): void {
   const value1: bigint = thread.popStack64();
 
   if (value2 === BigInt(0)) {
-    thread.throwNewException('java/lang/ArithmeticException', 'Division by 0');
+    thread.throwNewException("java/lang/ArithmeticException", "Division by 0");
     return;
   }
 
-  if (value1 === MIN_LONG && value2 === BigInt(-1)) {
+  if (value1 === MIN_LONG && value2 === -BigInt(1)) {
     thread.pushStack64(value1);
     return;
   }
@@ -164,7 +164,7 @@ export function runIrem(thread: Thread): void {
   const value1 = thread.popStack();
 
   if (value2 === 0) {
-    thread.throwNewException('java/lang/ArithmeticException', 'Division by 0');
+    thread.throwNewException("java/lang/ArithmeticException", "Division by 0");
     return;
   }
   // JS bitwise can only return 32-bit ints
@@ -177,7 +177,7 @@ export function runLrem(thread: Thread): void {
   const value1: bigint = thread.popStack64();
 
   if (value2 === BigInt(0)) {
-    thread.throwNewException('java/lang/ArithmeticException', 'Division by 0');
+    thread.throwNewException("java/lang/ArithmeticException", "Division by 0");
     return;
   }
 
@@ -269,7 +269,7 @@ export function runLushr(thread: Thread): void {
   }
 
   // convert leading 1's to zeros
-  thread.pushStack64((value1 & BigInt('0xffffffffffffffff')) >> BigInt(value2));
+  thread.pushStack64((value1 & BigInt("0xffffffffffffffff")) >> BigInt(value2));
 }
 
 export function runIand(thread: Thread): void {

@@ -1,32 +1,39 @@
 import JVM from "..";
 import { CONSTANT_TAG } from "../../ClassFile/constants/constants";
 import { OPCODE } from "../../ClassFile/constants/instructions";
-import { ClassFile } from "../../ClassFile/types";
-import { CodeAttribute, AttributeInfo } from "../../ClassFile/types/attributes";
-import { ConstantInfo, ConstantUtf8Info } from "../../ClassFile/types/constants";
+import { ACCESS_FLAGS, ClassFile } from "../../ClassFile/types";
+import { AttributeInfo, CodeAttribute } from "../../ClassFile/types/attributes";
+import {
+  ConstantInfo,
+  ConstantUtf8Info,
+} from "../../ClassFile/types/constants";
 import { FIELD_FLAGS, FieldInfo } from "../../ClassFile/types/fields";
-import { MethodInfo, METHOD_FLAGS } from "../../ClassFile/types/methods";
+import { METHOD_FLAGS, MethodInfo } from "../../ClassFile/types/methods";
 import AbstractClassLoader from "../ClassLoader/AbstractClassLoader";
+import { CLASS_STATUS, ThreadStatus } from "../constants";
 import { JNI } from "../jni";
-import Thread, { ThreadStatus } from "../thread";
+import Thread from "../thread";
 import { AbstractThreadPool } from "../threadpool";
 import { ImmediateResult, checkError, checkSuccess } from "../types/Result";
-import { PrimitiveClassData, ReferenceClassData, ArrayClassData, ClassData, CLASS_STATUS } from "../types/class/ClassData";
+import {
+  PrimitiveClassData,
+  ReferenceClassData,
+  ArrayClassData,
+  ClassData,
+} from "../types/class/ClassData";
 import { Field } from "../types/class/Field";
 import { Method } from "../types/class/Method";
 import { JvmArray } from "../types/reference/Array";
 import { JvmObject, JavaType } from "../types/reference/Object";
 import { primitiveTypeToName } from "../utils";
 import AbstractSystem from "../utils/AbstractSystem";
-import { ACCESS_FLAGS as CLASS_FLAGS } from "../../ClassFile/types";
-
 
 export class TestClassLoader extends AbstractClassLoader {
   getJavaObject(): JvmObject | null {
     return null;
   }
   private primitiveClasses: { [className: string]: PrimitiveClassData } = {};
-  getPrimitiveClassRef(className: string): PrimitiveClassData {
+  getPrimitiveClass(className: string): PrimitiveClassData {
     if (this.primitiveClasses[className]) {
       return this.primitiveClasses[className];
     }
@@ -45,22 +52,22 @@ export class TestClassLoader extends AbstractClassLoader {
     componentCls: ReferenceClassData
   ): ImmediateResult<ArrayClassData> {
     // #region load array superclasses/interfaces
-    const objRes = this.getClassRef('java/lang/Object');
+    const objRes = this.getClass("java/lang/Object");
     if (checkError(objRes)) {
       return objRes;
     }
-    const cloneableRes = this.getClassRef('java/lang/Cloneable');
+    const cloneableRes = this.getClass("java/lang/Cloneable");
     if (checkError(cloneableRes)) {
       return cloneableRes;
     }
-    const serialRes = this.getClassRef('java/io/Serializable');
+    const serialRes = this.getClass("java/io/Serializable");
     if (checkError(serialRes)) {
       return serialRes;
     }
     // #endregion
 
     const arrayClass = new ArrayClassData(
-      CLASS_FLAGS.ACC_PUBLIC,
+      ACCESS_FLAGS.ACC_PUBLIC,
       className,
       this,
       componentCls,
@@ -121,22 +128,22 @@ export class TestClassLoader extends AbstractClassLoader {
         length: 16,
         value: options.superClass
           ? options.superClass?.getClassname()
-          : 'java/lang/Object',
+          : "java/lang/Object",
       }, // superclass name
       { tag: 7, nameIndex: 4 },
       {
         tag: 1,
         length: options.className?.length ?? 9,
-        value: options.className ?? 'Test/Test',
+        value: options.className ?? "Test/Test",
       },
       {
         tag: CONSTANT_TAG.Utf8,
         length: 4,
-        value: 'Code',
+        value: "Code",
       },
     ];
     if (options.constants) {
-      options.constants.forEach(func => {
+      options.constants.forEach((func) => {
         constantPool.push(func(constantPool));
       });
     }
@@ -157,7 +164,7 @@ export class TestClassLoader extends AbstractClassLoader {
           constantPool.push({
             tag: CONSTANT_TAG.Utf8,
             length: 4,
-            value: 'Test',
+            value: "Test",
           });
           constantPool.push({
             tag: CONSTANT_TAG.NameAndType,
@@ -191,8 +198,8 @@ export class TestClassLoader extends AbstractClassLoader {
             code: method.code,
             exceptionTableLength: method.exceptionTable?.length ?? 0,
             exceptionTable:
-              method.exceptionTable?.map(handler => {
-                if (handler.catchType === '') {
+              method.exceptionTable?.map((handler) => {
+                if (handler.catchType === "") {
                   return {
                     startPc: handler.startPc,
                     endPc: handler.endPc,
@@ -225,7 +232,7 @@ export class TestClassLoader extends AbstractClassLoader {
         })
       : [];
     const loader =
-      options.loader ?? new TestClassLoader(new TestSystem(), 'test/', null);
+      options.loader ?? new TestClassLoader(new TestSystem(), "test/", null);
 
     const fields: FieldInfo[] = options.fields
       ? options.fields.map((field, index) => {
@@ -242,7 +249,7 @@ export class TestClassLoader extends AbstractClassLoader {
           constantPool.push({
             tag: CONSTANT_TAG.Utf8,
             length: 4,
-            value: options.className ?? 'Test',
+            value: options.className ?? "Test",
           });
           constantPool.push({
             tag: CONSTANT_TAG.NameAndType,
@@ -289,7 +296,7 @@ export class TestClassLoader extends AbstractClassLoader {
     const clsRef = options.arrayComponent
       ? new ArrayClassData(
           options.flags ?? 33,
-          options.className ?? '[LTest',
+          options.className ?? "[LTest",
           loader,
           options.arrayComponent,
           () => {}
@@ -314,12 +321,12 @@ export class TestClassLoader extends AbstractClassLoader {
             attributes: [],
           },
           loader,
-          options.className ?? 'Test/Test',
+          options.className ?? "Test/Test",
           () => {}
         );
     clsRef.status = options.status ?? CLASS_STATUS.PREPARED;
 
-    loader.loadTestClassRef(options.className ?? 'Test/Test', clsRef);
+    loader.loadTestClassRef(options.className ?? "Test/Test", clsRef);
     return clsRef;
   }
 
@@ -333,13 +340,13 @@ export class TestClassLoader extends AbstractClassLoader {
 
 export class TestSystem extends AbstractSystem {
   stdout(message: string): void {
-    throw new Error('Method not implemented.');
+    throw new Error("Method not implemented.");
   }
   stderr(message: string): void {
-    throw new Error('Method not implemented.');
+    throw new Error("Method not implemented.");
   }
   readFile(path: string): ClassFile {
-    throw new Error('Method not implemented.');
+    throw new Error("Method not implemented.");
   }
 }
 
@@ -360,7 +367,7 @@ export class TestThread extends Thread {
     jvm: JVM,
     tpool: AbstractThreadPool
   ) {
-    super(threadClass, jvm, tpool);
+    super(threadClass, jvm, tpool, new JvmObject(threadClass));
     this.setStatus(ThreadStatus.RUNNABLE);
   }
 }
@@ -385,15 +392,19 @@ export class TestJVM extends JVM {
     this.tJNI = testJNI;
   }
 
+  checkInitialized(): boolean {
+    return true;
+  }
+
   private tnewCharArr(str: string): ImmediateResult<JvmArray> {
-    const cArrRes = this.testLoader.getClassRef('[C');
+    const cArrRes = this.testLoader.getClass("[C");
     if (checkError(cArrRes)) {
       return cArrRes;
     }
 
     const cArrCls = cArrRes.result;
     const cArr = cArrCls.instantiate() as JvmArray;
-    const jsArr: number[] = [];
+    const jsArr = [];
     for (let i = 0; i < str.length; i++) {
       jsArr.push(str.charCodeAt(i));
     }
@@ -408,14 +419,14 @@ export class TestJVM extends JVM {
       return charArr;
     }
 
-    const strRes = this.testLoader.getClassRef('java/lang/String');
+    const strRes = this.testLoader.getClass("java/lang/String");
 
     if (checkError(strRes)) {
       return strRes;
     }
     const strCls = strRes.result;
     const strObj = strCls.instantiate();
-    const fieldRef = strCls.getFieldRef('value[C') as Field;
+    const fieldRef = strCls.lookupField("value[C") as Field;
     strObj.putField(fieldRef as Field, charArr.result);
     return { result: strObj };
   }
@@ -426,7 +437,7 @@ export class TestJVM extends JVM {
     }
     const strRes = this.tnewString(str);
     if (checkError(strRes)) {
-      throw new Error('testString creation failed');
+      throw new Error("testString creation failed");
     }
 
     this.tinternedStrings[str] = strRes.result;
@@ -439,25 +450,25 @@ export class TestJVM extends JVM {
 }
 
 export const setupTest = () => {
-  const jni = new JNI();
+  const jni = new JNI("stdlib");
   const testSystem = new TestSystem();
-  const testLoader = new TestClassLoader(testSystem, '', null);
+  const testLoader = new TestClassLoader(testSystem, "", null);
 
   // #region create dummy classes
   const dispatchUncaughtCode = new DataView(new ArrayBuffer(8));
   dispatchUncaughtCode.setUint8(0, OPCODE.RETURN);
   testLoader.createClass({
-    className: 'java/lang/Object',
+    className: "java/lang/Object",
     loader: testLoader,
     superClass: null,
   });
   const threadClass = testLoader.createClass({
-    className: 'java/lang/Thread',
+    className: "java/lang/Thread",
     methods: [
       {
         accessFlags: [METHOD_FLAGS.ACC_PROTECTED],
-        name: 'dispatchUncaughtException',
-        descriptor: '(Ljava/lang/Throwable;)V',
+        name: "dispatchUncaughtException",
+        descriptor: "(Ljava/lang/Throwable;)V",
         attributes: [],
         code: dispatchUncaughtCode,
       },
@@ -465,35 +476,35 @@ export const setupTest = () => {
     loader: testLoader,
   }) as ReferenceClassData;
   const clsClass = testLoader.createClass({
-    className: 'java/lang/Class',
+    className: "java/lang/Class",
     loader: testLoader,
     fields: [
       {
         accessFlags: [FIELD_FLAGS.ACC_PUBLIC],
-        name: 'classLoader',
-        descriptor: 'Ljava/lang/ClassLoader;',
+        name: "classLoader",
+        descriptor: "Ljava/lang/ClassLoader;",
         attributes: [],
       },
     ],
   });
   testLoader.createClass({
-    className: 'java/lang/Cloneable',
+    className: "java/lang/Cloneable",
     loader: testLoader,
-    flags: CLASS_FLAGS.ACC_INTERFACE | CLASS_FLAGS.ACC_PUBLIC,
+    flags: ACCESS_FLAGS.ACC_INTERFACE | ACCESS_FLAGS.ACC_PUBLIC,
   });
   testLoader.createClass({
-    className: 'java/io/Serializable',
+    className: "java/io/Serializable",
     loader: testLoader,
-    flags: CLASS_FLAGS.ACC_INTERFACE | CLASS_FLAGS.ACC_PUBLIC,
+    flags: ACCESS_FLAGS.ACC_INTERFACE | ACCESS_FLAGS.ACC_PUBLIC,
   });
   const strClass = testLoader.createClass({
-    className: 'java/lang/String',
+    className: "java/lang/String",
     loader: testLoader,
     fields: [
       {
         accessFlags: [FIELD_FLAGS.ACC_FINAL, FIELD_FLAGS.ACC_PRIVATE],
-        name: 'value',
-        descriptor: '[C',
+        name: "value",
+        descriptor: "[C",
         attributes: [],
       },
     ],
@@ -501,33 +512,33 @@ export const setupTest = () => {
 
   const code = new DataView(new ArrayBuffer(100));
   const testClass = testLoader.createClass({
-    className: 'Test',
+    className: "Test",
     constants: [
       () => ({
         tag: CONSTANT_TAG.Utf8,
         length: 3,
-        value: '()V',
+        value: "()V",
       }),
       () => ({
         tag: CONSTANT_TAG.Utf8,
         length: 5,
-        value: 'test0',
+        value: "test0",
       }),
       () => ({
         tag: CONSTANT_TAG.Utf8,
         length: 4,
-        value: 'Test',
+        value: "Test",
       }),
-      cPool => ({
+      (cPool) => ({
         tag: CONSTANT_TAG.NameAndType,
         nameIndex: cPool.length - 2,
         descriptorIndex: cPool.length - 3,
       }),
-      cPool => ({
+      (cPool) => ({
         tag: CONSTANT_TAG.Class,
         nameIndex: cPool.length - 2,
       }),
-      cPool => {
+      (cPool) => {
         return {
           tag: CONSTANT_TAG.Methodref,
           classIndex: cPool.length - 1,
@@ -538,45 +549,45 @@ export const setupTest = () => {
     methods: [
       {
         accessFlags: [METHOD_FLAGS.ACC_STATIC],
-        name: 'test0',
-        descriptor: '()V',
+        name: "test0",
+        descriptor: "()V",
         attributes: [],
         code: code,
       },
     ],
     loader: testLoader,
   });
-  const method = testClass.getMethod('test0()V') as Method;
+  const method = testClass.getMethod("test0()V") as Method;
   // #endregion
 
   // #region exception classes
   const Throwable = testLoader.createClass({
-    className: 'java/lang/Throwable',
+    className: "java/lang/Throwable",
     loader: testLoader,
-    flags: CLASS_FLAGS.ACC_PUBLIC,
+    flags: ACCESS_FLAGS.ACC_PUBLIC,
   });
   const NullPointerException = testLoader.createClass({
-    className: 'java/lang/NullPointerException',
+    className: "java/lang/NullPointerException",
     superClass: Throwable as ReferenceClassData,
     loader: testLoader,
-    flags: CLASS_FLAGS.ACC_PUBLIC,
+    flags: ACCESS_FLAGS.ACC_PUBLIC,
   });
   const ArithmeticException = testLoader.createClass({
-    className: 'java/lang/ArithmeticException',
+    className: "java/lang/ArithmeticException",
     superClass: Throwable as ReferenceClassData,
     loader: testLoader,
-    flags: CLASS_FLAGS.ACC_PUBLIC,
+    flags: ACCESS_FLAGS.ACC_PUBLIC,
   });
   const IllegalAccessError = testLoader.createClass({
-    className: 'java/lang/IllegalAccessError',
+    className: "java/lang/IllegalAccessError",
     superClass: Throwable as ReferenceClassData,
     loader: testLoader,
-    flags: CLASS_FLAGS.ACC_PUBLIC,
+    flags: ACCESS_FLAGS.ACC_PUBLIC,
   });
   testLoader.createClass({
-    className: 'java/lang/NegativeArraySizeException',
+    className: "java/lang/NegativeArraySizeException",
     loader: testLoader,
-    flags: CLASS_FLAGS.ACC_PUBLIC,
+    flags: ACCESS_FLAGS.ACC_PUBLIC,
   });
 
   //   #endregion

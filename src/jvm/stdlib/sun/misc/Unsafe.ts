@@ -140,10 +140,6 @@ const functions = {
     const field = locals[1] as JvmObject;
     const slot = field._getField("slot", "I", "java/lang/reflect/Field");
 
-    console.warn(
-      "objectFieldOffset: not checking if slot is used to access fields not declared in this class"
-    );
-
     // #region debug
     const fstr = field._getField(
       "name",
@@ -186,12 +182,6 @@ const functions = {
       // offset: field slot of field reflectionData
       // expected: SoftReference object
       // newValue: SoftReference object
-
-      console.debug(
-        "compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z: ",
-        obj1.getClass().getClassname(),
-        offset
-      );
 
       thread.returnStackFrame(
         unsafeCompareAndSwap(thread, unsafe, obj1, offset, expected, newValue)

@@ -20,9 +20,6 @@ const functions = {
 
     const arrClsRes = clsRef.getLoader().getClass(clsName);
     if (checkError(arrClsRes)) {
-      console.error(
-        "init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V: Method not found"
-      );
       thread.throwNewException(
         "java/lang/ClassNotFoundException",
         arrClsRes.msg

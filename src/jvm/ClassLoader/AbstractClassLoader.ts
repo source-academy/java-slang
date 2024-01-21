@@ -181,7 +181,6 @@ export default abstract class AbstractClassLoader {
   }
 
   getJavaObject(): JvmObject | null {
-    console.error("ApplicationClassloader: Java object not created");
     return null;
   }
 }

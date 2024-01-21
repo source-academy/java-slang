@@ -281,11 +281,9 @@ export function attrInfo2Interface(
 }
 
 export function autoBox(obj: any) {
-  console.warn("Auto boxing not implemented");
   return obj;
 }
 
 export function autoUnbox(obj: any) {
-  console.warn("Auto unboxing not implemented");
   return obj;
 }

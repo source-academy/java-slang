@@ -494,7 +494,6 @@ export class ConstantInvokeDynamic extends Constant {
     // #endregion
 
     // #region run bootstrap method
-    console.log("RUNNING LINK CALL SITE");
 
     const mhnRes = loader.getClass("java/lang/invoke/MethodHandleNatives");
     if (checkError(mhnRes)) {
@@ -544,7 +543,6 @@ export class ConstantInvokeDynamic extends Constant {
             appendixArr,
           ],
           (css) => {
-            console.log("LINK CSS FINISH. ", css);
             this.result = { result: css };
           }
         )
@@ -567,7 +565,6 @@ export class ConstantInvokeDynamic extends Constant {
       throw new Error("Bootstrap method not found");
     }
 
-    console.log("BOOTSTRAP METHOD: ", bootstrapMethod);
     const bootstrapMhConst = bootstrapMethod.bootstrapMethodRef;
     const constref = bootstrapMhConst.tempGetReference();
     const refres = constref.resolve(thread);
@@ -577,7 +574,6 @@ export class ConstantInvokeDynamic extends Constant {
       }
       return { isDefer: true };
     }
-    const res = refres.result;
 
     const bsArgIdx = bootstrapMethod.bootstrapArguments;
     const argConst = bsArgIdx[0] as ConstantMethodType;
@@ -603,9 +599,9 @@ export class ConstantInvokeDynamic extends Constant {
     }
 
     const thisClsName = this.cls.getClassname();
-    const intercls = clsRes.result;
-    const erasedDesc = argConst.getDescriptor();
-    const methodName = nameAndTypeRes.name;
+    clsRes.result;
+    argConst.getDescriptor();
+    nameAndTypeRes.name;
     const toInvoke = invokeRes.result as Method;
     const invokerName = toInvoke.getName();
     const invokerDesc = toInvoke.getDescriptor();
@@ -1287,6 +1283,7 @@ export class ConstantMethodHandle extends Constant {
           }
         )
       );
+      return { isDefer: true };
     };
     // #endregion
 

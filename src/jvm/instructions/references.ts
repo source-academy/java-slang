@@ -1,13 +1,23 @@
 import { NativeStackFrame, JavaStackFrame } from "../stackframe";
 import Thread from "../thread";
-import { checkSuccess, checkError, Result, ImmediateResult } from "../types/Result";
+import {
+  checkSuccess,
+  checkError,
+  Result,
+  ImmediateResult,
+} from "../types/Result";
 import { ReferenceClassData } from "../types/class/ClassData";
-import { ConstantFieldref, ConstantMethodref, ConstantInterfaceMethodref, ConstantInvokeDynamic, ConstantClass } from "../types/class/Constants";
+import {
+  ConstantFieldref,
+  ConstantMethodref,
+  ConstantInterfaceMethodref,
+  ConstantInvokeDynamic,
+  ConstantClass,
+} from "../types/class/Constants";
 import { Method } from "../types/class/Method";
 import { ArrayPrimitiveType, JvmArray } from "../types/reference/Array";
 import { JavaType, JvmObject } from "../types/reference/Object";
-import { asDouble, asFloat } from "../utils";
-
+import { asDouble, asFloat, getArgs } from "../utils";
 
 export function runGetstatic(thread: Thread): void {
   const indexbyte = thread.getCode().getUint16(thread.getPC() + 1);
@@ -42,7 +52,7 @@ export function runGetstatic(thread: Thread): void {
     return;
   }
 
-  if (field.getFieldDesc() === 'J' || field.getFieldDesc() === 'D') {
+  if (field.getFieldDesc() === "J" || field.getFieldDesc() === "D") {
     thread.pushStack64(field.getValue());
   } else {
     thread.pushStack(field.getValue());
@@ -130,12 +140,13 @@ export function runGetfield(thread: Thread): void {
 
   const objRef = thread.popStack() as JvmObject;
   if (objRef === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
 
+  // If fieldRef is Parent.X, and object is Child, Parent.X is set not Child.X
   const value = objRef.getField(field);
-  if (field.getFieldDesc() === 'J' || field.getFieldDesc() === 'D') {
+  if (field.getFieldDesc() === "J" || field.getFieldDesc() === "D") {
     thread.pushStack64(value);
   } else {
     thread.pushStack(value);
@@ -166,7 +177,7 @@ export function runPutfield(thread: Thread): void {
   }
 
   let value;
-  if (field.getFieldDesc() === 'J' || field.getFieldDesc() === 'D') {
+  if (field.getFieldDesc() === "J" || field.getFieldDesc() === "D") {
     value = thread.popStack64();
   } else {
     value = thread.popStack();
@@ -174,7 +185,7 @@ export function runPutfield(thread: Thread): void {
 
   const objRef = thread.popStack() as JvmObject;
   if (objRef === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   objRef.putField(field, value);
@@ -184,28 +195,77 @@ export function runPutfield(thread: Thread): void {
 function invokeInit(
   thread: Thread,
   constant: ConstantMethodref | ConstantInterfaceMethodref
-): Result<{ classRef: ReferenceClassData; methodRef: Method; args: any[] }> {
-  const methodRes = constant.resolve();
+): Result<{ methodRef: Method; args: any[]; polyMethod?: Method }> {
+  const methodRes = constant.resolve(thread);
   if (!checkSuccess(methodRes)) {
-    if (checkError(methodRes)) {
-      return methodRes;
-    }
-    return { isDefer: true };
+    return methodRes;
   }
   const methodRef = methodRes.result;
 
   const classRef = methodRef.getClass();
   const initRes = classRef.initialize(thread);
   if (!checkSuccess(initRes)) {
-    if (checkError(initRes)) {
-      return initRes;
-    }
-    return { isDefer: true };
+    return initRes;
   }
 
-  const args = methodRef.getArgs(thread);
+  if (methodRef.checkSignaturePolymorphic()) {
+    const { appendix, memberName, originalDescriptor } =
+      constant.getPolymorphic();
 
-  return { result: { classRef, methodRef, args } };
+    let target: Method;
+    let args: any[] = [];
+    const name = methodRef.getName();
+    let mh, mn;
+    switch (name) {
+      case "invokeBasic":
+        target = methodRef;
+        args = getArgs(thread, originalDescriptor, target.checkNative());
+        mh = thread.popStack() as JvmObject;
+        if (mh === null) {
+          return { exceptionCls: "java/lang/NullPointerException", msg: "" };
+        }
+        args = [mh, ...args];
+        break;
+      case "invoke":
+      case "invokeExact":
+        if (!memberName) {
+          return { exceptionCls: "java/lang/NullPointerException", msg: "" };
+        }
+        target = memberName.getNativeField("vmtarget") as Method;
+        args = getArgs(thread, originalDescriptor, target.checkNative());
+        if (appendix !== null) {
+          args.push(appendix);
+        }
+        mh = thread.popStack() as JvmObject;
+        if (mh === null) {
+          return { exceptionCls: "java/lang/NullPointerException", msg: "" };
+        }
+        args = [mh, ...args];
+        break;
+      case "linkToVirtual":
+      case "linkToInterface":
+      case "linkToSpecial":
+      case "linkToStatic":
+        mn = thread.popStack() as JvmObject;
+        target = mn.getNativeField("vmtarget") as Method;
+        thread.pushStack(mn);
+        args = getArgs(thread, originalDescriptor, target.checkNative());
+        args.pop();
+        if (mn === null) {
+          return { exceptionCls: "java/lang/NullPointerException", msg: "" };
+        }
+        break;
+      default:
+        return { exceptionCls: "java/lang/LinkageError", msg: "" };
+    }
+
+    return {
+      result: { methodRef: target, args, polyMethod: methodRef },
+    };
+  } else {
+    const args = methodRef.getArgs(thread);
+    return { result: { methodRef, args } };
+  }
 }
 
 // looks up method for invokevirtual/invokeinterface.
@@ -218,14 +278,14 @@ function lookupMethod(
 ): ImmediateResult<{ toInvoke: Method; objRef: JvmObject }> {
   const objRef = thread.popStack() as JvmObject;
   if (objRef === null) {
-    return { exceptionCls: 'java/lang/NullPointerException', msg: '' };
+    return { exceptionCls: "java/lang/NullPointerException", msg: "" };
   }
 
   if (checkCastTo && !objRef.getClass().checkCast(checkCastTo)) {
-    return { exceptionCls: 'java/lang/IncompatibleClassChangeError', msg: '' };
+    return { exceptionCls: "java/lang/IncompatibleClassChangeError", msg: "" };
   }
-  const runtimeClassRef = objRef.getClass();
 
+  const runtimeClassRef = objRef.getClass();
   // method lookup
   const lookupResult = runtimeClassRef.lookupMethod(
     methodRef.getName() + methodRef.getDescriptor(),
@@ -238,16 +298,53 @@ function lookupMethod(
   }
   const toInvoke = lookupResult.result;
   if (toInvoke.checkAbstract()) {
-    return { exceptionCls: 'java/lang/NoSuchMethodError', msg: '' };
+    return { exceptionCls: "java/lang/NoSuchMethodError", msg: "" };
   }
 
   return { result: { toInvoke, objRef } };
 }
 
+function invokePoly(
+  thread: Thread,
+  polyMethod: Method,
+  vmtarget: Method,
+  args: any[],
+  returnOffset: number
+): void {
+  let toInvoke = vmtarget;
+  if (polyMethod.getName() === "invokeBasic") {
+    const mh = args[0] as JvmObject;
+    const lambdaForm = mh._getField(
+      "form",
+      "Ljava/lang/invoke/LambdaForm;",
+      "java/lang/invoke/MethodHandle"
+    );
+    const memberName = lambdaForm._getField(
+      "vmentry",
+      "Ljava/lang/invoke/MemberName;",
+      "java/lang/invoke/LambdaForm"
+    );
+    toInvoke = memberName.getNativeField("vmtarget") as Method;
+  }
+
+  thread.invokeStackFrame(
+    toInvoke.checkNative()
+      ? new NativeStackFrame(
+          toInvoke.getClass(),
+          toInvoke,
+          0,
+          args,
+          returnOffset,
+          thread.getJVM().getJNI()
+        )
+      : new JavaStackFrame(toInvoke.getClass(), toInvoke, 0, args, returnOffset)
+  );
+}
+
 function invokeVirtual(
   thread: Thread,
   constant: ConstantMethodref | ConstantInterfaceMethodref,
-  onFinish?: () => void
+  returnOffset: number
 ): void {
   const resolutionRes = invokeInit(thread, constant);
   if (!checkSuccess(resolutionRes)) {
@@ -257,7 +354,12 @@ function invokeVirtual(
     }
     return;
   }
-  const { methodRef, args } = resolutionRes.result;
+  const { methodRef, args, polyMethod } = resolutionRes.result;
+
+  if (polyMethod) {
+    invokePoly(thread, polyMethod, methodRef, args, returnOffset);
+    return;
+  }
 
   // method lookup
   const toInvokeRes = lookupMethod(thread, methodRef, false);
@@ -267,32 +369,26 @@ function invokeVirtual(
   }
   const { toInvoke, objRef } = toInvokeRes.result;
 
-  onFinish && onFinish();
-
   if (toInvoke.checkNative()) {
-    const nativeMethod = thread
-      .getJVM()
-      .getJNI()
-      .getNativeMethod(
-        toInvoke.getClass().getClassname(),
-        toInvoke.getName() + toInvoke.getDescriptor()
-      );
-    if (!nativeMethod) {
-      thread.throwNewException('java/lang/UnsatisfiedLinkError', '');
-      return;
-    }
     thread.invokeStackFrame(
       new NativeStackFrame(
         toInvoke.getClass(),
         toInvoke,
         0,
         [objRef, ...args],
-        nativeMethod
+        returnOffset,
+        thread.getJVM().getJNI()
       )
     );
   } else {
     thread.invokeStackFrame(
-      new JavaStackFrame(toInvoke.getClass(), toInvoke, 0, [objRef, ...args])
+      new JavaStackFrame(
+        toInvoke.getClass(),
+        toInvoke,
+        0,
+        [objRef, ...args],
+        returnOffset
+      )
     );
   }
 }
@@ -303,7 +399,7 @@ export function runInvokevirtual(thread: Thread): void {
     .getClass()
     .getConstant(indexbyte) as ConstantMethodref;
 
-  invokeVirtual(thread, constant, () => thread.offsetPc(3));
+  invokeVirtual(thread, constant, 3);
 }
 
 export function runInvokespecial(thread: Thread): void {
@@ -323,40 +419,35 @@ export function runInvokespecial(thread: Thread): void {
 
   const objRef = thread.popStack() as JvmObject;
   if (objRef === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
 
   if (methodRef.checkAbstract()) {
-    thread.throwNewException('java/lang/AbstractMethodError', '');
+    thread.throwNewException("java/lang/AbstractMethodError", "");
     return;
   }
-  thread.offsetPc(3);
 
   if (methodRef.checkNative()) {
-    const nativeMethod = thread
-      .getJVM()
-      .getJNI()
-      .getNativeMethod(
-        methodRef.getClass().getClassname(),
-        methodRef.getName() + methodRef.getDescriptor()
-      );
-    if (!nativeMethod) {
-      thread.throwNewException('java/lang/UnsatisfiedLinkError', '');
-      return;
-    }
     thread.invokeStackFrame(
       new NativeStackFrame(
         methodRef.getClass(),
         methodRef,
         0,
         [objRef, ...args],
-        nativeMethod
+        3,
+        thread.getJVM().getJNI()
       )
     );
   } else {
     thread.invokeStackFrame(
-      new JavaStackFrame(methodRef.getClass(), methodRef, 0, [objRef, ...args])
+      new JavaStackFrame(
+        methodRef.getClass(),
+        methodRef,
+        0,
+        [objRef, ...args],
+        3
+      )
     );
   }
 }
@@ -375,41 +466,33 @@ export function runInvokestatic(thread: Thread): void {
     }
     return;
   }
-  const { classRef, methodRef, args } = resolutionRes.result;
+  const { methodRef, args } = resolutionRes.result;
 
   if (!methodRef.checkStatic()) {
-    thread.throwNewException('java/lang/IncompatibleClassChangeError', '');
+    thread.throwNewException("java/lang/IncompatibleClassChangeError", "");
     return;
   }
 
-  thread.offsetPc(3);
-
   if (methodRef.checkNative()) {
-    const nativeMethod = thread
-      .getJVM()
-      .getJNI()
-      .getNativeMethod(
-        classRef.getClassname(),
-        methodRef.getName() + methodRef.getDescriptor()
-      );
-    if (!nativeMethod) {
-      thread.throwNewException('java/lang/UnsatisfiedLinkError', '');
-      return;
-    }
-
     thread.invokeStackFrame(
-      new NativeStackFrame(classRef, methodRef, 0, args, nativeMethod)
+      new NativeStackFrame(
+        methodRef.getClass(),
+        methodRef,
+        0,
+        args,
+        3,
+        thread.getJVM().getJNI()
+      )
     );
   } else {
-    thread.invokeStackFrame(new JavaStackFrame(classRef, methodRef, 0, args));
+    thread.invokeStackFrame(
+      new JavaStackFrame(methodRef.getClass(), methodRef, 0, args, 3)
+    );
   }
 }
 
 export function runInvokeinterface(thread: Thread): void {
   const indexbyte = thread.getCode().getUint16(thread.getPC() + 1);
-  // Not actually useful
-  const count = thread.getCode().getUint8(thread.getPC() + 3);
-  const zero = thread.getCode().getUint8(thread.getPC() + 4);
 
   const constant = thread
     .getClass()
@@ -431,46 +514,38 @@ export function runInvokeinterface(thread: Thread): void {
   }
   const { toInvoke, objRef } = toInvokeRes.result;
 
-  thread.offsetPc(5);
-
   if (toInvoke.checkNative()) {
-    const methodCls = toInvoke.getClass();
-
-    const nativeMethod = thread
-      .getJVM()
-      .getJNI()
-      .getNativeMethod(
-        methodCls.getClassname(),
-        toInvoke.getName() + toInvoke.getDescriptor()
-      );
-    if (!nativeMethod) {
-      thread.throwNewException('java/lang/UnsatisfiedLinkError', '');
-      return;
-    }
     thread.invokeStackFrame(
       new NativeStackFrame(
         toInvoke.getClass(),
         toInvoke,
         0,
         [objRef, ...args],
-        nativeMethod
+        5,
+        thread.getJVM().getJNI()
       )
     );
   } else {
     thread.invokeStackFrame(
-      new JavaStackFrame(toInvoke.getClass(), toInvoke, 0, [objRef, ...args])
+      new JavaStackFrame(toInvoke.getClass(), toInvoke, 0, [objRef, ...args], 5)
     );
   }
 }
 
 export function runInvokedynamic(thread: Thread): void {
   const index = thread.getCode().getUint16(thread.getPC() + 1);
-  const zero1 = thread.getCode().getUint8(thread.getPC() + 3);
-  const zero2 = thread.getCode().getUint8(thread.getPC() + 4);
 
   const invoker = thread.getClass();
   const callsiteConstant = invoker.getConstant(index) as ConstantInvokeDynamic;
-  console.warn('INDY not implemented');
+
+  const tempRes = callsiteConstant.resolve(thread);
+  if (!checkSuccess(tempRes)) {
+    if (checkError(tempRes)) {
+      thread.throwNewException(tempRes.exceptionCls, tempRes.msg);
+      return;
+    }
+    return;
+  }
   thread.offsetPc(5);
   return;
 }
@@ -489,7 +564,7 @@ export function runNew(thread: Thread): void {
 
   const objCls = res.result;
   if (objCls.checkAbstract() || objCls.checkInterface()) {
-    thread.throwNewException('java/lang/InstantiationError', '');
+    thread.throwNewException("java/lang/InstantiationError", "");
     return;
   }
 
@@ -513,45 +588,45 @@ export function runNewarray(thread: Thread): void {
 
   const count = thread.popStack();
   if (count < 0) {
-    thread.throwNewException('java/lang/NegativeArraySizeException', '');
+    thread.throwNewException("java/lang/NegativeArraySizeException", "");
     return;
   }
 
-  let className = '';
+  let className = "";
   switch (atype) {
     case ArrayPrimitiveType.boolean:
-      className = '[' + JavaType.boolean;
+      className = "[" + JavaType.boolean;
       break;
     case ArrayPrimitiveType.char:
-      className = '[' + JavaType.char;
+      className = "[" + JavaType.char;
       break;
     case ArrayPrimitiveType.float:
-      className = '[' + JavaType.float;
+      className = "[" + JavaType.float;
       break;
     case ArrayPrimitiveType.double:
-      className = '[' + JavaType.double;
+      className = "[" + JavaType.double;
       break;
     case ArrayPrimitiveType.byte:
-      className = '[' + JavaType.byte;
+      className = "[" + JavaType.byte;
       break;
     case ArrayPrimitiveType.short:
-      className = '[' + JavaType.short;
+      className = "[" + JavaType.short;
       break;
     case ArrayPrimitiveType.int:
-      className = '[' + JavaType.int;
+      className = "[" + JavaType.int;
       break;
     case ArrayPrimitiveType.long:
-      className = '[' + JavaType.long;
+      className = "[" + JavaType.long;
       break;
     default:
-      throw new Error('Invalid atype, reference types should use anewarray');
+      throw new Error("Invalid atype, reference types should use anewarray");
   }
   const classResolutionResult = thread
     .getClass()
     .getLoader()
-    .getClassRef(className);
+    .getClass(className);
   if (checkError(classResolutionResult)) {
-    throw new Error('Failed to load primitive array class');
+    throw new Error("Failed to load primitive array class");
   }
 
   const arrayCls = classResolutionResult.result;
@@ -565,13 +640,9 @@ export function runAnewarray(thread: Thread): void {
   const invoker = thread.getClass();
   const count = thread.popStack();
   thread.offsetPc(3);
-  const onDefer = () => {
-    thread.pushStack(count);
-    thread.offsetPc(-3);
-  };
 
   if (count < 0) {
-    thread.throwNewException('java/lang/NegativeArraySizeException', '');
+    thread.throwNewException("java/lang/NegativeArraySizeException", "");
     return;
   }
 
@@ -581,32 +652,14 @@ export function runAnewarray(thread: Thread): void {
     return;
   }
   const objCls = res.result;
-  // const initRes = objCls.initialize(thread, onDefer);
-  // if (!checkSuccess(initRes)) {
-  //   if (checkError(initRes)) {
-  //     const err = initRes.getError();
-  //     thread.throwNewException(err.exceptionCls, err.msg);
-  //     return;
-  //   }
-  //   return;
-  // }
 
   const arrayClassRes = invoker
     .getLoader()
-    .getClassRef('[L' + objCls.getClassname() + ';');
+    .getClass("[L" + objCls.getClassname() + ";");
   if (checkError(arrayClassRes)) {
-    throw new Error('Failed to load array class');
+    throw new Error("Failed to load array class");
   }
   const arrayCls = arrayClassRes.result;
-  // const aInitRes = arrayCls.initialize(thread, onDefer);
-  // if (!checkSuccess(aInitRes)) {
-  //   if (checkError(aInitRes)) {
-  //     const err = aInitRes.getError();
-  //     thread.throwNewException(err.exceptionCls, err.msg);
-  //     return;
-  //   }
-  //   return;
-  // }
 
   const arrayref = arrayCls.instantiate() as unknown as JvmArray;
   arrayref.initArray(count);
@@ -616,7 +669,7 @@ export function runAnewarray(thread: Thread): void {
 export function runArraylength(thread: Thread): void {
   const arrayref = thread.popStack() as JvmArray;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   thread.offsetPc(1);
@@ -628,11 +681,9 @@ export function runAthrow(thread: Thread): void {
 
   if (exception === null) {
     thread.pushStack(exception);
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
-
-  console.warn('ATHROW: structured locking w/ synchronized not implemented');
 
   thread.offsetPc(1);
   thread.throwException(exception);
@@ -676,7 +727,7 @@ function _checkCast(
   } else {
     value === 1
       ? thread.pushStack(objectref)
-      : thread.throwNewException('java/lang/ClassCastException', '');
+      : thread.throwNewException("java/lang/ClassCastException", "");
   }
   return;
 }
@@ -696,21 +747,19 @@ export function runInstanceof(thread: Thread): void {
 export function runMonitorenter(thread: Thread): void {
   const obj = thread.popStack() as JvmObject | null;
   if (obj === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
 
-  thread.offsetPc(1);
-  console.warn('MONITORENTER: Not implemented');
+  obj.getMonitor().enter(thread, () => thread.offsetPc(1));
 }
 
 export function runMonitorexit(thread: Thread): void {
   const obj = thread.popStack() as JvmObject | null;
   if (obj === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
 
-  thread.offsetPc(1);
-  console.warn('MONITOREXIT: Not implemented');
+  obj.getMonitor().exit(thread, () => thread.offsetPc(1));
 }

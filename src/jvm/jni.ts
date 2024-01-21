@@ -18,9 +18,11 @@ type Lib = {
 
 export class JNI {
   private classes: Lib;
+  private classPath: string;
 
-  constructor(stdlib?: Lib) {
+  constructor(classPath: string, stdlib?: Lib) {
     this.classes = stdlib ?? {};
+    this.classPath = classPath;
   }
 
   /**
@@ -52,7 +54,6 @@ export class JNI {
   getNativeMethod(
     thread: Thread,
     className: string,
-    classPath: string,
     methodName: string
   ): Result<(thread: Thread, locals: any[]) => void> {
     // classname not found
@@ -60,7 +61,6 @@ export class JNI {
       this.classes[className] = {};
     }
 
-    // dynamic import class native lambdas
     if (!this.classes?.[className]?.methods) {
       if (!this.classes[className].blocking) {
         this.classes[className].blocking = [thread];
@@ -75,7 +75,8 @@ export class JNI {
             this.classes[className].blocking = [];
           });
         } else {
-          const cp = "../../" + classPath + "/" + className;
+          // dynamic import to avoid downloading everything each run
+          const cp = "../../" + this.classPath + "/" + className;
           import(cp)
             .then((lib) => {
               this.classes[className].methods = lib.default;
@@ -100,7 +101,6 @@ export class JNI {
     // native method does not exist
     if (!this.classes?.[className]?.methods?.[methodName]) {
       // FIXME: Returns a dummy function for now, but should throw an error
-      console.error(`Native method missing: ${className}.${methodName} `);
       const retType = parseFieldDescriptor(methodName.split(")")[1], 0).type;
 
       switch (retType) {

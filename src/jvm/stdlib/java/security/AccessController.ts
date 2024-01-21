@@ -25,10 +25,6 @@ const doPrivileged = (thread: Thread, locals: any[]) => {
       0,
       [action],
       (ret: JvmObject) => {
-        console.debug(
-          "RUN doPrivileged(Ljava/security/PrivilegedExceptionAction;)Ljava/lang/Object;",
-          { ...ret, cls: null }
-        );
         thread.returnStackFrame();
         thread.returnStackFrame(ret);
       }
