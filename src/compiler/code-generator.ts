@@ -16,6 +16,7 @@ import {
   BasicForStatement,
   PostfixExpression,
   PrefixExpression,
+  ReturnStatement,
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration, UnannType } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -97,6 +98,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     });
     return { stackSize: maxStack, resultType: EMPTY_TYPE };
+  },
+
+  ReturnStatement: (node: Node, cg: CodeGenerator) => {
+    const { expression: expr } = node as ReturnStatement;
+    if (expr) {
+      const { stackSize: stackSize, resultType: resultType } = compile(expr, cg);
+      cg.code.push(OPCODE.IRETURN);
+      return { stackSize, resultType };
+    }
+
+    cg.code.push(OPCODE.RETURN);
+    return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor("void") };
   },
 
   BasicForStatement: (node: Node, cg: CodeGenerator) => {
@@ -402,12 +415,14 @@ class CodeGenerator {
     });
 
     const { methodBody } = methodNode;
-    const maxStack = Math.max(this.maxLocals, compile(methodBody, this).stackSize);
+    const { stackSize: stackSize } = compile(methodBody, this);
+    if (methodNode.methodHeader.result === "void") {
+      this.code.push(OPCODE.RETURN);
+    }
+    this.resolveLabels();
+
     const exceptionTable: Array<ExceptionHandler> = [];
     const attributes: Array<AttributeInfo> = [];
-
-    this.code.push(OPCODE.RETURN);
-    this.resolveLabels();
     const codeBuf = new Uint8Array(this.code).buffer;
     const dataView = new DataView(codeBuf);
     this.code.forEach((x, i) => dataView.setUint8(i, x));
@@ -419,7 +434,7 @@ class CodeGenerator {
     return {
       attributeNameIndex: this.constantPoolManager.indexUtf8Info("Code"),
       attributeLength: attributeLength,
-      maxStack: maxStack,
+      maxStack: Math.max(this.maxLocals, stackSize),
       maxLocals: this.maxLocals,
       codeLength: this.code.length,
       code: dataView,

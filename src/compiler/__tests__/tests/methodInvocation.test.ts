@@ -40,6 +40,68 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["2", "1", "0"],
+  },
+  {
+    comment: "chain calls",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          System.out.println("main");
+          f();
+          System.out.println("main");
+        }
+        public static void f() {
+          System.out.println("f");
+          g();
+        }
+        public static void g() {
+          h();
+          System.out.println("g");
+        }
+        public static void h() {
+          System.out.println("h");
+        }
+      }
+    `,
+    expectedLines: ["main", "f", "h", "g", "main"],
+  },
+  {
+    comment: "static function returning non-void",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          int a = 10;
+          a += f(3);
+          System.out.println(a);
+        }
+        public static int f(int x) {
+          return x + x;
+        }
+      }
+    `,
+    expectedLines: ["16"],
+  },
+  {
+    comment: "factorial function on small input",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          System.out.println(f(0));
+          System.out.println(f(1));
+          System.out.println(f(2));
+          System.out.println(f(3));
+          System.out.println(f(4));
+          System.out.println(f(5));
+        }
+        public static int f(int x) {
+          if (x == 0) {
+            return 1;
+          }
+          return x * f(x - 1);
+        }
+      }
+    `,
+    expectedLines: ["1", "1", "2", "6", "24", "120"],
   }
 ];
 

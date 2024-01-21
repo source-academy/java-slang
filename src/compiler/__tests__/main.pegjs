@@ -714,7 +714,15 @@ YieldStatement
   = yield Expression semicolon
 
 ReturnStatement
-  = return Expression? semicolon
+  = return expr:Expression? semicolon {
+    if (!expr) {
+      return {kind: "ReturnStatement"};
+    }
+    return {
+      kind: "ReturnStatement",
+      expression: expr,
+    }
+  }
 
 ThrowStatement
   = throw Expression semicolon
