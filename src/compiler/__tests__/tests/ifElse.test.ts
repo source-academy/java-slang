@@ -24,6 +24,25 @@ const testCases: testCase[] = [
     expectedLines: ["ok", "done"],
   },
   {
+    comment: "if without else, trivial conditional expression",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          if (true) {
+            System.out.println("ok");
+          }
+          if (false) {
+            System.out.println("uh oh");
+          }
+          if (true) {
+            System.out.println("done");
+          }
+        }
+      }
+    `,
+    expectedLines: ["ok", "done"],
+  },
+  {
     comment: "if and else",
     program: `
       public class Main {
