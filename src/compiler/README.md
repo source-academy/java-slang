@@ -29,4 +29,5 @@ This is a bookkeeping of the planned scope of the compiler. It will be updated f
 - Class inheritance
 - Method overloading/overriding
 - Generics
+- Type casting
 
