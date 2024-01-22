@@ -101,8 +101,12 @@ HexDigits = HexDigit ([_]*HexDigit)*
 HexDigit = [a-fA-F0-9]
 
 BooleanLiteral
-  = "true"
-  / "false"
+  = value:("true" / "false") {
+    return {
+      kind: "BooleanLiteral",
+      value: value,
+    }
+  }
 
 CharacterLiteral = ['] (EscapeSequence / !['\\] .) [']
 
