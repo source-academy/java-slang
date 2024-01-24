@@ -40,6 +40,7 @@ export class Compiler {
 
   compile(ast: AST) {
     this.setup();
+    this.symbolTable.handleImports(ast.importDeclarations);
     const classFiles: Array<ClassFile> = [];
     ast.topLevelClassOrInterfaceDeclarations.forEach(x => classFiles.push(this.compileClass(x)));
     return classFiles[0];

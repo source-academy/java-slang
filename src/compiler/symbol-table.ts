@@ -1,4 +1,5 @@
 import { UnannType } from "../ast/types/classes";
+import { ImportDeclaration } from "../ast/types/packages-and-modules";
 import { generateClassAccessFlags, generateFieldAccessFlags, generateMethodAccessFlags } from "./compiler-utils";
 import { InvalidMethodCallError, SymbolNotFoundError, SymbolRedeclarationError } from "./error";
 
@@ -72,24 +73,24 @@ export class SymbolTable {
   private tables: Array<Table>;
   private curTable: Table;
   private curIdx: number;
-  //private imports: Array<string>;
-  private fullPathMap: Map<string, string>;
+  private importedPackages: Array<string>;
+  private importedClassMap: Map<string, string>;
 
   constructor() {
     this.tables = [this.getNewTable()];
     this.curTable = this.tables[0];
     this.curIdx = 0;
-    //this.imports = ["java/lang/"];
-    this.fullPathMap = new Map();
+    this.importedPackages = [];
+    this.importedClassMap = new Map();
     this.setup();
   }
 
   private setup() {
+    this.importedPackages.push("java/lang/");
     this.insertClassInfo({
       name: "java/lang/String",
       accessFlags: generateClassAccessFlags(["public", "final"])
     });
-    this.fullPathMap.set("String", "java/lang/String");
     this.returnToRoot();
     this.insertClassInfo({
       name: "java/io/PrintStream",
@@ -112,7 +113,6 @@ export class SymbolTable {
       name: "java/lang/System",
       accessFlags: generateClassAccessFlags(["public", "final"])
     });
-    this.fullPathMap.set("System", "java/lang/System");
     this.insertFieldInfo({
       name: "out",
       accessFlags: generateFieldAccessFlags(["static"]),
@@ -131,6 +131,18 @@ export class SymbolTable {
     this.tables = [this.tables[0]];
     this.curTable = this.tables[0];
     this.curIdx = 0;
+  }
+
+  handleImports(imports: Array<ImportDeclaration>) {
+    imports.forEach(i => {
+      const id = i.identifier;
+      if (id.endsWith('*')) {
+        this.importedPackages.push(id.slice(0, id.length - 1).replaceAll('.', '/'));
+      } else {
+        const typeName = id.slice(id.lastIndexOf('.') + 1);
+        this.importedClassMap.set(typeName, id.replaceAll('.', '/'));
+      }
+    });
   }
 
   extend() {
@@ -308,8 +320,17 @@ export class SymbolTable {
       }
     }
 
-    if (this.fullPathMap.has(name)) {
-      return this.resolveTypename(this.fullPathMap.get(name)!!);
+    if (this.importedClassMap.has(name)) {
+      return this.importedClassMap.get(name)!!;
+    }
+
+    let p: string;
+    for (p of this.importedPackages) {
+      const fullName = p + name;
+      const key = generateSymbol(fullName, SymbolType.CLASS);
+      if (this.tables[0].has(key)) {
+        return fullName;
+      }
     }
 
     throw new SymbolNotFoundError(name);

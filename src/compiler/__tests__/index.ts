@@ -6,6 +6,7 @@ import { whileTest } from "./tests/while.test";
 import { forTest } from "./tests/for.test";
 import { unaryExpressionTest } from "./tests/unaryExpression.test";
 import { methodInvocationTest } from "./tests/methodInvocation.test";
+import { importTest } from "./tests/import.test";
 
 describe("compiler tests", () => {
   printlnTest();
@@ -16,4 +17,5 @@ describe("compiler tests", () => {
   whileTest();
   forTest();
   methodInvocationTest();
+  importTest();
 })

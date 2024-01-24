@@ -406,8 +406,7 @@ PackageName
   = Name
 
 TypeName
-  = TypeIdentifier
-  / Identifier dot TypeName
+  = Name
 
 ExpressionName
   = n:Name {
@@ -440,9 +439,10 @@ CompilationUnit
   = _ @OrdinaryCompilationUnit
 
 OrdinaryCompilationUnit
-  = PackageDeclaration? ImportDeclaration* tld:TopLevelClassOrInterfaceDeclaration* {
+  = PackageDeclaration? ids:ImportDeclaration* tld:TopLevelClassOrInterfaceDeclaration* {
     return {
       kind: "OrdinaryCompilationUnit",
+      importDeclarations: ids,
       topLevelClassOrInterfaceDeclarations: tld,
     }
   }
@@ -451,7 +451,19 @@ PackageDeclaration
   = TO_BE_ADDED
 
 ImportDeclaration
-  = TO_BE_ADDED
+  = i:(SingleTypeImportDeclaration
+  / TypeImportOnDemandDeclaration) {
+    return {
+      isStatic: false,
+      identifier: i,
+    }
+  }
+
+SingleTypeImportDeclaration
+  = import @TypeName semicolon
+
+TypeImportOnDemandDeclaration
+  = import @$(PackageOrTypeName dot mul) semicolon
 
 TopLevelClassOrInterfaceDeclaration
   = ClassDeclaration
