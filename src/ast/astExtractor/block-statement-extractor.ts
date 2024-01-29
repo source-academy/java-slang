@@ -4,6 +4,9 @@ import {
   BinaryExpressionCtx,
   BlockStatementCstNode,
   ExpressionCtx,
+  FqnOrRefTypeCtx,
+  FqnOrRefTypePartCommonCtx,
+  FqnOrRefTypePartFirstCtx,
   IToken,
   IntegerLiteralCtx,
   IntegralTypeCtx,
@@ -22,12 +25,14 @@ import {
   BinaryExpression,
   BlockStatement,
   Expression,
+  ExpressionName,
 } from "../types/blocks-and-statements";
 
 export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   private type: UnannType;
   private identifier: Identifier;
   private value: Expression;
+  private name: ExpressionName;
 
   constructor() {
     super();
@@ -35,17 +40,26 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   extract(cst: BlockStatementCstNode): BlockStatement {
     this.visit(cst);
-    return {
-      kind: "LocalVariableDeclarationStatement",
-      localVariableType: this.type,
-      variableDeclaratorList: [
-        {
-          kind: "VariableDeclarator",
-          variableDeclaratorId: this.identifier,
-          variableInitializer: this.value,
-        }
-      ],
-    };
+    if (cst.children.localVariableDeclarationStatement) {
+      return {
+        kind: "LocalVariableDeclarationStatement",
+        localVariableType: this.type,
+        variableDeclaratorList: [
+          {
+            kind: "VariableDeclarator",
+            variableDeclaratorId: this.identifier,
+            variableInitializer: this.value,
+          },
+        ],
+      };
+    } else {
+      return {
+        kind: "Assignment",
+        left: this.name,
+        operator: "=",
+        right: this.value,
+      };
+    }
   }
 
   integralType(ctx: IntegralTypeCtx) {
@@ -77,6 +91,9 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   binaryExpression(ctx: BinaryExpressionCtx) {
     if (ctx.BinaryOperator && ctx.BinaryOperator.length > 0) {
       return this.makeBinaryExpression(ctx.BinaryOperator, ctx.unaryExpression);
+    } else if (ctx.AssignmentOperator && ctx.expression) {
+      this.value = this.visit(ctx.expression);
+      this.name = this.visit(ctx.unaryExpression[0]);
     } else {
       return this.visit(ctx.unaryExpression[0]);
     }
@@ -183,7 +200,24 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
       return this.visit(ctx.literal);
     } else if (ctx.parenthesisExpression) {
       return this.visit(ctx.parenthesisExpression);
+    } else if (ctx.fqnOrRefType) {
+      return this.visit(ctx.fqnOrRefType);
     }
+  }
+
+  fqnOrRefType(ctx: FqnOrRefTypeCtx) {
+    return this.visit(ctx.fqnOrRefTypePartFirst);
+  }
+
+  fqnOrRefTypePartFirst(ctx: FqnOrRefTypePartFirstCtx) {
+    return this.visit(ctx.fqnOrRefTypePartCommon);
+  }
+
+  fqnOrRefTypePartCommon(ctx: FqnOrRefTypePartCommonCtx) {
+    return ctx.Identifier && {
+      kind: "ExpressionName",
+      name: ctx.Identifier[0].image,
+    };
   }
 
   literal(ctx: LiteralCtx) {
