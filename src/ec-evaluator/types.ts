@@ -1,48 +1,34 @@
 import { Node } from "../ast/types/ast";
-import { EnvTree } from "./createContext";
-import { Agenda, Stash } from "./interpreter"
+import { Control, Environment, Stash } from "./interpreter";
+import { RuntimeError } from "./errors";
 
-export interface Context<T = any> {
-  /** Runtime Specific state */
-  runtime: {
-    environmentTree: EnvTree
-    environments: Environment[]
-    nodes: Node[]
-    agenda: Agenda | null
-    stash: Stash | null
-  }
-}
+export interface Context {
+  errors: RuntimeError[],
 
-export interface Environment {
-  id: string
-  name: string
-  tail: Environment | null
-  head: Frame
-}
+  control: Control,
+  stash: Stash,
+  environment: Environment,
 
-export interface Frame {
-  [name: string]: any
-}
+  totalSteps: number,
+};
 
 export enum InstrType {
-  ASSIGNMENT = 'Assignment',
+  ASSIGNMENT = 'Assign',
   BINARY_OP = 'BinaryOperation',
   POP = 'Pop',
 }
 
 interface BaseInstr {
-  instrType: InstrType
-  srcNode: Node
+  instrType: InstrType;
+  srcNode: Node;
 }
 
 export interface AssmtInstr extends BaseInstr {
-  symbol: string
-  constant: boolean
-  declaration: boolean
+  symbol: string;
 }
 
 export interface BinOpInstr extends BaseInstr {
-  symbol: string
+  symbol: string;
 }
 
 export type Instr =
@@ -50,6 +36,19 @@ export type Instr =
   | AssmtInstr
   | BinOpInstr;
 
-export type AgendaItem = Node | Instr
+export type ControlItem = Node | Instr;
 
-export type Value = any
+export type Value = any;
+export type Name = string;
+
+export interface Error {
+  status: 'error';
+}
+
+export interface Finished {
+  status: 'finished';
+  context: Context;
+  value: Value;
+}
+
+export type Result = Finished | Error;
