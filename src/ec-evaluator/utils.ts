@@ -169,32 +169,50 @@ export function defineVariable(
   return environment
 }
 
+/**
+ * Binary Expressions
+ */
 export const evaluateBinaryExpression = (operator: string, left: Literal, right: Literal) => {
   switch (operator) {
-    case '+':
+    case "+":
       return {
-        type: "Literal",
-        value: left.value + right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) + Number(right.literalType.value)),
+        },
       };
-    case '-':
+    case "-":
       return {
-        type: "Literal",
-        value: left.value - right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) - Number(right.literalType.value)),
+        },
       };
-    case '*':
+    case "*":
       return {
-        type: "Literal",
-        value: left.value * right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) * Number(right.literalType.value)),
+        },
       };
-    case '/':
+    case "/":
       return {
-        type: "Literal",
-        value: left.value / right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) / Number(right.literalType.value)),
+        },
       };
-    case '%':
+    case "%":
       return {
-        type: "Literal",
-        value: left.value % right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) % Number(right.literalType.value)),
+        },
       };
     default:
       return undefined;
