@@ -17,6 +17,9 @@ import {
   PostfixExpression,
   PrefixExpression,
   ReturnStatement,
+  Expression,
+  ArrayAccess,
+  BinaryOperator,
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration, UnannType } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -84,15 +87,37 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   LocalVariableDeclarationStatement: (node: Node, cg: CodeGenerator) => {
+    const createIntLiteralNode = (int: number): Node => {
+      return {
+        kind: "Literal",
+        literalType: { kind: "DecimalIntegerLiteral", value: int.toString() },
+      }
+    }
     let maxStack = 0;
     const { variableDeclaratorList: lst, localVariableType: type } = node as LocalVariableDeclarationStatement;
     lst.forEach(v => {
-      const { variableDeclaratorId: identifier, variableInitializer: vi } = v;
+      const { identifier: identifier, variableInitializer: vi } = v;
       const curIdx = cg.maxLocals++;
       cg.symbolTable.insertVariableInfo({
-        name: identifier, typeDescriptor: cg.symbolTable.generateFieldDescriptor(type), index: curIdx
+        name: identifier,
+        typeDescriptor: cg.symbolTable.generateFieldDescriptor(type + v.dims),
+        index: curIdx
       });
-      if (vi) {
+      if (!vi) {
+        return;
+      }
+      if (Array.isArray(vi)) {
+        maxStack = compile(createIntLiteralNode(vi.length), cg).stackSize;
+        cg.code.push(OPCODE.NEWARRAY, 10);
+        vi.forEach((val, i) => {
+          cg.code.push(OPCODE.DUP);
+          const size1 = compile(createIntLiteralNode(i), cg).stackSize;
+          const size2 = compile(val as Expression, cg).stackSize;
+          cg.code.push(OPCODE.IASTORE);
+          maxStack = Math.max(maxStack, 1 + size1 + size2);
+        });
+        cg.code.push(OPCODE.ASTORE, curIdx);
+      } else {
         maxStack = Math.max(maxStack, compile(vi, cg).stackSize);
         cg.code.push(OPCODE.ISTORE, curIdx);
       }
@@ -242,6 +267,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     return f(node, cg.labels[cg.labels.length - 1], false);
   },
 
+  ArrayAccess: (node: Node, cg: CodeGenerator) => {
+    const n = node as ArrayAccess;
+    const { stackSize: size1, resultType: type } = compile(n.primary, cg);
+    const size2 = compile(n.expression, cg).stackSize;
+    cg.code.push(OPCODE.IALOAD);
+
+    return { stackSize: size1 + size2, resultType: type.slice(1) };
+  },
+
   MethodInvocation: (node: Node, cg: CodeGenerator) => {
     const n = node as MethodInvocation;
     let maxStack = 1;
@@ -277,15 +311,33 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   Assignment: (node: Node, cg: CodeGenerator) => {
+    let maxStack = 0;
     const { left: left, operator: op, right: right } = node as Assignment;
-    let maxStack = op === "=" ? 0 : compile(left, cg).stackSize;
-    maxStack = Math.max(maxStack, compile(right, cg).stackSize);
-    if (op !== "=") {
-      cg.code.push(opToOpcode[op.substring(0, op.length - 1)]);
+
+    if (left.kind === "ArrayAccess") {
+      const size1 = compile(left.primary, cg).stackSize;
+      const size2 = compile(left.expression, cg).stackSize;
+      maxStack = size1 + size2;
     }
-    const { index: idx, typeDescriptor: type } = cg.symbolTable.queryVariable(left.name);
-    cg.code.push(OPCODE.ISTORE, idx as number);
-    return { stackSize: maxStack, resultType: type };
+
+    if (op !== "=") {
+      maxStack += compile({
+        kind: "BinaryExpression",
+        left: left,
+        right: right,
+        operator: op.slice(0, op.length - 1) as BinaryOperator
+      }, cg).stackSize;
+    } else {
+      maxStack += compile(right, cg).stackSize;
+    }
+
+    if (left.kind === "ExpressionName") {
+      const { index: idx } = cg.symbolTable.queryVariable(left.name);
+      cg.code.push(OPCODE.ISTORE, idx as number);
+    } else {
+      cg.code.push(OPCODE.IASTORE);
+    }
+    return { stackSize: maxStack, resultType: EMPTY_TYPE };
   },
 
   BinaryExpression: (node: Node, cg: CodeGenerator) => {
@@ -337,7 +389,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   ExpressionName: (node: Node, cg: CodeGenerator) => {
     const { name: name } = node as ExpressionName;
     const { index: idx, typeDescriptor: type } = cg.symbolTable.queryVariable(name);
-    cg.code.push(OPCODE.ILOAD, idx as number);
+    cg.code.push(type.includes('[') ? OPCODE.ALOAD : OPCODE.ILOAD, idx as number);
     return { stackSize: 1, resultType: type };
   },
 

@@ -34,6 +34,12 @@ export interface DoStatement {
 }
 
 export type ForStatement = BasicForStatement | EnhancedForStatement;
+
+export interface ReturnStatement {
+  kind: "ReturnStatement";
+  expression: Expression;
+}
+
 export interface BasicForStatement {
   kind: "BasicForStatement";
   forInit: Array<ExpressionStatement> | LocalVariableDeclarationStatement;
@@ -46,7 +52,7 @@ export interface EnhancedForStatement {
   kind: "EnhancedForStatement";
 }
 
-export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement;
+export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement | ReturnStatement;
 
 export type ExpressionStatement = MethodInvocation | Assignment;
 
@@ -62,15 +68,21 @@ export type LocalVariableType = UnannType;
 
 export interface VariableDeclarator {
   kind: "VariableDeclarator";
-  variableDeclaratorId: VariableDeclaratorId;
+  identifier: Identifier;
+  dims: string;
   variableInitializer: VariableInitializer;
 }
 
-export type VariableDeclaratorId = Identifier;
-export type VariableInitializer = Expression;
+export type VariableInitializer = Expression | ArrayInitializer;
+export type ArrayInitializer = Array<VariableInitializer>;
 
 export type Expression = Primary | BinaryExpression | UnaryExpression;
-export type Primary = Literal | ExpressionName | Assignment;
+export type Primary = Literal | ExpressionName | Assignment | ArrayAccess;
+export interface ArrayAccess {
+  kind: "ArrayAccess";
+  primary: Primary;
+  expression: Expression;
+}
 
 export interface Literal {
   kind: "Literal";
@@ -140,9 +152,10 @@ export interface NullLiteral {
   value: "null";
 }
 
+export type BinaryOperator = "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "<<" | ">>" | ">>>" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||";
 export interface BinaryExpression {
   kind: "BinaryExpression";
-  operator: "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "<<" | ">>" | ">>>" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||";
+  operator: BinaryOperator;
   left: Expression;
   right: Expression;
 }
@@ -155,11 +168,11 @@ export interface ExpressionName {
 export interface Assignment {
   kind: "Assignment";
   left: LeftHandSide;
-  operator: string;
+  operator: "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "|=" | "&=" | "^=" | "<<=" | ">>=" | ">>>=";
   right: Expression;
 }
 
-export type LeftHandSide = ExpressionName;
+export type LeftHandSide = ExpressionName | ArrayAccess;
 export type UnaryExpression = PrefixExpression | PostfixExpression;
 
 export interface PrefixExpression {

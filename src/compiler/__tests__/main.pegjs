@@ -562,7 +562,8 @@ VariableDeclarator
 VariableDeclaratorId
   = id:Identifier d:Dims? {
     return {
-      variableDeclaratorId: id,
+      kind: "VariableDeclarator",
+      identifier: id,
       dims: d ?? "",
     }
   }
@@ -627,7 +628,7 @@ FormalParameter
       kind: "FormalParameter",
       variableModifier: vm,
       unannType: ut + vdid.dims,
-      identifier: vdid.variableDeclaratorId,
+      identifier: vdid.identifier,
     }
   }
 
@@ -809,7 +810,17 @@ StatementExpression
 Primary
   = lparen @Expression rparen
   / MethodInvocation
+  / ArrayAccess
   / Literal 
+
+ArrayAccess
+  = en:ExpressionName lsquare expr:Expression rsquare {
+    return {
+      kind: "ArrayAccess",
+      primary: en,
+      expression: expr,
+    }
+  }
 
 MethodInvocation
   = n:Name lparen al:ArgumentList? rparen { 
@@ -864,7 +875,8 @@ Assignment
   }
 
 LeftHandSide
-  = ExpressionName
+  = ArrayAccess
+  / ExpressionName
 
 AssignmentOperator
   = assign

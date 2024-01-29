@@ -45,7 +45,7 @@ export interface MethodHeader {
   formalParameterList: Array<FormalParameter>;
 }
 
-export type Result = "void";
+export type Result = UnannType;
 
 export interface FormalParameter {
   kind: "FormalParameter";

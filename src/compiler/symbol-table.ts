@@ -170,7 +170,7 @@ export class SymbolTable {
       return;
     }
 
-    const symbolNode = this.curTable.get(key)!!;
+    const symbolNode = this.curTable.get(key)!;
     const methodInfos = symbolNode.info as MethodInfos;
     for (let i = 0; i < methodInfos.length; i++) {
       if (methodInfos[i].typeDescriptor === info.typeDescriptor) {
@@ -254,7 +254,7 @@ export class SymbolTable {
       const key = generateSymbol(name, SymbolType.METHOD);
       for (let i = this.curIdx; i >= 0; i--) {
         if (this.tables[i].has(key)) {
-          symbolInfos.push(this.tables[i].get(key)!!.info);
+          symbolInfos.push(this.tables[i].get(key)!.info);
           return symbolInfos;
         }
       }
@@ -266,7 +266,7 @@ export class SymbolTable {
       const token = tokens[i];
       if (i === 0) {
         const key = generateSymbol(this.resolveTypename(token), SymbolType.CLASS);
-        curTable = this.tables[0].get(key)!!.children;
+        curTable = this.tables[0].get(key)!.children;
       } else if (i < len - 1) {
         const key = generateSymbol(token, SymbolType.FIELD);
         const node = curTable.get(key);
@@ -275,7 +275,7 @@ export class SymbolTable {
         }
         symbolInfos.push(node.info);
         const type = generateSymbol((node.info as FieldInfo).typeName, SymbolType.CLASS);
-        curTable = this.tables[0].get(type)!!.children;
+        curTable = this.tables[0].get(type)!.children;
       } else {
         const key = generateSymbol(token, SymbolType.METHOD);
         const node = curTable.get(key);
@@ -321,7 +321,7 @@ export class SymbolTable {
     }
 
     if (this.importedClassMap.has(name)) {
-      return this.importedClassMap.get(name)!!;
+      return this.importedClassMap.get(name)!;
     }
 
     let p: string;
