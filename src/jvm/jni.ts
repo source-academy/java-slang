@@ -3,6 +3,7 @@ import Thread from "./thread";
 import { Result } from "./types/Result";
 import { JavaType } from "./types/reference/Object";
 import { parseFieldDescriptor } from "./utils";
+import AbstractSystem from "./utils/AbstractSystem";
 
 type Lib = {
   [className: string]: {
@@ -19,10 +20,12 @@ type Lib = {
 export class JNI {
   private classes: Lib;
   private classPath: string;
+  private system: AbstractSystem;
 
-  constructor(classPath: string, stdlib?: Lib) {
+  constructor(classPath: string, system: AbstractSystem, stdlib?: Lib) {
     this.classes = stdlib ?? {};
     this.classPath = classPath;
+    this.system = system;
   }
 
   /**
@@ -75,9 +78,8 @@ export class JNI {
             this.classes[className].blocking = [];
           });
         } else {
-          // dynamic import to avoid downloading everything each run
-          const cp = "../../" + this.classPath + "/" + className;
-          import(cp)
+          this.system
+            .readFile(this.classPath + "/" + className)
             .then((lib) => {
               this.classes[className].methods = lib.default;
             })
@@ -100,63 +102,10 @@ export class JNI {
 
     // native method does not exist
     if (!this.classes?.[className]?.methods?.[methodName]) {
-      // FIXME: Returns a dummy function for now, but should throw an error
-      const retType = parseFieldDescriptor(methodName.split(")")[1], 0).type;
-
-      switch (retType) {
-        case JavaType.array:
-          return {
-            result: (thread: Thread, ...params: any) => {
-              thread.returnStackFrame(null);
-            },
-          };
-        case JavaType.byte:
-        case JavaType.int:
-        case JavaType.boolean:
-        case JavaType.char:
-        case JavaType.short:
-          return {
-            result: (thread: Thread, ...params: any) => {
-              thread.returnStackFrame(0);
-            },
-          };
-        case JavaType.double:
-          return {
-            result: (thread: Thread, ...params: any) => {
-              thread.returnStackFrame64(0.0);
-            },
-          };
-        case JavaType.float:
-          return {
-            result: (thread: Thread, ...params: any) => {
-              thread.returnStackFrame(0.0);
-            },
-          };
-        case JavaType.long:
-          return {
-            result: (thread: Thread, ...params: any) => {
-              thread.returnStackFrame64(BigInt(0));
-            },
-          };
-        case JavaType.reference:
-          return {
-            result: (thread: Thread, ...params: any) => {
-              thread.returnStackFrame(null);
-            },
-          };
-        case JavaType.void:
-          return {
-            result: (thread: Thread, ...params: any) => {
-              thread.returnStackFrame();
-            },
-          };
-        default:
-          return {
-            result: (thread: Thread, ...params: any) => {
-              thread.returnStackFrame();
-            },
-          };
-      }
+      return {
+        exceptionCls: "java/lang/UnsatisfiedLinkError",
+        msg: `${className}.${methodName} implementation not found`,
+      };
     }
 
     return { result: (this.classes[className].methods as any)[methodName] };

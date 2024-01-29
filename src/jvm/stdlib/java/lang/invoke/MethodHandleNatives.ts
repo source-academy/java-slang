@@ -229,6 +229,14 @@ const functions = {
         return;
       }
     },
+
+  "registerNatives()V": (thread: Thread, locals: any[]) => {
+    thread.returnStackFrame();
+  },
+
+  "getConstant(I)I": (thread: Thread, locals: any[]) => {
+    thread.returnStackFrame(0);
+  },
 };
 
 export default functions;

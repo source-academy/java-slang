@@ -3,7 +3,7 @@ import {
   ConstantUtf8Info,
 } from "../../../../ClassFile/types/constants";
 import Thread from "../../../thread";
-import { ErrorResult } from "../../../types/Result";
+import { ErrorResult, checkError, checkSuccess } from "../../../types/Result";
 import {
   ReferenceClassData,
   ArrayClassData,
@@ -23,9 +23,7 @@ function getFieldInfo(
 ): any {
   // obj is a class obj
   const objCls = obj.getClass();
-  // unsafe should be loaded at initialization
-  // also init unsafe at JVM startup?
-  const unsafeCls = unsafe.getClass();
+
   if (objCls.getClassname() === "java/lang/Object") {
     throw new Error("not implemented");
   } else if (objCls.checkArray()) {
@@ -96,11 +94,6 @@ function unsafeCompareAndSwap(
   expected: any,
   newValue: any
 ): number {
-  // obj: Class object w/ field reflectionData
-  // offset: field slot of field reflectionData
-  // expected: SoftReference object
-  // newValue: SoftReference object
-
   const fi = getFieldInfo(thread, unsafe, obj, offset);
   const objBase = fi[0];
   const ref = fi[1];
@@ -140,19 +133,13 @@ const functions = {
     const field = locals[1] as JvmObject;
     const slot = field._getField("slot", "I", "java/lang/reflect/Field");
 
-    // #region debug
-    const fstr = field._getField(
-      "name",
-      "Ljava/lang/String;",
-      "java/lang/reflect/Field"
+    console.warn(
+      "objectFieldOffset: not checking if slot is used to access fields not declared in this class"
     );
-    const cArr = fstr._getField("value", "[C", "java/lang/String");
-    const chars = cArr.getJsArray();
-    // #endregion
 
     thread.returnStackFrame64(BigInt(slot));
   },
-  // Used for bitwise operations
+
   "arrayIndexScale(Ljava/lang/Class;)I": (thread: Thread, locals: any[]) => {
     const clsObj = locals[1] as JvmObject;
     const clsRef = clsObj.getNativeField("classRef") as ReferenceClassData;
@@ -289,7 +276,7 @@ const functions = {
       const clsObj = newClass.getJavaObject();
       thread.returnStackFrame(clsObj);
     },
-  // sun/misc/Unsafe.defineClass(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;
+
   "defineClass(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;":
     (thread: Thread, locals: any[]) => {
       const unsafe = locals[0] as JvmObject;
@@ -310,6 +297,26 @@ const functions = {
       const clsData = loader.defineClass(classfile);
       thread.returnStackFrame(clsData.getJavaObject());
     },
+
+  "ensureClassInitialized(Ljava/lang/Class;)V": (
+    thread: Thread,
+    locals: any[]
+  ) => {
+    const clsObj = locals[1] as JvmObject;
+    const cls = clsObj.getNativeField("classRef") as ClassData;
+    const initRes = cls.initialize(thread);
+
+    if (checkSuccess(initRes)) {
+      thread.returnStackFrame();
+    } else if (checkError(initRes)) {
+      thread.throwNewException(
+        (initRes as ErrorResult).exceptionCls,
+        (initRes as ErrorResult).msg
+      );
+    }
+
+    return;
+  },
 };
 
 export default functions;

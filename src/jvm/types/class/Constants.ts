@@ -374,6 +374,10 @@ export class ConstantClass extends Constant {
     return this.result;
   }
 
+  public getClassName(): string {
+    return this.className.get();
+  }
+
   public get() {
     if (!this.result) {
       this.resolve();
@@ -494,7 +498,6 @@ export class ConstantInvokeDynamic extends Constant {
     // #endregion
 
     // #region run bootstrap method
-
     const mhnRes = loader.getClass("java/lang/invoke/MethodHandleNatives");
     if (checkError(mhnRes)) {
       return { exceptionCls: "java/lang/ClassNotFoundException", msg: "" };
@@ -574,6 +577,7 @@ export class ConstantInvokeDynamic extends Constant {
       }
       return { isDefer: true };
     }
+    const res = refres.result;
 
     const bsArgIdx = bootstrapMethod.bootstrapArguments;
     const argConst = bsArgIdx[0] as ConstantMethodType;
@@ -599,9 +603,9 @@ export class ConstantInvokeDynamic extends Constant {
     }
 
     const thisClsName = this.cls.getClassname();
-    clsRes.result;
-    argConst.getDescriptor();
-    nameAndTypeRes.name;
+    const intercls = clsRes.result;
+    const erasedDesc = argConst.getDescriptor();
+    const methodName = nameAndTypeRes.name;
     const toInvoke = invokeRes.result as Method;
     const invokerName = toInvoke.getName();
     const invokerDesc = toInvoke.getDescriptor();
@@ -1053,6 +1057,10 @@ export class ConstantMethodref extends Constant {
     }
 
     const nt = this.nameAndTypeConstant.get();
+
+    if (nt.name === "staticPrint") {
+      console.log("break");
+    }
     const resolutionResult = symbolClass.resolveMethod(
       nt.name,
       nt.descriptor,
@@ -1283,7 +1291,6 @@ export class ConstantMethodHandle extends Constant {
           }
         )
       );
-      return { isDefer: true };
     };
     // #endregion
 

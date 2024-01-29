@@ -5,7 +5,7 @@ import { JNI } from "./jni";
 import { InternalStackFrame, JavaStackFrame } from "./stackframe";
 import Thread from "./thread";
 import { AbstractThreadPool, RoundRobinThreadPool } from "./threadpool";
-import { checkError, checkSuccess } from "./types/Result";
+import { checkError } from "./types/Result";
 import { ReferenceClassData } from "./types/class/ClassData";
 import { JvmObject } from "./types/reference/Object";
 import { UnsafeHeap } from "./unsafe-heap";
@@ -16,6 +16,7 @@ export default class JVM {
   private jvmOptions: {
     javaClassPath: string;
     userDir: string;
+    nativesPath: string;
   };
   private isInitialized = false;
 
@@ -33,11 +34,13 @@ export default class JVM {
     options?: {
       javaClassPath?: string;
       userDir?: string;
+      nativesPath?: string;
     }
   ) {
     this.jvmOptions = {
-      javaClassPath: "natives",
+      javaClassPath: "stdlib",
       userDir: "example",
+      nativesPath: "src/stdlib",
       ...options,
     };
     this.nativeSystem = nativeSystem;
@@ -45,7 +48,7 @@ export default class JVM {
       this.nativeSystem,
       this.jvmOptions.javaClassPath
     );
-    this.jni = new JNI(this.jvmOptions.javaClassPath);
+    this.jni = new JNI(this.jvmOptions.nativesPath, nativeSystem);
     this.threadpool = new RoundRobinThreadPool(() => {});
     this.applicationClassLoader = new ApplicationClassLoader(
       this.nativeSystem,
@@ -87,16 +90,23 @@ export default class JVM {
     javaObject.putNativeField("thread", mainThread);
 
     const tasks: (() => void)[] = [];
-    // #region initialize threadgroup object
-    const tgInitRes = threadGroupCls.initialize(mainThread);
-    if (!checkSuccess(tgInitRes)) {
-      throw new Error("ThreadGroup initialization failed");
-    }
+
+    // #region initialize classes
+    tasks.push(() =>
+      // @ts-ignore
+      threadGroupCls.initialize(mainThread, null, () => {
+        // initialize thread class
+        threadCls.initialize(mainThread);
+      })
+    );
+    // #endregion
+
+    // #region initialize threadgroup
     const initialTg = threadGroupCls.instantiate();
     tasks.push(() => initialTg.initialize(mainThread));
     // #endregion
 
-    // #region initialize Thread class
+    // #region initialize Thread
     const tgfr = threadCls.lookupField("groupLjava/lang/ThreadGroup;");
     const pFr = threadCls.lookupField("priorityI");
     if (!tgfr || !pFr) {
@@ -105,10 +115,6 @@ export default class JVM {
     const javaThread = mainThread.getJavaObject();
     javaThread.putField(tgfr, initialTg);
     javaThread.putField(pFr, 1);
-    tasks.push(() => threadCls.initialize(mainThread));
-    // #endregion
-
-    // #region initialize thread object
     tasks.push(() => mainThread.initialize(mainThread));
     // #endregion
 
@@ -128,6 +134,7 @@ export default class JVM {
           () => {
             this.isInitialized = true;
             onInitialized && onInitialized();
+            mainCls.initialize(mainThread);
           }
         )
       )
@@ -148,8 +155,6 @@ export default class JVM {
     if (!mainMethod) {
       throw new Error("Main method not found");
     }
-
-    tasks.push(() => mainCls.initialize(mainThread));
     tasks.push(() => {
       mainThread.invokeStackFrame(
         new JavaStackFrame(mainCls, mainMethod, 0, [])

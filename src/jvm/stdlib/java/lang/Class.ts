@@ -1,6 +1,7 @@
 import AbstractClassLoader from "../../../ClassLoader/AbstractClassLoader";
 import Thread from "../../../thread";
 import { checkError, checkSuccess, ErrorResult } from "../../../types/Result";
+import { InnerClasses } from "../../../types/class/Attributes";
 import {
   ClassData,
   ArrayClassData,
@@ -14,7 +15,6 @@ const functions = {
     thread: Thread,
     locals: any[]
   ) => {
-    const clsObj = locals[0] as JvmObject;
     thread.returnStackFrame(0);
   },
 
@@ -104,6 +104,7 @@ const functions = {
     const clsRef = clsObj.getNativeField("classRef") as ReferenceClassData;
     thread.returnStackFrame(clsRef.checkArray() ? 1 : 0);
   },
+
   "isPrimitive()Z": (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
     const clsRef = clsObj.getNativeField("classRef") as ClassData;
@@ -267,6 +268,42 @@ const functions = {
     thread.returnStackFrame(mArr);
   },
 
+  "getDeclaringClass0()Ljava/lang/Class;": (thread: Thread, locals: any[]) => {
+    const clsObj = locals[0] as JvmObject;
+    const classRef = clsObj.getNativeField("classRef") as ClassData;
+
+    if (!classRef.checkReference()) {
+      thread.returnStackFrame(null);
+      return;
+    }
+
+    const innerAttrib = classRef.getAttribute(
+      "InnerClasses"
+    )?.[0] as InnerClasses;
+    if (innerAttrib) {
+      for (const cls of innerAttrib.classes) {
+        if (cls.innerClass.getClassName() === classRef.getClassname()) {
+          if (cls.outerClass === null) {
+            thread.returnStackFrame(null);
+          } else {
+            const outerResolution = cls.outerClass.resolve();
+            if (checkError(outerResolution)) {
+              thread.throwNewException(
+                outerResolution.exceptionCls,
+                outerResolution.msg
+              );
+              return;
+            }
+            thread.returnStackFrame(outerResolution.result.getJavaObject());
+            return;
+          }
+        }
+      }
+    }
+
+    thread.returnStackFrame(null);
+  },
+
   "isAssignableFrom(Ljava/lang/Class;)Z": (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
     const clsRef = clsObj.getNativeField("classRef") as ClassData;
@@ -285,6 +322,7 @@ const functions = {
       thread.returnStackFrame(null);
       return;
     }
+
     thread.returnStackFrame(null);
   },
 

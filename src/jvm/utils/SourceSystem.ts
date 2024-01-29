@@ -1,12 +1,20 @@
 import { ClassFile } from "../../ClassFile/types";
 import AbstractSystem from "./AbstractSystem";
+import parseBin from "./disassembler";
 
 export default class SourceSystem extends AbstractSystem {
   private stdoutBuffer: string = "";
   private stderrBuffer: string = "";
 
-  readFile(path: string): ClassFile {
-    return JSON.parse(localStorage.getItem(path) ?? "{}");
+  readFileSync(path: string): ClassFile {
+    const binStr = localStorage.getItem(path);
+    // @ts-ignore
+    const ab = Uint8Array.from(binStr, (x) => x.charCodeAt(0));
+    return parseBin(new DataView(ab.buffer));
+  }
+
+  readFile(path: string): Promise<any> {
+    return import("../../" + path);
   }
 
   stdout(message: string): void {

@@ -2,7 +2,12 @@ import { ClassFile } from "../../../ClassFile/types";
 import { AttributeInfo } from "../../../ClassFile/types/attributes";
 import AbstractClassLoader from "../../ClassLoader/AbstractClassLoader";
 import { ConstantPool } from "../../constant-pool";
-import { CLASS_FLAGS, CLASS_STATUS, CLASS_TYPE } from "../../constants";
+import {
+  CLASS_FLAGS,
+  CLASS_STATUS,
+  CLASS_TYPE,
+  ThreadStatus,
+} from "../../constants";
 import { InternalStackFrame } from "../../stackframe";
 import Thread from "../../thread";
 import { primitiveNameToType, attrInfo2Interface } from "../../utils";
@@ -26,6 +31,9 @@ export abstract class ClassData {
   protected accessFlags: number;
   protected type: CLASS_TYPE;
   public status: CLASS_STATUS = CLASS_STATUS.PREPARED;
+
+  protected initThread?: Thread;
+  protected onInitCallbacks: Array<() => void> = [];
 
   protected thisClass: string;
   protected packageName: string;
@@ -501,8 +509,14 @@ export abstract class ClassData {
    * Initializes the class. If the class has a static initializer, it is invoked.
    * @param thread used to invoke the static initializer
    * @param onDefer callback to be called before invoking the static initializer.
+   * @param onInitialized callback to be called after the class has been initialized.
    */
-  initialize(thread: Thread, onDefer?: () => void): Result<ClassData> {
+  initialize(
+    thread: Thread,
+    onDefer?: () => void | null,
+    onInitialized?: () => void | null
+  ): Result<ClassData> {
+    onInitialized && onInitialized();
     return { result: this };
   }
 
@@ -688,35 +702,60 @@ export class ReferenceClassData extends ClassData {
     return true;
   }
 
-  initialize(thread: Thread, onDefer?: () => void): Result<ClassData> {
-    if (
-      this.status === CLASS_STATUS.INITIALIZED ||
-      this.status === CLASS_STATUS.INITIALIZING
-    ) {
+  initialize(
+    thread: Thread,
+    onDefer?: () => void | null,
+    onInitialized?: () => void | null
+  ): Result<ClassData> {
+    if (this.status === CLASS_STATUS.INITIALIZED) {
+      onInitialized && onInitialized();
       return { result: this };
     }
 
-    if (!this.javaClassObject) {
-      this.getJavaObject();
+    if (this.status === CLASS_STATUS.INITIALIZING) {
+      if (this.initThread !== thread) {
+        thread.setStatus(ThreadStatus.WAITING);
+        this.onInitCallbacks.push(() =>
+          thread.setStatus(ThreadStatus.RUNNABLE)
+        );
+        return { isDefer: true };
+      }
+
+      onInitialized && this.onInitCallbacks.push(onInitialized);
+      return { result: this };
+    }
+
+    this.initThread = thread;
+
+    if (
+      this.superClass &&
+      this.superClass.status !== CLASS_STATUS.INITIALIZED
+    ) {
+      const superInit = this.superClass.initialize(thread);
+      if (!checkSuccess(superInit)) {
+        return superInit;
+      }
     }
 
     // has static initializer
     if (this.methods["<clinit>()V"]) {
       this.status = CLASS_STATUS.INITIALIZING;
       onDefer && onDefer();
+
+      onInitialized && this.onInitCallbacks.push(onInitialized);
       thread.invokeStackFrame(
-        new InternalStackFrame(
-          this,
-          this.methods["<clinit>()V"],
-          0,
-          [],
-          () => (this.status = CLASS_STATUS.INITIALIZED)
-        )
+        new InternalStackFrame(this, this.methods["<clinit>()V"], 0, [], () => {
+          this.status = CLASS_STATUS.INITIALIZED;
+          this.onInitCallbacks.forEach((cb) => cb());
+          this.onInitCallbacks = [];
+          this.initThread = undefined;
+        })
       );
       return { isDefer: true };
     }
 
     this.status = CLASS_STATUS.INITIALIZED;
+    onInitialized && onInitialized();
     return { result: this };
   }
 

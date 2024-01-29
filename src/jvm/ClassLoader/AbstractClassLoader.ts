@@ -168,7 +168,7 @@ export default abstract class AbstractClassLoader {
 
     let classFile;
     try {
-      classFile = this.nativeSystem.readFile(path);
+      classFile = this.nativeSystem.readFileSync(path);
     } catch (e) {
       return {
         exceptionCls: "java/lang/ClassNotFoundException",
