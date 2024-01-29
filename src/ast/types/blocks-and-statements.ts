@@ -63,7 +63,7 @@ export type LocalVariableType = UnannType;
 export interface VariableDeclarator {
   kind: "VariableDeclarator";
   variableDeclaratorId: VariableDeclaratorId;
-  variableInitializer: VariableInitializer;
+  variableInitializer?: VariableInitializer;
 }
 
 export type VariableDeclaratorId = Identifier;

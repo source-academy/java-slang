@@ -1,16 +1,12 @@
-import { Node } from "../ast/types/ast"
-import { AssmtInstr, BinOpInstr, Instr, InstrType } from "./types"
+import { Node } from "../ast/types/ast";
+import { AssmtInstr, BinOpInstr, Instr, InstrType } from "./types";
 
 export const assmtInstr = (
   symbol: string,
-  constant: boolean,
-  declaration: boolean,
   srcNode: Node
 ): AssmtInstr => ({
   instrType: InstrType.ASSIGNMENT,
   symbol,
-  constant,
-  declaration,
   srcNode
 })
 

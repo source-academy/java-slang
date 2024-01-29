@@ -1,5 +1,6 @@
 import { CompilationUnit } from "./packages-and-modules";
 import {
+  Assignment,
   Block,
   BlockStatement,
   Expression,
@@ -10,6 +11,7 @@ interface NodeMap {
   Block: Block;
   BlockStatement: BlockStatement;
   Expression: Expression;
+  Assignment: Assignment;
 }
 
 export type Node = NodeMap[keyof NodeMap];
