@@ -17,7 +17,10 @@ import {
   ConstantNameAndTypeInfo,
   ConstantStringInfo,
   ConstantInfo,
-  ConstantUtf8Info
+  ConstantUtf8Info,
+  ConstantDoubleInfo,
+  ConstantFloatInfo,
+  ConstantLongInfo
 } from "../ClassFile/types/constants";
 import { FieldInfo } from "../ClassFile/types/fields";
 import { MethodInfo } from "../ClassFile/types/methods";
@@ -95,14 +98,30 @@ export class BinaryWriter {
 
   private writeConstant(constant: ConstantInfo) {
     this.write(constant.tag);
+    let val, buf;
     switch (constant.tag) {
       case CONSTANT_TAG.Utf8:
         this.write((constant as ConstantUtf8Info).length, u2);
         this.writeString((constant as ConstantUtf8Info).value);
         break;
       case CONSTANT_TAG.Integer:
-      case CONSTANT_TAG.Float:
         this.write((constant as ConstantIntegerInfo).value, u4);
+        break;
+      case CONSTANT_TAG.Float:
+        val = (constant as ConstantFloatInfo).value;
+        buf = new Uint8Array(new Float32Array([val]).buffer).reverse();
+        buf.forEach(x => this.write(x));
+        break;
+      case CONSTANT_TAG.Long:
+        val = (constant as ConstantLongInfo).value;
+        const div = 2 ** 32;
+        this.write(Number(val / BigInt(div)), u4);
+        this.write(Number(val % BigInt(div)), u4);
+        break;
+      case CONSTANT_TAG.Double:
+        val = (constant as ConstantDoubleInfo).value;
+        buf = new Uint8Array(new Float64Array([val]).buffer).reverse();
+        buf.forEach(x => this.write(x));
         break;
       case CONSTANT_TAG.Class:
         this.write((constant as ConstantClassInfo).nameIndex, u2);

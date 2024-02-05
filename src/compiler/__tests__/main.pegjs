@@ -76,13 +76,23 @@ DecimalNumeral
     }
   }
 
-FloatingPointLiteral = HexadecimalFloatingPointLiteral / DecimalFloatingPointLiteral
+FloatingPointLiteral 
+  = pre:[+\-]? val:(HexadecimalFloatingPointLiteral / DecimalFloatingPointLiteral) {
+    val.value = (pre ?? "") + val.value;
+    return val;
+  }
 
 DecimalFloatingPointLiteral
-   = Digits '.' Digits?  ExponentPart? [fFdD]?
+   = value:
+   $(Digits '.' Digits?  ExponentPart? [fFdD]?
     / '.' Digits ExponentPart? [fFdD]?
     / Digits ExponentPart [fFdD]?
-    / Digits ExponentPart? [fFdD]
+    / Digits ExponentPart? [fFdD]) {
+      return {
+        kind: "DecimalFloatingPointLiteral",
+        value: value,
+      }
+    }
 
 ExponentPart = [eE] [+\-]? Digits
 

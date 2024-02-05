@@ -64,7 +64,7 @@ export class Compiler {
       magic: MAGIC,
       minorVersion: MINOR_VERSION,
       majorVersion: MAJOR_VERSION,
-      constantPoolCount: constantPool.length + 1,
+      constantPoolCount: this.constantPoolManager.getSize(),
       constantPool: constantPool,
       accessFlags: accessFlags,
       thisClass: thisClassIndex,

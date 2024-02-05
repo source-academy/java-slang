@@ -108,6 +108,24 @@ export class SymbolTable {
       parentClassName: "java/io/PrintStream",
       typeDescriptor: this.generateMethodDescriptor(["int"], "void")
     });
+    this.insertMethodInfo({
+      name: "println",
+      accessFlags: generateMethodAccessFlags(["public"]),
+      parentClassName: "java/io/PrintStream",
+      typeDescriptor: this.generateMethodDescriptor(["long"], "void")
+    });
+    this.insertMethodInfo({
+      name: "println",
+      accessFlags: generateMethodAccessFlags(["public"]),
+      parentClassName: "java/io/PrintStream",
+      typeDescriptor: this.generateMethodDescriptor(["float"], "void")
+    });
+    this.insertMethodInfo({
+      name: "println",
+      accessFlags: generateMethodAccessFlags(["public"]),
+      parentClassName: "java/io/PrintStream",
+      typeDescriptor: this.generateMethodDescriptor(["double"], "void")
+    });
     this.returnToRoot();
     this.insertClassInfo({
       name: "java/lang/System",

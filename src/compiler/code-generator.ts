@@ -402,6 +402,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("String") };
       }
       case "DecimalIntegerLiteral": {
+        if (value.endsWith('l') || value.endsWith('L')) {
+          const n = BigInt(value.slice(0, -1));
+          const idx = cg.constantPoolManager.indexLongInfo(n);
+          cg.code.push(OPCODE.LDC2_W, 0, idx);
+          return { stackSize: 2, resultType: cg.symbolTable.generateFieldDescriptor("long") };
+        }
         const n = parseInt(value);
         if (-128 <= n && n < 128) {
           cg.code.push(OPCODE.BIPUSH, n);
@@ -412,6 +418,17 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           cg.code.push(OPCODE.LDC, idx);
         }
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("int") };
+      }
+      case "DecimalFloatingPointLiteral": {
+        const d = parseFloat(value);
+        if (value.endsWith('f') || value.endsWith('F')) {
+          const idx = cg.constantPoolManager.indexFloatInfo(d);
+          cg.code.push(OPCODE.LDC, idx);
+          return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("float") };
+        }
+        const idx = cg.constantPoolManager.indexDoubleInfo(d);
+        cg.code.push(OPCODE.LDC2_W, 0, idx);
+        return { stackSize: 2, resultType: cg.symbolTable.generateFieldDescriptor("double") };
       }
     }
 
