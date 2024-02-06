@@ -7,6 +7,7 @@ import {
   GLOBAL_ENVIRONMENT,
   createFrame,
   getEnvironmentType,
+  getEnvironmentVariable,
   setEnvironmentVariable,
 } from "./environment";
 import {
@@ -38,12 +39,32 @@ export const check = (
   environmentFrame: Frame = GLOBAL_ENVIRONMENT
 ): Result => {
   switch (node.kind) {
+    case "Assignment": {
+      const { left, right } = node;
+      const leftType = getEnvironmentVariable(environmentFrame, left.name);
+      if (leftType instanceof Error) return newResult(null, [leftType]);
+      const { currentType, errors } = check(right, environmentFrame);
+      if (errors.length > 0) return newResult(null, errors);
+      if (!currentType)
+        throw new Error(
+          "Right side of assignment statment should return a type."
+        );
+      if (!leftType.canBeAssigned(currentType))
+        return newResult(null, [new IncompatibleTypesError()]);
+      return newResult(null);
+    }
     case "BinaryExpression": {
       const { left, operator, right } = node;
-      const { currentType: leftType, errors: leftErrors } = check(left);
+      const { currentType: leftType, errors: leftErrors } = check(
+        left,
+        environmentFrame
+      );
       if (leftErrors.length > 0)
         return { currentType: null, errors: leftErrors };
-      const { currentType: rightType, errors: rightErrors } = check(right);
+      const { currentType: rightType, errors: rightErrors } = check(
+        right,
+        environmentFrame
+      );
       if (rightErrors.length > 0)
         return { currentType: null, errors: rightErrors };
       if (!leftType || !rightType)
@@ -141,7 +162,10 @@ export const check = (
         const { variableInitializer } = variableDeclarator;
         if (!variableInitializer)
           throw new Error("Variable initializer is undefined.");
-        const { currentType, errors } = check(variableInitializer);
+        const { currentType, errors } = check(
+          variableInitializer,
+          environmentFrame
+        );
         if (errors.length > 0) return { currentType: null, errors };
         if (currentType == null)
           throw new Error(
@@ -178,7 +202,7 @@ export const check = (
               case "HexadecimalFloatingPointLiteral": {
                 expression.literalType.value =
                   "-" + expression.literalType.value;
-                return check(expression);
+                return check(expression, environmentFrame);
               }
               case "BooleanLiteral":
               case "CharacterLiteral":
@@ -189,7 +213,7 @@ export const check = (
           }
         }
         case "+":
-          return check(expression);
+          return check(expression, environmentFrame);
         default:
           throw new Error(
             `Unrecgonized operator ${operator} found in prefix expression.`
@@ -198,7 +222,7 @@ export const check = (
     }
     default:
       throw new Error(
-        `Check is not implemented for this type of node. \n${node}`
+        `Check is not implemented for this type of node ${node.kind}.`
       );
   }
 };

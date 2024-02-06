@@ -1,4 +1,5 @@
 import { check } from "..";
+import { IncompatibleTypesError } from "../../errors";
 import { parse } from "../../../ast/parser";
 import { Type } from "../../types/type";
 
@@ -19,22 +20,20 @@ const testcases: {
     input: `int test = 0;`,
     result: { type: null, errors: [] },
   },
-  // TODO: Not yet implemented in ast extractor
-  // {
-  //   input: `
-  //     int test = 0;
-  //     test = 1;
-  //   `,
-  //   result: { type: null, errors: [] },
-  // },
-  // {
-  //   input: `
-  //     int test = 0;
-  //     test = "A";
-  //   `,
-  //   result: { type: null, errors: [new IncompatibleTypesError()] },
-  //   only: true,
-  // },
+  {
+    input: `
+      int test = 0;
+      test = 1;
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int test = 0;
+      test = "A";
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] },
+  },
 ];
 
 describe("Type Checker", () => {

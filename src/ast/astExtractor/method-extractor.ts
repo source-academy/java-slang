@@ -11,7 +11,6 @@ import {
   VariableDeclaratorIdCtx,
   VariableParaRegularParameterCtx,
 } from "java-parser";
-
 import {
   MethodModifier,
   MethodDeclaration,
@@ -38,11 +37,11 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
       methodHeader: {
         result: this.res,
         identifier: this.identifier,
-        formalParameterList: this.params
+        formalParameterList: this.params,
       },
       methodBody: {
         kind: "Block",
-        blockStatements:this.body,
+        blockStatements: this.body,
         location: cst.location,
       },
       location: cst.location,
@@ -59,8 +58,10 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
       ctx.Final,
       ctx.Synchronized,
       ctx.Native,
-      ctx.Strictfp
-    ].filter(x => x !== undefined).map(x => x ? x[0].image : x);
+      ctx.Strictfp,
+    ]
+      .filter((x) => x !== undefined)
+      .map((x) => (x ? x[0].image : x));
     this.modifier.push(possibleModifiers[0] as MethodModifier);
   }
 
@@ -68,7 +69,7 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     const typeExtractor = new TypeExtractor();
     if (ctx.unannType) {
       this.res = typeExtractor.extract(ctx.unannType[0]);
-    } else /* if (ctx.Void) */ {
+    } /* if (ctx.Void) */ else {
       this.res = "void";
     }
   }
@@ -81,13 +82,13 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   formalParameterList(ctx: FormalParameterListCtx) {
-    return ctx.formalParameter.map(p => this.visit(p));
+    return ctx.formalParameter.map((p) => this.visit(p));
   }
 
   formalParameter(ctx: FormalParameterCtx) {
     if (ctx.variableParaRegularParameter) {
       return this.visit(ctx.variableParaRegularParameter);
-    } else /* if (ctx.variableArityParameter) */ {
+    } /* if (ctx.variableArityParameter) */ else {
       return this.visit(ctx.variableArityParameter!);
     }
   }
@@ -115,9 +116,10 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   blockStatements(ctx: BlockStatementsCtx) {
-    ctx.blockStatement.forEach(x => {
+    ctx.blockStatement.forEach((x) => {
       const blockStatementExtractor = new BlockStatementExtractor();
-      this.body.push(blockStatementExtractor.extract(x));
-    })
+      const blockStatement = blockStatementExtractor.extract(x);
+      if (blockStatement) this.body.push(blockStatement);
+    });
   }
 }
