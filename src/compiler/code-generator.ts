@@ -1,5 +1,7 @@
 import { OPCODE } from "../ClassFile/constants/instructions";
 import { ExceptionHandler, AttributeInfo } from "../ClassFile/types/attributes";
+import { FIELD_FLAGS } from "../ClassFile/types/fields";
+import { METHOD_FLAGS } from "../ClassFile/types/methods";
 import { Node } from "../ast/types/ast";
 import {
   MethodInvocation,
@@ -12,10 +14,14 @@ import {
   IfStatement,
   WhileStatement,
   BasicForStatement,
+  PostfixExpression,
+  PrefixExpression,
+  ReturnStatement,
 } from "../ast/types/blocks-and-statements";
-import { MethodDeclaration } from "../ast/types/classes";
+import { MethodDeclaration, UnannType } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
-import { SymbolTable, SymbolType } from "./symbol-table"
+import { ConstructNotSupportedError } from "./error";
+import { FieldInfo, MethodInfos, SymbolTable } from "./symbol-table"
 
 type Label = {
   offset: number;
@@ -52,28 +58,58 @@ const reverseLogicalOp: { [type: string]: OPCODE } = {
   ">=": OPCODE.IF_ICMPLT,
 };
 
-const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => number } = {
+type CompileResult = {
+  stackSize: number,
+  resultType: string
+};
+const EMPTY_TYPE: string = "";
+
+function compile(node: Node, cg: CodeGenerator): CompileResult {
+  if (!(node.kind in codeGenerators)) {
+    throw new ConstructNotSupportedError(node.kind);
+  }
+  return codeGenerators[node.kind](node, cg);
+}
+
+const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => CompileResult } = {
   Block: (node: Node, cg: CodeGenerator) => {
     let maxStack = 0;
+    let resultType = "";
     (node as Block).blockStatements.forEach(x => {
-      maxStack = Math.max(maxStack, codeGenerators[x.kind](x, cg));
+      const { stackSize: stackSize, resultType: type } = compile(x, cg);
+      maxStack = Math.max(maxStack, stackSize);
+      resultType = type;
     })
-    return maxStack;
+    return { stackSize: maxStack, resultType };
   },
 
   LocalVariableDeclarationStatement: (node: Node, cg: CodeGenerator) => {
     let maxStack = 0;
-    const { variableDeclaratorList: lst } = node as LocalVariableDeclarationStatement;
+    const { variableDeclaratorList: lst, localVariableType: type } = node as LocalVariableDeclarationStatement;
     lst.forEach(v => {
       const { variableDeclaratorId: identifier, variableInitializer: vi } = v;
       const curIdx = cg.maxLocals++;
-      cg.symbolTable.insert(identifier, SymbolType.VARIABLE, { index: curIdx });
+      cg.symbolTable.insertVariableInfo({
+        name: identifier, typeDescriptor: cg.symbolTable.generateFieldDescriptor(type), index: curIdx
+      });
       if (vi) {
-        maxStack = Math.max(maxStack, codeGenerators[vi.kind](vi, cg));
+        maxStack = Math.max(maxStack, compile(vi, cg).stackSize);
         cg.code.push(OPCODE.ISTORE, curIdx);
       }
     });
-    return maxStack;
+    return { stackSize: maxStack, resultType: EMPTY_TYPE };
+  },
+
+  ReturnStatement: (node: Node, cg: CodeGenerator) => {
+    const { expression: expr } = node as ReturnStatement;
+    if (expr) {
+      const { stackSize: stackSize, resultType: resultType } = compile(expr, cg);
+      cg.code.push(OPCODE.IRETURN);
+      return { stackSize, resultType };
+    }
+
+    cg.code.push(OPCODE.RETURN);
+    return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor("void") };
   },
 
   BasicForStatement: (node: Node, cg: CodeGenerator) => {
@@ -81,9 +117,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     const { forInit, condition, forUpdate, body: originalBody } = node as BasicForStatement;
 
     if (forInit instanceof Array) {
-      forInit.forEach(e => maxStack = Math.max(maxStack, codeGenerators[e.kind](e, cg)));
+      forInit.forEach(e => maxStack = Math.max(maxStack, compile(e, cg).stackSize));
     } else {
-      maxStack = Math.max(maxStack, codeGenerators[forInit.kind](forInit, cg));
+      maxStack = Math.max(maxStack, compile(forInit, cg).stackSize);
     }
 
     const whileNode: WhileStatement = {
@@ -94,17 +130,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
         blockStatements: [originalBody, ...forUpdate],
       }
     };
-    maxStack = Math.max(maxStack, codeGenerators[whileNode.kind](whileNode, cg));
+    const compileResult = compile(whileNode, cg);
+    compileResult.stackSize = Math.max(compileResult.stackSize, maxStack);
 
-    return maxStack;
+    return compileResult;
   },
 
   DoStatement: (node: Node, cg: CodeGenerator) => {
     const { body } = node as WhileStatement;
-    codeGenerators[body.kind](body, cg);
+    compile(body, cg);
 
     node.kind = "WhileStatement";
-    return codeGenerators[node.kind](node, cg);
+    return compile(node, cg);
   },
 
   WhileStatement: (node: Node, cg: CodeGenerator) => {
@@ -115,12 +152,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     startLabel.offset = cg.code.length;
     const endLabel = cg.generateNewLabel();
 
-    maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg));
-    maxStack = Math.max(maxStack, codeGenerators[body.kind](body, cg));
+    maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg).stackSize);
+    maxStack = Math.max(maxStack, compile(body, cg).stackSize);
 
     cg.addBranchInstr(OPCODE.GOTO, startLabel);
     endLabel.offset = cg.code.length;
-    return maxStack;
+    return { stackSize: maxStack, resultType: EMPTY_TYPE };
   },
 
   IfStatement: (node: Node, cg: CodeGenerator) => {
@@ -128,8 +165,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
     const { condition: condition, consequent: consequent, alternate: alternate } = node as IfStatement;
 
     const elseLabel = cg.generateNewLabel();
-    maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg));
-    maxStack = Math.max(maxStack, codeGenerators[consequent.kind](consequent, cg));
+    maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg).stackSize);
+    let { stackSize: conSize, resultType: resType } = compile(consequent, cg);
+    maxStack = Math.max(maxStack, conSize);
 
     const endLabel = cg.generateNewLabel();
     if (alternate) {
@@ -138,59 +176,68 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
 
     elseLabel.offset = cg.code.length;
     if (alternate) {
-      maxStack = Math.max(maxStack, codeGenerators[alternate.kind](alternate, cg));
+      const { stackSize: altSize, resultType: altType } = compile(alternate, cg);
+      maxStack = Math.max(maxStack, altSize);
+      if (altType === EMPTY_TYPE) {
+        resType = EMPTY_TYPE;
+      }
       endLabel.offset = cg.code.length;
     }
 
-    return maxStack;
+    return { stackSize: maxStack, resultType: resType };
   },
 
   LogicalExpression: (node: Node, cg: CodeGenerator) => {
-    const f = (node: Node, targetLabel: Label, onTrue: boolean): number => {
+    const f = (node: Node, targetLabel: Label, onTrue: boolean): CompileResult => {
       if (node.kind === "Literal") {
         const { literalType: { kind: kind, value: value } } = node as Literal;
         const boolValue = value === "true";
         if (kind === "BooleanLiteral" && onTrue === boolValue) {
           cg.addBranchInstr(OPCODE.GOTO, targetLabel);
-          return 0;
+          return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor("boolean") };
         }
+      }
+
+      if (node.kind === "PrefixExpression") {
+        const { expression: expr } = node as PrefixExpression;
+        return f(expr, targetLabel, !onTrue);
       }
 
       if (node.kind === "BinaryExpression") {
         const { left: left, right: right, operator: op } = node as BinaryExpression;
-        let lsize = 0;
-        let rsize = 0;
+        let l: CompileResult;
+        let r: CompileResult;
         if (op === "&&") {
           if (onTrue) {
             const falseLabel = cg.generateNewLabel();
-            lsize = f(left, falseLabel, false);
-            rsize = f(right, targetLabel, true);
+            l = f(left, falseLabel, false);
+            r = f(right, targetLabel, true);
             falseLabel.offset = cg.code.length;
           } else {
-            lsize = f(left, targetLabel, false);
-            rsize = f(right, targetLabel, false);
+            l = f(left, targetLabel, false);
+            r = f(right, targetLabel, false);
           }
-          return Math.max(lsize, 1 + rsize);
+          return { stackSize: Math.max(l.stackSize, 1 + r.stackSize), resultType: l.resultType };
         } else if (op === "||") {
           if (onTrue) {
-            lsize = f(left, targetLabel, true);
-            rsize = f(right, targetLabel, true);
+            l = f(left, targetLabel, true);
+            r = f(right, targetLabel, true);
           } else {
             const falseLabel = cg.generateNewLabel();
-            lsize = f(left, falseLabel, true);
-            rsize = f(right, targetLabel, false);
+            l = f(left, falseLabel, true);
+            r = f(right, targetLabel, false);
             falseLabel.offset = cg.code.length;
           }
-          return Math.max(lsize, 1 + rsize);
+          return { stackSize: Math.max(l.stackSize, 1 + r.stackSize), resultType: l.resultType };
         } else if (op in reverseLogicalOp) {
-          lsize = f(left, targetLabel, onTrue);
-          rsize = f(right, targetLabel, onTrue);
+          l = f(left, targetLabel, onTrue);
+          r = f(right, targetLabel, onTrue);
           cg.addBranchInstr(onTrue ? opToOpcode[op] : reverseLogicalOp[op], targetLabel);
-          return Math.max(lsize, 1 + rsize);
+          return { stackSize: Math.max(l.stackSize, 1 + r.stackSize), resultType: l.resultType };
         }
       }
 
-      return codeGenerators[node.kind](node, cg);
+      return compile(node, cg);
     }
     return f(node, cg.labels[cg.labels.length - 1], false);
   },
@@ -198,48 +245,100 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
   MethodInvocation: (node: Node, cg: CodeGenerator) => {
     const n = node as MethodInvocation;
     let maxStack = 1;
+    let resultType = EMPTY_TYPE;
 
-    const { parentClassName: p1, typeDescriptor: t1 } = cg.symbolTable.query("out", SymbolType.CLASS);
-    const { parentClassName: p2, typeDescriptor: t2 } = cg.symbolTable.query("println", SymbolType.CLASS);
-    const out = cg.constantPoolManager.indexFieldrefInfo(p1 as string, "out", t1 as string);
-    const descriptor =
-      n.argumentList[0].kind === "Literal"
-        && (n.argumentList[0] as Literal).literalType.kind === "StringLiteral" ? t2 as string : "(I)V";
-    const println = cg.constantPoolManager.indexMethodrefInfo(p2 as string, "println", descriptor);
+    const symbolInfos = cg.symbolTable.queryMethod(n.identifier);
+    for (let i = 0; i < symbolInfos.length - 1; i++) {
+      const fieldInfo = (symbolInfos[i] as FieldInfo);
+      const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
+      cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
+    }
 
-    cg.code.push(OPCODE.GETSTATIC, 0, out);
+    const argTypes: Array<UnannType> = [];
     n.argumentList.forEach((x, i) => {
-      maxStack = Math.max(maxStack, i + 1 + codeGenerators[x.kind](x, cg));
+      const argCompileResult = compile(x, cg);
+      maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize);
+      argTypes.push(argCompileResult.resultType);
     })
-    cg.code.push(OPCODE.INVOKEVIRTUAL, 0, println);
-    return maxStack;
+    const argDescriptor = '(' + argTypes.join(',') + ')';
+
+    const methodInfos = symbolInfos[symbolInfos.length - 1] as MethodInfos;
+    for (let i = 0; i < methodInfos.length; i++) {
+      const methodInfo = methodInfos[i];
+      if (methodInfo.typeDescriptor.includes(argDescriptor)) {
+        const method = cg.constantPoolManager.indexMethodrefInfo(methodInfo.parentClassName, methodInfo.name, methodInfo.typeDescriptor);
+        cg.code.push((methodInfo.accessFlags & METHOD_FLAGS.ACC_STATIC) ? OPCODE.INVOKESTATIC : OPCODE.INVOKEVIRTUAL, 0, method);
+        resultType = methodInfo.typeDescriptor.slice(argDescriptor.length);
+        break;
+      }
+    }
+
+    return { stackSize: maxStack, resultType: resultType };
   },
 
   Assignment: (node: Node, cg: CodeGenerator) => {
     const { left: left, operator: op, right: right } = node as Assignment;
-    let maxStack = op === "=" ? 0 : codeGenerators[left.kind](left, cg);
-    codeGenerators[right.kind](right, cg);
+    let maxStack = op === "=" ? 0 : compile(left, cg).stackSize;
+    maxStack = Math.max(maxStack, compile(right, cg).stackSize);
     if (op !== "=") {
       cg.code.push(opToOpcode[op.substring(0, op.length - 1)]);
     }
-    const { index: idx } = cg.symbolTable.query(left.name, SymbolType.VARIABLE);
+    const { index: idx, typeDescriptor: type } = cg.symbolTable.queryVariable(left.name);
     cg.code.push(OPCODE.ISTORE, idx as number);
-    return maxStack;
+    return { stackSize: maxStack, resultType: type };
   },
 
   BinaryExpression: (node: Node, cg: CodeGenerator) => {
     const { left: left, right: right, operator: op } = node as BinaryExpression;
-    const lsize = codeGenerators[left.kind](left, cg);
-    const rsize = codeGenerators[right.kind](right, cg);
+    const l = compile(left, cg);
+    const r = compile(right, cg);
     cg.code.push(opToOpcode[op]);
-    return Math.max(lsize, 1 + rsize);
+    return { stackSize: Math.max(l.stackSize, 1 + r.stackSize), resultType: l.resultType };
+  },
+
+  PrefixExpression: (node: Node, cg: CodeGenerator) => {
+    const { operator: op, expression: expr } = node as PostfixExpression;
+    if (op === "++" || op === "--") {
+      const { name: name } = expr as ExpressionName;
+      const { index: idx, typeDescriptor: type } = cg.symbolTable.queryVariable(name);
+      cg.code.push(OPCODE.IINC, idx as number, op === "++" ? 1 : -1);
+      cg.code.push(OPCODE.ILOAD, idx as number);
+      return { stackSize: 1, resultType: type };
+    }
+
+    let compileResult = compile(expr, cg);
+    if (op === "-") {
+      cg.code.push(OPCODE.INEG);
+    } else if (op === "~") {
+      cg.code.push(OPCODE.ICONST_M1, OPCODE.IXOR);
+      compileResult.stackSize = Math.max(compileResult.stackSize, 2);
+    } else if (op === "!") {
+      const elseLabel = cg.generateNewLabel();
+      const endLabel = cg.generateNewLabel();
+      cg.addBranchInstr(OPCODE.IFEQ, elseLabel);
+      cg.code.push(OPCODE.ICONST_0);
+      cg.addBranchInstr(OPCODE.GOTO, endLabel);
+      elseLabel.offset = cg.code.length;
+      cg.code.push(OPCODE.ICONST_1);
+      endLabel.offset = cg.code.length;
+    }
+    return compileResult;
+  },
+
+  PostfixExpression: (node: Node, cg: CodeGenerator) => {
+    const { operator: op, expression: expr } = node as PostfixExpression;
+    const { name: name } = expr as ExpressionName;
+    const { index: idx, typeDescriptor: type } = cg.symbolTable.queryVariable(name);
+    cg.code.push(OPCODE.ILOAD, idx as number);
+    cg.code.push(OPCODE.IINC, idx as number, op === "++" ? 1 : -1);
+    return { stackSize: 1, resultType: type };
   },
 
   ExpressionName: (node: Node, cg: CodeGenerator) => {
     const { name: name } = node as ExpressionName;
-    const { index: idx } = cg.symbolTable.query(name, SymbolType.VARIABLE);
+    const { index: idx, typeDescriptor: type } = cg.symbolTable.queryVariable(name);
     cg.code.push(OPCODE.ILOAD, idx as number);
-    return 1;
+    return { stackSize: 1, resultType: type };
   },
 
   Literal: (node: Node, cg: CodeGenerator) => {
@@ -248,7 +347,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
       case "StringLiteral": {
         const strIdx = cg.constantPoolManager.indexStringInfo(value);
         cg.code.push(OPCODE.LDC, strIdx);
-        return 1;
+        return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("String") };
       }
       case "DecimalIntegerLiteral": {
         const n = parseInt(value);
@@ -260,11 +359,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => numbe
           const idx = cg.constantPoolManager.indexIntegerInfo(n);
           cg.code.push(OPCODE.LDC, idx);
         }
-        return 1;
+        return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("int") };
       }
     }
 
-    return 1;
+    return { stackSize: 1, resultType: EMPTY_TYPE };
   },
 }
 
@@ -281,12 +380,12 @@ class CodeGenerator {
   }
 
   generateNewLabel(): Label {
-    const lable = {
+    const label = {
       offset: 0,
       pointedBy: [],
     };
-    this.labels.push(lable);
-    return lable;
+    this.labels.push(label);
+    return label;
   }
 
   addBranchInstr(opcode: OPCODE, label: Label) {
@@ -307,19 +406,23 @@ class CodeGenerator {
   generateCode(methodNode: MethodDeclaration) {
     this.symbolTable.extend();
     methodNode.methodHeader.formalParameterList.forEach(p => {
-      this.symbolTable.insert(p.identifier, SymbolType.VARIABLE, {
+      this.symbolTable.insertVariableInfo({
+        name: p.identifier,
+        typeDescriptor: this.symbolTable.generateFieldDescriptor(p.unannType),
         index: this.maxLocals
       });
       this.maxLocals++;
     });
 
     const { methodBody } = methodNode;
-    const maxStack = Math.max(this.maxLocals, codeGenerators[methodBody.kind](methodBody, this));
+    const { stackSize: stackSize } = compile(methodBody, this);
+    if (methodNode.methodHeader.result === "void") {
+      this.code.push(OPCODE.RETURN);
+    }
+    this.resolveLabels();
+
     const exceptionTable: Array<ExceptionHandler> = [];
     const attributes: Array<AttributeInfo> = [];
-
-    this.code.push(OPCODE.RETURN);
-    this.resolveLabels();
     const codeBuf = new Uint8Array(this.code).buffer;
     const dataView = new DataView(codeBuf);
     this.code.forEach((x, i) => dataView.setUint8(i, x));
@@ -331,7 +434,7 @@ class CodeGenerator {
     return {
       attributeNameIndex: this.constantPoolManager.indexUtf8Info("Code"),
       attributeLength: attributeLength,
-      maxStack: maxStack,
+      maxStack: Math.max(this.maxLocals, stackSize),
       maxLocals: this.maxLocals,
       codeLength: this.code.length,
       code: dataView,
