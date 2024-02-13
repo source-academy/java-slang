@@ -73,7 +73,7 @@ const testCases: testCase[] = [
     expectedLines: ["count is now 70", "x is now 70", "n is now 70", "110", "50"],
   },
   {
-    comment: "nested for loops",
+    comment: "2 level nested for loops, part 1",
     program: `
       public class Main {
         public static void main(String[] args) {
@@ -89,7 +89,7 @@ const testCases: testCase[] = [
     expectedLines: ["0", "0", "0", "1", "0", "2", "1", "0", "1", "1", "1", "2", "2", "0", "2", "1", "2", "2",],
   },
   {
-    comment: "nested for loops",
+    comment: "2 level nested for loops, part 2",
     program: `
       public class Main {
         public static void main(String[] args) {
@@ -103,6 +103,28 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["-1", "1", "-1", "0", "-1", "-1", "0", "1", "0", "0", "0", "-1", "1", "1", "1", "0", "1", "-1",],
+  },
+  {
+    comment: "for loops with break/continue statements",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          for (int x = -1; x <= 1; x++) {
+            if (x == 0) {
+              continue;
+            }
+            for (int y = 1; y >= -1; y--) {
+              System.out.println(x);
+              System.out.println(y);
+              if (y == 0) {
+                break;
+              }
+            }
+          }
+        }
+      }
+    `,
+    expectedLines: ["-1", "1", "-1", "0", "1", "1", "1", "0"],
   }
 ];
 

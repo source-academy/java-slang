@@ -35,11 +35,6 @@ export interface DoStatement {
 
 export type ForStatement = BasicForStatement | EnhancedForStatement;
 
-export interface ReturnStatement {
-  kind: "ReturnStatement";
-  expression: Expression;
-}
-
 export interface BasicForStatement {
   kind: "BasicForStatement";
   forInit: Array<ExpressionStatement> | LocalVariableDeclarationStatement;
@@ -52,7 +47,7 @@ export interface EnhancedForStatement {
   kind: "EnhancedForStatement";
 }
 
-export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement | ReturnStatement;
+export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement | ReturnStatement | BreakStatement | ContinueStatement;
 
 export type ExpressionStatement = MethodInvocation | Assignment;
 
@@ -185,4 +180,19 @@ export interface PostfixExpression {
   kind: "PostfixExpression";
   operator: "++" | "--";
   expression: Expression;
+}
+
+export interface ReturnStatement {
+  kind: "ReturnStatement";
+  expression: Expression;
+}
+
+export interface BreakStatement {
+  kind: "BreakStatement";
+  identifier?: Identifier;
+}
+
+export interface ContinueStatement {
+  kind: "ContinueStatement";
+  identifier?: Identifier;
 }

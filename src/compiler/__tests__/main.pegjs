@@ -732,10 +732,18 @@ DoStatement
   }
 
 BreakStatement
-  = break semicolon
+  = break semicolon {
+    return {
+      kind: "BreakStatement",
+    }
+  }
 
 ContinueStatement
-  = continue semicolon
+  = continue semicolon {
+    return {
+      kind: "ContinueStatement",
+    }
+  }
 
 YieldStatement
   = yield Expression semicolon

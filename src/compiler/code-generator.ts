@@ -20,6 +20,7 @@ import {
   Expression,
   ArrayAccess,
   BinaryOperator,
+  DoStatement,
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration, UnannType } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -137,9 +138,19 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor("void") };
   },
 
+  BreakStatement: (node: Node, cg: CodeGenerator) => {
+    cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][1]);
+    return { stackSize: 0, resultType: EMPTY_TYPE };
+  },
+
+  ContinueStatement: (node: Node, cg: CodeGenerator) => {
+    cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][0]);
+    return { stackSize: 0, resultType: EMPTY_TYPE };
+  },
+
   BasicForStatement: (node: Node, cg: CodeGenerator) => {
     let maxStack = 0;
-    const { forInit, condition, forUpdate, body: originalBody } = node as BasicForStatement;
+    const { forInit, condition, forUpdate, body: body } = node as BasicForStatement;
 
     if (forInit instanceof Array) {
       forInit.forEach(e => maxStack = Math.max(maxStack, compile(e, cg).stackSize));
@@ -147,26 +158,45 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       maxStack = Math.max(maxStack, compile(forInit, cg).stackSize);
     }
 
-    const whileNode: WhileStatement = {
-      kind: "WhileStatement",
-      condition: condition,
-      body: {
-        kind: "Block",
-        blockStatements: [originalBody, ...forUpdate],
-      }
-    };
-    const compileResult = compile(whileNode, cg);
-    compileResult.stackSize = Math.max(compileResult.stackSize, maxStack);
+    const startLabel = cg.generateNewLabel();
+    const continueLabel = cg.generateNewLabel();
+    const endLabel = cg.generateNewLabel();
+    cg.loopLabels.push([continueLabel, endLabel]);
 
-    return compileResult;
+    startLabel.offset = cg.code.length;
+
+    maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg).stackSize);
+    maxStack = Math.max(maxStack, compile(body, cg).stackSize);
+    continueLabel.offset = cg.code.length;
+    forUpdate.forEach(e => {
+      maxStack = Math.max(maxStack, compile(e, cg).stackSize);
+    });
+
+    cg.addBranchInstr(OPCODE.GOTO, startLabel);
+    endLabel.offset = cg.code.length;
+
+    cg.loopLabels.pop();
+    return { stackSize: maxStack, resultType: EMPTY_TYPE };
   },
 
   DoStatement: (node: Node, cg: CodeGenerator) => {
-    const { body } = node as WhileStatement;
-    compile(body, cg);
+    let maxStack = 0;
+    const { condition: condition, body: body } = node as DoStatement;
 
-    node.kind = "WhileStatement";
-    return compile(node, cg);
+    const startLabel = cg.generateNewLabel();
+    const continueLabel = cg.generateNewLabel();
+    const endLabel = cg.generateNewLabel();
+    cg.loopLabels.push([continueLabel, endLabel]);
+
+    startLabel.offset = cg.code.length;
+    maxStack = Math.max(maxStack, compile(body, cg).stackSize);
+    continueLabel.offset = cg.code.length;
+    maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg).stackSize);
+    cg.addBranchInstr(OPCODE.GOTO, startLabel);
+    endLabel.offset = cg.code.length;
+
+    cg.loopLabels.pop();
+    return { stackSize: maxStack, resultType: EMPTY_TYPE };
   },
 
   WhileStatement: (node: Node, cg: CodeGenerator) => {
@@ -174,13 +204,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { condition, body } = node as WhileStatement;
 
     const startLabel = cg.generateNewLabel();
-    startLabel.offset = cg.code.length;
     const endLabel = cg.generateNewLabel();
+    cg.loopLabels.push([startLabel, endLabel]);
+    startLabel.offset = cg.code.length;
 
     maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg).stackSize);
     maxStack = Math.max(maxStack, compile(body, cg).stackSize);
 
     cg.addBranchInstr(OPCODE.GOTO, startLabel);
+    cg.loopLabels.pop();
     endLabel.offset = cg.code.length;
     return { stackSize: maxStack, resultType: EMPTY_TYPE };
   },
@@ -441,6 +473,7 @@ class CodeGenerator {
   constantPoolManager: ConstantPoolManager;
   maxLocals: number = 0;
   labels: Label[] = [];
+  loopLabels: Label[][] = [];
   code: number[] = [];
 
   constructor(symbolTable: SymbolTable, constantPoolManager: ConstantPoolManager) {

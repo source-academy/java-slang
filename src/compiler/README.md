@@ -6,18 +6,17 @@ This is a bookkeeping of the planned scope of the compiler. It will be updated f
 - Methods that have `public static` access flags, return `int/void`, never throw exception
 - `int` variables
 - `int/boolean/String` literals
-- Controls (`if-else`, `while`, `do-while`, basic `for` loop, `return` statements), loops and if-elses can be nested in each other
+- Controls (`if-else`, `while`, `do-while`, basic `for` loop, `break`, `continue`, `return` statements), loops and if-elses can be nested in each other
 - Arithmetic and conditional expressions
 - Assignment statements
 - Method invocation
+- Non-static import statements
+- Single dimension array declaration/initialization
 
 **Features that are planned to support**
 
-- Import statements
 - Class fields (with `public static` access flag)
-- Single dimension array declaration/initialization
 - Primitive type variables
-- Controls (`break/continue`)
 - Object instantiation (with `new` keyword)
 
 **Features that will not be supported**
