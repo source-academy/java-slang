@@ -1,5 +1,7 @@
 import Thread from "../thread";
+import { JvmObject } from "../types/reference/Object";
 import { asFloat, asDouble } from "../utils";
+import { checkError } from "../utils/Result";
 
 export function runGoto(thread: Thread): void {
   thread.offsetPc(1);
@@ -7,10 +9,6 @@ export function runGoto(thread: Thread): void {
   thread.offsetPc(branchbyte - 1);
 }
 
-/**
- * Used to implement finally. pushes pc + 3 onto stack, then goto pc + branchbyte
- * @param thread
- */
 export function runJsr(thread: Thread): void {
   thread.offsetPc(1);
   const branchbyte = thread.getCode().getInt16(thread.getPC());
@@ -23,7 +21,7 @@ export function runRet(thread: Thread): void {
   thread.offsetPc(1);
   const index = thread.getCode().getUint8(thread.getPC());
   thread.offsetPc(1);
-  const retAddr = thread.loadLocal(index);
+  const retAddr = thread.loadLocal(index) as number;
   thread.setPc(retAddr);
 }
 
@@ -40,7 +38,11 @@ export function runTableswitch(thread: Thread): void {
   const high = thread.getCode().getInt32(offset);
   offset += 4;
 
-  const index = thread.popStack();
+  const popResult = thread.popStack();
+  if (checkError(popResult)) {
+    return;
+  }
+  const index = popResult.result;
   if (index < low || index > high) {
     thread.offsetPc(def);
     return;
@@ -66,11 +68,14 @@ export function runLookupswitch(thread: Thread): void {
   const npairCount = thread.getCode().getInt32(offset);
   offset += 4;
 
-  const value = thread.popStack();
+  const popResult = thread.popStack();
+  if (checkError(popResult)) {
+    return;
+  }
 
   for (let i = 0; i < npairCount; i++) {
     const key = thread.getCode().getInt32(offset);
-    if (key === value) {
+    if (key === popResult.result) {
       const nextPcOffset = thread.getCode().getInt32(offset + 4);
       thread.offsetPc(nextPcOffset);
       return;
@@ -81,43 +86,70 @@ export function runLookupswitch(thread: Thread): void {
   thread.offsetPc(def);
 }
 
-export function runIreturn(thread: Thread): void {
+function _return(thread: Thread, ret?: any, isWide?: boolean): void {
   thread.offsetPc(1);
 
-  const ret = thread.popStack();
-  thread.returnStackFrame(ret);
+  const method = thread.getMethod();
+  if (method.checkSynchronized()) {
+    if (method.checkStatic()) {
+      method.getClass().getJavaObject().getMonitor().exit(thread);
+    } else {
+      (thread.loadLocal(0) as JvmObject).getMonitor().exit(thread);
+    }
+  }
+
+  if (isWide) {
+    thread.returnStackFrame64(ret);
+  } else {
+    thread.returnStackFrame(ret);
+  }
+}
+
+export function runIreturn(thread: Thread): void {
+  const popResult = thread.popStack();
+  if (checkError(popResult)) {
+    return;
+  }
+  const ret = popResult.result;
+  _return(thread, ret);
 }
 
 export function runLreturn(thread: Thread): void {
-  thread.offsetPc(1);
-
-  const ret = thread.popStack64();
-  thread.returnStackFrame64(ret);
+  const popResult = thread.popStack64();
+  if (checkError(popResult)) {
+    return;
+  }
+  const ret = popResult.result;
+  _return(thread, ret, true);
 }
 
 export function runFreturn(thread: Thread): void {
-  thread.offsetPc(1);
-
-  const ret = asFloat(thread.popStack());
-  thread.returnStackFrame(ret);
+  const popResult = thread.popStack();
+  if (checkError(popResult)) {
+    return;
+  }
+  const ret = asFloat(popResult.result);
+  _return(thread, ret);
 }
 
 export function runDreturn(thread: Thread): void {
-  thread.offsetPc(1);
-
-  const ret = asDouble(thread.popStack64());
-  thread.returnStackFrame64(ret);
+  const popResult = thread.popStack64();
+  if (checkError(popResult)) {
+    return;
+  }
+  const ret = asDouble(popResult.result);
+  _return(thread, ret, true);
 }
 
 export function runAreturn(thread: Thread): void {
-  thread.offsetPc(1);
-
-  const ret = thread.popStack();
-  thread.returnStackFrame(ret);
+  const popResult = thread.popStack();
+  if (checkError(popResult)) {
+    return;
+  }
+  const ret = popResult.result;
+  _return(thread, ret);
 }
 
 export function runReturn(thread: Thread): void {
-  thread.offsetPc(1);
-
-  thread.returnStackFrame();
+  _return(thread);
 }

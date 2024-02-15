@@ -1,7 +1,7 @@
 import { OPCODE } from "../../../ClassFile/constants/instructions";
 import { JavaStackFrame } from "../../stackframe";
 import Thread from "../../thread";
-import { ClassData } from "../../types/class/ClassData";
+import { ReferenceClassData } from "../../types/class/ClassData";
 import { JvmObject } from "../../types/reference/Object";
 import { setupTest } from "../test-utils";
 
@@ -11,7 +11,7 @@ const MAX_INT = 2147483647;
 const MIN_INT = -2147483648;
 
 let thread: Thread;
-let threadClass: ClassData;
+let threadClass: ReferenceClassData;
 let code: DataView;
 
 beforeEach(() => {

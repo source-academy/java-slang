@@ -1,38 +1,34 @@
 import Thread from "../thread";
+import { checkError } from "../types/Result";
 import { JvmArray } from "../types/reference/Array";
 
 export function runIload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index = thread.getCode().getUint8(thread.getPC());
-  thread.offsetPc(1);
+  const index = thread.getCode().getUint8(thread.getPC() + 1);
+  thread.offsetPc(2);
   thread.pushStack(thread.loadLocal(index));
 }
 
 export function runLload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index = thread.getCode().getUint8(thread.getPC());
-  thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(index));
+  const index = thread.getCode().getUint8(thread.getPC() + 1);
+  thread.offsetPc(2);
+  thread.pushStack64(thread.loadLocal(index) as bigint | number);
 }
 
 export function runFload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index = thread.getCode().getUint8(thread.getPC());
-  thread.offsetPc(1);
+  const index = thread.getCode().getUint8(thread.getPC() + 1);
+  thread.offsetPc(2);
   thread.pushStack(thread.loadLocal(index));
 }
 
 export function runDload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index = thread.getCode().getUint8(thread.getPC());
-  thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(index));
+  const index = thread.getCode().getUint8(thread.getPC() + 1);
+  thread.offsetPc(2);
+  thread.pushStack64(thread.loadLocal(index) as bigint | number);
 }
 
 export function runAload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index = thread.getCode().getUint8(thread.getPC());
-  thread.offsetPc(1);
+  const index = thread.getCode().getUint8(thread.getPC() + 1);
+  thread.offsetPc(2);
   thread.pushStack(thread.loadLocal(index));
 }
 
@@ -58,22 +54,22 @@ export function runIload3(thread: Thread): void {
 
 export function runLload0(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(0));
+  thread.pushStack64(thread.loadLocal(0) as bigint);
 }
 
 export function runLload1(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(1));
+  thread.pushStack64(thread.loadLocal(1) as bigint);
 }
 
 export function runLload2(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(2));
+  thread.pushStack64(thread.loadLocal(2) as bigint);
 }
 
 export function runLload3(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(3));
+  thread.pushStack64(thread.loadLocal(3) as bigint);
 }
 
 export function runFload0(thread: Thread): void {
@@ -98,22 +94,22 @@ export function runFload3(thread: Thread): void {
 
 export function runDload0(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(0));
+  thread.pushStack64(thread.loadLocal(0) as number);
 }
 
 export function runDload1(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(1));
+  thread.pushStack64(thread.loadLocal(1) as number);
 }
 
 export function runDload2(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(2));
+  thread.pushStack64(thread.loadLocal(2) as number);
 }
 
 export function runDload3(thread: Thread): void {
   thread.offsetPc(1);
-  thread.pushStack64(thread.loadLocal(3));
+  thread.pushStack64(thread.loadLocal(3) as number);
 }
 
 export function runAload0(thread: Thread): void {
@@ -137,145 +133,179 @@ export function runAload3(thread: Thread): void {
 }
 
 export function runIaload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index: number = thread.popStack();
-  const arrayref: JvmArray | null = thread.popStack();
+  const popResult = thread.popStack();
+  const popResult2 = thread.popStack();
+  if (checkError(popResult) || checkError(popResult2)) {
+    return;
+  }
+
+  const index: number = popResult.result;
+  const arrayref: JvmArray | null = popResult2.result;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   if (arrayref.len() <= index || index < 0) {
     thread.throwNewException(
-      'java/lang/ArrayIndexOutOfBoundsException',
+      "java/lang/ArrayIndexOutOfBoundsException",
       `Index ${index} out of bounds for length ${arrayref.len()}`
     );
     return;
   }
-  thread.pushStack(arrayref.get(index));
+
+  thread.pushStack(arrayref.get(index)) && thread.offsetPc(1);
 }
 
 export function runLaload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index: number = thread.popStack();
-  const arrayref: JvmArray | null = thread.popStack();
+  const popResult = thread.popStack();
+  const popResult2 = thread.popStack();
+  if (checkError(popResult) || checkError(popResult2)) {
+    return;
+  }
+  const index: number = popResult.result;
+  const arrayref: JvmArray | null = popResult2.result;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   if (arrayref.len() <= index || index < 0) {
     thread.throwNewException(
-      'java/lang/ArrayIndexOutOfBoundsException',
+      "java/lang/ArrayIndexOutOfBoundsException",
       `Index ${index} out of bounds for length ${arrayref.len()}`
     );
     return;
   }
-  thread.pushStack64(arrayref.get(index));
+  thread.pushStack64(arrayref.get(index)) && thread.offsetPc(1);
 }
 
 export function runFaload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index: number = thread.popStack();
-  const arrayref: JvmArray | null = thread.popStack();
+  const popResult = thread.popStack();
+  const popResult2 = thread.popStack();
+  if (checkError(popResult) || checkError(popResult2)) {
+    return;
+  }
+  const index: number = popResult.result;
+  const arrayref: JvmArray | null = popResult2.result;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   if (arrayref.len() <= index || index < 0) {
     thread.throwNewException(
-      'java/lang/ArrayIndexOutOfBoundsException',
+      "java/lang/ArrayIndexOutOfBoundsException",
       `Index ${index} out of bounds for length ${arrayref.len()}`
     );
     return;
   }
-  thread.pushStack(arrayref.get(index));
+  thread.pushStack(arrayref.get(index)) && thread.offsetPc(1);
 }
 
 export function runDaload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index: number = thread.popStack();
-  const arrayref: JvmArray | null = thread.popStack();
+  const popResult = thread.popStack();
+  const popResult2 = thread.popStack();
+  if (checkError(popResult) || checkError(popResult2)) {
+    return;
+  }
+  const index: number = popResult.result;
+  const arrayref: JvmArray | null = popResult2.result;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   if (arrayref.len() <= index || index < 0) {
     thread.throwNewException(
-      'java/lang/ArrayIndexOutOfBoundsException',
+      "java/lang/ArrayIndexOutOfBoundsException",
       `Index ${index} out of bounds for length ${arrayref.len()}`
     );
     return;
   }
-  thread.pushStack64(arrayref.get(index));
+  thread.pushStack64(arrayref.get(index)) && thread.offsetPc(1);
 }
 
 export function runAaload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index: number = thread.popStack();
-  const arrayref: JvmArray | null = thread.popStack();
+  const popResult = thread.popStack();
+  const popResult2 = thread.popStack();
+  if (checkError(popResult) || checkError(popResult2)) {
+    return;
+  }
+  const index: number = popResult.result;
+  const arrayref: JvmArray | null = popResult2.result;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   if (arrayref.len() <= index || index < 0) {
     thread.throwNewException(
-      'java/lang/ArrayIndexOutOfBoundsException',
+      "java/lang/ArrayIndexOutOfBoundsException",
       `Index ${index} out of bounds for length ${arrayref.len()}`
     );
     return;
   }
-  thread.pushStack(arrayref.get(index));
+  thread.pushStack(arrayref.get(index)) && thread.offsetPc(1);
 }
 
 export function runBaload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index: number = thread.popStack();
-  const arrayref: JvmArray | null = thread.popStack();
+  const popResult = thread.popStack();
+  const popResult2 = thread.popStack();
+  if (checkError(popResult) || checkError(popResult2)) {
+    return;
+  }
+  const index: number = popResult.result;
+  const arrayref: JvmArray | null = popResult2.result;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   if (arrayref.len() <= index || index < 0) {
     thread.throwNewException(
-      'java/lang/ArrayIndexOutOfBoundsException',
+      "java/lang/ArrayIndexOutOfBoundsException",
       `Index ${index} out of bounds for length ${arrayref.len()}`
     );
     return;
   }
-  thread.pushStack(arrayref.get(index));
+  thread.pushStack(arrayref.get(index)) && thread.offsetPc(1);
 }
 
 export function runCaload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index: number = thread.popStack();
-  const arrayref: JvmArray | null = thread.popStack();
+  const popResult = thread.popStack();
+  const popResult2 = thread.popStack();
+  if (checkError(popResult) || checkError(popResult2)) {
+    return;
+  }
+  const index: number = popResult.result;
+  const arrayref: JvmArray | null = popResult2.result;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   if (arrayref.len() <= index || index < 0) {
     thread.throwNewException(
-      'java/lang/ArrayIndexOutOfBoundsException',
+      "java/lang/ArrayIndexOutOfBoundsException",
       `Index ${index} out of bounds for length ${arrayref.len()}`
     );
     return;
   }
-  thread.pushStack(arrayref.get(index));
+  thread.pushStack(arrayref.get(index)) && thread.offsetPc(1);
 }
 
 export function runSaload(thread: Thread): void {
-  thread.offsetPc(1);
-  const index: number = thread.popStack();
-  const arrayref: JvmArray | null = thread.popStack();
+  const popResult = thread.popStack();
+  const popResult2 = thread.popStack();
+  if (checkError(popResult) || checkError(popResult2)) {
+    return;
+  }
+  const index: number = popResult.result;
+  const arrayref: JvmArray | null = popResult2.result;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   if (arrayref.len() <= index || index < 0) {
     thread.throwNewException(
-      'java/lang/ArrayIndexOutOfBoundsException',
+      "java/lang/ArrayIndexOutOfBoundsException",
       `Index ${index} out of bounds for length ${arrayref.len()}`
     );
     return;
   }
-  thread.pushStack(arrayref.get(index));
+  thread.pushStack(arrayref.get(index)) && thread.offsetPc(1);
 }

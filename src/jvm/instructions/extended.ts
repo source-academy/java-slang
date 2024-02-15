@@ -15,45 +15,57 @@ export function runWide(thread: Thread): void {
   const indexbyte = thread.getCode().getUint16(thread.getPC());
   thread.offsetPc(2);
 
+  let store;
   switch (opcode) {
     case OPCODE.ILOAD:
-      thread.pushStack(thread.loadLocal(indexbyte));
-      return;
-    case OPCODE.LLOAD:
-      thread.pushStack64(thread.loadLocal(indexbyte));
-      return;
     case OPCODE.FLOAD:
-      thread.pushStack(thread.loadLocal(indexbyte));
-      return;
-    case OPCODE.DLOAD:
-      thread.pushStack64(thread.loadLocal(indexbyte));
-      return;
     case OPCODE.ALOAD:
       thread.pushStack(thread.loadLocal(indexbyte));
       return;
+    case OPCODE.LLOAD:
+    case OPCODE.DLOAD:
+      thread.pushStack64(thread.loadLocal(indexbyte) as bigint | number);
+      return;
     case OPCODE.ISTORE:
-      thread.storeLocal(indexbyte, thread.popStack());
-      return;
-    case OPCODE.LSTORE:
-      thread.storeLocal(indexbyte, thread.popStack64());
-      return;
-    case OPCODE.FSTORE:
-      thread.storeLocal(indexbyte, asFloat(thread.popStack()));
-      return;
-    case OPCODE.DSTORE:
-      thread.storeLocal(indexbyte, asDouble(thread.popStack64()));
-      return;
     case OPCODE.ASTORE:
-      thread.storeLocal(indexbyte, thread.popStack());
-      return;
-
+      store = thread.popStack();
+      if (checkError(store)) {
+        return;
+      } else {
+        thread.storeLocal(indexbyte, store.result);
+        return;
+      }
+    case OPCODE.FSTORE:
+      store = thread.popStack();
+      if (checkError(store)) {
+        return;
+      } else {
+        thread.storeLocal(indexbyte, asFloat(store.result));
+        return;
+      }
+    case OPCODE.LSTORE:
+      store = thread.popStack64();
+      if (checkError(store)) {
+        return;
+      } else {
+        thread.storeLocal(indexbyte, store.result);
+        return;
+      }
+    case OPCODE.DSTORE:
+      store = thread.popStack64();
+      if (checkError(store)) {
+        return;
+      } else {
+        thread.storeLocal(indexbyte, asDouble(store.result));
+        return;
+      }
     case OPCODE.IINC:
       const constbyte = thread.getCode().getInt16(thread.getPC());
       thread.offsetPc(2);
 
       thread.storeLocal(
         indexbyte,
-        (thread.loadLocal(indexbyte) + constbyte) | 0
+        ((thread.loadLocal(indexbyte) as number) + constbyte) | 0
       );
       return;
   }
@@ -72,7 +84,11 @@ export function runMultianewarray(thread: Thread): void {
   // get dimensions array: [2][3] == [2,3]
   const dimArray = [];
   for (let i = 0; i < dimensions; i++) {
-    const dim = thread.popStack();
+    const popResult = thread.popStack();
+    if (checkError(popResult)) {
+      return;
+    }
+    const dim = popResult.result;
 
     if (dim < 0) {
       thread.throwNewException(
@@ -142,7 +158,11 @@ export function runIfnull(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC());
   thread.offsetPc(2);
 
-  const ref = thread.popStack() as JvmObject;
+  const popResult = thread.popStack();
+  if (checkError(popResult)) {
+    return;
+  }
+  const ref = popResult.result as JvmObject;
   if (ref === null) {
     thread.offsetPc(branchbyte - 3);
     return;
@@ -154,7 +174,11 @@ export function runIfnonnull(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC());
   thread.offsetPc(2);
 
-  const ref = thread.popStack() as JvmObject;
+  const popResult = thread.popStack();
+  if (checkError(popResult)) {
+    return;
+  }
+  const ref = popResult.result as JvmObject;
   if (ref !== null) {
     thread.offsetPc(branchbyte - 3);
     return;

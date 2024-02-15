@@ -77,8 +77,13 @@ const functions = {
     locals: any[]
   ) => {
     const props = locals[0] as JvmObject;
+    // FIXME: use actual values
     const systemProperties = {
       "java.class.path": "example",
+      "java.home": "natives",
+      "java.ext.dirs": "natives/lib/ext",
+      "java.io.tmpdir": "temp",
+      "sun.boot.class.path": "natives",
       "file.encoding": "UTF-8",
       "java.vendor": "Source Academy",
       "java.version": "1.0",
@@ -176,6 +181,18 @@ const functions = {
       fr.putValue(stream);
     }
     thread.returnStackFrame();
+  },
+
+  "currentTimeMillis()J": (thread: Thread, locals: any[]) => {
+    const time = BigInt(Date.now());
+    thread.returnStackFrame64(time);
+  },
+
+  "identityHashCode(Ljava/lang/Object;)I": (thread: Thread, locals: any[]) => {
+    console.warn(
+      "System.identityHashCode(Ljava/lang/Object;)I not implemented"
+    );
+    thread.returnStackFrame(0);
   },
 };
 

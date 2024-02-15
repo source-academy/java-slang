@@ -1,11 +1,11 @@
 import { FieldInfo, FIELD_FLAGS } from "../../../ClassFile/types/fields";
 import { ConstantPool } from "../../constant-pool";
 import Thread from "../../thread";
-import { attrInfo2Interface } from "../../utils";
+import { attrInfo2Interface, parseFieldDescriptor } from "../../utils";
 import { checkSuccess, ImmediateResult, checkError, Result } from "../Result";
 import { JvmObject, JavaType } from "../reference/Object";
-import { IAttribute, ConstantValue } from "./Attributes";
-import { ReferenceClassData } from "./ClassData";
+import { IAttribute, ConstantValue, NestHost } from "./Attributes";
+import { ClassData, ReferenceClassData } from "./ClassData";
 import { ConstantUtf8 } from "./Constants";
 
 export class Field {
@@ -14,7 +14,7 @@ export class Field {
   private fieldDesc: string;
   private value: any;
   private accessFlags: number;
-  private attributes: { [attributeName: string]: IAttribute[] } = {};
+  private attributes: { [attributeName: string]: IAttribute } = {};
 
   private static reflectedClass: ReferenceClassData | null = null;
   private javaObject: JvmObject | null = null;
@@ -25,7 +25,7 @@ export class Field {
     fieldName: string,
     fieldDesc: string,
     accessFlags: number,
-    attributes: { [attributeName: string]: IAttribute[] },
+    attributes: { [attributeName: string]: IAttribute },
     slot: number
   ) {
     this.cls = cls;
@@ -55,7 +55,7 @@ export class Field {
 
     if (this.checkStatic() && this.attributes["ConstantValue"]) {
       const constantValue = (
-        this.attributes["ConstantValue"][0] as ConstantValue
+        this.attributes["ConstantValue"] as ConstantValue
       ).constantvalue.resolve(null as any, cls.getLoader()); // String resolution does not need thread
       if (!checkSuccess(constantValue)) {
         return;
@@ -115,6 +115,20 @@ export class Field {
       Field.reflectedClass = fRes.result as ReferenceClassData;
     }
 
+    const fieldClsName = parseFieldDescriptor(this.fieldDesc, 0);
+    let ftRes;
+    if (fieldClsName.referenceCls) {
+      ftRes = this.cls.getLoader().getClass(fieldClsName.referenceCls);
+    } else {
+      ftRes = {
+        result: this.cls.getLoader().getPrimitiveClass(fieldClsName.type),
+      };
+    }
+    if (checkError(ftRes)) {
+      return ftRes;
+    }
+    const fieldType = (ftRes.result as ClassData).getJavaObject() as JvmObject;
+
     this.javaObject = Field.reflectedClass.instantiate();
     this.javaObject.initialize(thread);
 
@@ -122,7 +136,7 @@ export class Field {
       "clazz",
       "Ljava/lang/Class;",
       "java/lang/reflect/Field",
-      Field.reflectedClass.getJavaObject()
+      this.cls.getJavaObject()
     );
     this.javaObject._putField(
       "name",
@@ -134,7 +148,7 @@ export class Field {
       "type",
       "Ljava/lang/Class;",
       "java/lang/reflect/Field",
-      this.cls.getJavaObject()
+      fieldType
     );
     this.javaObject._putField(
       "modifiers",
@@ -149,6 +163,7 @@ export class Field {
       this.slot
     );
 
+    console.warn("getReflectedObject: not using signature, annotations");
     this.javaObject._putField(
       "signature",
       "Ljava/lang/String;",
@@ -267,7 +282,36 @@ export class Field {
     const invokerClass = thread.getClass();
     const fieldClass = this.getClass();
     if (this.checkPrivate() && invokerClass !== fieldClass) {
-      return { exceptionCls: "java/lang/IllegalAccessError", msg: "" };
+      // nest mate test (se11)
+      // There is currently a bug with lambdas invoking the private bytecode directly.
+      // We add nest information so the invocation succeeds.
+      // https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-5.html#jvms-5.4.4
+      const nestHostAttrD = fieldClass.getAttribute("NestHost") as NestHost;
+      let nestHostD;
+      if (!nestHostAttrD) {
+        nestHostD = fieldClass;
+      } else {
+        const resolutionResult = nestHostAttrD.hostClass.resolve();
+        if (checkError(resolutionResult)) {
+          return resolutionResult;
+        }
+        nestHostD = resolutionResult.result;
+      }
+      const nestHostArrC = invokerClass.getAttribute("NestHost") as NestHost;
+      let nestHostC;
+      if (!nestHostArrC) {
+        nestHostC = invokerClass;
+      } else {
+        const resolutionResult = nestHostArrC.hostClass.resolve();
+        if (checkError(resolutionResult)) {
+          return resolutionResult;
+        }
+        nestHostC = resolutionResult.result;
+      }
+
+      if (nestHostC !== nestHostD) {
+        return { exceptionCls: "java/lang/IllegalAccessError", msg: "" };
+      }
     }
 
     if (

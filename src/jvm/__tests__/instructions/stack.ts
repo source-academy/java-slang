@@ -1,21 +1,22 @@
 import { OPCODE } from "../../../ClassFile/constants/instructions";
 import { JavaStackFrame } from "../../stackframe";
 import Thread from "../../thread";
-import { ReferenceClassData } from "../../types/class/ClassData";
+import { SuccessResult } from "../../types/Result";
+import { ClassData, ReferenceClassData } from "../../types/class/ClassData";
 import { JvmObject } from "../../types/reference/Object";
 import { setupTest } from "../test-utils";
 
 let thread: Thread;
 let threadClass: ReferenceClassData;
 let code: DataView;
-let javaThread: JvmObject;
+let testClass: ClassData;
 
 beforeEach(() => {
   const setup = setupTest();
   thread = setup.thread;
   threadClass = setup.classes.threadClass;
   code = setup.code;
-  const testClass = setup.classes.testClass;
+  testClass = setup.classes.testClass;
   const method = setup.method;
   thread.invokeStackFrame(new JavaStackFrame(testClass, method, 0, []));
 });
@@ -57,13 +58,14 @@ describe("Pop2", () => {
 
 describe("Dup", () => {
   test("DUP: duplicates reference", () => {
-    thread.pushStack(javaThread);
+    const ref = testClass.instantiate();
+    thread.pushStack(ref);
     code.setUint8(0, OPCODE.DUP);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(2);
-    expect(lastFrame.operandStack[0] === javaThread).toBe(true);
-    expect(lastFrame.operandStack[1] === javaThread).toBe(true);
+    expect(lastFrame.operandStack[0] === ref).toBe(true);
+    expect(lastFrame.operandStack[1] === ref).toBe(true);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
@@ -99,10 +101,10 @@ describe("DupX2", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(4);
-    expect(thread.popStack() === v1).toBe(true);
-    expect(thread.popStack() === v2).toBe(true);
-    expect(thread.popStack() === v3).toBe(true);
-    expect(thread.popStack() === v1).toBe(true);
+    expect((thread.popStack() as SuccessResult<any>).result === v1).toBe(true);
+    expect((thread.popStack() as SuccessResult<any>).result === v2).toBe(true);
+    expect((thread.popStack() as SuccessResult<any>).result === v3).toBe(true);
+    expect((thread.popStack() as SuccessResult<any>).result === v1).toBe(true);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
@@ -114,9 +116,9 @@ describe("DupX2", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(4);
-    expect(thread.popStack() === v1).toBe(true);
-    expect(thread.popStack64()).toBe(5.0);
-    expect(thread.popStack() === v1).toBe(true);
+    expect((thread.popStack() as SuccessResult<any>).result === v1).toBe(true);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(5.0);
+    expect((thread.popStack() as SuccessResult<any>).result === v1).toBe(true);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
@@ -145,8 +147,8 @@ describe("Dup2", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(4);
-    expect(thread.popStack64()).toBe(5.0);
-    expect(thread.popStack64()).toBe(5.0);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(5.0);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(5.0);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
@@ -180,9 +182,9 @@ describe("Dup2X1", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(5);
-    expect(thread.popStack()).toBe(v1);
-    expect(thread.popStack64()).toBe(5.0);
-    expect(thread.popStack()).toBe(v1);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v1);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(5.0);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v1);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
@@ -222,10 +224,10 @@ describe("Dup2X2", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(6);
-    expect(thread.popStack64()).toBe(5.0);
-    expect(thread.popStack()).toBe(v1);
-    expect(thread.popStack()).toBe(v2);
-    expect(thread.popStack64()).toBe(5.0);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(5.0);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v1);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v2);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(5.0);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
@@ -240,11 +242,11 @@ describe("Dup2X2", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(6);
-    expect(thread.popStack()).toBe(v1);
-    expect(thread.popStack()).toBe(v2);
-    expect(thread.popStack64()).toBe(5.0);
-    expect(thread.popStack()).toBe(v1);
-    expect(thread.popStack()).toBe(v2);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v1);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v2);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(5.0);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v1);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v2);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
@@ -255,9 +257,9 @@ describe("Dup2X2", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(6);
-    expect(thread.popStack64()).toBe(6.0);
-    expect(thread.popStack64()).toBe(5.0);
-    expect(thread.popStack64()).toBe(6.0);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(6.0);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(5.0);
+    expect((thread.popStack64() as SuccessResult<any>).result).toBe(6.0);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
@@ -273,8 +275,8 @@ describe("Swap", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(2);
-    expect(thread.popStack()).toBe(v1);
-    expect(thread.popStack()).toBe(v2);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v1);
+    expect((thread.popStack() as SuccessResult<any>).result).toBe(v2);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });

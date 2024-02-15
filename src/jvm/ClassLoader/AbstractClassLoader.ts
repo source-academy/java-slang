@@ -37,10 +37,6 @@ export default abstract class AbstractClassLoader {
     this.parentLoader = parentLoader;
   }
 
-  getClassPath(): string {
-    return this.classPath;
-  }
-
   /**
    * Loads a given classfile. Used to support Unsafe operations.
    * @param classFile
@@ -56,7 +52,10 @@ export default abstract class AbstractClassLoader {
    * @param classFile
    * @returns
    * */
-  protected linkClass(cls: ClassFile): ReferenceClassData {
+  protected linkClass(
+    cls: ClassFile,
+    protectionDomain?: JvmObject
+  ): ReferenceClassData {
     // resolve classname
     const clsInfo = cls.constantPool[cls.thisClass] as ConstantClassInfo;
     const clsName = cls.constantPool[clsInfo.nameIndex] as ConstantUtf8Info;
@@ -67,10 +66,13 @@ export default abstract class AbstractClassLoader {
       cls,
       this,
       thisClass,
-      (e) => (hasError = e)
+      (e) => (hasError = e),
+      undefined,
+      protectionDomain
     );
 
     if (hasError) {
+      // FIXME: throw java error instead
       throw new Error((hasError as ErrorResult).exceptionCls);
     }
     return data;
@@ -164,7 +166,9 @@ export default abstract class AbstractClassLoader {
    * @returns
    */
   protected load(className: string): ImmediateResult<ClassData> {
-    const path = this.classPath ? this.classPath + "/" + className : className;
+    const path =
+      (this.classPath ? this.classPath + "/" + className : className) +
+      ".class";
 
     let classFile;
     try {
@@ -186,11 +190,20 @@ export default abstract class AbstractClassLoader {
 }
 
 export class ApplicationClassLoader extends AbstractClassLoader {
+  private javaClassLoader?: JvmObject;
   constructor(
     nativeSystem: AbstractSystem,
     classPath: string,
     parentLoader: AbstractClassLoader
   ) {
     super(nativeSystem, classPath, parentLoader);
+  }
+
+  _setJavaClassLoader(javaClassLoader: JvmObject) {
+    this.javaClassLoader = javaClassLoader;
+  }
+
+  getJavaObject(): JvmObject | null {
+    return this.javaClassLoader ?? null;
   }
 }

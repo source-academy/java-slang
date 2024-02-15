@@ -25,6 +25,12 @@ const functions = {
     monitor.wait(thread, locals[1]);
     thread.returnStackFrame();
   },
+  "notifyAll()V": (thread: Thread, locals: any[]) => {
+    const obj = locals[0] as JvmObject;
+    const monitor = obj.getMonitor();
+    monitor.notifyAll(thread);
+    thread.returnStackFrame();
+  },
 };
 
 export default functions;

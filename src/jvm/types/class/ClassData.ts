@@ -22,9 +22,45 @@ import {
 import { JvmArray } from "../reference/Array";
 import { JvmObject } from "../reference/Object";
 import { IAttribute, BootstrapMethod, BootstrapMethods } from "./Attributes";
-import { Constant, ConstantClass, ConstantUtf8 } from "./Constants";
+import {
+  Constant,
+  ConstantClass,
+  ConstantInterfaceMethodref,
+  ConstantMethodref,
+  ConstantUtf8,
+} from "./Constants";
 import { Field } from "./Field";
 import { Method } from "./Method";
+
+class ClassLock {
+  private owner?: Thread;
+  private onRelease: Array<() => void> = [];
+
+  constructor() {}
+
+  isOwner(thread: Thread) {
+    return this.owner === thread;
+  }
+
+  lock(thread: Thread, onInit?: () => void): boolean {
+    if (onInit) {
+      this.onRelease.push(onInit);
+    }
+
+    if (!this.owner) {
+      this.owner = thread;
+      return true;
+    }
+
+    return false;
+  }
+
+  release() {
+    this.onRelease.forEach((cb) => cb());
+    this.onRelease = [];
+    this.owner = undefined;
+  }
+}
 
 export abstract class ClassData {
   protected loader: AbstractClassLoader;
@@ -32,8 +68,7 @@ export abstract class ClassData {
   protected type: CLASS_TYPE;
   public status: CLASS_STATUS = CLASS_STATUS.PREPARED;
 
-  protected initThread?: Thread;
-  protected onInitCallbacks: Array<() => void> = [];
+  protected classLock?: ClassLock;
 
   protected thisClass: string;
   protected packageName: string;
@@ -50,13 +85,13 @@ export abstract class ClassData {
     [fieldName: string]: Field;
   } = {};
   protected instanceFields: { [key: string]: Field } | null = null;
-  protected allFields: Field[] = [];
+  protected vmIndexFields?: Field[];
   protected staticFields: Field[] = [];
   protected methods: {
     [methodName: string]: Method;
   } = {};
 
-  protected attributes: { [attributeName: string]: IAttribute[] } = {};
+  protected attributes: { [attributeName: string]: IAttribute } = {};
 
   constructor(
     loader: AbstractClassLoader,
@@ -70,6 +105,10 @@ export abstract class ClassData {
     this.thisClass = thisClass;
     this.packageName = thisClass.split("/").slice(0, -1).join("/");
     this.constantPool = new ConstantPool(this, []);
+  }
+
+  isInitialized(): boolean {
+    return this.status === CLASS_STATUS.INITIALIZED;
   }
 
   checkPrimitive(): this is PrimitiveClassData {
@@ -341,6 +380,10 @@ export abstract class ClassData {
     return this.methods[methodName] ?? null;
   }
 
+  addMethod(method: Method) {
+    this.methods[method.getName() + method.getDescriptor()] = method;
+  }
+
   /**
    * Gets all methods declared in this class, including private methods.
    * Excludes inherited methods.
@@ -357,6 +400,30 @@ export abstract class ClassData {
     }
 
     return null;
+  }
+
+  getFieldFromSlot(slot: number): Field | null {
+    for (const field of Object.values(this.fields)) {
+      if (field.getSlot() === slot) {
+        return field;
+      }
+    }
+
+    return null;
+  }
+
+  getFieldVmIndex(field: Field): number {
+    const fieldArr = this.vmIndexFields
+      ? this.vmIndexFields
+      : this._fillVmIndexFieldArr();
+    return fieldArr.indexOf(field);
+  }
+
+  getFieldFromVmIndex(index: number): Field | null {
+    const fieldArr = this.vmIndexFields
+      ? this.vmIndexFields
+      : this._fillVmIndexFieldArr();
+    return fieldArr[index] ?? null;
   }
 
   lookupField(fieldName: string): Field | null {
@@ -471,8 +538,9 @@ export abstract class ClassData {
 
     if (result !== null) {
       const method = result;
-      if (!method.checkAccess(accessingClass, this)) {
-        return { exceptionCls: "java/lang/IllegalAccessError", msg: "" };
+      const accessCheckResult = method.checkAccess(accessingClass, this);
+      if (checkError(accessCheckResult)) {
+        return accessCheckResult;
       }
       return { result };
     }
@@ -480,8 +548,9 @@ export abstract class ClassData {
     // Otherwise, method resolution attempts to locate the referenced method in the superinterfaces of the specified class C
     result = this._resolveMethodInterface(name, descriptor);
     if (result !== null) {
-      if (!result.checkAccess(accessingClass, this)) {
-        return { exceptionCls: "java/lang/IllegalAccessError", msg: "" };
+      const accessCheckResult = result.checkAccess(accessingClass, this);
+      if (checkError(accessCheckResult)) {
+        return accessCheckResult;
       }
       return { result };
     }
@@ -494,6 +563,36 @@ export abstract class ClassData {
     return constItem;
   }
 
+  getMethodConstantIndex(method: Method): number {
+    const isInterface = this.checkInterface();
+    for (let i = 1; i < this.constantPool.size(); i++) {
+      const constItem = this.getConstant(i);
+      if (
+        (!isInterface && ConstantMethodref.check(constItem)) ||
+        (isInterface && ConstantInterfaceMethodref.check(constItem))
+      ) {
+        const clsname = constItem.getClassName();
+        if (clsname !== this.thisClass) {
+          continue;
+        }
+
+        const nameAndType = constItem.getNameAndType();
+
+        if (
+          nameAndType.name === method.getName() &&
+          nameAndType.descriptor === method.getDescriptor()
+        ) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  }
+
+  insertConstant(con: Constant): number {
+    return this.constantPool.insert(con);
+  }
+
   /**
    * Getters
    */
@@ -503,6 +602,22 @@ export abstract class ClassData {
 
   getPackageName(): string {
     return this.packageName;
+  }
+
+  private _fillVmIndexFieldArr(): Field[] {
+    if (this.vmIndexFields) {
+      return this.vmIndexFields;
+    }
+
+    this.vmIndexFields = this.superClass
+      ? [...this.superClass._fillVmIndexFieldArr()]
+      : [];
+    this.interfaces.forEach((interfaceCls) => {
+      this.vmIndexFields?.push(...interfaceCls._fillVmIndexFieldArr());
+    });
+    this.vmIndexFields.push(...Object.values(this.fields));
+
+    return this.vmIndexFields;
   }
 
   /**
@@ -538,6 +653,10 @@ export abstract class ClassData {
     }
 
     return this.javaClassObject;
+  }
+
+  getProtectionDomain(): JvmObject | null {
+    return null;
   }
 
   getAccessFlags(): number {
@@ -605,19 +724,20 @@ export class PrimitiveClassData extends ClassData {
 
 export class ReferenceClassData extends ClassData {
   protected bootstrapMethods: Array<BootstrapMethod> = [];
-  private nestedHost: ReferenceClassData = this;
-  private nestedMembers: ReferenceClassData[] = [];
-  private anonymousInnerId: number = 0;
+  private protectionDomain: JvmObject | null;
 
   constructor(
     classfile: ClassFile,
     loader: AbstractClassLoader,
     className: string,
     onError: (error: ErrorResult) => void,
-    cpOverrides?: JvmArray
+    cpOverrides?: JvmArray,
+    protectionDomain?: JvmObject
   ) {
     super(loader, classfile.accessFlags, CLASS_TYPE.REFERENCE, className);
+
     this.loader = loader;
+    this.protectionDomain = protectionDomain ?? null;
 
     this.constantPool = new ConstantPool(
       this,
@@ -693,7 +813,7 @@ export class ReferenceClassData extends ClassData {
 
     if (this.attributes["BootstrapMethods"]) {
       this.bootstrapMethods = (
-        this.attributes["BootstrapMethods"][0] as BootstrapMethods
+        this.attributes["BootstrapMethods"] as BootstrapMethods
       ).bootstrapMethods;
     }
   }
@@ -705,7 +825,7 @@ export class ReferenceClassData extends ClassData {
   initialize(
     thread: Thread,
     onDefer?: () => void | null,
-    onInitialized?: () => void | null
+    onInitialized?: () => void
   ): Result<ClassData> {
     if (this.status === CLASS_STATUS.INITIALIZED) {
       onInitialized && onInitialized();
@@ -713,19 +833,24 @@ export class ReferenceClassData extends ClassData {
     }
 
     if (this.status === CLASS_STATUS.INITIALIZING) {
-      if (this.initThread !== thread) {
-        thread.setStatus(ThreadStatus.WAITING);
-        this.onInitCallbacks.push(() =>
-          thread.setStatus(ThreadStatus.RUNNABLE)
-        );
-        return { isDefer: true };
+      if (!this.classLock) {
+        throw new Error("Class lock not set during initialization");
       }
 
-      onInitialized && this.onInitCallbacks.push(onInitialized);
-      return { result: this };
-    }
+      onDefer && onDefer();
+      if (this.classLock.isOwner(thread)) {
+        // Object's static initializer invokes static method Object.registerNatives()
+        // Invokestatic initializes Object again.
+        // We return a success result so the clinit can complete.
+        return { result: this };
+      }
 
-    this.initThread = thread;
+      this.classLock.lock(thread, () =>
+        thread.setStatus(ThreadStatus.RUNNABLE)
+      );
+      thread.setStatus(ThreadStatus.WAITING);
+      return { isDefer: true };
+    }
 
     if (
       this.superClass &&
@@ -737,18 +862,17 @@ export class ReferenceClassData extends ClassData {
       }
     }
 
+    this.status = CLASS_STATUS.INITIALIZING;
+    this.classLock = new ClassLock();
+    this.classLock.lock(thread, onInitialized);
+
     // has static initializer
     if (this.methods["<clinit>()V"]) {
-      this.status = CLASS_STATUS.INITIALIZING;
       onDefer && onDefer();
-
-      onInitialized && this.onInitCallbacks.push(onInitialized);
       thread.invokeStackFrame(
         new InternalStackFrame(this, this.methods["<clinit>()V"], 0, [], () => {
           this.status = CLASS_STATUS.INITIALIZED;
-          this.onInitCallbacks.forEach((cb) => cb());
-          this.onInitCallbacks = [];
-          this.initThread = undefined;
+          this.classLock?.release();
         })
       );
       return { isDefer: true };
@@ -756,6 +880,7 @@ export class ReferenceClassData extends ClassData {
 
     this.status = CLASS_STATUS.INITIALIZED;
     onInitialized && onInitialized();
+    this.classLock.release();
     return { result: this };
   }
 
@@ -793,29 +918,13 @@ export class ReferenceClassData extends ClassData {
     return superClass.checkCast(castTo);
   }
 
-  // #region used for temp indy hack
-
-  getAnonymousInnerId(): number {
-    return this.anonymousInnerId++;
+  getProtectionDomain(): JvmObject | null {
+    return this.protectionDomain;
   }
 
-  nestMember(cls: ReferenceClassData) {
-    this.nestedMembers.push(cls);
+  _addAttribute(attr: IAttribute) {
+    this.attributes[attr.name] = attr;
   }
-
-  nestHost(cls: ReferenceClassData) {
-    this.nestedHost = cls;
-  }
-
-  getNestedMembers(): ReferenceClassData[] {
-    return this.nestedMembers;
-  }
-
-  getNestedHost(): ReferenceClassData {
-    return this.nestedHost;
-  }
-
-  // #endregion
 }
 
 export class ArrayClassData extends ClassData {

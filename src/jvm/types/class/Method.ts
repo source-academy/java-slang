@@ -1,6 +1,6 @@
+import { OPCODE } from "../../../ClassFile/constants/instructions";
 import { MethodInfo, METHOD_FLAGS } from "../../../ClassFile/types/methods";
 import { ConstantPool } from "../../constant-pool";
-import { NativeStackFrame, JavaStackFrame } from "../../stackframe";
 import Thread from "../../thread";
 import {
   attrInfo2Interface,
@@ -13,10 +13,22 @@ import {
   ErrorResult,
   checkSuccess,
 } from "../Result";
-import { JvmObject } from "../reference/Object";
-import { Code, IAttribute } from "./Attributes";
+import { JvmArray } from "../reference/Array";
+import { JavaType, JvmObject } from "../reference/Object";
+import {
+  Code,
+  Exceptions,
+  IAttribute,
+  NestHost,
+  Signature,
+} from "./Attributes";
 import { ReferenceClassData, ArrayClassData, ClassData } from "./ClassData";
-import { ConstantUtf8 } from "./Constants";
+import {
+  ConstantClass,
+  ConstantMethodref,
+  ConstantNameAndType,
+  ConstantUtf8,
+} from "./Constants";
 
 export interface MethodHandler {
   startPc: number;
@@ -31,9 +43,12 @@ export class Method {
   private accessFlags: number;
   private name: string;
   private descriptor: string;
+  private attributes: { [attributeName: string]: IAttribute } = {};
 
   private static reflectMethodClass: ReferenceClassData | null = null;
   private static reflectConstructorClass: ReferenceClassData | null = null;
+  private bridgeCounter = 0;
+
   private javaObject?: JvmObject;
   private slot: number;
 
@@ -42,14 +57,15 @@ export class Method {
     accessFlags: number,
     name: string,
     descriptor: string,
-    attributes: { [attributeName: string]: IAttribute[] },
+    attributes: { [attributeName: string]: IAttribute },
     slot: number
   ) {
     this.cls = cls;
-    this.code = (attributes["Code"]?.[0] as Code) ?? null;
+    this.code = (attributes["Code"] as Code) ?? null;
     this.accessFlags = accessFlags;
     this.name = name;
     this.descriptor = descriptor;
+    this.attributes = attributes;
     this.slot = slot;
   }
 
@@ -145,19 +161,62 @@ export class Method {
 
     // create exception class array
     const exceptionTypes = caCls.instantiate();
-    exceptionTypes.initArray(0, []);
+    const exceptions = this.attributes["Exceptions"] as Exceptions;
+    let err;
+    if (exceptions) {
+      exceptionTypes.initArray(
+        exceptions.exceptionTable.length,
+        exceptions.exceptionTable.map((exceptionClass) => {
+          const res = exceptionClass.resolve();
+          if (checkError(res)) {
+            err = res;
+            return null;
+          }
+          return res.result.getJavaObject();
+        })
+      );
+    } else {
+      exceptionTypes.initArray(0, []);
+    }
+
+    if (err) {
+      return err;
+    }
 
     // modifiers
     const modifiers = this.accessFlags;
 
     // signature
-    const signature = null;
+    let signature = this.attributes["Signature"]
+      ? thread
+          .getJVM()
+          .getInternedString(
+            (this.attributes["Signature"] as Signature).signature
+          )
+      : null;
 
     // annotations
-    const annotations = null;
+    const baRes = loader.getClass("[B");
+    if (checkError(baRes)) {
+      return baRes;
+    }
+    const baCls = baRes.result as ArrayClassData;
+    const annotations = baCls.instantiate() as JvmArray;
+    annotations.initArray(0, []);
+    const anno = this.attributes["RuntimeVisibleAnnotations"];
+    if (anno) {
+      // convert attribute back to byte array
+      console.warn("reflected method annotations not implemented");
+    }
 
     // parameter annotations
-    const parameterAnnotations = null;
+    const parameterAnnotations = baCls.instantiate() as JvmArray;
+    parameterAnnotations.initArray(0, []);
+    const pAnno = this.attributes["RuntimeVisibleParameterAnnotations"];
+    if (pAnno) {
+      // convert attribute back to byte array
+      console.warn("reflected method annotations not implemented");
+    }
 
     let javaObject: JvmObject;
 
@@ -341,39 +400,144 @@ export class Method {
     return getArgs(thread, this.descriptor, this.checkNative());
   }
 
-  getBridgeMethod() {
-    return (thread: Thread, returnOffset: number) => {
-      let sf;
+  generateBridgeMethod() {
+    const isStatic = this.checkStatic();
+    const bridgeDescriptor = isStatic
+      ? this.descriptor
+      : `(${this.cls.getClassname()};${this.descriptor.slice(1)}`;
 
-      const args = this.getArgs(thread);
-      let locals;
+    const pdesc = parseMethodDescriptor(this.descriptor);
+    let maxStack = 0;
+    let maxLocals = 0;
 
-      // push object for non static invokes
-      if (!this.checkStatic()) {
-        const obj = thread.popStack();
-        if (obj === null) {
-          thread.throwNewException("java/lang/NullPointerException", "");
-          return;
-        }
-        locals = [obj, ...args];
-      } else {
-        locals = args;
+    // #region build bytecode
+    let bytecode = [];
+    let constantIdx = 0;
+    // push args
+    if (!isStatic) {
+      bytecode.push(OPCODE.ALOAD_0);
+      maxStack++;
+      maxLocals++;
+    }
+    for (const arg of pdesc.args) {
+      let stacksize = 1;
+      switch (arg.type) {
+        case JavaType.byte:
+        case JavaType.char:
+        case JavaType.short:
+        case JavaType.boolean:
+        case JavaType.int:
+          bytecode.push(OPCODE.ILOAD);
+          break;
+        case JavaType.double:
+          bytecode.push(OPCODE.DLOAD);
+          stacksize++;
+          break;
+        case JavaType.float:
+          bytecode.push(OPCODE.FLOAD);
+          break;
+        case JavaType.long:
+          bytecode.push(OPCODE.LLOAD);
+          stacksize++;
+          break;
+        case JavaType.array:
+        case JavaType.reference:
+          bytecode.push(OPCODE.ALOAD);
+          break;
+        case JavaType.void:
+          throw new Error("void type in method descriptor");
       }
+      bytecode.push(maxLocals);
+      maxStack += stacksize;
+      maxLocals += stacksize;
+    }
 
-      if (this.checkNative()) {
-        sf = new NativeStackFrame(
-          this.cls,
-          this,
-          0,
-          locals,
-          returnOffset,
-          thread.getJVM().getJNI()
-        );
+    // invoke original method
+    bytecode.push(isStatic ? OPCODE.INVOKESTATIC : OPCODE.INVOKESPECIAL);
+    constantIdx = bytecode.length;
+    let index = this.cls.getMethodConstantIndex(this);
+    if (index <= 0) {
+      const nc = new ConstantUtf8(this.cls, this.name);
+      const dc = new ConstantUtf8(this.cls, this.descriptor);
+      const nt = new ConstantNameAndType(this.cls, nc, dc);
+      this.cls.insertConstant(nc);
+      this.cls.insertConstant(dc);
+      this.cls.insertConstant(nt);
+
+      const cnc = new ConstantUtf8(this.cls, this.cls.getClassname());
+      const cc = ConstantClass.asResolved(this.cls, cnc, this.cls);
+      this.cls.insertConstant(cnc);
+      this.cls.insertConstant(cc);
+
+      const mc = ConstantMethodref.asResolved(this.cls, cc, nt, this);
+      index = this.cls.insertConstant(mc);
+    }
+    bytecode.push(index);
+
+    // return
+    switch (pdesc.ret.type) {
+      case JavaType.byte:
+      case JavaType.char:
+      case JavaType.short:
+      case JavaType.boolean:
+      case JavaType.int:
+        bytecode.push(OPCODE.IRETURN);
+        maxStack = Math.max(maxStack, 1);
+        break;
+      case JavaType.double:
+        bytecode.push(OPCODE.DRETURN);
+        maxStack = Math.max(maxStack, 2);
+        break;
+      case JavaType.float:
+        bytecode.push(OPCODE.FRETURN);
+        maxStack = Math.max(maxStack, 1);
+        break;
+      case JavaType.long:
+        bytecode.push(OPCODE.LRETURN);
+        maxStack = Math.max(maxStack, 2);
+        break;
+      case JavaType.array:
+      case JavaType.reference:
+        bytecode.push(OPCODE.ARETURN);
+        maxStack = Math.max(maxStack, 1);
+        break;
+      case JavaType.void:
+    }
+
+    const ab = new ArrayBuffer(bytecode.length + 1);
+    const dv = new DataView(ab);
+    let dvidx = 0;
+    for (let i = 0; i < bytecode.length; i++) {
+      if (i !== constantIdx) {
+        dv.setUint8(dvidx++, bytecode[i]);
       } else {
-        sf = new JavaStackFrame(this.cls, this, 0, locals, returnOffset);
+        dv.setUint16(dvidx, bytecode[i]);
+        dvidx += 2;
       }
-      thread.invokeStackFrame(sf);
-    };
+    }
+    // #endregion
+
+    const bridge = new Method(
+      this.cls,
+      METHOD_FLAGS.ACC_SYNTHETIC | METHOD_FLAGS.ACC_STATIC,
+      this.name + "$" + this.bridgeCounter++,
+      bridgeDescriptor,
+      {
+        Code: {
+          name: "Code",
+          maxStack: maxStack,
+          maxLocals: maxLocals,
+          codeLength: dv.buffer.byteLength,
+          code: dv,
+          exceptionTableLength: 0,
+          exceptionTable: [],
+          attributes: {},
+        } as Code,
+      },
+      -1
+    );
+
+    return bridge;
   }
 
   /**
@@ -436,43 +600,84 @@ export class Method {
   /**
    * Checks if this method is accessible to a given class through a symbolic reference.
    */
-  checkAccess(accessingClass: ClassData, symbolicClass: ClassData) {
+  checkAccess(
+    accessingClass: ClassData,
+    symbolicClass: ClassData
+  ): ImmediateResult<Method> {
     const declaringCls = this.getClass();
+    const illegalAccessResult = {
+      exceptionCls: "java/lang/IllegalAccessError",
+      msg: "",
+    };
+    const successResult = { result: this };
 
     // this is public
     if (this.checkPublic()) {
-      return true;
+      return successResult;
     }
 
     const isSamePackage =
       declaringCls.getPackageName() === accessingClass.getPackageName();
 
     if (this.checkDefault()) {
-      return isSamePackage;
+      return isSamePackage ? { result: this } : illegalAccessResult;
     }
 
     if (this.checkProtected()) {
       if (isSamePackage) {
-        return true;
+        return successResult;
       }
 
       // this is protected and is declared in a class C, and D is either a subclass of C or C itself
       if (!accessingClass.checkCast(declaringCls)) {
-        return false;
+        return illegalAccessResult;
       }
 
       // if this is not static, then the symbolic reference to this must contain a symbolic reference to a class T,
       // such that T is either a subclass of D, a superclass of D, or D itself.
-      return (
-        this.checkStatic() ||
+      return this.checkStatic() ||
         declaringCls.checkCast(symbolicClass) ||
         symbolicClass.checkCast(declaringCls)
-      );
+        ? successResult
+        : illegalAccessResult;
     }
 
     // R is private
-    // FIXME: test inner class
-    return accessingClass === declaringCls;
+    if (accessingClass === declaringCls) {
+      return successResult;
+    }
+
+    // nest mate test (se11)
+    // There is currently a bug with lambdas invoking the private bytecode directly.
+    // We add nest information so the invocation succeeds.
+    // https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-5.html#jvms-5.4.4
+    const nestHostAttrD = declaringCls.getAttribute("NestHost") as NestHost;
+    let nestHostD;
+    if (!nestHostAttrD) {
+      nestHostD = declaringCls;
+    } else {
+      const resolutionResult = nestHostAttrD.hostClass.resolve();
+      if (checkError(resolutionResult)) {
+        return resolutionResult;
+      }
+      nestHostD = resolutionResult.result;
+    }
+    const nestHostArrC = accessingClass.getAttribute("NestHost") as NestHost;
+    let nestHostC;
+    if (!nestHostArrC) {
+      nestHostC = accessingClass;
+    } else {
+      const resolutionResult = nestHostArrC.hostClass.resolve();
+      if (checkError(resolutionResult)) {
+        return resolutionResult;
+      }
+      nestHostC = resolutionResult.result;
+    }
+    if (nestHostC === nestHostD) {
+      return successResult;
+    }
+
+    return illegalAccessResult;
   }
 
   _getCode() {

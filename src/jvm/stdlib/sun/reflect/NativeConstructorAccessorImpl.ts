@@ -35,6 +35,10 @@ const functions = {
       }
 
       const retObj = clsRef.instantiate();
+      // FIXME: unbox args if required
+      if (paramArr) {
+        console.error("newInstance0: Auto unboxing not implemented");
+      }
       const params = [retObj, ...(paramArr ? paramArr.getJsArray() : [])];
       thread.invokeStackFrame(
         new InternalStackFrame(clsRef, methodRef, 0, params, () => {

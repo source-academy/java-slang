@@ -2,13 +2,21 @@ import {
   ConstantClassInfo,
   ConstantUtf8Info,
 } from "../../../../ClassFile/types/constants";
+import AbstractClassLoader from "../../../ClassLoader/AbstractClassLoader";
 import Thread from "../../../thread";
-import { ErrorResult, checkError, checkSuccess } from "../../../types/Result";
+import {
+  ErrorResult,
+  checkSuccess,
+  checkError,
+  SuccessResult,
+} from "../../../types/Result";
+import { NestHost } from "../../../types/class/Attributes";
 import {
   ReferenceClassData,
   ArrayClassData,
   ClassData,
 } from "../../../types/class/ClassData";
+import { ConstantClass, ConstantUtf8 } from "../../../types/class/Constants";
 import { Field } from "../../../types/class/Field";
 import { JvmArray } from "../../../types/reference/Array";
 import { JvmObject } from "../../../types/reference/Object";
@@ -21,11 +29,19 @@ function getFieldInfo(
   obj: JvmObject,
   offset: bigint
 ): any {
+  // const fieldName: string;
+  // const objBase: any;
+
   // obj is a class obj
   const objCls = obj.getClass();
 
+  // unsafe should be loaded at initialization
+  // also init unsafe at JVM startup?
+  const unsafeCls = unsafe.getClass();
+
   if (objCls.getClassname() === "java/lang/Object") {
-    throw new Error("not implemented");
+    const objBase = obj.getNativeField("staticFieldBase") as ReferenceClassData;
+    return [objBase, objBase.getFieldFromVmIndex(Number(offset))];
   } else if (objCls.checkArray()) {
     // obj is an array. offset represents index * unit space
     const compCls = objCls.getComponentClass();
@@ -94,6 +110,11 @@ function unsafeCompareAndSwap(
   expected: any,
   newValue: any
 ): number {
+  // obj: Class object w/ field reflectionData
+  // offset: field slot of field reflectionData
+  // expected: SoftReference object
+  // newValue: SoftReference object
+
   const fi = getFieldInfo(thread, unsafe, obj, offset);
   const objBase = fi[0];
   const ref = fi[1];
@@ -137,9 +158,23 @@ const functions = {
       "objectFieldOffset: not checking if slot is used to access fields not declared in this class"
     );
 
-    thread.returnStackFrame64(BigInt(slot));
-  },
+    // #region debug
+    const fstr = field._getField(
+      "name",
+      "Ljava/lang/String;",
+      "java/lang/reflect/Field"
+    );
+    const cArr = (fstr as JvmObject)._getField(
+      "value",
+      "[C",
+      "java/lang/String"
+    );
+    const chars = (cArr as JvmArray).getJsArray();
+    // #endregion
 
+    thread.returnStackFrame64(BigInt(slot as number));
+  },
+  // Used for bitwise operations
   "arrayIndexScale(Ljava/lang/Class;)I": (thread: Thread, locals: any[]) => {
     const clsObj = locals[1] as JvmObject;
     const clsRef = clsObj.getNativeField("classRef") as ReferenceClassData;
@@ -273,6 +308,20 @@ const functions = {
         return;
       }
 
+      // add nest information
+      if (!hostClass.getAttribute("NestHost")) {
+        const classConstant = ConstantClass.asResolved(
+          hostClass,
+          new ConstantUtf8(hostClass, hostClass.getClassname()),
+          hostClass
+        );
+        const nestHostAttr: NestHost = {
+          hostClass: classConstant,
+          name: "NestHost",
+        };
+        newClass._addAttribute(nestHostAttr);
+      }
+
       const clsObj = newClass.getJavaObject();
       thread.returnStackFrame(clsObj);
     },
@@ -284,12 +333,13 @@ const functions = {
       const byteArray = locals[2] as JvmArray;
       const offset = locals[3] as number;
       const len = locals[4] as number;
+      const loaderObj = locals[5] as JvmObject;
+      const protectionDomain = locals[6] as JvmObject;
 
-      let loader = thread.getJVM().getBootstrapClassLoader();
-      // load with provided loader
-      if (locals[5]) {
-        throw new Error("loaderObject to loader not implemnented");
-      }
+      let loader = loaderObj
+        ? (loaderObj.getNativeField("loader") as AbstractClassLoader)
+        : thread.getJVM().getBootstrapClassLoader();
+
       const bytecode = new DataView(
         new Uint8Array(byteArray.getJsArray()).buffer
       );
@@ -302,6 +352,7 @@ const functions = {
     thread: Thread,
     locals: any[]
   ) => {
+    const unsafe = locals[0] as JvmObject;
     const clsObj = locals[1] as JvmObject;
     const cls = clsObj.getNativeField("classRef") as ClassData;
     const initRes = cls.initialize(thread);
@@ -316,6 +367,56 @@ const functions = {
     }
 
     return;
+  },
+
+  "shouldBeInitialized(Ljava/lang/Class;)Z": (
+    thread: Thread,
+    locals: any[]
+  ) => {
+    const clsObj = locals[1] as JvmObject;
+    const cls = clsObj.getNativeField("classRef") as ClassData;
+    thread.returnStackFrame(cls.isInitialized() ? 1 : 0);
+  },
+
+  "staticFieldOffset(Ljava/lang/reflect/Field;)J": (
+    thread: Thread,
+    locals: any[]
+  ) => {
+    const field = locals[1] as JvmObject;
+    const slot = field._getField(
+      "slot",
+      "I",
+      "java/lang/reflect/Field"
+    ) as number;
+    const cls = field._getField(
+      "clazz",
+      "Ljava/lang/Class;",
+      "java/lang/reflect/Field"
+    ) as JvmObject;
+    const clsRef = cls.getNativeField("classRef") as ReferenceClassData;
+    const jsField = clsRef.getFieldFromSlot(slot);
+    thread.returnStackFrame64(
+      BigInt(jsField ? clsRef.getFieldVmIndex(jsField) : -1)
+    );
+  },
+
+  "staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;": (
+    thread: Thread,
+    locals: any[]
+  ) => {
+    const field = locals[1] as JvmObject;
+    const javaClass = field._getField(
+      "clazz",
+      "Ljava/lang/Class;",
+      "java/lang/reflect/Field"
+    ) as JvmObject;
+    const cls = javaClass.getNativeField("classRef") as ReferenceClassData;
+    const objRes = cls
+      .getLoader()
+      .getClass("java/lang/Object") as SuccessResult<ClassData>;
+    const jobj = objRes.result.instantiate();
+    jobj.putNativeField("staticFieldBase", cls);
+    thread.returnStackFrame(jobj);
   },
 };
 

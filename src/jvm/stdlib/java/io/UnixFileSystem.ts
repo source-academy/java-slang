@@ -11,6 +11,33 @@ const functions = {
 
     thread.returnStackFrame(js2jString(thread.getClass().getLoader(), pathStr));
   },
+
+  "initIDs()V": (thread: Thread, locals: any[]) => {
+    thread.returnStackFrame();
+  },
+
+  "getBooleanAttributes0(Ljava/io/File;)I": (thread: Thread, locals: any[]) => {
+    // const unixFS = locals[0];
+    // const file = locals[1] as JvmObject;
+
+    console.warn(
+      "Native method not implemented: getBooleanAttributes0(Ljava/io/File;)I"
+    );
+    thread.returnStackFrame(0);
+  },
+
+  "list(Ljava/io/File;)[Ljava/lang/String;": (
+    thread: Thread,
+    locals: any[]
+  ) => {
+    // const unixFS = locals[0];
+    // const file = locals[1] as JvmObject;
+
+    console.warn(
+      "Native method not implemented: list(Ljava/io/File;)[Ljava/lang/String;"
+    );
+    thread.returnStackFrame(null);
+  },
 };
 
 export default functions;

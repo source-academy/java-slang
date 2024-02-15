@@ -345,7 +345,10 @@ export class TestSystem extends AbstractSystem {
   stderr(message: string): void {
     throw new Error("Method not implemented.");
   }
-  readFile(path: string): ClassFile {
+  readFile(path: string): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
+  readFileSync(path: string): ClassFile {
     throw new Error("Method not implemented.");
   }
 }
@@ -406,6 +409,7 @@ export class TestJVM extends JVM {
     const cArr = cArrCls.instantiate() as JvmArray;
     const jsArr = [];
     for (let i = 0; i < str.length; i++) {
+      // @ts-ignore
       jsArr.push(str.charCodeAt(i));
     }
     cArr.initArray(str.length, jsArr);
@@ -450,8 +454,8 @@ export class TestJVM extends JVM {
 }
 
 export const setupTest = () => {
-  const jni = new JNI("stdlib");
   const testSystem = new TestSystem();
+  const jni = new JNI("stdlib", testSystem);
   const testLoader = new TestClassLoader(testSystem, "", null);
 
   // #region create dummy classes

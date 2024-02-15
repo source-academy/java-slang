@@ -1,8 +1,6 @@
 import { ThreadStatus } from "./constants";
 import Thread from "./thread";
 import { Result } from "./types/Result";
-import { JavaType } from "./types/reference/Object";
-import { parseFieldDescriptor } from "./utils";
 import AbstractSystem from "./utils/AbstractSystem";
 
 type Lib = {

@@ -1,39 +1,38 @@
 import { ClassFile } from "../../ClassFile/types";
 import AbstractSystem from "./AbstractSystem";
-import parseBin from "./disassembler";
 
 export default class SourceSystem extends AbstractSystem {
-  private stdoutBuffer: string = "";
-  private stderrBuffer: string = "";
+  private readClassFile: (path: string) => ClassFile;
+  private readNatives: (path: string) => Promise<any>;
+  private stdoutPipe: (message: string) => void;
+  private stderrPipe: (message: string) => void;
+
+  constructor(
+    readClassFile: (path: string) => ClassFile,
+    readNatives: (path: string) => Promise<any>,
+    stdoutPipe: (message: string) => void,
+    stderrPipe: (message: string) => void
+  ) {
+    super();
+    this.readClassFile = readClassFile;
+    this.readNatives = readNatives;
+    this.stdoutPipe = stdoutPipe;
+    this.stderrPipe = stderrPipe;
+  }
 
   readFileSync(path: string): ClassFile {
-    const binStr = localStorage.getItem(path);
-    // @ts-ignore
-    const ab = Uint8Array.from(binStr, (x) => x.charCodeAt(0));
-    return parseBin(new DataView(ab.buffer));
+    return this.readClassFile(path);
   }
 
   readFile(path: string): Promise<any> {
-    return import("../../" + path);
+    return this.readNatives(path);
   }
 
   stdout(message: string): void {
-    if (message.endsWith("\n")) {
-      console.log(this.stdoutBuffer + message.slice(0, -1));
-      this.stdoutBuffer = "";
-      return;
-    }
-
-    this.stdoutBuffer += message;
+    this.stdoutPipe(message);
   }
 
   stderr(message: string): void {
-    if (message.endsWith("\n")) {
-      console.log(this.stderrBuffer + message.slice(0, -1));
-      this.stderrBuffer = "";
-      return;
-    }
-
-    this.stderrBuffer += message;
+    this.stderrPipe(message);
   }
 }

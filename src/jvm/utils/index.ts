@@ -12,7 +12,7 @@ import { ConstantUtf8 } from "../types/class/Constants";
 import { Field } from "../types/class/Field";
 import { JvmArray } from "../types/reference/Array";
 import { JvmObject, JavaType } from "../types/reference/Object";
-import { SuccessResult } from "./Result";
+import { SuccessResult, checkError } from "./Result";
 
 /**
  * Converts a Java String to a JS string
@@ -20,7 +20,9 @@ import { SuccessResult } from "./Result";
  */
 export const j2jsString = (str: JvmObject) => {
   return String.fromCharCode(
-    ...str._getField("value", "[C", "java/lang/String").getJsArray()
+    ...(
+      str._getField("value", "[C", "java/lang/String") as JvmArray
+    ).getJsArray()
   );
 };
 
@@ -164,36 +166,50 @@ export function getArgs(
   const methodDesc = parseMethodDescriptor(descriptor);
   const args = [];
   for (let i = methodDesc.args.length - 1; i >= 0; i--) {
+    let popResult;
     switch (methodDesc.args[i].type) {
       case "V":
         break; // should not happen
+      case "D":
+        popResult = thread.popStack64();
+        if (checkError(popResult)) {
+          break;
+        }
+        args.push(asDouble(popResult.result));
+        if (!isNative) {
+          args.push(asDouble(popResult.result));
+        }
+        break;
+      case "F":
+        popResult = thread.popStack();
+        if (checkError(popResult)) {
+          break;
+        }
+        args.push(asFloat(popResult.result));
+        break;
+      case "J":
+        popResult = thread.popStack64();
+        if (checkError(popResult)) {
+          break;
+        }
+        args.push(popResult.result);
+        if (!isNative) {
+          args.push(popResult.result);
+        }
+        break;
+      case "[":
       case "B":
       case "C":
       case "I":
       case "S":
       case "Z":
-        args.push(thread.popStack());
-        break;
-      case "D":
-        const double = asDouble(thread.popStack64());
-        args.push(double);
-        if (!isNative) {
-          args.push(double);
+      default: // also references + arrays
+        popResult = thread.popStack();
+        if (checkError(popResult)) {
+          break;
         }
+        args.push(popResult.result);
         break;
-      case "F":
-        args.push(asFloat(thread.popStack()));
-        break;
-      case "J":
-        const long = asDouble(thread.popStack64());
-        args.push(long);
-        if (!isNative) {
-          args.push(long);
-        }
-        break;
-      case "[":
-      default: // references + arrays
-        args.push(thread.popStack());
     }
   }
 
@@ -266,24 +282,36 @@ export function attrInfo2Interface(
   infoArr: AttributeInfo[],
   constantPool: ConstantPool
 ) {
-  const attributes: { [attributeName: string]: IAttribute[] } = {};
+  const attributes: { [attributeName: string]: IAttribute } = {};
   // attributes
   infoArr.forEach((attr) => {
     const attrName = (
       constantPool.get(attr.attributeNameIndex) as ConstantUtf8
     ).get();
-    if (!attributes[attrName]) {
-      attributes[attrName] = [];
-    }
-    attributes[attrName].push(info2Attribute(attr, constantPool));
+    attributes[attrName] = info2Attribute(attr, constantPool);
   });
   return attributes;
 }
 
 export function autoBox(obj: any) {
+  console.warn("Auto boxing not implemented");
   return obj;
 }
 
 export function autoUnbox(obj: any) {
+  console.warn("Auto unboxing not implemented");
   return obj;
+}
+
+export function arraybuffer2string(buffer: ArrayBuffer) {
+  return String.fromCharCode(...new Uint8Array(buffer));
+}
+
+export function string2arraybuffer(str: string) {
+  var buf = new ArrayBuffer(str.length); // 2 bytes for each char
+  var bufView = new Uint8Array(buf);
+  for (var i = 0, strLen = str.length; i < strLen; i++) {
+    bufView[i] = str.charCodeAt(i);
+  }
+  return buf;
 }

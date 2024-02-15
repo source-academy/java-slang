@@ -40,6 +40,7 @@ const functions = {
       thread.invokeStackFrame(
         new InternalStackFrame(methodCls, method, 0, params, (ret, err) => {
           if (err) {
+            // FIXME: wrap exception instead
             thread.throwNewException(
               "java/lang/reflect/InvocationTargetException",
               err.exceptionCls + ": " + err.msg

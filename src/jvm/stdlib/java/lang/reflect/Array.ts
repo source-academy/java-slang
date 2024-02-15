@@ -1,9 +1,9 @@
 import Thread from "../../../../thread";
-import { checkError } from "../../../../types/Result";
 import {
   ReferenceClassData,
   ArrayClassData,
 } from "../../../../types/class/ClassData";
+import { checkError } from "../../../../types/Result";
 import { JvmObject } from "../../../../types/reference/Object";
 
 const functions = {
@@ -20,6 +20,9 @@ const functions = {
 
     const arrClsRes = clsRef.getLoader().getClass(clsName);
     if (checkError(arrClsRes)) {
+      console.error(
+        "init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V: Method not found"
+      );
       thread.throwNewException(
         "java/lang/ClassNotFoundException",
         arrClsRes.msg

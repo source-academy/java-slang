@@ -1,9 +1,40 @@
 import { CONSTANT_TAG } from "../ClassFile/constants/constants";
-import { ConstantInfo, ConstantIntegerInfo, ConstantFloatInfo, ConstantLongInfo, ConstantDoubleInfo, ConstantUtf8Info, ConstantStringInfo, ConstantNameAndTypeInfo, ConstantMethodTypeInfo, ConstantClassInfo, ConstantInvokeDynamicInfo, ConstantFieldrefInfo, ConstantMethodrefInfo, ConstantInterfaceMethodrefInfo, ConstantMethodHandleInfo } from "../ClassFile/types/constants";
+import {
+  ConstantInfo,
+  ConstantIntegerInfo,
+  ConstantFloatInfo,
+  ConstantLongInfo,
+  ConstantDoubleInfo,
+  ConstantUtf8Info,
+  ConstantStringInfo,
+  ConstantNameAndTypeInfo,
+  ConstantMethodTypeInfo,
+  ConstantClassInfo,
+  ConstantInvokeDynamicInfo,
+  ConstantFieldrefInfo,
+  ConstantMethodrefInfo,
+  ConstantInterfaceMethodrefInfo,
+  ConstantMethodHandleInfo,
+} from "../ClassFile/types/constants";
 import { ClassData } from "./types/class/ClassData";
-import { Constant, ConstantInteger, ConstantFloat, ConstantLong, ConstantDouble, ConstantUtf8, ConstantString, ConstantNameAndType, ConstantMethodType, ConstantClass, ConstantInvokeDynamic, ConstantFieldref, ConstantMethodref, ConstantInterfaceMethodref, ConstantMethodHandle } from "./types/class/Constants";
+import {
+  Constant,
+  ConstantInteger,
+  ConstantFloat,
+  ConstantLong,
+  ConstantDouble,
+  ConstantUtf8,
+  ConstantString,
+  ConstantNameAndType,
+  ConstantMethodType,
+  ConstantClass,
+  ConstantInvokeDynamic,
+  ConstantFieldref,
+  ConstantMethodref,
+  ConstantInterfaceMethodref,
+  ConstantMethodHandle,
+} from "./types/class/Constants";
 import { JvmArray } from "./types/reference/Array";
-
 
 export class ConstantPool {
   private pool: Constant[];
@@ -181,5 +212,13 @@ export class ConstantPool {
 
   get(index: number): Constant {
     return this.pool[index];
+  }
+
+  insert(constant: Constant): number {
+    return this.pool.push(constant) - 1;
+  }
+
+  size(): number {
+    return this.pool.length;
   }
 }

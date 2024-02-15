@@ -17,6 +17,7 @@ const doPrivileged = (thread: Thread, locals: any[]) => {
     thread.throwNewException(methodRes.exceptionCls, methodRes.msg);
     return null;
   }
+
   const methodRef = methodRes.result as Method;
   thread.invokeStackFrame(
     new InternalStackFrame(
@@ -25,7 +26,6 @@ const doPrivileged = (thread: Thread, locals: any[]) => {
       0,
       [action],
       (ret: JvmObject) => {
-        thread.returnStackFrame();
         thread.returnStackFrame(ret);
       }
     )
@@ -36,6 +36,9 @@ const functions = {
     doPrivileged,
 
   "doPrivileged(Ljava/security/PrivilegedExceptionAction;)Ljava/lang/Object;":
+    doPrivileged,
+
+  "doPrivileged(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;":
     doPrivileged,
 
   "doPrivileged(Ljava/security/PrivilegedAction;)Ljava/lang/Object;": (
@@ -85,6 +88,16 @@ const functions = {
         thread.returnStackFrame(ret);
       })
     );
+  },
+
+  "getStackAccessControlContext()Ljava/security/AccessControlContext;": (
+    thread: Thread,
+    locals: any[]
+  ) => {
+    console.warn(
+      "getStackAccessControlContext()Ljava/security/AccessControlContext; not implemented"
+    );
+    thread.returnStackFrame(null);
   },
 };
 export default functions;

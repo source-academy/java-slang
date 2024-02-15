@@ -5,6 +5,10 @@ import { JvmObject } from "../../../types/reference/Object";
 import { j2jsString } from "../../../utils";
 
 const functions = {
+  "registerNatives()V": (thread: Thread, locals: any[]) => {
+    thread.returnStackFrame();
+  },
+
   "findLoadedClass0(Ljava/lang/String;)Ljava/lang/Class;": (
     thread: Thread,
     locals: any[]

@@ -15,6 +15,8 @@ const functions = {
     thread: Thread,
     locals: any[]
   ) => {
+    const clsObj = locals[0] as JvmObject;
+    console.warn("Class.desiredAssertionStatus0: assertions disabled");
     thread.returnStackFrame(0);
   },
 
@@ -277,9 +279,7 @@ const functions = {
       return;
     }
 
-    const innerAttrib = classRef.getAttribute(
-      "InnerClasses"
-    )?.[0] as InnerClasses;
+    const innerAttrib = classRef.getAttribute("InnerClasses") as InnerClasses;
     if (innerAttrib) {
       for (const cls of innerAttrib.classes) {
         if (cls.innerClass.getClassName() === classRef.getClassname()) {
@@ -323,6 +323,13 @@ const functions = {
       return;
     }
 
+    const attrib = thisCls.getAttribute("EnclosingMethod");
+    if (attrib) {
+      // TODO: get enclosing method from attribute enclosingmethod
+      console.error(
+        "native method missing: Class.getEnclosingMethod0() for reference class"
+      );
+    }
     thread.returnStackFrame(null);
   },
 
@@ -340,6 +347,7 @@ const functions = {
     }
     const clsArrCls = clsArrRes.result as ArrayClassData;
     const clsArr = clsArrCls.instantiate();
+    const jsClsArr = [];
 
     if (thisCls.checkPrimitive() || thisCls.checkArray()) {
       clsArr.initArray(0);
@@ -347,8 +355,32 @@ const functions = {
       return;
     }
 
-    const innerclasses: any[] = [];
-    clsArr.initArray(innerclasses.length, innerclasses);
+    const innerclassesAttr = thisCls.getAttribute(
+      "InnerClasses"
+    ) as InnerClasses;
+    if (innerclassesAttr) {
+      for (const cls of innerclassesAttr.classes) {
+        if (!cls.outerClass) continue;
+
+        const outerRes = cls.outerClass.resolve();
+        if (!checkSuccess(outerRes)) {
+          continue;
+        }
+        if (outerRes.result !== thisCls) continue;
+        const innerRes = cls.innerClass.resolve();
+        if (!checkSuccess(innerRes)) {
+          if (checkError(innerRes)) {
+            thread.throwNewException(innerRes.exceptionCls, innerRes.msg);
+          }
+          return;
+        }
+        jsClsArr.push(innerRes.result.getJavaObject());
+      }
+      clsArr.initArray(jsClsArr.length, jsClsArr);
+    } else {
+      clsArr.initArray(0);
+    }
+
     thread.returnStackFrame(clsArr);
   },
 
@@ -361,6 +393,15 @@ const functions = {
       return;
     }
     thread.returnStackFrame(obj.getClass().checkCast(thisCls) ? 1 : 0);
+  },
+
+  "getProtectionDomain0()Ljava/security/ProtectionDomain;": (
+    thread: Thread,
+    locals: any[]
+  ) => {
+    thread.returnStackFrame(
+      (locals[0] as JvmObject).getNativeField("classRef").getProtectionDomain()
+    );
   },
 };
 

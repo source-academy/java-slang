@@ -505,7 +505,7 @@ describe("D2l", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(2);
-    expect(lastFrame.operandStack[0]).toBe(BigInt(-9223372036854775808));
+    expect(lastFrame.operandStack[0]).toBe(BigInt("-9223372036854775808"));
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
