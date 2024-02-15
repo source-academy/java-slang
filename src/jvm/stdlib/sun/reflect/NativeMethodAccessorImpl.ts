@@ -25,11 +25,6 @@ const functions = {
       if (!method) {
         throw new Error("Invalid slot?");
       }
-      const retType = methodObj._getField(
-        "returnType",
-        "Ljava/lang/Class;",
-        "java/lang/reflect/Method"
-      ) as JvmObject;
 
       const paramJavaArray = locals[2] as JvmArray;
       let params: any[] = [];

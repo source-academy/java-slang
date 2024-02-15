@@ -1,6 +1,5 @@
 import { ClassFile } from "../../../ClassFile/types";
 import { AttributeInfo } from "../../../ClassFile/types/attributes";
-import { ConstantUtf8Info } from "../../../ClassFile/types/constants";
 import { readAttribute } from "./utils/readAttributes";
 import { readConstants } from "./utils/readConstants";
 import { readField } from "./utils/readField";
@@ -74,10 +73,6 @@ export default function parseBin(view: DataView) {
       view,
       offset
     );
-    const fieldName = cls.constantPool[result.nameIndex] as ConstantUtf8Info;
-    const fieldDesc = cls.constantPool[
-      result.descriptorIndex
-    ] as ConstantUtf8Info;
     cls.fields.push(result);
     offset = resultOffset;
   }

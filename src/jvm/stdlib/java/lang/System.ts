@@ -6,7 +6,7 @@ import { JvmArray } from "../../../types/reference/Array";
 import { JvmObject } from "../../../types/reference/Object";
 
 const functions = {
-  "registerNatives()V": (thread: Thread, locals: any[]) => {
+  "registerNatives()V": (thread: Thread) => {
     thread.returnStackFrame();
   },
   "arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V": (
@@ -107,7 +107,6 @@ const functions = {
       "sun.jnu.encoding": "UTF-8",
     };
 
-    const loader = thread.getClass().getLoader();
     const propClass = props.getClass();
     const method = propClass.getMethod(
       "setProperty(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;"
@@ -183,12 +182,12 @@ const functions = {
     thread.returnStackFrame();
   },
 
-  "currentTimeMillis()J": (thread: Thread, locals: any[]) => {
+  "currentTimeMillis()J": (thread: Thread) => {
     const time = BigInt(Date.now());
     thread.returnStackFrame64(time);
   },
 
-  "identityHashCode(Ljava/lang/Object;)I": (thread: Thread, locals: any[]) => {
+  "identityHashCode(Ljava/lang/Object;)I": (thread: Thread) => {
     console.warn(
       "System.identityHashCode(Ljava/lang/Object;)I not implemented"
     );

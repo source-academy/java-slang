@@ -1,7 +1,4 @@
-import {
-  CodeAttribute,
-  AttributeInfo,
-} from "../../../../ClassFile/types/attributes";
+import { AttributeInfo } from "../../../../ClassFile/types/attributes";
 import {
   ConstantInfo,
   ConstantUtf8Info,
@@ -24,7 +21,6 @@ export function readMethod(
   offset += 2;
 
   const attributes = [];
-  let code: CodeAttribute | null | undefined;
 
   for (let i = 0; i < attributesCount; i += 1) {
     const { result, offset: resultOffset } = readAttribute(

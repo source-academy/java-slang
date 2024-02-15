@@ -15,7 +15,6 @@ const functions = {
     thread: Thread,
     locals: any[]
   ) => {
-    const clsObj = locals[0] as JvmObject;
     console.warn("Class.desiredAssertionStatus0: assertions disabled");
     thread.returnStackFrame(0);
   },
@@ -46,13 +45,12 @@ const functions = {
     locals: any[]
   ) => {
     const clsObj = locals[0] as JvmObject;
-    const publicOnly = locals[1];
     const clsRef = clsObj.getNativeField("classRef") as ClassData;
     const fields = clsRef.getDeclaredFields();
 
     const result = [];
 
-    for (const [name, field] of Object.entries(fields)) {
+    for (const [_, field] of Object.entries(fields)) {
       const refRes = field.getReflectedObject(thread);
       if (checkError(refRes)) {
         thread.returnStackFrame();
@@ -140,7 +138,6 @@ const functions = {
       const nameJStr = locals[0] as JvmObject;
       const initialize = (locals[1] as number) === 1;
       const loaderObj = locals[2] as JvmObject;
-      const callerClassObj = locals[3] as JvmObject;
 
       const name = j2jsString(nameJStr).replaceAll(".", "/");
 

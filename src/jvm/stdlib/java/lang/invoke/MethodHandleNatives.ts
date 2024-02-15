@@ -256,7 +256,6 @@ const functions = {
         ? j2jsString(locals[2] as JvmObject)
         : locals[2];
       const matchFlags = locals[3] as number;
-      const caller = locals[4] as JvmObject;
       let skip = locals[5] as number;
       const results = (locals[6] as JvmArray).getJsArray();
       let matched = 0;

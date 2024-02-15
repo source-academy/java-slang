@@ -35,10 +35,6 @@ function getFieldInfo(
   // obj is a class obj
   const objCls = obj.getClass();
 
-  // unsafe should be loaded at initialization
-  // also init unsafe at JVM startup?
-  const unsafeCls = unsafe.getClass();
-
   if (objCls.getClassname() === "java/lang/Object") {
     const objBase = obj.getNativeField("staticFieldBase") as ReferenceClassData;
     return [objBase, objBase.getFieldFromVmIndex(Number(offset))];
@@ -150,28 +146,8 @@ const functions = {
     thread: Thread,
     locals: any[]
   ) => {
-    const unsafe = locals[0] as JvmObject;
     const field = locals[1] as JvmObject;
     const slot = field._getField("slot", "I", "java/lang/reflect/Field");
-
-    console.warn(
-      "objectFieldOffset: not checking if slot is used to access fields not declared in this class"
-    );
-
-    // #region debug
-    const fstr = field._getField(
-      "name",
-      "Ljava/lang/String;",
-      "java/lang/reflect/Field"
-    );
-    const cArr = (fstr as JvmObject)._getField(
-      "value",
-      "[C",
-      "java/lang/String"
-    );
-    const chars = (cArr as JvmArray).getJsArray();
-    // #endregion
-
     thread.returnStackFrame64(BigInt(slot as number));
   },
   // Used for bitwise operations
@@ -271,7 +247,6 @@ const functions = {
   },
   "defineAnonymousClass(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;":
     (thread: Thread, locals: any[]) => {
-      const unsafe = locals[0] as JvmObject;
       const hostClassObj = locals[1] as JvmObject;
       const byteArray = locals[2] as JvmArray;
       const cpPatches = locals[3] as JvmArray;
@@ -328,13 +303,8 @@ const functions = {
 
   "defineClass(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;":
     (thread: Thread, locals: any[]) => {
-      const unsafe = locals[0] as JvmObject;
-      const nameObj = locals[1] as JvmObject;
       const byteArray = locals[2] as JvmArray;
-      const offset = locals[3] as number;
-      const len = locals[4] as number;
       const loaderObj = locals[5] as JvmObject;
-      const protectionDomain = locals[6] as JvmObject;
 
       let loader = loaderObj
         ? (loaderObj.getNativeField("loader") as AbstractClassLoader)
@@ -352,7 +322,6 @@ const functions = {
     thread: Thread,
     locals: any[]
   ) => {
-    const unsafe = locals[0] as JvmObject;
     const clsObj = locals[1] as JvmObject;
     const cls = clsObj.getNativeField("classRef") as ClassData;
     const initRes = cls.initialize(thread);

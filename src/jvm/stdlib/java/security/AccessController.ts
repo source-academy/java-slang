@@ -15,7 +15,7 @@ const doPrivileged = (thread: Thread, locals: any[]) => {
 
   if (!checkSuccess(methodRes)) {
     thread.throwNewException(methodRes.exceptionCls, methodRes.msg);
-    return null;
+    return;
   }
 
   const methodRef = methodRes.result as Method;
@@ -31,6 +31,7 @@ const doPrivileged = (thread: Thread, locals: any[]) => {
     )
   );
 };
+
 const functions = {
   "doPrivileged(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;":
     doPrivileged,

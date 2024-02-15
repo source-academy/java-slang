@@ -15,7 +15,6 @@ const functions = {
       "classRef"
     ) as ReferenceClassData;
     const length = locals[1] as number;
-    const shouldWrap = !clsRef.checkPrimitive() && !clsRef.checkArray();
     let clsName = "[" + clsRef.getDescriptor();
 
     const arrClsRes = clsRef.getLoader().getClass(clsName);

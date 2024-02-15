@@ -8,7 +8,6 @@ const functions = {
     const bytes = locals[1] as JvmArray;
     const offset = locals[2] as number;
     const len = locals[3] as number;
-    const append = locals[4] as boolean;
 
     const javafd = stream._getField(
       "fd",
