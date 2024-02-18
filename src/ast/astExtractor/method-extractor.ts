@@ -44,6 +44,7 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     this.body = [];
     this.visit(cst);
     return {
+      kind: "MethodDeclaration",
       methodModifier: this.modifier,
       methodHeader: {
         result: "void",
