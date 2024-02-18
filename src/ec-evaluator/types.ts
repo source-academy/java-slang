@@ -1,5 +1,7 @@
 import { Node } from "../ast/types/ast";
-import { Control, Environment, Stash } from "./interpreter";
+import { Literal, Void } from "../ast/types/blocks-and-statements";
+import { MethodDeclaration } from "../ast/types/classes";
+import { Control, EnvNode, Environment, Stash } from "./components";
 import { RuntimeError } from "./errors";
 
 export interface Context {
@@ -65,11 +67,32 @@ export type Instr =
   | ResetInstr
   | EvalVarInstr;
 
+/**
+ * Components
+ */
 export type ControlItem = Node | Instr;
+export type StashItem = Literal | Closure | Void | Variable;
 
-export type Value = any;
 export type Name = string;
+export type Value = Variable | Closure;
 
+export type VarValue = any
+
+export interface Variable {
+  kind: "Variable";
+  name: Name;
+  value: VarValue;
+}
+
+export interface Closure {
+  kind: "Closure";
+  method: MethodDeclaration;
+  env: EnvNode;
+}
+
+/**
+ * Execution results
+ */
 export interface Error {
   status: 'error';
 }
