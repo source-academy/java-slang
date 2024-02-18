@@ -12,10 +12,18 @@ export interface Context {
   totalSteps: number,
 };
 
+/**
+ * Instructions
+ */
 export enum InstrType {
   ASSIGNMENT = 'Assign',
   BINARY_OP = 'BinaryOperation',
   POP = 'Pop',
+  INVOCATION = 'Invocation',
+  RESET = 'Reset',
+  ENV = 'Env',
+  MARKER = 'Marker',
+  EVAL_VAR = 'EvalVariable',
 }
 
 interface BaseInstr {
@@ -23,18 +31,39 @@ interface BaseInstr {
   srcNode: Node;
 }
 
-export interface AssmtInstr extends BaseInstr {
-  symbol: string;
-}
+export interface AssmtInstr extends BaseInstr {}
 
 export interface BinOpInstr extends BaseInstr {
   symbol: string;
 }
 
+export interface PopInstr extends BaseInstr {}
+
+export interface InvInstr extends BaseInstr {
+  arity: number;
+}
+
+export interface EnvInstr extends BaseInstr {
+  env: EnvNode;
+}
+
+export interface MarkerInstr extends BaseInstr {}
+
+export interface ResetInstr extends BaseInstr {}
+
+export interface EvalVarInstr extends BaseInstr {
+  symbol: string;
+}
+
 export type Instr =
-  | BaseInstr
   | AssmtInstr
-  | BinOpInstr;
+  | BinOpInstr
+  | PopInstr
+  | InvInstr
+  | EnvInstr
+  | MarkerInstr
+  | ResetInstr
+  | EvalVarInstr;
 
 export type ControlItem = Node | Instr;
 
