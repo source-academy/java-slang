@@ -8,6 +8,7 @@ import {
 import { BaseJavaCstVisitorWithDefaults } from "java-parser";
 import { ClassModifier, Identifier, ClassBodyDeclaration, ClassDeclaration } from "../types/classes";
 import { MethodExtractor } from "./method-extractor";
+import { FieldExtractor } from "./field-extractor";
 
 export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<ClassModifier>;
@@ -53,6 +54,13 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   classMemberDeclaration(ctx: ClassMemberDeclarationCtx) {
+    if (ctx.fieldDeclaration) {
+      ctx.fieldDeclaration.forEach(x => {
+        const fieldExtractor = new FieldExtractor();
+        const fieldNode = fieldExtractor.extract(x);
+        this.body.push(fieldNode);
+      })
+    }
     if (ctx.methodDeclaration) {
       ctx.methodDeclaration.forEach(x => {
         const methodExtractor = new MethodExtractor();

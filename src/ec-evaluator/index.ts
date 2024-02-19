@@ -1,12 +1,14 @@
 import { parse } from "../ast/parser";
-import { Control, Environment, evaluate, Stash } from "./interpreter";
+import { Control, Environment, Stash } from "./components";
+import { STEP_LIMIT } from "./constants";
+import { evaluate } from "./interpreter";
 import { Context, Error, Finished, Result } from "./types";
 
 export const runECEvaluator = (
   files: Partial<Record<string, string>>,
   entrypointFilePath: string,
   context: Context,
-  targetStep: number = Infinity,
+  targetStep: number = STEP_LIMIT,
 ): Promise<Result> => {
   try {
     const code = files[entrypointFilePath];
@@ -32,5 +34,5 @@ export const createContext = (): Context => ({
   stash: new Stash(),
   environment: new Environment(),
 
-  totalSteps: Infinity,
+  totalSteps: STEP_LIMIT,
 });

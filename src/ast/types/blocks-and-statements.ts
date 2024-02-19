@@ -46,14 +46,24 @@ export interface EnhancedForStatement {
   kind: "EnhancedForStatement";
 }
 
-export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement;
+export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement | ReturnStatement;
 
-export type ExpressionStatement = MethodInvocation | Assignment;
+export interface ExpressionStatement {
+  kind: "ExpressionStatement";
+  stmtExp: StatementExpression
+}
+
+export type StatementExpression = MethodInvocation | Assignment;
 
 export interface MethodInvocation {
   kind: "MethodInvocation";
-  identifier: Identifier
+  identifier: MethodName;
   argumentList: ArgumentList;
+}
+
+export interface MethodName {
+  kind: "MethodName";
+  name: string;
 }
 
 export type ArgumentList = Array<Expression>;
@@ -69,8 +79,18 @@ export interface VariableDeclarator {
 export type VariableDeclaratorId = Identifier;
 export type VariableInitializer = Expression;
 
-export type Expression = Primary | BinaryExpression | UnaryExpression;
-export type Primary = Literal | ExpressionName | Assignment;
+export interface ReturnStatement {
+  kind: "ReturnStatement";
+  exp: Expression;
+}
+
+export type Expression = Primary | BinaryExpression | UnaryExpression | Void;
+
+export interface Void {
+  kind: "Void";
+}
+
+export type Primary = Literal | ExpressionName | Assignment | MethodInvocation;
 
 export interface Literal {
   kind: "Literal";

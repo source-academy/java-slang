@@ -25,3 +25,19 @@ export class VariableRedeclarationError implements RuntimeError {
     return `Name ${this.name} redeclared.`;
   }
 }
+
+export class UndeclaredMethodError implements RuntimeError {
+  constructor(private name: string) {};
+
+  public explain() {
+    return `Method ${this.name} not declared.`;
+  }
+}
+
+export class MethodRedeclarationError implements RuntimeError {
+  constructor(private name: string) {};
+
+  public explain() {
+    return `Method ${this.name} redeclared.`;
+  }
+}

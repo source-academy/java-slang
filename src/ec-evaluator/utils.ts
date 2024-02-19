@@ -1,7 +1,7 @@
 import { Node } from "../ast/types/ast";
-import { BlockStatement, Literal } from "../ast/types/blocks-and-statements";
+import { DecimalIntegerLiteral, Literal } from "../ast/types/blocks-and-statements";
 import * as errors from "./errors";
-import { ControlItem, Context, Instr, Value, Name } from "./types";
+import { ControlItem, Context, Instr } from "./types";
 
 /**
  * Stack is implemented for agenda and stash registers.
@@ -79,7 +79,7 @@ export const isNode = (command: ControlItem): command is Node => {
  * @param seq Array of statements.
  * @returns Array of commands to be pushed into agenda.
  */
-export const handleSequence = (seq: BlockStatement[]): ControlItem[] => {
+export const handleSequence = (seq: ControlItem[]): ControlItem[] => {
   const result: ControlItem[] = []
   for (const command of seq) {
     result.push(command)
@@ -89,48 +89,8 @@ export const handleSequence = (seq: BlockStatement[]): ControlItem[] => {
 }
 
 /**
- * Environments
+ * Errors
  */
-
-export const currentEnvironment = (context: Context) => context.environment;
-
-export const DECLARED_BUT_NOT_YET_ASSIGNED = Symbol("Used to implement block scope");
-
-export const declareVariable = (context: Context, name: Name) => {
-  const currEnv = currentEnvironment(context);
-
-  if (currEnv.has(name)) {
-    throw new errors.VariableRedeclarationError(name);
-  }
-  currEnv.set(name, DECLARED_BUT_NOT_YET_ASSIGNED);
-
-  return currEnv;
-}
-
-export const getVariable = (context: Context, name: Name) => {
-  let currEnv = currentEnvironment(context);
-
-  if (currEnv.has(name)) {
-    // Variables must be definitely assigned prior to access
-    if (currEnv.get(name) === DECLARED_BUT_NOT_YET_ASSIGNED) {
-      return handleRuntimeError(context, new errors.UnassignedVariableError(name));
-    }
-    return currEnv.get(name);
-  }
-
-  return handleRuntimeError(context, new errors.UndeclaredVariableError(name));
-}
-
-export const setVariable = (context: Context, name: Name, value: Value) => {
-  let currEnv = currentEnvironment(context);
-
-  if (!currEnv.has(name)) {
-    handleRuntimeError(context, new errors.UndeclaredVariableError(name));
-  }
-
-  currEnv.set(name, value);
-}
-
 export const handleRuntimeError = (context: Context, error: errors.RuntimeError) => {
   context.errors.push(error);
   throw error;
@@ -139,7 +99,7 @@ export const handleRuntimeError = (context: Context, error: errors.RuntimeError)
 /**
  * Binary Expressions
  */
-export const evaluateBinaryExpression = (operator: string, left: Literal, right: Literal) => {
+export const evaluateBinaryExpression = (operator: string, left: Literal, right: Literal): Literal => {
   switch (operator) {
     case "+":
       return {
@@ -147,7 +107,7 @@ export const evaluateBinaryExpression = (operator: string, left: Literal, right:
         literalType: {
           kind: left.literalType.kind,
           value: String(Number(left.literalType.value) + Number(right.literalType.value)),
-        },
+        } as DecimalIntegerLiteral,
       };
     case "-":
       return {
@@ -155,7 +115,7 @@ export const evaluateBinaryExpression = (operator: string, left: Literal, right:
         literalType: {
           kind: left.literalType.kind,
           value: String(Number(left.literalType.value) - Number(right.literalType.value)),
-        },
+        } as DecimalIntegerLiteral,
       };
     case "*":
       return {
@@ -163,7 +123,7 @@ export const evaluateBinaryExpression = (operator: string, left: Literal, right:
         literalType: {
           kind: left.literalType.kind,
           value: String(Number(left.literalType.value) * Number(right.literalType.value)),
-        },
+        } as DecimalIntegerLiteral,
       };
     case "/":
       return {
@@ -171,17 +131,15 @@ export const evaluateBinaryExpression = (operator: string, left: Literal, right:
         literalType: {
           kind: left.literalType.kind,
           value: String(Number(left.literalType.value) / Number(right.literalType.value)),
-        },
+        } as DecimalIntegerLiteral,
       };
-    case "%":
+    default /* case "%" */:
       return {
         kind: "Literal",
         literalType: {
           kind: left.literalType.kind,
           value: String(Number(left.literalType.value) % Number(right.literalType.value)),
-        },
+        } as DecimalIntegerLiteral,
       };
-    default:
-      return undefined;
   }
 }

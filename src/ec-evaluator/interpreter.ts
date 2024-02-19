@@ -1,15 +1,29 @@
 import { 
   Assignment,
   BinaryExpression,
+  Block,
   Expression,
   ExpressionName,
+  ExpressionStatement,
   Literal,
   LocalVariableDeclarationStatement,
   LocalVariableType,
+  MethodInvocation,
+  MethodName,
+  ReturnStatement,
   VariableDeclarator,
+  Void,
 } from "../ast/types/blocks-and-statements";
-import { Identifier } from "../ast/types/classes";
+import {
+  FieldDeclaration,
+  FormalParameter,
+  Identifier,
+  MethodBody,
+  MethodDeclaration
+} from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
+import { Control, Stash } from "./components";
+import { STEP_LIMIT } from "./constants";
 import * as instr from './instrCreator';
 import * as node from './nodeCreator';
 import {
@@ -19,17 +33,18 @@ import {
   Context,
   Instr,
   InstrType,
-  Value,
-  Name,
+  InvInstr,
+  Closure,
+  EnvInstr,
+  ResetInstr,
+  EvalVarInstr,
+  Variable,
+  VarValue,
 } from "./types";
 import { 
-  Stack,
-  declareVariable,
   evaluateBinaryExpression,
-  getVariable,
   handleSequence,
   isNode,
-  setVariable,
 } from "./utils";
 
 type CmdEvaluator = (
@@ -39,14 +54,7 @@ type CmdEvaluator = (
   stash: Stash,
 ) => void
 
-/**
- * Components of CSE Machine.
- */
-export class Control extends Stack<ControlItem> {};
-export class Stash extends Stack<Value> {};
-export class Environment extends Map<Name, Value> {};
-
-export const evaluate = (context: Context, targetStep: number = Infinity): Value => {
+export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): VarValue => {
   const control = context.control;
   const stash = context.stash;
 
@@ -81,13 +89,73 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    if (command.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody.blockStatements.length == 1) {
-      // If program only consists of one statement, evaluate it immediately
-      const next = command.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody.blockStatements[0];
-      cmdEvaluators[next.kind](next, context, control, stash)
-    } else {
-      // Push block body
-      control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody.blockStatements));
+    // TODO eval class declarations
+    control.push(node.mainMtdInvExpStmtNode());
+    control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations[0].classBody));
+  },
+
+  Block: (
+    command: Block,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Save current environment before extending.
+    control.push(instr.envInstr(context.environment.current, command));
+    control.push(...handleSequence(command.blockStatements));
+
+    context.environment.extendEnv(context.environment.current, "block");
+  },
+
+  MethodDeclaration: (
+    command: MethodDeclaration,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Add empty ReturnStatement if absent
+    const methodBody: MethodBody = command.methodBody;
+    if (methodBody.blockStatements.length === 0 ||
+      // TODO deep search
+      methodBody.blockStatements.filter(stmt => stmt.kind === "ReturnStatement").length === 0) {
+      methodBody.blockStatements.push(node.emptyReturnStmtNode());
+    }
+    
+    // Declare method
+    // TODO use method signature instead of identifier
+    const id: Identifier = command.methodHeader.identifier;
+    const closure = {
+      kind: "Closure",
+      method: command,
+      env: context.environment.current,
+    } as Closure;
+    context.environment.defineMethod(id, closure);
+  },
+
+  FieldDeclaration: (
+    command: FieldDeclaration,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const declaration: VariableDeclarator = command.variableDeclaratorList[0];
+    const id: Identifier = declaration.variableDeclaratorId;
+    context.environment.declareVariable(id);
+    // TODO default value utility function
+    context.environment.defineVariable(id, {
+      kind: "Literal",
+      literalType: {
+        kind: "DecimalIntegerLiteral",
+        value: "0",
+      },
+    } as Literal);
+    
+    const init: Expression | undefined = declaration?.variableInitializer;
+    if (init) {
+      control.push(instr.popInstr(command));
+      control.push(instr.assmtInstr(command));
+      control.push(init);
+      control.push(instr.evalVarInstr(id, command));
     }
   },
 
@@ -105,13 +173,33 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // LocalVariableDeclarationStatement without VariableInitializer and Assignment.
     const init: Expression | undefined = declaration?.variableInitializer;
     if (init) {
-      control.push(node.assmtNode(id, init));
+      control.push(node.expStmtAssmtNode(id, init));
       control.push(node.localVarDeclNoInitNode(type, id));
       return;
     }
 
     // Evaluating LocalVariableDeclarationStatement just declares the variable.
-    declareVariable(context, id);
+    context.environment.declareVariable(id);
+  },
+
+  ExpressionStatement: (
+    command: ExpressionStatement,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    control.push(instr.popInstr(command));
+    control.push(command.stmtExp);
+  },
+
+  ReturnStatement: (
+    command: ReturnStatement,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    control.push(instr.resetInstr(command));
+    control.push(command.exp);
   },
 
   Assignment: (
@@ -120,15 +208,33 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // Assignment is an ExpressionStatement
-    control.push(instr.popInstr(command));
-    control.push(instr.assmtInstr(command.left.name, command));
-    // TODO: EVAL_VAR LeftHandSide
+    control.push(instr.assmtInstr(command));
     control.push(command.right);
+    control.push(instr.evalVarInstr(command.left.name, command));
+  },
+  
+  MethodInvocation: (
+    command: MethodInvocation,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    control.push(instr.invInstr(command.argumentList.length, command));
+    control.push(...handleSequence(command.argumentList));
+    control.push(command.identifier);
   },
 
   Literal: (
     command: Literal,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    stash.push(command);
+  },
+
+  Void: (
+    command: Void,
     context: Context,
     control: Control,
     stash: Stash,
@@ -142,7 +248,19 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    stash.push(getVariable(context, command.name));
+    // TODO add DEREF instr and standardize ExpressionName eval to Variable
+    const value: VarValue = context.environment.getValue(command.name);
+    stash.push(value);
+  },
+
+  MethodName: (
+    command: MethodName,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const value: Closure = context.environment.getMethod(command.name);
+    stash.push(value);
   },
 
   BinaryExpression: (
@@ -171,8 +289,11 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // TODO: LeftHandSide to be popped after implementing EVAL_VAR LeftHandSide
-    setVariable(context, command.symbol, stash.peek());
+    // value is popped before variable becuase value is evaluated later than variable.
+    const value: VarValue = stash.pop()! as Literal;
+    const variable: Variable = stash.pop()! as Variable;
+    variable.value = value;
+    stash.push(value);
   },
 
   [InstrType.BINARY_OP]: (
@@ -181,8 +302,73 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    const right = stash.pop();
-    const left = stash.pop();
+    const right = stash.pop()! as Literal;
+    const left = stash.pop()! as Literal;
     stash.push(evaluateBinaryExpression(command.symbol, left, right));
-  }
+  },
+
+  [InstrType.INVOCATION]: (
+    command: InvInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+    ) => {
+    // Save current environment to be restored after method returns.
+    control.push(instr.envInstr(context.environment.current, command.srcNode));
+
+    // Mark end of method in case method returns halfway.
+    control.push(instr.markerInstr(command.srcNode));
+
+    // Retrieve arguments and method to be invoked in reversed order.
+    const args: Literal[] = [];
+    for (let i = 0; i < command.arity; i++) {
+      args.push(stash.pop()! as Literal);
+    }
+    args.reverse();
+    const closure: Closure = stash.pop()! as Closure;
+
+    // Extend method's environment by binding arguments to corresponding parameters.
+    context.environment.extendEnv(closure.env, closure.method.methodHeader.identifier);
+    const params: FormalParameter[] = closure.method.methodHeader.formalParameterList;
+    params.forEach(param => {
+      context.environment.declareVariable(param.identifier);
+    });
+    for (let i = 0; i < command.arity; i++) {
+      context.environment.defineVariable(params[i].identifier, args[i]);
+    }
+
+    // Push method body
+    control.push(closure.method.methodBody);
+  },
+
+  [InstrType.ENV]: (
+    command: EnvInstr,
+    context: Context,
+    control: Control,
+    stash: Stash, 
+  ) => {
+    context.environment.restoreEnv(command.env);
+  },
+
+  [InstrType.RESET]: (
+    command: ResetInstr,
+    context: Context,
+    control: Control,
+    stash: Stash, 
+  ) => {
+    // Continue popping ControlItem until Marker is found.
+    const next: ControlItem | undefined = control.pop();
+    if (next && (isNode(next) || next.instrType !== InstrType.MARKER)) {
+      control.push(instr.resetInstr(command.srcNode));
+    }
+  },
+
+  [InstrType.EVAL_VAR]: (
+    command: EvalVarInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    stash.push(context.environment.getVariable(command.symbol));
+  },
 };

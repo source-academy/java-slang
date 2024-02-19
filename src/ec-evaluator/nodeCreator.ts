@@ -1,8 +1,12 @@
 import {
   Assignment,
   Expression,
+  ExpressionStatement,
   LeftHandSide,
   LocalVariableDeclarationStatement,
+  MethodInvocation,
+  MethodName,
+  ReturnStatement,
   VariableDeclarator,
   VariableDeclaratorId,
 } from "../ast/types/blocks-and-statements";
@@ -22,16 +26,38 @@ export const localVarDeclNoInitNode = (
   ],
 });
 
-export const assmtNode = (
+export const expStmtAssmtNode = (
   left: string,
   right: Expression,
   operator: string = '=',
-): Assignment => ({
-  kind: "Assignment",
-  left: {
-    kind: "ExpressionName",
-    name: left,
-  } as LeftHandSide,
-  operator,
-  right,
+): ExpressionStatement => ({
+  kind: "ExpressionStatement",
+  stmtExp: {
+    kind: "Assignment",
+    left: {
+      kind: "ExpressionName",
+      name: left,
+    } as LeftHandSide,
+    operator,
+    right,
+  } as Assignment,
+});
+
+export const mainMtdInvExpStmtNode = (): ExpressionStatement => ({
+  kind: "ExpressionStatement",
+  stmtExp: {
+    kind: "MethodInvocation",
+    identifier: {
+      kind: "MethodName",
+      name: "main",
+    } as MethodName,
+    argumentList: []
+  } as MethodInvocation,
+});
+
+export const emptyReturnStmtNode = (): ReturnStatement => ({
+  kind: "ReturnStatement",
+  exp: {
+    kind: "Void",
+  },
 });

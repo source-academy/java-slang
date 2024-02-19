@@ -1,4 +1,4 @@
-import { Block } from "./blocks-and-statements";
+import { Block, VariableDeclarator } from "./blocks-and-statements";
 
 export type ClassDeclaration = NormalClassDeclaration;
 
@@ -20,9 +20,10 @@ export type ClassModifier =
   | "strictfp";
 
 export type ClassBodyDeclaration = ClassMemberDeclaration;
-export type ClassMemberDeclaration = MethodDeclaration;
+export type ClassMemberDeclaration = MethodDeclaration | FieldDeclaration;
 
 export interface MethodDeclaration {
+  kind: "MethodDeclaration";
   methodModifier: Array<MethodModifier>;
   methodHeader: MethodHeader;
   methodBody: MethodBody;
@@ -52,6 +53,22 @@ export interface FormalParameter {
   unannType: UnannType;
   identifier: Identifier;
 }
+
+export interface FieldDeclaration {
+  kind: "FieldDeclaration";
+  fieldModifier: Array<FieldModifier>;
+  fieldType: UnannType;
+  variableDeclaratorList: Array<VariableDeclarator>;
+}
+
+export type FieldModifier =
+  | "public"
+  | "protected"
+  | "private"
+  | "static"
+  | "final"
+  | "transient"
+  | "volatile";
 
 export type UnannType = string;
 export type VariableDeclaratorId = Identifier;
