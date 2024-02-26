@@ -1,4 +1,4 @@
-This is a bookkeeping of the planned scope of the compiler. It will be updated from time to time to reflect the current status of the compiler and to make the scope clearer.
+This is a bookkeeping of the planned scope of the compiler. It will be updated from time to time to reflect the current status of the compiler and to make the scope clearer. For a more formal treatment of what features are being supported, see scope.txt for a BNF-form of the Java sub-language.
 
 **Features that are already supported**
 
