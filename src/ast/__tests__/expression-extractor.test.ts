@@ -176,75 +176,211 @@ describe("extract BinaryExpression correctly", () => {
 });
 
 describe("extract ExpressionName correctly", () => {
-  it("extract LocalVariableDeclarationStatement simple ExpressionName correctly", () => {
-      const programStr = `
-        class Test {
-          int x;
-          void test() {
-            int y = x;
-          }
+  it("extract LocalVariableDeclarationStatement VariableInitializer simple ExpressionName correctly", () => {
+    const programStr = `
+      class Test {
+        int x;
+        void test() {
+          int y = x;
         }
-      `;
-    
-      const expectedAst: AST = {
-        kind: "CompilationUnit",
-        topLevelClassOrInterfaceDeclarations: [
-          {
-            kind: "NormalClassDeclaration",
-            classModifier: [],
-            typeIdentifier: "Test",
-            classBody: [
-              {
-                kind: "FieldDeclaration",
-                fieldModifier: [],
-                fieldType: "int",
-                variableDeclaratorList: [
-                  {
-                    kind: "VariableDeclarator",
-                    variableDeclaratorId: "x",
-                  },
-                ],
-              },
-              {
-                kind: "MethodDeclaration",
-                methodModifier: [],
-                methodHeader: {
-                  result: "void",
-                  identifier: "test",
-                  formalParameterList: [],
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
                 },
-                methodBody: {
-                kind: "Block",
-                blockStatements: [
-                  {
-                    kind: "LocalVariableDeclarationStatement",
-                    localVariableType: "int",
-                    variableDeclaratorList: [
-                      {
-                        kind: "VariableDeclarator",
-                        variableDeclaratorId: "y",
-                        variableInitializer: {
-                          kind: "ExpressionName",
-                          name: "x",
-                        },
+              ],
+            },
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+              kind: "Block",
+              blockStatements: [
+                {
+                  kind: "LocalVariableDeclarationStatement",
+                  localVariableType: "int",
+                  variableDeclaratorList: [
+                    {
+                      kind: "VariableDeclarator",
+                      variableDeclaratorId: "y",
+                      variableInitializer: {
+                        kind: "ExpressionName",
+                        name: "x",
                       },
-                    ],
-                  },
-                ],
-              },
-              },
-            ],
-          },
-        ],
-      };
+                    },
+                  ],
+                },
+              ],
+            },
+            },
+          ],
+        },
+      ],
+    };
     
-      const ast = parse(programStr);
-      expect(ast).toEqual(expectedAst);
-    });
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract LocalVariableDeclarationStatement VariableInitializer qualified ExpressionName correctly", () => {
+    const programStr = `
+      class Test {
+        static int x;
+        void test() {
+          int y = Test.x;
+        }
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [
+                "static",
+              ],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                },
+              ],
+            },
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+              kind: "Block",
+              blockStatements: [
+                {
+                  kind: "LocalVariableDeclarationStatement",
+                  localVariableType: "int",
+                  variableDeclaratorList: [
+                    {
+                      kind: "VariableDeclarator",
+                      variableDeclaratorId: "y",
+                      variableInitializer: {
+                        kind: "ExpressionName",
+                        name: "Test.x",
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract LocalVariableDeclarationStatement VariableInitializer this keyword correctly", () => {
+    const programStr = `
+      class Test {
+        static int x;
+        void test() {
+          int y = this.x;
+        }
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [
+                "static",
+              ],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                },
+              ],
+            },
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+              kind: "Block",
+              blockStatements: [
+                {
+                  kind: "LocalVariableDeclarationStatement",
+                  localVariableType: "int",
+                  variableDeclaratorList: [
+                    {
+                      kind: "VariableDeclarator",
+                      variableDeclaratorId: "y",
+                      variableInitializer: {
+                        kind: "ExpressionName",
+                        name: "this.x",
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
 });
 
 describe("extract Assignment correctly", () => {
-  it("extract Assignment correctly", () => {
+  it("extract Assignment second LeftHandSide simple ExpressionName correctly", () => {
     const programStr = `
       class Test {
         int x = y = 1;
@@ -293,10 +429,110 @@ describe("extract Assignment correctly", () => {
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
+
+  it("extract Assignment second LeftHandSide qualified ExpressionName correctly", () => {
+    const programStr = `
+      class Test {
+        int x = Test.y = 1;
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                  variableInitializer: {
+                    kind: "Assignment",
+                    left: {
+                      kind: "ExpressionName",
+                      name: "Test.y",
+                    },
+                    operator: "=",
+                    right: {
+                      kind: "Literal",
+                      literalType: {
+                        kind: "DecimalIntegerLiteral",
+                        value: "1",
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract Assignment second LeftHandSide this keyword correctly", () => {
+    const programStr = `
+      class Test {
+        int x = this.y = 1;
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                  variableInitializer: {
+                    kind: "Assignment",
+                    left: {
+                      kind: "ExpressionName",
+                      name: "this.y",
+                    },
+                    operator: "=",
+                    right: {
+                      kind: "Literal",
+                      literalType: {
+                        kind: "DecimalIntegerLiteral",
+                        value: "1",
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
 });
 
 describe("extract MethodInvocation correctly", () => {
-  it("extract MethodInvocation without arguments correctly", () => {
+  it("extract MethodInvocation simple MethodName correctly", () => {
     const programStr = `
       class Test {
         int x = test();
@@ -339,10 +575,10 @@ describe("extract MethodInvocation correctly", () => {
     expect(ast).toEqual(expectedAst);
   });
 
-  it("extract MethodInvocation with arguments correctly", () => {
+  it("extract MethodInvocation qualified MethodName correctly", () => {
     const programStr = `
       class Test {
-        int x = test(y, z);
+        int x = Test.test();
       }
     `;
   
@@ -366,7 +602,141 @@ describe("extract MethodInvocation correctly", () => {
                     kind: "MethodInvocation",
                     identifier: {
                       kind: "MethodName",
-                      name: "test",
+                      name: "Test.test",
+                    },
+                    argumentList: [],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract MethodInvocation this keyword correctly", () => {
+    const programStr = `
+      class Test {
+        int x = this.test();
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                  variableInitializer: {
+                    kind: "MethodInvocation",
+                    identifier: {
+                      kind: "MethodName",
+                      name: "this.test",
+                    },
+                    argumentList: [],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+  
+  it("extract MethodInvocation qualified MethodName with args correctly", () => {
+    const programStr = `
+      class Test {
+        int x = test.test(y);
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                  variableInitializer: {
+                    kind: "MethodInvocation",
+                    identifier: {
+                      kind: "MethodName",
+                      name: "test.test",
+                    },
+                    argumentList: [
+                      {
+                        kind: "ExpressionName",
+                        name: "y",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract MethodInvocation this keyword with args correctly", () => {
+    const programStr = `
+      class Test {
+        int x = this.test(y, 100);
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                  variableInitializer: {
+                    kind: "MethodInvocation",
+                    identifier: {
+                      kind: "MethodName",
+                      name: "this.test",
                     },
                     argumentList: [
                       {
@@ -374,8 +744,11 @@ describe("extract MethodInvocation correctly", () => {
                         name: "y",
                       },
                       {
-                        kind: "ExpressionName",
-                        name: "z",
+                        kind: "Literal",
+                        literalType: {
+                          kind: "DecimalIntegerLiteral",
+                          value: "100",
+                        },
                       },
                     ],
                   },

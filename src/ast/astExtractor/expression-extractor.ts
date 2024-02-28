@@ -8,6 +8,7 @@ import {
   FqnOrRefTypeCtx,
   FqnOrRefTypePartCommonCtx,
   FqnOrRefTypePartFirstCtx,
+  FqnOrRefTypePartRestCtx,
   IToken,
   IntegerLiteralCtx,
   LiteralCtx,
@@ -156,17 +157,33 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   primary(ctx: PrimaryCtx) {
+    let primary = this.visit(ctx.primaryPrefix);
+
     if (ctx.primarySuffix) {
-      return {
-        kind: "MethodInvocation",
-        identifier: {
-          kind: "MethodName",
-          name: this.visit(ctx.primaryPrefix[0].children.fqnOrRefType!),
-        },
-        argumentList: this.visit(ctx.primarySuffix),
-      } as MethodInvocation;
+      for (const s of ctx.primarySuffix.filter(s => !s.children.methodInvocationSuffix)) {
+        primary += "." + this.visit(s);
+      }
+
+      if (ctx.primarySuffix[ctx.primarySuffix.length - 1].children.methodInvocationSuffix) {
+        return {
+          kind: "MethodInvocation",
+          identifier: {
+            kind: "MethodName",
+            name: primary,
+          },
+          argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
+        } as MethodInvocation;
+      }
     }
-    return this.visit(ctx.primaryPrefix);
+
+    if (ctx.primaryPrefix[0].children.fqnOrRefType || ctx.primaryPrefix[0].children.This) {
+      return {
+        kind: "ExpressionName",
+        name: primary,
+      } as ExpressionName;
+    }
+
+    return primary;
   }
 
   primaryPrefix(ctx: PrimaryPrefixCtx) {
@@ -175,18 +192,19 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
     } else if (ctx.parenthesisExpression) {
       return this.visit(ctx.parenthesisExpression);
     } else if (ctx.fqnOrRefType) {
-      return {
-        kind: "ExpressionName",
-        name: this.visit(ctx.fqnOrRefType),
-      } as ExpressionName;
+      return this.visit(ctx.fqnOrRefType);
     } else if (ctx.newExpression) {
       return this.visit(ctx.newExpression);
+    } else if (ctx.This) {
+      return ctx.This[0].image;
     }
   }
   
   primarySuffix(ctx: PrimarySuffixCtx) {
     if (ctx.methodInvocationSuffix) {
       return this.visit(ctx.methodInvocationSuffix);
+    } else if (ctx.Identifier) {
+      return ctx.Identifier[0].image;
     }
   }
 
@@ -221,7 +239,13 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
-    return this.visit(ctx.fqnOrRefTypePartFirst);
+    let fqn = this.visit(ctx.fqnOrRefTypePartFirst);
+    if (ctx.fqnOrRefTypePartRest) {
+      for (const r of ctx.fqnOrRefTypePartRest) {
+        fqn += "." + this.visit(r);
+      }
+    }
+    return fqn;
   }
 
   fqnOrRefTypePartFirst(ctx: FqnOrRefTypePartFirstCtx) {
@@ -230,6 +254,10 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
 
   fqnOrRefTypePartCommon(ctx: FqnOrRefTypePartCommonCtx) {
     return ctx.Identifier && ctx.Identifier[0].image;
+  }
+
+  fqnOrRefTypePartRest(ctx: FqnOrRefTypePartRestCtx) {
+    return this.visit(ctx.fqnOrRefTypePartCommon);
   }
 
   literal(ctx: LiteralCtx) {

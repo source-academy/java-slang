@@ -6,6 +6,7 @@ import {
   FqnOrRefTypeCtx,
   FqnOrRefTypePartCommonCtx,
   FqnOrRefTypePartFirstCtx,
+  FqnOrRefTypePartRestCtx,
   MethodInvocationSuffixCtx,
   PrimaryCtx,
   PrimaryPrefixCtx,
@@ -100,25 +101,36 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   primary(ctx: PrimaryCtx) {
-    // MethodInvocation
+    // Assignment LHS, MethodInvocation identifier
+    let primary = this.visit(ctx.primaryPrefix);
+
     if (ctx.primarySuffix) {
-      return {
-        kind: "MethodInvocation",
-        identifier: {
-          kind: "MethodName",
-          name: this.visit(ctx.primaryPrefix),
-        },
-        argumentList: this.visit(ctx.primarySuffix),
-      } as MethodInvocation;
+      for (const s of ctx.primarySuffix.filter(s => !s.children.methodInvocationSuffix)) {
+        primary += "." + this.visit(s);
+      }
+
+      // MethodInvocation
+      if (ctx.primarySuffix[ctx.primarySuffix.length - 1].children.methodInvocationSuffix) {
+        return {
+          kind: "MethodInvocation",
+          identifier: {
+            kind: "MethodName",
+            name: primary,
+          },
+          argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
+        } as MethodInvocation;
+      }
     }
-    // Assignment LHS
-    return this.visit(ctx.primaryPrefix);
+
+    return primary;
   }
 
   primaryPrefix(ctx: PrimaryPrefixCtx) {
     // Assignment LHS, MethodInvocation identifier
     if (ctx.fqnOrRefType) {
       return this.visit(ctx.fqnOrRefType);
+    } else if (ctx.This) {
+      return ctx.This[0].image;
     }
   }
 
@@ -126,6 +138,8 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
     // MethodInvocation argumentList
     if (ctx.methodInvocationSuffix) {
       return this.visit(ctx.methodInvocationSuffix);
+    } else if (ctx.Identifier) {
+      return ctx.Identifier[0].image;
     }
   }
 
@@ -142,7 +156,13 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
     // Assignment LHS, MethodInvocation identifier
-    return this.visit(ctx.fqnOrRefTypePartFirst);
+    let fqn = this.visit(ctx.fqnOrRefTypePartFirst);
+    if (ctx.fqnOrRefTypePartRest) {
+      for (const r of ctx.fqnOrRefTypePartRest) {
+        fqn += "." + this.visit(r);
+      }
+    }
+    return fqn;
   }
 
   fqnOrRefTypePartFirst(ctx: FqnOrRefTypePartFirstCtx) {
@@ -153,5 +173,9 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   fqnOrRefTypePartCommon(ctx: FqnOrRefTypePartCommonCtx) {
     // Assignment LHS, MethodInvocation identifier
     return ctx.Identifier && ctx.Identifier[0].image;
+  }
+
+  fqnOrRefTypePartRest(ctx: FqnOrRefTypePartRestCtx) {
+    return this.visit(ctx.fqnOrRefTypePartCommon);
   }
 }
