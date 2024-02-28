@@ -2,6 +2,7 @@ import {
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
+  ClassOrInterfaceTypeToInstantiateCtx,
   ExpressionCstNode,
   ExpressionCtx,
   FqnOrRefTypeCtx,
@@ -11,6 +12,7 @@ import {
   IntegerLiteralCtx,
   LiteralCtx,
   MethodInvocationSuffixCtx,
+  NewExpressionCtx,
   ParenthesisExpressionCtx,
   PrimaryCtx,
   PrimaryPrefixCtx,
@@ -18,11 +20,13 @@ import {
   TernaryExpressionCtx,
   UnaryExpressionCstNode,
   UnaryExpressionCtx,
+  UnqualifiedClassInstanceCreationExpressionCtx,
 } from "java-parser";
 
 import {
   Assignment,
   BinaryExpression,
+  ClassInstanceCreationExpression,
   Expression,
   ExpressionName,
   MethodInvocation,
@@ -188,6 +192,27 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
 
   methodInvocationSuffix(ctx: MethodInvocationSuffixCtx) {
     return ctx.argumentList ? this.visit(ctx.argumentList) : [];
+  }
+
+  newExpression(ctx: NewExpressionCtx) {
+    if (ctx.unqualifiedClassInstanceCreationExpression) {
+      return this.visit(ctx.unqualifiedClassInstanceCreationExpression);
+    }
+  }
+
+  unqualifiedClassInstanceCreationExpression(ctx: UnqualifiedClassInstanceCreationExpressionCtx) {
+    return {
+      kind: "ClassInstanceCreationExpression",
+      identifier: {
+        kind: "ClassName",
+        name: this.visit(ctx.classOrInterfaceTypeToInstantiate),
+      },
+      argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : [],
+    } as ClassInstanceCreationExpression;
+  }
+
+  classOrInterfaceTypeToInstantiate(ctx: ClassOrInterfaceTypeToInstantiateCtx) {
+    return ctx.Identifier[0].image;
   }
 
   argumentList(ctx: ArgumentListCtx) {

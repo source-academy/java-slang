@@ -391,3 +391,136 @@ describe("extract MethodInvocation correctly", () => {
     expect(ast).toEqual(expectedAst);
   });
 });
+
+describe("extract ClassInstanceCreationExpression correctly", () => {
+  it("extract LocalVariableDeclarationStatement ClassInstanceCreationExpression without arguments correctly", () => {
+    const programStr = `
+      class Test {
+        void test() {
+          Test test = new Test();
+        }
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+              kind: "Block",
+              blockStatements: [
+                {
+                  kind: "LocalVariableDeclarationStatement",
+                  localVariableType: "Test",
+                  variableDeclaratorList: [
+                    {
+                      kind: "VariableDeclarator",
+                      variableDeclaratorId: "test",
+                      variableInitializer: {
+                        kind: "ClassInstanceCreationExpression",
+                        identifier: {
+                          kind: "ClassName",
+                          name: "Test"
+                        },
+                        argumentList: [],
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract LocalVariableDeclarationStatement ClassInstanceCreationExpression with arguments correctly", () => {
+    const programStr = `
+      class Test {
+        void test() {
+          Test test = new Test(1, 2);
+        }
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+              kind: "Block",
+              blockStatements: [
+                {
+                  kind: "LocalVariableDeclarationStatement",
+                  localVariableType: "Test",
+                  variableDeclaratorList: [
+                    {
+                      kind: "VariableDeclarator",
+                      variableDeclaratorId: "test",
+                      variableInitializer: {
+                        kind: "ClassInstanceCreationExpression",
+                        identifier: {
+                          kind: "ClassName",
+                          name: "Test"
+                        },
+                        argumentList: [
+                          {
+                            kind: "Literal",
+                            literalType: {
+                              kind: "DecimalIntegerLiteral",
+                              value: "1",
+                            },
+                          },
+                          {
+                            kind: "Literal",
+                            literalType: {
+                              kind: "DecimalIntegerLiteral",
+                              value: "2",
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+});

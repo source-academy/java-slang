@@ -90,7 +90,23 @@ export interface Void {
   kind: "Void";
 }
 
-export type Primary = Literal | ExpressionName | Assignment | MethodInvocation;
+export type Primary = 
+  Literal
+  | ExpressionName
+  | Assignment
+  | MethodInvocation
+  | ClassInstanceCreationExpression;
+
+export interface ClassInstanceCreationExpression {
+  kind: "ClassInstanceCreationExpression",
+  identifier: ClassName;
+  argumentList: ArgumentList;
+}
+
+export interface ClassName {
+  kind: "ClassName";
+  name: string;
+}
 
 export interface Literal {
   kind: "Literal";

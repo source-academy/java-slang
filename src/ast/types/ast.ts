@@ -3,6 +3,8 @@ import {
   Assignment,
   Block,
   BlockStatement,
+  ClassInstanceCreationExpression,
+  ClassName,
   Expression,
   ExpressionStatement,
   MethodInvocation,
@@ -28,6 +30,8 @@ interface NodeMap {
   ReturnStatement: ReturnStatement;
   MethodName: MethodName;
   NormalClassDeclaration: NormalClassDeclaration;
+  ClassName: ClassName;
+  ClassInstanceCreationExpression: ClassInstanceCreationExpression;
 }
 
 export type Node = NodeMap[keyof NodeMap];
