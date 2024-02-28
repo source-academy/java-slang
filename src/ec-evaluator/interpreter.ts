@@ -18,7 +18,8 @@ import {
   FormalParameter,
   Identifier,
   MethodBody,
-  MethodDeclaration
+  MethodDeclaration,
+  UnannType,
 } from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
 import { Control, Stash } from "./components";
@@ -41,6 +42,7 @@ import {
   VarValue,
 } from "./types";
 import { 
+  defaultValues,
   evaluateBinaryExpression,
   handleSequence,
   isNode,
@@ -137,25 +139,19 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
+    // FieldDeclaration to be evaluated are always static fields.
+    // Instance fields are transformed into Assignment ExpressionStatement inserted into constructors.
+
+    const type: UnannType = command.fieldType;
     const declaration: VariableDeclarator = command.variableDeclaratorList[0];
     const id: Identifier = declaration.variableDeclaratorId;
-    context.environment.declareVariable(id);
-    // TODO default value utility function
-    context.environment.defineVariable(id, {
-      kind: "Literal",
-      literalType: {
-        kind: "DecimalIntegerLiteral",
-        value: "0",
-      },
-    } as Literal);
+    // Fields are always initialized to default value if initializer is absent.
+    const init: Expression = declaration?.variableInitializer || defaultValues.get(type)!;
     
-    const init: Expression | undefined = declaration?.variableInitializer;
-    if (init) {
-      control.push(instr.popInstr(command));
-      control.push(instr.assmtInstr(command));
-      control.push(init);
-      control.push(instr.evalVarInstr(id, command));
-    }
+    control.push(instr.popInstr(command));
+    control.push(instr.assmtInstr(command));
+    control.push(init);
+    control.push(instr.evalVarInstr(id, command));
   },
 
   LocalVariableDeclarationStatement: (
