@@ -180,7 +180,7 @@ describe("extract ReturnStatement correctly", () => {
               kind: "MethodDeclaration",
               methodModifier: [],
               methodHeader: {
-                result: "void",
+                result: "int",
                 identifier: "test",
                 formalParameterList: [],
               },

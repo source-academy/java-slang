@@ -79,3 +79,85 @@ describe("extract MethodModifier correctly", () => {
     expect(ast).toEqual(expectedAst);
   });
 });
+
+describe("extract FormalParameter correctly", () => {
+  it("extract MethodDeclaration without FormalParameter correctly", () => {
+    const programStr = `
+      class Test {
+        void test() {}
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+                kind: "Block",
+                blockStatements: [],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract MethodDeclaration with FormalParameter correctly", () => {
+    const programStr = `
+      class Test {
+        void test(int x) {}
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [
+                  {
+                    kind: "FormalParameter",
+                    unannType: "int",
+                    identifier: "x",
+                  },
+                ],
+              },
+              methodBody: {
+                kind: "Block",
+                blockStatements: [],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+});

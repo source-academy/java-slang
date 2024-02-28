@@ -1,53 +1,42 @@
 import {
+  BaseJavaCstVisitorWithDefaults,
   BlockStatementsCtx,
-  CstNode,
-  DimsCtx,
   FormalParameterCtx,
+  FormalParameterListCtx,
+  MethodDeclarationCstNode,
   MethodDeclaratorCtx,
   MethodModifierCtx,
-  UnannClassTypeCtx,
+  ResultCtx,
+  VariableArityParameterCtx,
   VariableDeclaratorIdCtx,
+  VariableParaRegularParameterCtx,
 } from "java-parser";
 
-import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { MethodModifier, MethodDeclaration, Identifier, FormalParameter } from "../types/classes";
+import {
+  MethodModifier,
+  MethodDeclaration,
+  Identifier,
+  FormalParameter,
+  Result,
+} from "../types/classes";
 import { BlockStatementExtractor } from "./block-statement-extractor";
 import { BlockStatement } from "../types/blocks-and-statements";
+import { TypeExtractor } from "./type-extractor";
 
 export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
-  private stack: Array<string> = [];
-  private modifier: Array<MethodModifier>;
+  private modifier: Array<MethodModifier> = [];
+  private res: Result;
   private identifier: Identifier;
-  private params: Array<FormalParameter>;
-  private body: Array<BlockStatement>;
+  private params: Array<FormalParameter> = [];
+  private body: Array<BlockStatement> = [];
 
-  constructor() {
-    super();
-    this.stack = [];
-    this.modifier = [];
-    this.identifier = '';
-    this.params = [];
-    this.body = [];
-  }
-
-  private getAndPop() {
-    const res = this.stack[this.stack.length - 1];
-    this.stack.pop();
-    return res as string;
-  }
-
-  extract(cst: CstNode): MethodDeclaration {
-    this.stack = [];
-    this.modifier = [];
-    this.identifier = '';
-    this.params = [];
-    this.body = [];
+  extract(cst: MethodDeclarationCstNode): MethodDeclaration {
     this.visit(cst);
     return {
       kind: "MethodDeclaration",
       methodModifier: this.modifier,
       methodHeader: {
-        result: "void",
+        result: this.res,
         identifier: this.identifier,
         formalParameterList: this.params
       },
@@ -73,39 +62,54 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     this.modifier.push(possibleModifiers[0] as MethodModifier);
   }
 
+  result(ctx: ResultCtx) {
+    const typeExtractor = new TypeExtractor();
+    if (ctx.unannType) {
+      this.res = typeExtractor.extract(ctx.unannType[0]);
+    } else /* if (ctx.Void) */ {
+      this.res = "void";
+    }
+  }
+
   methodDeclarator(ctx: MethodDeclaratorCtx) {
     this.identifier = ctx.Identifier[0].image;
     if (ctx.formalParameterList) {
-      this.visit(ctx.formalParameterList);
+      this.params = this.visit(ctx.formalParameterList);
     }
+  }
+
+  formalParameterList(ctx: FormalParameterListCtx) {
+    return ctx.formalParameter.map(p => this.visit(p));
   }
 
   formalParameter(ctx: FormalParameterCtx) {
     if (ctx.variableParaRegularParameter) {
-      this.visit(ctx.variableParaRegularParameter);
-    } else if (ctx.variableArityParameter) {
-      this.visit(ctx.variableArityParameter);
+      return this.visit(ctx.variableParaRegularParameter);
+    } else /* if (ctx.variableArityParameter) */ {
+      return this.visit(ctx.variableArityParameter!);
     }
+  }
 
-    const argName = this.getAndPop();
-    const typeName = this.getAndPop();
-    this.params.push({
+  variableParaRegularParameter(ctx: VariableParaRegularParameterCtx) {
+    const typeExtractor = new TypeExtractor();
+    return {
       kind: "FormalParameter",
-      unannType: typeName,
-      identifier: argName,
-    });
+      unannType: typeExtractor.extract(ctx.unannType[0]),
+      identifier: this.visit(ctx.variableDeclaratorId),
+    } as FormalParameter;
   }
 
-  unannClassType(ctx: UnannClassTypeCtx) {
-    this.stack.push(ctx.Identifier[0].image);
-  }
-
-  dims(ctx: DimsCtx) {
-    this.stack[this.stack.length - 1] += "[]";
+  variableArityParameter(ctx: VariableArityParameterCtx) {
+    const typeExtractor = new TypeExtractor();
+    return {
+      kind: "FormalParameter",
+      unannType: typeExtractor.extract(ctx.unannType[0]),
+      identifier: ctx.Identifier[0].image,
+    } as FormalParameter;
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {
-    this.stack.push(ctx.Identifier[0].image);
+    return ctx.Identifier[0].image;
   }
 
   blockStatements(ctx: BlockStatementsCtx) {
