@@ -3,6 +3,7 @@ import { Block, VariableDeclarator } from "./blocks-and-statements";
 export type ClassDeclaration = NormalClassDeclaration;
 
 export interface NormalClassDeclaration {
+  kind: "NormalClassDeclaration";
   classModifier: Array<ClassModifier>;
   typeIdentifier: Identifier;
   classBody: Array<ClassBodyDeclaration>;

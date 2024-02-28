@@ -13,6 +13,7 @@ describe("extract MethodModifier correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -49,6 +50,7 @@ describe("extract MethodModifier correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [

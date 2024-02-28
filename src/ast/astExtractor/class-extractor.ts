@@ -1,12 +1,18 @@
 import {
+  BaseJavaCstVisitorWithDefaults,
   ClassMemberDeclarationCtx,
   ClassModifierCtx,
   CstNode,
   TypeIdentifierCtx,
 } from "java-parser";
 
-import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { ClassModifier, Identifier, ClassBodyDeclaration, ClassDeclaration } from "../types/classes";
+import {
+  ClassModifier,
+  Identifier,
+  ClassBodyDeclaration,
+  ClassDeclaration,
+  NormalClassDeclaration
+} from "../types/classes";
 import { MethodExtractor } from "./method-extractor";
 import { FieldExtractor } from "./field-extractor";
 
@@ -28,10 +34,11 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
     this.body = [];
     this.visit(cst);
     return {
+      kind: "NormalClassDeclaration",
       classModifier: this.modifier,
       typeIdentifier: this.identifier,
       classBody: this.body,
-    };
+    } as NormalClassDeclaration;
   }
 
   classModifier(ctx: ClassModifierCtx) {

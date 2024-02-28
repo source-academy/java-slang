@@ -12,6 +12,7 @@ import {
 import {
   FieldDeclaration,
   MethodDeclaration,
+  NormalClassDeclaration,
 } from "./classes";
 
 interface NodeMap {
@@ -26,6 +27,7 @@ interface NodeMap {
   MethodInvocation: MethodInvocation;
   ReturnStatement: ReturnStatement;
   MethodName: MethodName;
+  NormalClassDeclaration: NormalClassDeclaration;
 }
 
 export type Node = NodeMap[keyof NodeMap];

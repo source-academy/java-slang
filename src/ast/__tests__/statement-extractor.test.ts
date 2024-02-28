@@ -15,6 +15,7 @@ describe("extract ExpressionStatement correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -72,6 +73,7 @@ describe("extract ExpressionStatement correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -124,6 +126,7 @@ describe("extract ReturnStatement correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -169,6 +172,7 @@ describe("extract ReturnStatement correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [

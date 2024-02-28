@@ -13,6 +13,7 @@ describe("extract Literal correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -56,6 +57,7 @@ describe("extract BinaryExpression correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -119,6 +121,7 @@ describe("extract BinaryExpression correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -187,6 +190,7 @@ describe("extract ExpressionName correctly", () => {
         kind: "CompilationUnit",
         topLevelClassOrInterfaceDeclarations: [
           {
+            kind: "NormalClassDeclaration",
             classModifier: [],
             typeIdentifier: "Test",
             classBody: [
