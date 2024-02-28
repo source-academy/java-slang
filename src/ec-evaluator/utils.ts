@@ -1,5 +1,6 @@
 import { Node } from "../ast/types/ast";
 import { DecimalIntegerLiteral, Literal } from "../ast/types/blocks-and-statements";
+import { UnannType } from "../ast/types/classes";
 import * as errors from "./errors";
 import { ControlItem, Context, Instr } from "./types";
 
@@ -143,3 +144,16 @@ export const evaluateBinaryExpression = (operator: string, left: Literal, right:
       };
   }
 }
+
+/**
+ * Default values.
+ */
+export const defaultValues = new Map<UnannType, Literal>([
+  ["int", {
+    kind: "Literal",
+    literalType: {
+      kind: "DecimalIntegerLiteral",
+      value: "0",
+    },
+  }],
+]);
