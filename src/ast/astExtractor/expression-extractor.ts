@@ -18,8 +18,10 @@ import {
 } from "java-parser";
 
 import {
+  Assignment,
   BinaryExpression,
   Expression,
+  ExpressionName,
 } from "../types/blocks-and-statements";
 
 export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
@@ -40,12 +42,20 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   binaryExpression(ctx: BinaryExpressionCtx) {
     if (ctx.BinaryOperator && ctx.BinaryOperator.length > 0) {
       return this.makeBinaryExpression(ctx.BinaryOperator, ctx.unaryExpression);
+    } else if (ctx.AssignmentOperator && ctx.expression) {
+      const expressionExtractor = new ExpressionExtractor();
+      return {
+        kind: "Assignment",
+        left: this.visit(ctx.unaryExpression[0]),
+        operator: "=",
+        right: expressionExtractor.extract(ctx.expression[0]),
+      } as Assignment;
     } else {
       return this.visit(ctx.unaryExpression[0]);
     }
   }
 
-  makeBinaryExpression(
+  private makeBinaryExpression(
     operators: IToken[],
     operands: UnaryExpressionCstNode[]
   ): BinaryExpression {
@@ -77,12 +87,12 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
     return res;
   }
 
-  isMulOp(op: IToken) {
+  private isMulOp(op: IToken) {
     const mulOps = ["*", "/", "%"];
     return mulOps.filter((mulOp) => mulOp === op.image).length > 0;
   }
 
-  processPrecedence(operators: IToken[], operands: UnaryExpressionCstNode[]) {
+  private processPrecedence(operators: IToken[], operands: UnaryExpressionCstNode[]) {
     const newOperators = [];
     const newOperands = [];
 
@@ -147,7 +157,12 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
     } else if (ctx.parenthesisExpression) {
       return this.visit(ctx.parenthesisExpression);
     } else if (ctx.fqnOrRefType) {
-      return this.visit(ctx.fqnOrRefType);
+      return {
+        kind: "ExpressionName",
+        name: this.visit(ctx.fqnOrRefType),
+      } as ExpressionName;
+    } else if (ctx.newExpression) {
+      return this.visit(ctx.newExpression);
     }
   }
 
@@ -160,10 +175,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   fqnOrRefTypePartCommon(ctx: FqnOrRefTypePartCommonCtx) {
-    return ctx.Identifier && {
-      kind: "ExpressionName",
-      name: ctx.Identifier[0].image,
-    };
+    return ctx.Identifier && ctx.Identifier[0].image;
   }
 
   literal(ctx: LiteralCtx) {

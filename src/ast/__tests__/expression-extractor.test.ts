@@ -242,3 +242,55 @@ describe("extract ExpressionName correctly", () => {
       expect(ast).toEqual(expectedAst);
     });
 });
+
+describe("extract Assignment correctly", () => {
+  it("extract Assignment correctly", () => {
+    const programStr = `
+      class Test {
+        int x = y = 1;
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                  variableInitializer: {
+                    kind: "Assignment",
+                    left: {
+                      kind: "ExpressionName",
+                      name: "y",
+                    },
+                    operator: "=",
+                    right: {
+                      kind: "Literal",
+                      literalType: {
+                        kind: "DecimalIntegerLiteral",
+                        value: "1",
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+});
