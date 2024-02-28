@@ -1,4 +1,5 @@
 import {
+  ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
   ExpressionCstNode,
@@ -9,9 +10,11 @@ import {
   IToken,
   IntegerLiteralCtx,
   LiteralCtx,
+  MethodInvocationSuffixCtx,
   ParenthesisExpressionCtx,
   PrimaryCtx,
   PrimaryPrefixCtx,
+  PrimarySuffixCtx,
   TernaryExpressionCtx,
   UnaryExpressionCstNode,
   UnaryExpressionCtx,
@@ -22,6 +25,7 @@ import {
   BinaryExpression,
   Expression,
   ExpressionName,
+  MethodInvocation,
 } from "../types/blocks-and-statements";
 
 export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
@@ -148,6 +152,16 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   primary(ctx: PrimaryCtx) {
+    if (ctx.primarySuffix) {
+      return {
+        kind: "MethodInvocation",
+        identifier: {
+          kind: "MethodName",
+          name: this.visit(ctx.primaryPrefix[0].children.fqnOrRefType!),
+        },
+        argumentList: this.visit(ctx.primarySuffix),
+      } as MethodInvocation;
+    }
     return this.visit(ctx.primaryPrefix);
   }
 
@@ -164,6 +178,21 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
     } else if (ctx.newExpression) {
       return this.visit(ctx.newExpression);
     }
+  }
+  
+  primarySuffix(ctx: PrimarySuffixCtx) {
+    if (ctx.methodInvocationSuffix) {
+      return this.visit(ctx.methodInvocationSuffix);
+    }
+  }
+
+  methodInvocationSuffix(ctx: MethodInvocationSuffixCtx) {
+    return ctx.argumentList ? this.visit(ctx.argumentList) : [];
+  }
+
+  argumentList(ctx: ArgumentListCtx) {
+    const expressionExtractor = new ExpressionExtractor();
+    return ctx.expression.map(e => expressionExtractor.extract(e));
   }
 
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {

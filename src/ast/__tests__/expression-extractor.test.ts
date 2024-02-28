@@ -294,3 +294,100 @@ describe("extract Assignment correctly", () => {
     expect(ast).toEqual(expectedAst);
   });
 });
+
+describe("extract MethodInvocation correctly", () => {
+  it("extract MethodInvocation without arguments correctly", () => {
+    const programStr = `
+      class Test {
+        int x = test();
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                  variableInitializer: {
+                    kind: "MethodInvocation",
+                    identifier: {
+                      kind: "MethodName",
+                      name: "test",
+                    },
+                    argumentList: [],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract MethodInvocation with arguments correctly", () => {
+    const programStr = `
+      class Test {
+        int x = test(y, z);
+      }
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "int",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                  variableInitializer: {
+                    kind: "MethodInvocation",
+                    identifier: {
+                      kind: "MethodName",
+                      name: "test",
+                    },
+                    argumentList: [
+                      {
+                        kind: "ExpressionName",
+                        name: "y",
+                      },
+                      {
+                        kind: "ExpressionName",
+                        name: "z",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+});
