@@ -77,6 +77,7 @@ function compile(node: Node, cg: CodeGenerator): CompileResult {
 
 const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => CompileResult } = {
   Block: (node: Node, cg: CodeGenerator) => {
+    cg.symbolTable.extend();
     let maxStack = 0;
     let resultType = "";
     (node as Block).blockStatements.forEach(x => {
@@ -84,6 +85,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       maxStack = Math.max(maxStack, stackSize);
       resultType = type;
     })
+    cg.symbolTable.teardown();
+
     return { stackSize: maxStack, resultType };
   },
 
@@ -149,6 +152,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   BasicForStatement: (node: Node, cg: CodeGenerator) => {
+    cg.symbolTable.extend();
     let maxStack = 0;
     const { forInit, condition, forUpdate, body: body } = node as BasicForStatement;
 
@@ -176,6 +180,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     endLabel.offset = cg.code.length;
 
     cg.loopLabels.pop();
+    cg.symbolTable.teardown();
     return { stackSize: maxStack, resultType: EMPTY_TYPE };
   },
 

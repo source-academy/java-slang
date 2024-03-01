@@ -105,6 +105,38 @@ const testCases: testCase[] = [
     expectedLines: ["-1", "1", "-1", "0", "-1", "-1", "0", "1", "0", "0", "0", "-1", "1", "1", "1", "0", "1", "-1",],
   },
   {
+    comment: "for loops with break statement",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          for (int i = -2; i <= 2; i++) {
+            System.out.println(i);
+            if (i == 0) {
+              break;
+            }
+          }
+        }
+      }
+    `,
+    expectedLines: ["-2", "-1", "0"],
+  },
+  {
+    comment: "for loops with continue statement",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          for (int i = -2; i <= 2; i++) {
+            if (i == 0) {
+              continue;
+            }
+            System.out.println(i);
+          }
+        }
+      }
+    `,
+    expectedLines: ["-2", "-1", "1", "2"],
+  },
+  {
     comment: "for loops with break/continue statements",
     program: `
       public class Main {
