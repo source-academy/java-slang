@@ -72,11 +72,17 @@ export type VariableInitializer = Expression | ArrayInitializer;
 export type ArrayInitializer = Array<VariableInitializer>;
 
 export type Expression = Primary | BinaryExpression | UnaryExpression;
-export type Primary = Literal | ExpressionName | Assignment | ArrayAccess;
+export type Primary = Literal | ExpressionName | Assignment | ArrayAccess | FieldAccess;
+
 export interface ArrayAccess {
   kind: "ArrayAccess";
   primary: Primary;
   expression: Expression;
+}
+
+export interface FieldAccess {
+  kind: "FieldAccess";
+  identifier: Identifier;
 }
 
 export interface Literal {
@@ -157,7 +163,7 @@ export interface BinaryExpression {
 
 export interface ExpressionName {
   kind: "ExpressionName";
-  name: string;
+  identifier: string;
 }
 
 export interface Assignment {
@@ -167,7 +173,7 @@ export interface Assignment {
   right: Expression;
 }
 
-export type LeftHandSide = ExpressionName | ArrayAccess;
+export type LeftHandSide = ExpressionName | FieldAccess | ArrayAccess;
 export type UnaryExpression = PrefixExpression | PostfixExpression;
 
 export interface PrefixExpression {

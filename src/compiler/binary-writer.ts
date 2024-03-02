@@ -148,7 +148,11 @@ export class BinaryWriter {
   }
 
   private writeField(field: FieldInfo) {
-    field;
+    this.write(field.accessFlags, u2);
+    this.write(field.nameIndex, u2);
+    this.write(field.descriptorIndex, u2);
+    this.write(field.attributesCount, u2);
+    field.attributes.forEach(attribute => this.writeAttribute(attribute));
   }
 
   private writeMethod(method: MethodInfo) {

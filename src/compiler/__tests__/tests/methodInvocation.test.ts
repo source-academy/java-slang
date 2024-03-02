@@ -102,6 +102,31 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["1", "1", "2", "6", "24", "120"],
+  },
+  {
+    comment: "composite function",
+    program: `
+      public class Main {
+        public static int f(int x) {
+          return x + 1;
+        }
+        public static int g(int x) {
+          return x * 2;
+        }
+        public static int h(int x) {
+          return x % 10;
+        }
+
+        public static void main(String[] args) {
+          int x = 7;
+          System.out.println(f(g(x)));
+          System.out.println(g(f(x)));
+          System.out.println(h(f(g(x))));
+          System.out.println(h(g(f(x))));
+        }
+      }
+    `,
+    expectedLines: ["15", "16", "5", "6"],
   }
 ];
 

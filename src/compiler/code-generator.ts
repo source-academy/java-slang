@@ -21,11 +21,12 @@ import {
   ArrayAccess,
   BinaryOperator,
   DoStatement,
+  FieldAccess,
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration, UnannType } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import { ConstructNotSupportedError } from "./error";
-import { FieldInfo, MethodInfos, SymbolTable } from "./symbol-table"
+import { FieldInfo, MethodInfos, SymbolTable, VariableInfo } from "./symbol-table"
 
 type Label = {
   offset: number;
@@ -104,8 +105,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const curIdx = cg.maxLocals++;
       cg.symbolTable.insertVariableInfo({
         name: identifier,
+        accessFlags: 0,
+        index: curIdx,
+        typeName: type + v.dims,
         typeDescriptor: cg.symbolTable.generateFieldDescriptor(type + v.dims),
-        index: curIdx
       });
       if (!vi) {
         return;
@@ -304,6 +307,19 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     return f(node, cg.labels[cg.labels.length - 1], false);
   },
 
+  FieldAccess: (node: Node, cg: CodeGenerator) => {
+    const name = (node as FieldAccess).identifier;
+    const fieldInfos = cg.symbolTable.queryField(name) as Array<FieldInfo>;
+
+    for (let i = 0; i < fieldInfos.length; i++) {
+      const fieldInfo = fieldInfos[i];
+      const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
+      cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
+    }
+
+    return { stackSize: 1, resultType: fieldInfos[fieldInfos.length - 1].typeDescriptor };
+  },
+
   ArrayAccess: (node: Node, cg: CodeGenerator) => {
     const n = node as ArrayAccess;
     const { stackSize: size1, resultType: type } = compile(n.primary, cg);
@@ -348,32 +364,47 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   Assignment: (node: Node, cg: CodeGenerator) => {
-    let maxStack = 0;
     const { left: left, operator: op, right: right } = node as Assignment;
 
-    if (left.kind === "ArrayAccess") {
-      const size1 = compile(left.primary, cg).stackSize;
-      const size2 = compile(left.expression, cg).stackSize;
-      maxStack = size1 + size2;
-    }
-
     if (op !== "=") {
-      maxStack += compile({
+      const subExpr: BinaryExpression = {
         kind: "BinaryExpression",
         left: left,
         right: right,
         operator: op.slice(0, op.length - 1) as BinaryOperator
-      }, cg).stackSize;
-    } else {
-      maxStack += compile(right, cg).stackSize;
+      };
+      const newAssignmentNode: Assignment = {
+        kind: "Assignment",
+        left: left,
+        operator: "=",
+        right: subExpr,
+      };
+      return compile(newAssignmentNode, cg);
     }
 
-    if (left.kind === "ExpressionName") {
-      const { index: idx } = cg.symbolTable.queryVariable(left.name);
-      cg.code.push(OPCODE.ISTORE, idx as number);
-    } else {
+    let maxStack = 0;
+    let lhs: Node = left;
+
+    if (lhs.kind === "ArrayAccess") {
+      const size1 = compile(lhs.primary, cg).stackSize;
+      const size2 = compile(lhs.expression, cg).stackSize;
+      maxStack = size1 + size2 + compile(right, cg).stackSize;
       cg.code.push(OPCODE.IASTORE);
+    } else if (lhs.kind === "ExpressionName" && !Array.isArray(cg.symbolTable.queryVariable(lhs.identifier))) {
+      const info = cg.symbolTable.queryVariable(lhs.identifier);
+      maxStack = 1 + compile(right, cg).stackSize;
+      cg.code.push(OPCODE.ISTORE, (info as VariableInfo).index);
+    } else {
+      const info = cg.symbolTable.queryVariable(lhs.identifier);
+      const fieldInfos = info as Array<FieldInfo>;
+      const fieldInfo = fieldInfos[fieldInfos.length - 1];
+      const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
+
+      cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
+      maxStack = 1 + compile(right, cg).stackSize;
+      cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.PUTSTATIC : OPCODE.PUTFIELD, 0, field);
     }
+
     return { stackSize: maxStack, resultType: EMPTY_TYPE };
   },
 
@@ -388,11 +419,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   PrefixExpression: (node: Node, cg: CodeGenerator) => {
     const { operator: op, expression: expr } = node as PostfixExpression;
     if (op === "++" || op === "--") {
-      const { name: name } = expr as ExpressionName;
-      const { index: idx, typeDescriptor: type } = cg.symbolTable.queryVariable(name);
-      cg.code.push(OPCODE.IINC, idx as number, op === "++" ? 1 : -1);
-      cg.code.push(OPCODE.ILOAD, idx as number);
-      return { stackSize: 1, resultType: type };
+      const { identifier: name } = expr as ExpressionName;
+      const info = cg.symbolTable.queryVariable(name);
+      if (Array.isArray(info)) {
+        return { stackSize: 1, resultType: EMPTY_TYPE }; // TODO
+      } else {
+        cg.code.push(OPCODE.IINC, info.index, op === "++" ? 1 : -1);
+        cg.code.push(OPCODE.ILOAD, info.index);
+        return { stackSize: 1, resultType: info.typeDescriptor };
+      }
     }
 
     let compileResult = compile(expr, cg);
@@ -416,18 +451,32 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   PostfixExpression: (node: Node, cg: CodeGenerator) => {
     const { operator: op, expression: expr } = node as PostfixExpression;
-    const { name: name } = expr as ExpressionName;
-    const { index: idx, typeDescriptor: type } = cg.symbolTable.queryVariable(name);
-    cg.code.push(OPCODE.ILOAD, idx as number);
-    cg.code.push(OPCODE.IINC, idx as number, op === "++" ? 1 : -1);
-    return { stackSize: 1, resultType: type };
+    const { identifier: name } = expr as ExpressionName;
+    const info = cg.symbolTable.queryVariable(name);
+    if (Array.isArray(info)) {
+      return { stackSize: 1, resultType: EMPTY_TYPE }; //TODO
+    } else {
+      cg.code.push(OPCODE.ILOAD, info.index);
+      cg.code.push(OPCODE.IINC, info.index, op === "++" ? 1 : -1);
+      return { stackSize: 1, resultType: info.typeDescriptor };
+    }
   },
 
   ExpressionName: (node: Node, cg: CodeGenerator) => {
-    const { name: name } = node as ExpressionName;
-    const { index: idx, typeDescriptor: type } = cg.symbolTable.queryVariable(name);
-    cg.code.push(type.includes('[') ? OPCODE.ALOAD : OPCODE.ILOAD, idx as number);
-    return { stackSize: 1, resultType: type };
+    const { identifier: name } = node as ExpressionName;
+    const info = cg.symbolTable.queryVariable(name);
+    if (Array.isArray(info)) {
+      const fieldInfos = info as Array<FieldInfo>;
+      for (let i = 0; i < fieldInfos.length; i++) {
+        const fieldInfo = fieldInfos[i];
+        const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
+        cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
+      }
+      return { stackSize: 1, resultType: fieldInfos[fieldInfos.length - 1].typeDescriptor };
+    } else {
+      cg.code.push(info.typeDescriptor.includes('[') ? OPCODE.ALOAD : OPCODE.ILOAD, info.index);
+      return { stackSize: 1, resultType: info.typeDescriptor };
+    }
   },
 
   Literal: (node: Node, cg: CodeGenerator) => {
@@ -515,8 +564,10 @@ class CodeGenerator {
     methodNode.methodHeader.formalParameterList.forEach(p => {
       this.symbolTable.insertVariableInfo({
         name: p.identifier,
+        accessFlags: 0,
+        index: this.maxLocals,
+        typeName: p.unannType,
         typeDescriptor: this.symbolTable.generateFieldDescriptor(p.unannType),
-        index: this.maxLocals
       });
       this.maxLocals++;
     });

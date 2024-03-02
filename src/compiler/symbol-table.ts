@@ -57,8 +57,10 @@ export interface MethodInfo {
 
 export interface VariableInfo {
   name: string,
+  accessFlags: number,
+  index: number,
+  typeName: string,
   typeDescriptor: string,
-  index: number
 };
 
 function generateSymbol(name: string, type: SymbolType) {
@@ -73,6 +75,7 @@ export class SymbolTable {
   private tables: Array<Table>;
   private curTable: Table;
   private curIdx: number;
+  private curClassIdx: number;
   private importedPackages: Array<string>;
   private importedClassMap: Map<string, string>;
 
@@ -213,6 +216,7 @@ export class SymbolTable {
 
     this.tables[++this.curIdx] = symbolNode.children;
     this.curTable = this.tables[this.curIdx];
+    this.curClassIdx = this.curIdx;
   }
 
   insertFieldInfo(info: FieldInfo) {
@@ -232,8 +236,10 @@ export class SymbolTable {
   insertVariableInfo(info: VariableInfo) {
     const key = generateSymbol(info.name, SymbolType.VARIABLE);
 
-    if (this.curTable.has(key)) {
-      throw new SymbolRedeclarationError(info.name);
+    for (let i = this.curIdx; i > this.curClassIdx; i++) {
+      if (this.tables[i].has(key)) {
+        throw new SymbolRedeclarationError(info.name);
+      }
     }
 
     const symbolNode: SymbolNode = {
@@ -243,13 +249,54 @@ export class SymbolTable {
     this.curTable.set(key, symbolNode);
   }
 
-  queryVariable(name: string): VariableInfo {
-    const key = generateSymbol(name, SymbolType.VARIABLE);
+  queryField(name: string): Array<SymbolInfo> {
+    let curTable = this.getNewTable();
+    const symbolInfos: Array<SymbolInfo> = [];
+
+    const tokens = name.split('.');
+    const len = tokens.length;
+    for (let i = 0; i < len; i++) {
+      const token = tokens[i];
+      if (i === 0) {
+        const key = generateSymbol(this.resolveTypename(token), SymbolType.CLASS);
+        curTable = this.tables[0].get(key)!.children;
+      } else if (i < len - 1) {
+        const key = generateSymbol(token, SymbolType.FIELD);
+        const node = curTable.get(key);
+        if (node === undefined) {
+          throw new InvalidMethodCallError(name);
+        }
+        symbolInfos.push(node.info);
+        const type = generateSymbol((node.info as FieldInfo).typeName, SymbolType.CLASS);
+        curTable = this.tables[0].get(type)!.children;
+      } else {
+        const key = generateSymbol(token, SymbolType.FIELD);
+        const node = curTable.get(key);
+        if (node === undefined) {
+          throw new InvalidMethodCallError(name);
+        }
+        symbolInfos.push(node.info);
+      }
+    }
+
+    return symbolInfos;
+  }
+
+  queryVariable(name: string): VariableInfo | Array<SymbolInfo> {
+    if (name.includes('.')) {
+      return this.queryField(name);
+    }
+
+    const key1 = generateSymbol(name, SymbolType.VARIABLE);
+    const key2 = generateSymbol(name, SymbolType.FIELD);
 
     for (let i = this.curIdx; i >= 0; i--) {
       const table = this.tables[i];
-      if (table.has(key)) {
-        return (table.get(key) as SymbolNode).info as VariableInfo;
+      if (table.has(key1)) {
+        return (table.get(key1) as SymbolNode).info as VariableInfo;
+      }
+      if (table.has(key2)) {
+        return [(table.get(key2) as SymbolNode).info as FieldInfo];
       }
     }
 
@@ -257,10 +304,9 @@ export class SymbolTable {
   }
 
   queryMethod(name: string): Array<SymbolInfo> {
-    const key1 = generateSymbol(name, SymbolType.VARIABLE);
-    const key2 = generateSymbol(name, SymbolType.FIELD);
-    for (let i = this.curIdx; i >= 0; i--) {
-      if (this.tables[i].has(key1) || this.tables[i].has(key2)) {
+    const key = generateSymbol(name, SymbolType.VARIABLE);
+    for (let i = this.curIdx; i > this.curClassIdx; i--) {
+      if (this.tables[i].has(key)) {
         throw new InvalidMethodCallError(name);
       }
     }
@@ -270,11 +316,10 @@ export class SymbolTable {
     const len = tokens.length;
     if (len === 1) {
       const key = generateSymbol(name, SymbolType.METHOD);
-      for (let i = this.curIdx; i >= 0; i--) {
-        if (this.tables[i].has(key)) {
-          symbolInfos.push(this.tables[i].get(key)!.info);
-          return symbolInfos;
-        }
+      const table = this.tables[this.curClassIdx];
+      if (table.has(key)) {
+        symbolInfos.push(table.get(key)!.info);
+        return symbolInfos;
       }
       throw new InvalidMethodCallError(name);
     }

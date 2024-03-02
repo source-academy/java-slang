@@ -422,7 +422,7 @@ ExpressionName
   = n:Name {
     return {
       kind: "ExpressionName",
-      name: n
+      identifier: n
     }
   }
 
@@ -547,7 +547,14 @@ ClassMemberDeclaration
   / semicolon
 
 FieldDeclaration
-  = FieldModifier* UnannType VariableDeclaratorList semicolon
+  = fm:FieldModifier* ut:UnannType vdl:VariableDeclaratorList semicolon {
+    return {
+      kind: "FieldDeclaration",
+      fieldModifier: fm,
+      unannType: ut,
+      variableDeclaratorList: vdl,
+    }
+  }
 
 FieldModifier
   = public
@@ -816,10 +823,10 @@ ExpressionStatement
 
 StatementExpression
   = Assignment
+  / ClassInstanceCreationExpression
   / &(increment / decrement) @UnaryExpression
   / !PlusMinus @UnaryExpression
   / MethodInvocation
-//  / ClassInstanceCreationExpression
 
 
 /*
@@ -827,9 +834,46 @@ StatementExpression
 */
 Primary
   = lparen @Expression rparen
+  / ClassInstanceCreationExpression
   / MethodInvocation
   / ArrayAccess
+  / FieldAccess
   / Literal 
+
+ClassInstanceCreationExpression
+  = u:UnqualifiedClassInstanceCreationExpression {
+    u.kind = "ClassInstanceCreationExpression";
+    return u;
+  }
+
+UnqualifiedClassInstanceCreationExpression
+  = new TypeArguments? c:ClassOrInterfaceTypeToInstantiate lparen al:ArgumentList? rparen ClassBody? {
+    return {
+      kind: "ClassInstanceCreationExpression",
+      classOrInterfaceTypeToInstantiate: c,
+      argumentList: al ?? [],
+    }
+  }
+
+ClassOrInterfaceTypeToInstantiate
+  = id:Name TypeArgumentsOrDiamond? {
+    return {
+      "kind": "ClassOrInterfaceTypeToInstantiate",
+	    "identifier": id,
+    }
+  }
+
+TypeArgumentsOrDiamond
+  = lt gt
+  / TypeArguments
+
+FieldAccess
+  = id:Identifier dot n:Name {
+    return {
+      kind: "FieldAccess",
+      identifier: id + '.' +  n,
+    }
+  }
 
 ArrayAccess
   = en:ExpressionName lsquare expr:Expression rsquare {
@@ -894,6 +938,7 @@ Assignment
 
 LeftHandSide
   = ArrayAccess
+  / FieldAccess
   / ExpressionName
 
 AssignmentOperator

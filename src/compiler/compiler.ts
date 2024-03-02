@@ -1,12 +1,13 @@
 import { ClassFile } from "../ClassFile/types";
 import { AST } from "../ast/types/packages-and-modules";
-import { ClassDeclaration, MethodDeclaration } from "../ast/types/classes";
+import { ClassBodyDeclaration, ClassDeclaration, FieldDeclaration, MethodDeclaration } from "../ast/types/classes";
 import { AttributeInfo } from "../ClassFile/types/attributes";
 import { FieldInfo } from "../ClassFile/types/fields";
 import { MethodInfo } from "../ClassFile/types/methods";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import {
   generateClassAccessFlags,
+  generateFieldAccessFlags,
   generateMethodAccessFlags,
 } from "./compiler-utils";
 import { SymbolTable } from "./symbol-table";
@@ -56,8 +57,7 @@ export class Compiler {
     const superClassIndex = this.constantPoolManager.indexClassInfo(parentClassName);
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className);
     this.constantPoolManager.indexUtf8Info("Code");
-    classNode.classBody.forEach(m => this.recordMethodInfo(m));
-    classNode.classBody.forEach(m => this.compileMethod(m));
+    this.handleClassBody(classNode.classBody);
 
     const constantPool = this.constantPoolManager.getPool();
     return {
@@ -78,6 +78,60 @@ export class Compiler {
       attributesCount: this.attributes.length,
       attributes: this.attributes
     };
+  }
+
+  private handleClassBody(classBody: Array<ClassBodyDeclaration>) {
+    const staticFields: Array<FieldDeclaration> = [];
+    const nonStaticFields: Array<FieldDeclaration> = [];
+    const staticMethods: Array<MethodDeclaration> = [];
+    const nonStaticMethods: Array<MethodDeclaration> = [];
+
+    classBody.forEach(d => {
+      if (d.kind === "FieldDeclaration") {
+        if (d.fieldModifier.includes("static")) {
+          staticFields.push(d);
+        } else {
+          nonStaticFields.push(d);
+        }
+      } else {
+        if (d.methodModifier.includes("static")) {
+          staticMethods.push(d);
+        } else {
+          nonStaticMethods.push(d);
+        }
+      }
+    });
+
+    staticFields.forEach(f => this.recordFieldInfo(f));
+    staticMethods.forEach(m => this.recordMethodInfo(m));
+    staticMethods.forEach(m => this.compileMethod(m));
+
+    nonStaticFields.forEach(f => this.recordFieldInfo(f));
+    nonStaticMethods.forEach(m => this.recordMethodInfo(m));
+    nonStaticMethods.forEach(m => this.compileMethod(m));
+  }
+
+  private recordFieldInfo(fieldNode: FieldDeclaration) {
+    const accessFlags = generateFieldAccessFlags(fieldNode.fieldModifier);
+    const type = fieldNode.unannType;
+    fieldNode.variableDeclaratorList.forEach(v => {
+      const fullType = type + v.dims;
+      const typeDescriptor = this.symbolTable.generateFieldDescriptor(fullType);
+      this.fields.push({
+        accessFlags: accessFlags,
+        nameIndex: this.constantPoolManager.indexUtf8Info(v.identifier),
+        descriptorIndex: this.constantPoolManager.indexUtf8Info(typeDescriptor),
+        attributesCount: 0,
+        attributes: []
+      });
+      this.symbolTable.insertFieldInfo({
+        name: v.identifier,
+        accessFlags: accessFlags,
+        parentClassName: this.className,
+        typeName: fullType,
+        typeDescriptor: typeDescriptor,
+      })
+    });
   }
 
   private recordMethodInfo(methodNode: MethodDeclaration) {
