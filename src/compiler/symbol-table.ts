@@ -1,7 +1,7 @@
 import { UnannType } from "../ast/types/classes";
 import { ImportDeclaration } from "../ast/types/packages-and-modules";
 import { generateClassAccessFlags, generateFieldAccessFlags, generateMethodAccessFlags } from "./compiler-utils";
-import { InvalidMethodCallError, SymbolNotFoundError, SymbolRedeclarationError } from "./error";
+import { InvalidMethodCallError, SymbolCannotBeResolvedError, SymbolNotFoundError, SymbolRedeclarationError } from "./error";
 
 export const typeMap = new Map([
   ['byte', 'B'],
@@ -179,28 +179,6 @@ export class SymbolTable {
     this.curTable = this.tables[this.curIdx];
   }
 
-  insertMethodInfo(info: MethodInfo) {
-    const key = generateSymbol(info.name, SymbolType.METHOD);
-
-    if (!this.curTable.has(key)) {
-      const symbolNode: SymbolNode = {
-        info: [info],
-        children: this.getNewTable()
-      };
-      this.curTable.set(key, symbolNode);
-      return;
-    }
-
-    const symbolNode = this.curTable.get(key)!;
-    const methodInfos = symbolNode.info as MethodInfos;
-    for (let i = 0; i < methodInfos.length; i++) {
-      if (methodInfos[i].typeDescriptor === info.typeDescriptor) {
-        throw new SymbolRedeclarationError(info.name);
-      }
-    }
-    methodInfos.push(info);
-  }
-
   insertClassInfo(info: ClassInfo) {
     const key = generateSymbol(info.name, SymbolType.CLASS);
 
@@ -233,10 +211,32 @@ export class SymbolTable {
     this.curTable.set(key, symbolNode);
   }
 
+  insertMethodInfo(info: MethodInfo) {
+    const key = generateSymbol(info.name, SymbolType.METHOD);
+
+    if (!this.curTable.has(key)) {
+      const symbolNode: SymbolNode = {
+        info: [info],
+        children: this.getNewTable()
+      };
+      this.curTable.set(key, symbolNode);
+      return;
+    }
+
+    const symbolNode = this.curTable.get(key)!;
+    const methodInfos = symbolNode.info as MethodInfos;
+    for (let i = 0; i < methodInfos.length; i++) {
+      if (methodInfos[i].typeDescriptor === info.typeDescriptor) {
+        throw new SymbolRedeclarationError(info.name);
+      }
+    }
+    methodInfos.push(info);
+  }
+
   insertVariableInfo(info: VariableInfo) {
     const key = generateSymbol(info.name, SymbolType.VARIABLE);
 
-    for (let i = this.curIdx; i > this.curClassIdx; i++) {
+    for (let i = this.curIdx; i > this.curClassIdx; i--) {
       if (this.tables[i].has(key)) {
         throw new SymbolRedeclarationError(info.name);
       }
@@ -249,7 +249,7 @@ export class SymbolTable {
     this.curTable.set(key, symbolNode);
   }
 
-  queryField(name: string): Array<SymbolInfo> {
+  private querySymbol(name: string, symbolType: SymbolType): Array<SymbolInfo> {
     let curTable = this.getNewTable();
     const symbolInfos: Array<SymbolInfo> = [];
 
@@ -264,22 +264,46 @@ export class SymbolTable {
         const key = generateSymbol(token, SymbolType.FIELD);
         const node = curTable.get(key);
         if (node === undefined) {
-          throw new InvalidMethodCallError(name);
+          throw new SymbolCannotBeResolvedError(token, name);
         }
         symbolInfos.push(node.info);
         const type = generateSymbol((node.info as FieldInfo).typeName, SymbolType.CLASS);
         curTable = this.tables[0].get(type)!.children;
       } else {
-        const key = generateSymbol(token, SymbolType.FIELD);
+        const key = generateSymbol(token, symbolType);
         const node = curTable.get(key);
         if (node === undefined) {
-          throw new InvalidMethodCallError(name);
+          throw new SymbolCannotBeResolvedError(token, name);
         }
         symbolInfos.push(node.info);
       }
     }
 
     return symbolInfos;
+  }
+
+  queryField(name: string): Array<SymbolInfo> {
+    return this.querySymbol(name, SymbolType.FIELD);
+  }
+
+  queryMethod(name: string): Array<SymbolInfo> {
+    if (name.includes('.')) {
+      return this.querySymbol(name, SymbolType.METHOD);
+    }
+
+    const key1 = generateSymbol(name, SymbolType.VARIABLE);
+    for (let i = this.curIdx; i > this.curClassIdx; i--) {
+      if (this.tables[i].has(key1)) {
+        throw new InvalidMethodCallError(name);
+      }
+    }
+
+    const key2 = generateSymbol(name, SymbolType.METHOD);
+    const table = this.tables[this.curClassIdx];
+    if (table.has(key2)) {
+      return [table.get(key2)!.info];
+    }
+    throw new InvalidMethodCallError(name);
   }
 
   queryVariable(name: string): VariableInfo | Array<SymbolInfo> {
@@ -301,55 +325,6 @@ export class SymbolTable {
     }
 
     throw new SymbolNotFoundError(name);
-  }
-
-  queryMethod(name: string): Array<SymbolInfo> {
-    const key = generateSymbol(name, SymbolType.VARIABLE);
-    for (let i = this.curIdx; i > this.curClassIdx; i--) {
-      if (this.tables[i].has(key)) {
-        throw new InvalidMethodCallError(name);
-      }
-    }
-
-    const symbolInfos: Array<SymbolInfo> = [];
-    const tokens = name.split('.');
-    const len = tokens.length;
-    if (len === 1) {
-      const key = generateSymbol(name, SymbolType.METHOD);
-      const table = this.tables[this.curClassIdx];
-      if (table.has(key)) {
-        symbolInfos.push(table.get(key)!.info);
-        return symbolInfos;
-      }
-      throw new InvalidMethodCallError(name);
-    }
-
-    let curTable: Table = this.getNewTable();
-    for (let i = 0; i < len; i++) {
-      const token = tokens[i];
-      if (i === 0) {
-        const key = generateSymbol(this.resolveTypename(token), SymbolType.CLASS);
-        curTable = this.tables[0].get(key)!.children;
-      } else if (i < len - 1) {
-        const key = generateSymbol(token, SymbolType.FIELD);
-        const node = curTable.get(key);
-        if (node === undefined) {
-          throw new InvalidMethodCallError(name);
-        }
-        symbolInfos.push(node.info);
-        const type = generateSymbol((node.info as FieldInfo).typeName, SymbolType.CLASS);
-        curTable = this.tables[0].get(type)!.children;
-      } else {
-        const key = generateSymbol(token, SymbolType.METHOD);
-        const node = curTable.get(key);
-        if (node === undefined) {
-          throw new InvalidMethodCallError(name);
-        }
-        symbolInfos.push(node.info);
-      }
-    }
-
-    return symbolInfos;
   }
 
   generateFieldDescriptor(typeName: UnannType) {
