@@ -101,7 +101,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let maxStack = 0;
     const { variableDeclaratorList: lst, localVariableType: type } = node as LocalVariableDeclarationStatement;
     lst.forEach(v => {
-      const { identifier: identifier, variableInitializer: vi } = v;
+      const { variableDeclaratorId: identifier, variableInitializer: vi } = v;
       const curIdx = cg.maxLocals++;
       cg.symbolTable.insertVariableInfo({
         name: identifier,
@@ -133,7 +133,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   ReturnStatement: (node: Node, cg: CodeGenerator) => {
-    const { expression: expr } = node as ReturnStatement;
+    const { exp: expr } = node as ReturnStatement;
     if (expr) {
       const { stackSize: stackSize, resultType: resultType } = compile(expr, cg);
       cg.code.push(OPCODE.IRETURN);
@@ -334,7 +334,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let maxStack = 1;
     let resultType = EMPTY_TYPE;
 
-    const symbolInfos = cg.symbolTable.queryMethod(n.identifier);
+    const symbolInfos = cg.symbolTable.queryMethod(n.identifier.name);
     for (let i = 0; i < symbolInfos.length - 1; i++) {
       const fieldInfo = (symbolInfos[i] as FieldInfo);
       const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);

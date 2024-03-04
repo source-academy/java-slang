@@ -1,12 +1,7 @@
-import { uniqueId } from "lodash"
-import { AgendaItem, Context, Environment, Frame, Instr, Value } from "./types"
-import { Node } from "../ast/types/ast"
-import { 
-  BlockStatement, 
-  Literal, 
-  LocalVariableDeclarationStatement 
-} from "../ast/types/blocks-and-statements"
-import { CompilationUnit } from "../ast/types/packages-and-modules"
+import { Node } from "../ast/types/ast";
+import { DecimalIntegerLiteral, Literal } from "../ast/types/blocks-and-statements";
+import * as errors from "./errors";
+import { ControlItem, Context, Instr } from "./types";
 
 /**
  * Stack is implemented for agenda and stash registers.
@@ -23,14 +18,10 @@ interface IStack<T> {
 export class Stack<T> implements IStack<T> {
   // Bottom of the array is at index 0
   private storage: T[] = []
-  private trace: T[] = []
-
-  public constructor() {}
 
   public push(...items: T[]): void {
     for (const item of items) {
       this.storage.push(item);
-      this.trace.push(item);
     }
   }
 
@@ -57,29 +48,25 @@ export class Stack<T> implements IStack<T> {
     // return a copy of the stack's contents
     return [...this.storage]
   }
-
-  public getTrace(): T[] {
-    return [...this.trace];
-  }
 }
 
 /**
  * Typeguard for Instr to distinguish between program statements and instructions.
  *
- * @param command An AgendaItem
- * @returns true if the AgendaItem is an instruction and false otherwise.
+ * @param command An ControlItem
+ * @returns true if the ControlItem is an instruction and false otherwise.
  */
-export const isInstr = (command: AgendaItem): command is Instr => {
+export const isInstr = (command: ControlItem): command is Instr => {
   return (command as Instr).instrType !== undefined
 }
 
 /**
  * Typeguard for esNode to distinguish between program statements and instructions.
  *
- * @param command An AgendaItem
- * @returns true if the AgendaItem is an esNode and false if it is an instruction.
+ * @param command An ControlItem
+ * @returns true if the ControlItem is an esNode and false if it is an instruction.
  */
-export const isNode = (command: AgendaItem): command is Node => {
+export const isNode = (command: ControlItem): command is Node => {
   return (command as Node).kind !== undefined
 }
 
@@ -92,8 +79,8 @@ export const isNode = (command: AgendaItem): command is Node => {
  * @param seq Array of statements.
  * @returns Array of commands to be pushed into agenda.
  */
-export const handleSequence = (seq: BlockStatement[]): AgendaItem[] => {
-  const result: AgendaItem[] = []
+export const handleSequence = (seq: ControlItem[]): ControlItem[] => {
+  const result: ControlItem[] = []
   for (const command of seq) {
     result.push(command)
   }
@@ -102,101 +89,57 @@ export const handleSequence = (seq: BlockStatement[]): AgendaItem[] => {
 }
 
 /**
- * Environments
+ * Errors
  */
-
-export const currentEnvironment = (context: Context) => context.runtime.environments[0]
-
-export const createBlockEnvironment = (
-  context: Context,
-  name = 'blockEnvironment',
-  head: Frame = {}
-): Environment => {
-  return {
-    name,
-    tail: currentEnvironment(context),
-    head,
-    id: uniqueId()
-  }
-}
-
-export const pushEnvironment = (context: Context, environment: Environment) => {
-  context.runtime.environments.unshift(environment)
-  context.runtime.environmentTree.insert(environment)
+export const handleRuntimeError = (context: Context, error: errors.RuntimeError) => {
+  context.errors.push(error);
+  throw error;
 }
 
 /**
- * Variables
+ * Binary Expressions
  */
-
-const DECLARED_BUT_NOT_YET_ASSIGNED = Symbol('Used to implement block scope')
-
-export function declareVariables(
-  context: Context,
-  node: CompilationUnit,
-  environment: Environment
-) {
-  for (const statement of node.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody) {
-    if (statement.kind === 'LocalVariableDeclarationStatement') {
-      if (environment.head.hasOwnProperty(statement.variableDeclarationList.variableDeclaratorId)) {
-        throw new Error("Variable re-declared.");
-      }
-      environment.head[statement.variableDeclarationList.variableDeclaratorId] = DECLARED_BUT_NOT_YET_ASSIGNED
-    }
-  }
-  return environment
-}
-
-export function defineVariable(
-  context: Context,
-  name: string,
-  value: Value,
-  constant = false,
-  node: LocalVariableDeclarationStatement
-) {
-  const environment = currentEnvironment(context)
-
-  if (environment.head[name] !== DECLARED_BUT_NOT_YET_ASSIGNED) {
-    throw new Error("Variable not declared.")
-  }
-
-  Object.defineProperty(environment.head, name, {
-    value,
-    writable: !constant,
-    enumerable: true
-  })
-
-  return environment
-}
-
-export const evaluateBinaryExpression = (operator: string, left: Literal, right: Literal) => {
+export const evaluateBinaryExpression = (operator: string, left: Literal, right: Literal): Literal => {
   switch (operator) {
-    case '+':
+    case "+":
       return {
-        type: "Literal",
-        value: left.value + right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) + Number(right.literalType.value)),
+        } as DecimalIntegerLiteral,
       };
-    case '-':
+    case "-":
       return {
-        type: "Literal",
-        value: left.value - right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) - Number(right.literalType.value)),
+        } as DecimalIntegerLiteral,
       };
-    case '*':
+    case "*":
       return {
-        type: "Literal",
-        value: left.value * right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) * Number(right.literalType.value)),
+        } as DecimalIntegerLiteral,
       };
-    case '/':
+    case "/":
       return {
-        type: "Literal",
-        value: left.value / right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) / Number(right.literalType.value)),
+        } as DecimalIntegerLiteral,
       };
-    case '%':
+    default /* case "%" */:
       return {
-        type: "Literal",
-        value: left.value % right.value
+        kind: "Literal",
+        literalType: {
+          kind: left.literalType.kind,
+          value: String(Number(left.literalType.value) % Number(right.literalType.value)),
+        } as DecimalIntegerLiteral,
       };
-    default:
-      return undefined;
   }
 }

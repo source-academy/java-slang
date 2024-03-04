@@ -61,11 +61,12 @@ export interface FormalParameter {
   identifier: Identifier;
 }
 
-export type UnannType = string;
-export type VariableDeclaratorId = Identifier;
-
-export type MethodBody = Block;
-export type Identifier = string;
+export interface FieldDeclaration {
+  kind: "FieldDeclaration";
+  fieldModifier: Array<FieldModifier>;
+  fieldType: UnannType;
+  variableDeclaratorList: Array<VariableDeclarator>;
+}
 
 export type FieldModifier =
   | "public"
@@ -74,4 +75,10 @@ export type FieldModifier =
   | "static"
   | "final"
   | "transient"
-  | "volatile"
+  | "volatile";
+
+export type UnannType = string;
+export type VariableDeclaratorId = Identifier;
+
+export type MethodBody = Block;
+export type Identifier = string;

@@ -1,55 +1,106 @@
 import { Node } from "../ast/types/ast";
-import { EnvTree } from "./createContext";
-import { Agenda, Stash } from "./interpreter"
+import { Literal, Void } from "../ast/types/blocks-and-statements";
+import { MethodDeclaration } from "../ast/types/classes";
+import { Control, EnvNode, Environment, Stash } from "./components";
+import { RuntimeError } from "./errors";
 
-export interface Context<T = any> {
-  /** Runtime Specific state */
-  runtime: {
-    environmentTree: EnvTree
-    environments: Environment[]
-    nodes: Node[]
-    agenda: Agenda | null
-    stash: Stash | null
-  }
-}
+export interface Context {
+  errors: RuntimeError[],
 
-export interface Environment {
-  id: string
-  name: string
-  tail: Environment | null
-  head: Frame
-}
+  control: Control,
+  stash: Stash,
+  environment: Environment,
 
-export interface Frame {
-  [name: string]: any
-}
+  totalSteps: number,
+};
 
+/**
+ * Instructions
+ */
 export enum InstrType {
-  ASSIGNMENT = 'Assignment',
+  ASSIGNMENT = 'Assign',
   BINARY_OP = 'BinaryOperation',
   POP = 'Pop',
+  INVOCATION = 'Invocation',
+  RESET = 'Reset',
+  ENV = 'Env',
+  MARKER = 'Marker',
+  EVAL_VAR = 'EvalVariable',
 }
 
 interface BaseInstr {
-  instrType: InstrType
-  srcNode: Node
+  instrType: InstrType;
+  srcNode: Node;
 }
 
-export interface AssmtInstr extends BaseInstr {
-  symbol: string
-  constant: boolean
-  declaration: boolean
-}
+export interface AssmtInstr extends BaseInstr {}
 
 export interface BinOpInstr extends BaseInstr {
-  symbol: string
+  symbol: string;
+}
+
+export interface PopInstr extends BaseInstr {}
+
+export interface InvInstr extends BaseInstr {
+  arity: number;
+}
+
+export interface EnvInstr extends BaseInstr {
+  env: EnvNode;
+}
+
+export interface MarkerInstr extends BaseInstr {}
+
+export interface ResetInstr extends BaseInstr {}
+
+export interface EvalVarInstr extends BaseInstr {
+  symbol: string;
 }
 
 export type Instr =
-  | BaseInstr
   | AssmtInstr
-  | BinOpInstr;
+  | BinOpInstr
+  | PopInstr
+  | InvInstr
+  | EnvInstr
+  | MarkerInstr
+  | ResetInstr
+  | EvalVarInstr;
 
-export type AgendaItem = Node | Instr
+/**
+ * Components
+ */
+export type ControlItem = Node | Instr;
+export type StashItem = Literal | Closure | Void | Variable;
 
-export type Value = any
+export type Name = string;
+export type Value = Variable | Closure;
+
+export type VarValue = any
+
+export interface Variable {
+  kind: "Variable";
+  name: Name;
+  value: VarValue;
+}
+
+export interface Closure {
+  kind: "Closure";
+  method: MethodDeclaration;
+  env: EnvNode;
+}
+
+/**
+ * Execution results
+ */
+export interface Error {
+  status: 'error';
+}
+
+export interface Finished {
+  status: 'finished';
+  context: Context;
+  value: Value;
+}
+
+export type Result = Finished | Error;

@@ -6,6 +6,7 @@
   "repository": "https://github.com/source-academy/java-slang.git",
   "license": "Apache-2.0",
   "scripts": {
+    "build": "tsc --build --force",
     "test": "jest",
     "test:watch": "jest --watch"
   },

@@ -580,7 +580,7 @@ VariableDeclaratorId
   = id:Identifier d:Dims? {
     return {
       kind: "VariableDeclarator",
-      identifier: id,
+      variableDeclaratorId: id,
       dims: d ?? "",
     }
   }
@@ -645,7 +645,7 @@ FormalParameter
       kind: "FormalParameter",
       variableModifier: vm,
       unannType: ut + vdid.dims,
-      identifier: vdid.identifier,
+      identifier: vdid.variableDeclaratorId,
     }
   }
 
@@ -762,7 +762,7 @@ ReturnStatement
     }
     return {
       kind: "ReturnStatement",
-      expression: expr,
+      exp: expr,
     }
   }
 
@@ -886,7 +886,7 @@ ArrayAccess
 
 MethodInvocation
   = n:Name lparen al:ArgumentList? rparen { 
-    return { kind: "MethodInvocation", identifier: n, argumentList: al ?? [] }
+    return { kind: "MethodInvocation", identifier: {kind: "MethodName", name: n}, argumentList: al ?? [] }
   }
 
 ArgumentList

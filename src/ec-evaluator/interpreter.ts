@@ -1,175 +1,374 @@
 import { 
-  BinaryExpression, 
-  Literal, 
-  LocalVariableDeclarationStatement, 
-  VariableDeclarator
+  Assignment,
+  BinaryExpression,
+  Block,
+  Expression,
+  ExpressionName,
+  ExpressionStatement,
+  Literal,
+  LocalVariableDeclarationStatement,
+  LocalVariableType,
+  MethodInvocation,
+  MethodName,
+  ReturnStatement,
+  VariableDeclarator,
+  Void,
 } from "../ast/types/blocks-and-statements";
+import {
+  FieldDeclaration,
+  FormalParameter,
+  Identifier,
+  MethodBody,
+  MethodDeclaration
+} from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
+import { Control, Stash } from "./components";
+import { STEP_LIMIT } from "./constants";
+import * as instr from './instrCreator';
+import * as node from './nodeCreator';
+import {
+  ControlItem,
+  AssmtInstr,
+  BinOpInstr,
+  Context,
+  Instr,
+  InstrType,
+  InvInstr,
+  Closure,
+  EnvInstr,
+  ResetInstr,
+  EvalVarInstr,
+  Variable,
+  VarValue,
+} from "./types";
 import { 
-  Stack, 
-  createBlockEnvironment, 
-  declareVariables, 
-  defineVariable, 
-  evaluateBinaryExpression, 
-  handleSequence, 
-  isNode, 
-  pushEnvironment 
+  evaluateBinaryExpression,
+  handleSequence,
+  isNode,
 } from "./utils";
-import { AgendaItem, AssmtInstr, BinOpInstr, Context, Instr, InstrType, Value } from "./types";
-import { Identifier } from "../ast/types/classes";
-import * as instr from './instrCreator'
-import { createContext } from "./createContext";
 
 type CmdEvaluator = (
-  command: AgendaItem,
+  command: ControlItem,
   context: Context,
-  agenda: Agenda,
+  control: Control,
   stash: Stash,
 ) => void
 
-/**
- * The agenda is a list of commands that still needs to be executed by the machine.
- * It contains syntax tree nodes or instructions.
- */
-export class Agenda extends Stack<AgendaItem> {
-  public constructor(compilationUnit: CompilationUnit) {
-    super();
+export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): VarValue => {
+  const control = context.control;
+  const stash = context.stash;
 
-    // Load compilationUnit into agenda stack
-    this.push(compilationUnit);
-  }
-}
+  let step = 1;
 
-/**
- * The stash is a list of values that stores intermediate results.
- */
-export class Stash extends Stack<Value> {
-  public constructor() {
-    super()
-  }
-}
-
-/**
- * The primary runner/loop of the explicit control evaluator.
- *
- * @param context The context to evaluate the program in.
- * @param agenda Points to the current context.runtime.agenda
- * @param stash Points to the current context.runtime.stash
- * @returns A special break object if the program is interrupted by a breakpoint;
- * else the top value of the stash. It is usually the return value of the program.
- */
-export const evaluate = (compilationUnit: CompilationUnit): [any, AgendaItem[], any[]] => {
-  const context = createContext();
-  const agenda = new Agenda(compilationUnit);
-  const stash = new Stash();
-
-  let command = agenda.peek()
-  
-  // console.log("Agenda: ", agenda);
-  // console.log("Stash: ", stash);
-  // console.log("Environment: ", context.runtime.environments)
+  let command = control.peek();
   
   while (command) {
-    agenda.pop()
-    if (isNode(command)) {
-      cmdEvaluators[command.kind](command, context, agenda, stash)
-    } else {
-      // Command is an instrucion
-      cmdEvaluators[command.instrType](command, context, agenda, stash)
+    if (step === targetStep) {
+      return stash.peek();
     }
 
-    // console.log("----------------------------------------------------------------------------")
-    // console.log("Agenda: ", agenda);
-    // console.log("Stash: ", stash);
-    // console.log("Environment: ", context.runtime.environments)
+    control.pop();
+    if (isNode(command)) {
+      cmdEvaluators[command.kind](command, context, control, stash);
+    } else {
+      cmdEvaluators[command.instrType](command, context, control, stash);
+    }
 
-    command = agenda.peek()
+    command = control.peek();
+    step += 1;
   }
 
-  return [stash.peek(), agenda.getTrace(), stash.getTrace()]
+  context.totalSteps = step;
+  return stash.peek();
 }
 
-/**
- * Dictionary of functions which handle the logic for the response of the three registers of
- * the ASE machine to each AgendaItem.
- */
 const cmdEvaluators: { [type: string]: CmdEvaluator } = {
-  /**
-   * Statements
-   */
+  CompilationUnit: (
+    command: CompilationUnit,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // TODO eval class declarations
+    control.push(node.mainMtdInvExpStmtNode());
+    control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations[0].classBody));
+  },
 
-  CompilationUnit: (command: CompilationUnit, context:Context, agenda: Agenda, stash: Stash) => {
-    // Create and push the environment only if it is non empty.
-    const environment = createBlockEnvironment(context, 'mainFuncEnvironment')
-    pushEnvironment(context, environment)
-    declareVariables(context, command, environment)
+  Block: (
+    command: Block,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Save current environment before extending.
+    control.push(instr.envInstr(context.environment.current, command));
+    control.push(...handleSequence(command.blockStatements));
 
-    if (command.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody.length == 1) {
-      // If program only consists of one statement, evaluate it immediately
-      const next = command.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody[0]
-      cmdEvaluators[next.kind](next, context, agenda, stash)
-      
-      // console.log("----------------------------------------------------------------------------")
-      // console.log("Agenda: ", agenda);
-      // console.log("Stash: ", stash);
-      // console.log("Environment: ", context.runtime.environments)
+    context.environment.extendEnv(context.environment.current, "block");
+  },
 
-    } else {
-      // Push block body
-      agenda.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody))
+  MethodDeclaration: (
+    command: MethodDeclaration,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Add empty ReturnStatement if absent
+    const methodBody: MethodBody = command.methodBody;
+    if (methodBody.blockStatements.length === 0 ||
+      // TODO deep search
+      methodBody.blockStatements.filter(stmt => stmt.kind === "ReturnStatement").length === 0) {
+      methodBody.blockStatements.push(node.emptyReturnStmtNode());
+    }
+    
+    // Declare method
+    // TODO use method signature instead of identifier
+    const id: Identifier = command.methodHeader.identifier;
+    const closure = {
+      kind: "Closure",
+      method: command,
+      env: context.environment.current,
+    } as Closure;
+    context.environment.defineMethod(id, closure);
+  },
+
+  FieldDeclaration: (
+    command: FieldDeclaration,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const declaration: VariableDeclarator = command.variableDeclaratorList[0];
+    const id: Identifier = declaration.variableDeclaratorId;
+    context.environment.declareVariable(id);
+    // TODO default value utility function
+    context.environment.defineVariable(id, {
+      kind: "Literal",
+      literalType: {
+        kind: "DecimalIntegerLiteral",
+        value: "0",
+      },
+    } as Literal);
+    
+    const init: Expression | undefined = declaration?.variableInitializer;
+    if (init) {
+      control.push(instr.popInstr(command));
+      control.push(instr.assmtInstr(command));
+      control.push(init);
+      control.push(instr.evalVarInstr(id, command));
     }
   },
 
-  LocalVariableDeclarationStatement: function (
+  LocalVariableDeclarationStatement: (
     command: LocalVariableDeclarationStatement,
-    context:Context,
-    agenda: Agenda,
+    context: Context,
+    control: Control,
     stash: Stash,
-  ) {
-    const declaration: VariableDeclarator = command.variableDeclarationList
-    const id = declaration.variableDeclaratorId as Identifier
-    const init = declaration.variableInitializer
+  ) => {
+    const type: LocalVariableType = command.localVariableType;
+    const declaration: VariableDeclarator = command.variableDeclaratorList[0];
+    const id: Identifier = declaration.variableDeclaratorId;
 
-    agenda.push(instr.popInstr(command))
-    agenda.push(instr.assmtInstr(id, false, true, command))
-    agenda.push(init)
+    // Break down LocalVariableDeclarationStatement with VariableInitializer into
+    // LocalVariableDeclarationStatement without VariableInitializer and Assignment.
+    const init: Expression | undefined = declaration?.variableInitializer;
+    if (init) {
+      control.push(node.expStmtAssmtNode(id, init));
+      control.push(node.localVarDeclNoInitNode(type, id));
+      return;
+    }
+
+    // Evaluating LocalVariableDeclarationStatement just declares the variable.
+    context.environment.declareVariable(id);
   },
 
-  Literal: (command: Literal, context:Context, agenda: Agenda, stash: Stash) => {
+  ExpressionStatement: (
+    command: ExpressionStatement,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    control.push(instr.popInstr(command));
+    control.push(command.stmtExp);
+  },
+
+  ReturnStatement: (
+    command: ReturnStatement,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    control.push(instr.resetInstr(command));
+    control.push(command.exp);
+  },
+
+  Assignment: (
+    command: Assignment,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    control.push(instr.assmtInstr(command));
+    control.push(command.right);
+    control.push(instr.evalVarInstr(command.left.name, command));
+  },
+  
+  MethodInvocation: (
+    command: MethodInvocation,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    control.push(instr.invInstr(command.argumentList.length, command));
+    control.push(...handleSequence(command.argumentList));
+    control.push(command.identifier);
+  },
+
+  Literal: (
+    command: Literal,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
     stash.push(command);
   },
 
-  BinaryExpression: function (command: BinaryExpression, context: Context, agenda: Agenda, stash: Stash) {
-    agenda.push(instr.binOpInstr(command.operator, command))
-    agenda.push(command.right)
-    agenda.push(command.left)
+  Void: (
+    command: Void,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    stash.push(command);
   },
 
-  /**
-   * Instructions
-   */
-  [InstrType.POP]: function (command: Instr, context: Context, agenda: Agenda, stash: Stash) {
-    stash.pop()
+  ExpressionName: (
+    command: ExpressionName,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // TODO add DEREF instr and standardize ExpressionName eval to Variable
+    const value: VarValue = context.environment.getValue(command.name);
+    stash.push(value);
+  },
+
+  MethodName: (
+    command: MethodName,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const value: Closure = context.environment.getMethod(command.name);
+    stash.push(value);
+  },
+
+  BinaryExpression: (
+    command: BinaryExpression,
+    context: Context,
+    control: Control,
+    stash: Stash
+  ) => {
+    control.push(instr.binOpInstr(command.operator, command));
+    control.push(command.right);
+    control.push(command.left);
+  },
+
+  [InstrType.POP]: (
+    command: Instr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    stash.pop();
   },
   
-  [InstrType.ASSIGNMENT]: function (
+  [InstrType.ASSIGNMENT]: (
     command: AssmtInstr,
     context: Context,
-    agenda: Agenda,
-    stash: Stash
-  ) {
-    defineVariable(context, command.symbol, stash.peek(), command.constant, 
-      command.srcNode as LocalVariableDeclarationStatement)
+    control: Control,
+    stash: Stash,
+  ) => {
+    // value is popped before variable becuase value is evaluated later than variable.
+    const value: VarValue = stash.pop()! as Literal;
+    const variable: Variable = stash.pop()! as Variable;
+    variable.value = value;
+    stash.push(value);
   },
 
-  [InstrType.BINARY_OP]: function (
+  [InstrType.BINARY_OP]: (
     command: BinOpInstr,
     context: Context,
-    agenda: Agenda,
-    stash: Stash
-  ) {
-    const right = stash.pop()
-    const left = stash.pop()
-    stash.push(evaluateBinaryExpression(command.symbol, left, right))
-  }
-}
+    control: Control,
+    stash: Stash,
+  ) => {
+    const right = stash.pop()! as Literal;
+    const left = stash.pop()! as Literal;
+    stash.push(evaluateBinaryExpression(command.symbol, left, right));
+  },
+
+  [InstrType.INVOCATION]: (
+    command: InvInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+    ) => {
+    // Save current environment to be restored after method returns.
+    control.push(instr.envInstr(context.environment.current, command.srcNode));
+
+    // Mark end of method in case method returns halfway.
+    control.push(instr.markerInstr(command.srcNode));
+
+    // Retrieve arguments and method to be invoked in reversed order.
+    const args: Literal[] = [];
+    for (let i = 0; i < command.arity; i++) {
+      args.push(stash.pop()! as Literal);
+    }
+    args.reverse();
+    const closure: Closure = stash.pop()! as Closure;
+
+    // Extend method's environment by binding arguments to corresponding parameters.
+    context.environment.extendEnv(closure.env, closure.method.methodHeader.identifier);
+    const params: FormalParameter[] = closure.method.methodHeader.formalParameterList;
+    params.forEach(param => {
+      context.environment.declareVariable(param.identifier);
+    });
+    for (let i = 0; i < command.arity; i++) {
+      context.environment.defineVariable(params[i].identifier, args[i]);
+    }
+
+    // Push method body
+    control.push(closure.method.methodBody);
+  },
+
+  [InstrType.ENV]: (
+    command: EnvInstr,
+    context: Context,
+    control: Control,
+    stash: Stash, 
+  ) => {
+    context.environment.restoreEnv(command.env);
+  },
+
+  [InstrType.RESET]: (
+    command: ResetInstr,
+    context: Context,
+    control: Control,
+    stash: Stash, 
+  ) => {
+    // Continue popping ControlItem until Marker is found.
+    const next: ControlItem | undefined = control.pop();
+    if (next && (isNode(next) || next.instrType !== InstrType.MARKER)) {
+      control.push(instr.resetInstr(command.srcNode));
+    }
+  },
+
+  [InstrType.EVAL_VAR]: (
+    command: EvalVarInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    stash.push(context.environment.getVariable(command.symbol));
+  },
+};

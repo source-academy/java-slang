@@ -119,13 +119,13 @@ export class Compiler {
       const typeDescriptor = this.symbolTable.generateFieldDescriptor(fullType);
       this.fields.push({
         accessFlags: accessFlags,
-        nameIndex: this.constantPoolManager.indexUtf8Info(v.identifier),
+        nameIndex: this.constantPoolManager.indexUtf8Info(v.variableDeclaratorId),
         descriptorIndex: this.constantPoolManager.indexUtf8Info(typeDescriptor),
         attributesCount: 0,
         attributes: []
       });
       this.symbolTable.insertFieldInfo({
-        name: v.identifier,
+        name: v.variableDeclaratorId,
         accessFlags: accessFlags,
         parentClassName: this.className,
         typeName: fullType,

@@ -49,12 +49,22 @@ export interface EnhancedForStatement {
 
 export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement | ReturnStatement | BreakStatement | ContinueStatement;
 
-export type ExpressionStatement = MethodInvocation | Assignment;
+export interface ExpressionStatement {
+  kind: "ExpressionStatement";
+  stmtExp: StatementExpression
+}
+
+export type StatementExpression = MethodInvocation | Assignment;
 
 export interface MethodInvocation {
   kind: "MethodInvocation";
-  identifier: Identifier
+  identifier: MethodName;
   argumentList: ArgumentList;
+}
+
+export interface MethodName {
+  kind: "MethodName";
+  name: string;
 }
 
 export type ArgumentList = Array<Expression>;
@@ -63,16 +73,15 @@ export type LocalVariableType = UnannType;
 
 export interface VariableDeclarator {
   kind: "VariableDeclarator";
-  identifier: Identifier;
+  variableDeclaratorId: VariableDeclaratorId;
   dims: string;
-  variableInitializer: VariableInitializer;
+  variableInitializer?: VariableInitializer;
 }
 
+export type VariableDeclaratorId = Identifier;
 export type VariableInitializer = Expression | ArrayInitializer;
-export type ArrayInitializer = Array<VariableInitializer>;
 
-export type Expression = Primary | BinaryExpression | UnaryExpression;
-export type Primary = Literal | ExpressionName | Assignment | ArrayAccess | FieldAccess;
+export type ArrayInitializer = Array<VariableInitializer>;
 
 export interface ArrayAccess {
   kind: "ArrayAccess";
@@ -84,6 +93,19 @@ export interface FieldAccess {
   kind: "FieldAccess";
   identifier: Identifier;
 }
+
+export interface ReturnStatement {
+  kind: "ReturnStatement";
+  exp: Expression;
+}
+
+export type Expression = Primary | BinaryExpression | UnaryExpression | Void;
+
+export interface Void {
+  kind: "Void";
+}
+
+export type Primary = Literal | ExpressionName | Assignment | MethodInvocation | ArrayAccess | FieldAccess;
 
 export interface Literal {
   kind: "Literal";
@@ -185,11 +207,6 @@ export interface PrefixExpression {
 export interface PostfixExpression {
   kind: "PostfixExpression";
   operator: "++" | "--";
-  expression: Expression;
-}
-
-export interface ReturnStatement {
-  kind: "ReturnStatement";
   expression: Expression;
 }
 
