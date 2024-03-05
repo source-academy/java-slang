@@ -126,11 +126,10 @@ export const check = (
       const errors: Error[] = [];
       const conditionResult = check(node.condition, environmentFrame);
       if (conditionResult.errors) errors.push(...conditionResult.errors);
-      if (!conditionResult.currentType)
-        throw new Error(
-          "Conditions in if statements should evaluate to a boolean."
-        );
-      if (!new Boolean().canBeAssigned(conditionResult.currentType))
+      if (
+        conditionResult.currentType &&
+        !new Boolean().canBeAssigned(conditionResult.currentType)
+      )
         errors.push(new IncompatibleTypesError());
       const newEnvironmentFrame = createFrame({}, environmentFrame);
       const consequentResult = check(node.consequent, newEnvironmentFrame);

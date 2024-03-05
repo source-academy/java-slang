@@ -1,4 +1,5 @@
 import { check } from "..";
+import { IncompatibleTypesError } from "../../errors";
 import { parse } from "../../../ast/parser";
 import { Type } from "../../types/type";
 
@@ -47,6 +48,15 @@ const testcases: {
       }
     `,
     result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int test = 0;
+      if (1 + 1) {
+        test = 1;
+      }
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] },
   },
 ];
 
