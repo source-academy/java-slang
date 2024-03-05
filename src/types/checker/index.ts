@@ -1,4 +1,5 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
+import { MethodDeclaration } from "../../ast/types/classes";
 import { Node } from "../../ast/types/ast";
 import { String } from "../types/nonPrimitives";
 import { Type } from "../types/type";
@@ -96,13 +97,18 @@ export const check = (
       }
     }
     case "CompilationUnit": {
-      const { blockStatements } =
-        node.topLevelClassOrInterfaceDeclarations[0].classBody[0].methodBody;
+      const { blockStatements } = (
+        node.topLevelClassOrInterfaceDeclarations[0]
+          .classBody[0] as MethodDeclaration
+      ).methodBody;
       const newEnvironmentFrame = createFrame({}, environmentFrame);
       const errors = blockStatements.flatMap((blockStatement) => {
         return check(blockStatement, newEnvironmentFrame).errors;
       });
       return { currentType: null, errors };
+    }
+    case "ExpressionStatement": {
+      return check(node.stmtExp, environmentFrame);
     }
     case "Literal": {
       const {
