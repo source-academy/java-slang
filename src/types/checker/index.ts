@@ -96,6 +96,15 @@ export const check = (
           );
       }
     }
+    case "Block": {
+      const errors: Error[] = [];
+      const newEnvironmentFrame = createFrame({}, environmentFrame);
+      node.blockStatements.forEach((statement) => {
+        const result = check(statement, newEnvironmentFrame);
+        if (result.errors) errors.push(...result.errors);
+      });
+      return newResult(null, errors);
+    }
     case "CompilationUnit": {
       const { blockStatements } = (
         node.topLevelClassOrInterfaceDeclarations[0]
@@ -107,8 +116,26 @@ export const check = (
       });
       return { currentType: null, errors };
     }
+    case "EmptyStatement": {
+      return newResult(null);
+    }
     case "ExpressionStatement": {
       return check(node.stmtExp, environmentFrame);
+    }
+    case "IfStatement": {
+      const errors: Error[] = [];
+      const conditionResult = check(node.condition, environmentFrame);
+      if (conditionResult.errors) errors.push(...conditionResult.errors);
+      if (!conditionResult.currentType)
+        throw new Error(
+          "Conditions in if statements should evaluate to a boolean."
+        );
+      if (!new Boolean().canBeAssigned(conditionResult.currentType))
+        errors.push(new IncompatibleTypesError());
+      const newEnvironmentFrame = createFrame({}, environmentFrame);
+      const consequentResult = check(node.consequent, newEnvironmentFrame);
+      if (consequentResult.errors) errors.push(...conditionResult.errors);
+      return newResult(null, errors);
     }
     case "Literal": {
       const {

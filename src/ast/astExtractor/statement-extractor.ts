@@ -2,11 +2,15 @@ import {
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
+  BlockCtx,
+  BlockStatementCtx,
+  BlockStatementsCtx,
   ExpressionCtx,
   FqnOrRefTypeCtx,
   FqnOrRefTypePartCommonCtx,
   FqnOrRefTypePartFirstCtx,
   FqnOrRefTypePartRestCtx,
+  IfStatementCtx,
   MethodInvocationSuffixCtx,
   PrimaryCtx,
   PrimaryPrefixCtx,
@@ -14,6 +18,7 @@ import {
   ReturnStatementCtx,
   StatementCstNode,
   StatementExpressionCtx,
+  StatementWithoutTrailingSubstatementCtx,
   TernaryExpressionCtx,
   UnaryExpressionCtx,
 } from "java-parser";
@@ -21,6 +26,7 @@ import {
 import {
   Assignment,
   Expression,
+  IfStatement,
   MethodInvocation,
   Statement,
   StatementExpression,
@@ -39,16 +45,27 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   extract(cst: StatementCstNode): Statement {
-    this.location = cst.location;
-    const statementWithoutTrailingSubstatementCst = cst.children.statementWithoutTrailingSubstatement![0];
-    this.visit(statementWithoutTrailingSubstatementCst);
-    if (statementWithoutTrailingSubstatementCst.children.expressionStatement) {
+    if (cst.children.ifStatement) {
+      return this.visit(cst.children.ifStatement);
+    } else {
+      return this.visit(cst.children.statementWithoutTrailingSubstatement!);
+    }
+  }
+
+  statementWithoutTrailingSubstatement(
+    ctx: StatementWithoutTrailingSubstatementCtx
+  ): Statement {
+    if (ctx.expressionStatement) {
+      this.visit(ctx.expressionStatement);
       return {
         kind: "ExpressionStatement",
         stmtExp: this.stmtExp,
         location: this.location,
       };
-    } else /* if (statementWithoutTrailingSubstatementCst.children.returnStatement) */ {
+    } else if (ctx.block) {
+      return this.visit(ctx.block);
+    } /* if (ctx.returnStatement) */ else {
+      this.visit(ctx.returnStatement!);
       return {
         kind: "ReturnStatement",
         exp: this.exp,
@@ -113,16 +130,23 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
     let primary = this.visit(ctx.primaryPrefix);
 
     if (ctx.primarySuffix) {
-      for (const s of ctx.primarySuffix.filter(s => !s.children.methodInvocationSuffix)) {
+      for (const s of ctx.primarySuffix.filter(
+        (s) => !s.children.methodInvocationSuffix
+      )) {
         primary += "." + this.visit(s);
       }
 
       // MethodInvocation
-      if (ctx.primarySuffix[ctx.primarySuffix.length - 1].children.methodInvocationSuffix) {
+      if (
+        ctx.primarySuffix[ctx.primarySuffix.length - 1].children
+          .methodInvocationSuffix
+      ) {
         return {
           kind: "MethodInvocation",
           identifier: primary,
-          argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
+          argumentList: this.visit(
+            ctx.primarySuffix[ctx.primarySuffix.length - 1]
+          ),
           location: this.location,
         } as MethodInvocation;
       }
@@ -157,7 +181,7 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   argumentList(ctx: ArgumentListCtx) {
     // MethodInvocation argumentList
     const expressionExtractor = new ExpressionExtractor();
-    return ctx.expression.map(e => expressionExtractor.extract(e));
+    return ctx.expression.map((e) => expressionExtractor.extract(e));
   }
 
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
@@ -183,5 +207,47 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   fqnOrRefTypePartRest(ctx: FqnOrRefTypePartRestCtx) {
     return this.visit(ctx.fqnOrRefTypePartCommon);
+  }
+
+  ifStatement(ctx: IfStatementCtx): IfStatement {
+    const consequentStatements: StatementCstNode[] = [];
+    const alternateStatements: StatementCstNode[] = [];
+    ctx.statement.forEach((statement) => {
+      if (!ctx.Else) consequentStatements.push(statement);
+      else
+        statement.location.startOffset > ctx.Else[0].endOffset
+          ? alternateStatements.push(statement)
+          : consequentStatements.push(statement);
+    });
+    const expressionExtractor = new ExpressionExtractor();
+    const result: Statement = {
+      kind: "IfStatement",
+      condition: expressionExtractor.extract(ctx.expression[0]),
+      consequent:
+        consequentStatements.length > 0
+          ? this.extract(consequentStatements[0])
+          : { kind: "EmptyStatement" },
+    };
+    if (alternateStatements.length === 0) return result;
+    return { ...result, alternate: this.extract(alternateStatements[0]) };
+  }
+
+  block(ctx: BlockCtx): Statement {
+    if (ctx.blockStatements) return this.visit(ctx.blockStatements);
+    return { kind: "EmptyStatement" };
+  }
+
+  blockStatements(ctx: BlockStatementsCtx): Statement {
+    return {
+      kind: "Block",
+      blockStatements: ctx.blockStatement.map((blockStatement) =>
+        this.visit(blockStatement)
+      ),
+    };
+  }
+
+  blockStatement(ctx: BlockStatementCtx): Statement {
+    if (ctx.statement) return this.extract(ctx.statement[0]);
+    return { kind: "EmptyStatement" };
   }
 }

@@ -23,7 +23,6 @@ const testcases: {
       }
     `,
     result: { type: null, errors: [] },
-    only: true,
   },
   {
     input: `
@@ -31,6 +30,20 @@ const testcases: {
       if (false) {}
       else {
         test = 1;
+      }
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int test = 0;
+      if (true) {
+        test = 1;
+        test = 2;
+      }
+      else {
+        test = 3;
+        test = 4;
       }
     `,
     result: { type: null, errors: [] },
