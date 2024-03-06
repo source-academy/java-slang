@@ -167,10 +167,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       if (ctx.primarySuffix[ctx.primarySuffix.length - 1].children.methodInvocationSuffix) {
         return {
           kind: "MethodInvocation",
-          identifier: {
-            kind: "MethodName",
-            name: primary,
-          },
+          identifier: primary,
           argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
         } as MethodInvocation;
       }

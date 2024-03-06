@@ -376,10 +376,7 @@ describe("extract ExpressionStatement correctly", () => {
                       kind: "ExpressionStatement",
                       stmtExp: {
                         kind: "MethodInvocation",
-                        identifier: {
-                          kind: "MethodName",
-                          name: "test",
-                        },
+                        identifier:"test",
                         argumentList: [],
                       },
                     },
@@ -427,10 +424,7 @@ describe("extract ExpressionStatement correctly", () => {
                       kind: "ExpressionStatement",
                       stmtExp: {
                         kind: "MethodInvocation",
-                        identifier: {
-                          kind: "MethodName",
-                          name: "Test.test",
-                        },
+                        identifier: "Test.test",
                         argumentList: [],
                       },
                     },
@@ -478,10 +472,7 @@ describe("extract ExpressionStatement correctly", () => {
                       kind: "ExpressionStatement",
                       stmtExp: {
                         kind: "MethodInvocation",
-                        identifier: {
-                          kind: "MethodName",
-                          name: "this.test",
-                        },
+                        identifier: "this.test",
                         argumentList: [],
                       },
                     },
@@ -529,10 +520,7 @@ describe("extract ExpressionStatement correctly", () => {
                       kind: "ExpressionStatement",
                       stmtExp: {
                         kind: "MethodInvocation",
-                        identifier: {
-                          kind: "MethodName",
-                          name: "Test.test",
-                        },
+                        identifier: "Test.test",
                         argumentList: [
                           {
                             kind: "Literal",
@@ -588,10 +576,7 @@ describe("extract ExpressionStatement correctly", () => {
                       kind: "ExpressionStatement",
                       stmtExp: {
                         kind: "MethodInvocation",
-                        identifier: {
-                          kind: "MethodName",
-                          name: "this.test",
-                        },
+                        identifier: "this.test",
                         argumentList: [
                           {
                             kind: "Literal",

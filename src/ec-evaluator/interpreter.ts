@@ -9,7 +9,6 @@ import {
   LocalVariableDeclarationStatement,
   LocalVariableType,
   MethodInvocation,
-  MethodName,
   ReturnStatement,
   VariableDeclarator,
   Void,
@@ -253,15 +252,6 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash.push(value);
   },
 
-  MethodName: (
-    command: MethodName,
-    context: Context,
-    control: Control,
-    stash: Stash,
-  ) => {
-    const value: Closure = context.environment.getMethod(command.name);
-    stash.push(value);
-  },
 
   BinaryExpression: (
     command: BinaryExpression,

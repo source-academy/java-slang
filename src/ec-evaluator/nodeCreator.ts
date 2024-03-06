@@ -5,7 +5,6 @@ import {
   LeftHandSide,
   LocalVariableDeclarationStatement,
   MethodInvocation,
-  MethodName,
   ReturnStatement,
   VariableDeclarator,
   VariableDeclaratorId,
@@ -47,10 +46,7 @@ export const mainMtdInvExpStmtNode = (): ExpressionStatement => ({
   kind: "ExpressionStatement",
   stmtExp: {
     kind: "MethodInvocation",
-    identifier: {
-      kind: "MethodName",
-      name: "main",
-    } as MethodName,
+    identifier: "main",
     argumentList: []
   } as MethodInvocation,
 });

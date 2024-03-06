@@ -557,10 +557,7 @@ describe("extract MethodInvocation correctly", () => {
                   variableDeclaratorId: "x",
                   variableInitializer: {
                     kind: "MethodInvocation",
-                    identifier: {
-                      kind: "MethodName",
-                      name: "test",
-                    },
+                    identifier: "test",
                     argumentList: [],
                   },
                 },
@@ -600,10 +597,7 @@ describe("extract MethodInvocation correctly", () => {
                   variableDeclaratorId: "x",
                   variableInitializer: {
                     kind: "MethodInvocation",
-                    identifier: {
-                      kind: "MethodName",
-                      name: "Test.test",
-                    },
+                    identifier: "Test.test",
                     argumentList: [],
                   },
                 },
@@ -643,10 +637,7 @@ describe("extract MethodInvocation correctly", () => {
                   variableDeclaratorId: "x",
                   variableInitializer: {
                     kind: "MethodInvocation",
-                    identifier: {
-                      kind: "MethodName",
-                      name: "this.test",
-                    },
+                    identifier: "this.test",
                     argumentList: [],
                   },
                 },
@@ -686,10 +677,7 @@ describe("extract MethodInvocation correctly", () => {
                   variableDeclaratorId: "x",
                   variableInitializer: {
                     kind: "MethodInvocation",
-                    identifier: {
-                      kind: "MethodName",
-                      name: "test.test",
-                    },
+                    identifier: "test.test",
                     argumentList: [
                       {
                         kind: "ExpressionName",
@@ -734,10 +722,7 @@ describe("extract MethodInvocation correctly", () => {
                   variableDeclaratorId: "x",
                   variableInitializer: {
                     kind: "MethodInvocation",
-                    identifier: {
-                      kind: "MethodName",
-                      name: "this.test",
-                    },
+                    identifier: "this.test",
                     argumentList: [
                       {
                         kind: "ExpressionName",

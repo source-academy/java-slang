@@ -7,7 +7,6 @@ import {
   Expression,
   ExpressionStatement,
   MethodInvocation,
-  MethodName,
   ReturnStatement,
 } from "./blocks-and-statements";
 import {
@@ -28,7 +27,6 @@ interface NodeMap {
   ExpressionStatement: ExpressionStatement;
   MethodInvocation: MethodInvocation;
   ReturnStatement: ReturnStatement;
-  MethodName: MethodName;
   NormalClassDeclaration: NormalClassDeclaration;
   ClassInstanceCreationExpression: ClassInstanceCreationExpression;
   ConstructorDeclaration: ConstructorDeclaration;

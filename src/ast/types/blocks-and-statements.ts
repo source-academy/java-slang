@@ -57,13 +57,8 @@ export type StatementExpression = MethodInvocation | Assignment;
 
 export interface MethodInvocation {
   kind: "MethodInvocation";
-  identifier: MethodName;
+  identifier: Identifier;
   argumentList: ArgumentList;
-}
-
-export interface MethodName {
-  kind: "MethodName";
-  name: string;
 }
 
 export type ArgumentList = Array<Expression>;
