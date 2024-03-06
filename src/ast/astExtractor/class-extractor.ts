@@ -1,5 +1,6 @@
 import {
   BaseJavaCstVisitorWithDefaults,
+  ClassBodyDeclarationCtx,
   ClassMemberDeclarationCtx,
   ClassModifierCtx,
   CstNode,
@@ -13,8 +14,9 @@ import {
   ClassDeclaration,
   NormalClassDeclaration
 } from "../types/classes";
-import { MethodExtractor } from "./method-extractor";
+import { ConstructorExtractor } from "./constructor-extractor";
 import { FieldExtractor } from "./field-extractor";
+import { MethodExtractor } from "./method-extractor";
 
 export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<ClassModifier>;
@@ -58,6 +60,19 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
 
   typeIdentifier(ctx: TypeIdentifierCtx) {
     this.identifier = ctx.Identifier[0].image;
+  }
+
+  classBodyDeclaration(ctx: ClassBodyDeclarationCtx) {
+    if (ctx.constructorDeclaration) {
+      ctx.constructorDeclaration.forEach(x => {
+        const constructorExtractor = new ConstructorExtractor();
+        const constructorNode = constructorExtractor.extract(x);
+        this.body.push(constructorNode);
+      })
+    }
+    if (ctx.classMemberDeclaration) {
+      this.visit(ctx.classMemberDeclaration);
+    }
   }
 
   classMemberDeclaration(ctx: ClassMemberDeclarationCtx) {

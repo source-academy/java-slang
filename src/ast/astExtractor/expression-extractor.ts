@@ -221,10 +221,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   unqualifiedClassInstanceCreationExpression(ctx: UnqualifiedClassInstanceCreationExpressionCtx) {
     return {
       kind: "ClassInstanceCreationExpression",
-      identifier: {
-        kind: "ClassName",
-        name: this.visit(ctx.classOrInterfaceTypeToInstantiate),
-      },
+      identifier: this.visit(ctx.classOrInterfaceTypeToInstantiate),
       argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : [],
     } as ClassInstanceCreationExpression;
   }

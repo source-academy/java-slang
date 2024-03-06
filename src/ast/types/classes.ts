@@ -20,8 +20,27 @@ export type ClassModifier =
   | "non-sealed"
   | "strictfp";
 
-export type ClassBodyDeclaration = ClassMemberDeclaration;
+export type ClassBodyDeclaration = ClassMemberDeclaration | ConstructorDeclaration;
 export type ClassMemberDeclaration = MethodDeclaration | FieldDeclaration;
+
+export interface ConstructorDeclaration {
+  kind: "ConstructorDeclaration";
+  constructorModifier: Array<ConstructorModifier>;
+  constructorDeclarator: ConstructorDeclarator;
+  constructorBody: ConstructorBody;
+}
+
+export type ConstructorModifier =
+  | "public"
+  | "protected"
+  | "private";
+
+export interface ConstructorDeclarator {
+  identifier: Identifier;
+  formalParameterList: Array<FormalParameter>;
+}
+
+export type ConstructorBody = Block;
 
 export interface MethodDeclaration {
   kind: "MethodDeclaration";

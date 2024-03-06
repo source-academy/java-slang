@@ -803,10 +803,7 @@ describe("extract ClassInstanceCreationExpression correctly", () => {
                       variableDeclaratorId: "test",
                       variableInitializer: {
                         kind: "ClassInstanceCreationExpression",
-                        identifier: {
-                          kind: "ClassName",
-                          name: "Test"
-                        },
+                        identifier: "Test",
                         argumentList: [],
                       },
                     },
@@ -861,10 +858,7 @@ describe("extract ClassInstanceCreationExpression correctly", () => {
                       variableDeclaratorId: "test",
                       variableInitializer: {
                         kind: "ClassInstanceCreationExpression",
-                        identifier: {
-                          kind: "ClassName",
-                          name: "Test"
-                        },
+                        identifier: "Test",
                         argumentList: [
                           {
                             kind: "Literal",

@@ -4,7 +4,6 @@ import {
   Block,
   BlockStatement,
   ClassInstanceCreationExpression,
-  ClassName,
   Expression,
   ExpressionStatement,
   MethodInvocation,
@@ -12,6 +11,7 @@ import {
   ReturnStatement,
 } from "./blocks-and-statements";
 import {
+  ConstructorDeclaration,
   FieldDeclaration,
   MethodDeclaration,
   NormalClassDeclaration,
@@ -30,8 +30,8 @@ interface NodeMap {
   ReturnStatement: ReturnStatement;
   MethodName: MethodName;
   NormalClassDeclaration: NormalClassDeclaration;
-  ClassName: ClassName;
   ClassInstanceCreationExpression: ClassInstanceCreationExpression;
+  ConstructorDeclaration: ConstructorDeclaration;
 }
 
 export type Node = NodeMap[keyof NodeMap];

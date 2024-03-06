@@ -99,13 +99,8 @@ export type Primary =
 
 export interface ClassInstanceCreationExpression {
   kind: "ClassInstanceCreationExpression",
-  identifier: ClassName;
+  identifier: Identifier;
   argumentList: ArgumentList;
-}
-
-export interface ClassName {
-  kind: "ClassName";
-  name: string;
 }
 
 export interface Literal {
