@@ -71,8 +71,8 @@ export class Environment {
     return this._current.getValue(name);
   }
 
-  defineMethod(name: Name, value: Closure) {
-    this._current.setMethod(name, value);
+  defineMtdOrCon(name: Name, method: Closure) {
+    this._current.setMtdOrCon(name, method);
   }
 
   getMethod(name: Name): Closure {
@@ -154,6 +154,13 @@ export class EnvNode {
       return this._parent.getValue(name);
     }
     throw new errors.UndeclaredVariableError(name);
+  }
+
+  setMtdOrCon(name: Name, value: Closure) {
+    if (this._frame.has(name)) {
+      throw new errors.MtdOrConRedeclarationError(name);
+    }
+    this._frame.set(name, value);
   }
 }
 

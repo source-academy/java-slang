@@ -1,6 +1,6 @@
 import { Node } from "../ast/types/ast";
 import { Literal, Void } from "../ast/types/blocks-and-statements";
-import { MethodDeclaration } from "../ast/types/classes";
+import { ConstructorDeclaration, MethodDeclaration } from "../ast/types/classes";
 import { Control, EnvNode, Environment, Stash } from "./components";
 import { RuntimeError } from "./errors";
 
@@ -86,7 +86,7 @@ export interface Variable {
 
 export interface Closure {
   kind: "Closure";
-  method: MethodDeclaration;
+  mtdOrCon: MethodDeclaration | ConstructorDeclaration;
   env: EnvNode;
 }
 

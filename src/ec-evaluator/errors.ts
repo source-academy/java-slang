@@ -34,10 +34,10 @@ export class UndeclaredMethodError implements RuntimeError {
   }
 }
 
-export class MethodRedeclarationError implements RuntimeError {
+export class MtdOrConRedeclarationError implements RuntimeError {
   constructor(private name: string) {};
 
   public explain() {
-    return `Method ${this.name} redeclared.`;
+    return `Method/Constructor ${this.name} redeclared.`;
   }
 }

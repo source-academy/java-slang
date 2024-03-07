@@ -1,6 +1,10 @@
 import { Node } from "../ast/types/ast";
 import { DecimalIntegerLiteral, Literal } from "../ast/types/blocks-and-statements";
-import { UnannType } from "../ast/types/classes";
+import {
+  ConstructorDeclaration,
+  MethodDeclaration,
+  UnannType,
+} from "../ast/types/classes";
 import * as errors from "./errors";
 import { ControlItem, Context, Instr } from "./types";
 
@@ -157,3 +161,9 @@ export const defaultValues = new Map<UnannType, Literal>([
     },
   }],
 ]);
+
+export const getDescriptor = (mtdOrCon: MethodDeclaration | ConstructorDeclaration): string => {
+  return mtdOrCon.kind === "MethodDeclaration"
+    ? `${mtdOrCon.methodHeader.identifier}(${mtdOrCon.methodHeader.formalParameterList.map(p => p.unannType).join(",")})${mtdOrCon.methodHeader.result}`
+    : `${mtdOrCon.constructorDeclarator.identifier}(${mtdOrCon.constructorDeclarator.formalParameterList.map(p => p.unannType).join(",")})`;
+}

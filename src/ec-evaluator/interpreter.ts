@@ -14,6 +14,7 @@ import {
   Void,
 } from "../ast/types/blocks-and-statements";
 import {
+  ConstructorDeclaration,
   FieldDeclaration,
   FormalParameter,
   Identifier,
@@ -44,6 +45,7 @@ import {
 import { 
   defaultValues,
   evaluateBinaryExpression,
+  getDescriptor,
   handleSequence,
   isNode,
 } from "./utils";
@@ -108,6 +110,22 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     context.environment.extendEnv(context.environment.current, "block");
   },
 
+  ConstructorDeclaration: (
+    command: ConstructorDeclaration,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Use constructor descriptor as key.
+    const conDescriptor: string = getDescriptor(command);
+    const conClosure = {
+      kind: "Closure",
+      mtdOrCon: command,
+      env: context.environment.current,
+    } as Closure;
+    context.environment.defineMtdOrCon(conDescriptor, conClosure);
+  },
+
   MethodDeclaration: (
     command: MethodDeclaration,
     context: Context,
@@ -122,15 +140,14 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       methodBody.blockStatements.push(node.emptyReturnStmtNode());
     }
     
-    // Declare method
-    // TODO use method signature instead of identifier
-    const id: Identifier = command.methodHeader.identifier;
-    const closure = {
+    // Use method descriptor as key.
+    const mtdDescriptor: string = getDescriptor(command);
+    const mtdClosure = {
       kind: "Closure",
-      method: command,
+      mtdOrCon: command,
       env: context.environment.current,
     } as Closure;
-    context.environment.defineMethod(id, closure);
+    context.environment.defineMtdOrCon(mtdDescriptor, mtdClosure);
   },
 
   FieldDeclaration: (
