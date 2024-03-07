@@ -48,12 +48,20 @@ export const expStmtAssmtNode = (
   } as Assignment,
 });
 
-export const mainMtdInvExpStmtNode = (): ExpressionStatement => ({
+export const mainMtdInvExpStmtNode = (className: string): ExpressionStatement => ({
   kind: "ExpressionStatement",
   stmtExp: {
     kind: "MethodInvocation",
-    identifier: "main",
-    argumentList: []
+    identifier: `${className}.main`,
+    argumentList: [
+      {
+        kind: "Literal",
+        literalType: {
+          kind: "StringLiteral",
+          value: `[""]`,
+        },
+      },
+    ],
   } as MethodInvocation,
 });
 

@@ -116,9 +116,11 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // TODO eval class declarations
-    control.push(node.mainMtdInvExpStmtNode());
-    control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations[0].classBody));
+    // TODO should search for class name whose class defines the main method
+    // TODO throw error if no main method is found
+    const className = command.topLevelClassOrInterfaceDeclarations[0].typeIdentifier;
+    control.push(node.mainMtdInvExpStmtNode(className));
+    control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations));
   },
   
   NormalClassDeclaration: (
