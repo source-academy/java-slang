@@ -4,6 +4,7 @@ import {
   DecimalIntegerLiteral,
   ExpressionStatement,
   Literal,
+  ReturnStatement,
 } from "../ast/types/blocks-and-statements";
 import {
   ConstructorDeclaration,
@@ -17,6 +18,7 @@ import * as errors from "./errors";
 import {
   emptyReturnStmtNode,
   expStmtAssmtNode,
+  exprNameNode,
   nullLitNode,
   returnThisStmtNode,
 } from "./nodeCreator";
@@ -280,7 +282,7 @@ export const appendOrReplaceReturn = (
   let returnStmt = conBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement" && stmt.exp.kind === "Void");
   if (returnStmt) {
     // Replace empty ReturnStatement with ReturnStatement with this keyword.
-    returnStmt = returnThisStmtNode();
+    (returnStmt as ReturnStatement).exp = exprNameNode("this");
   } else {
     // Add ReturnStatement with this keyword.
     conBodyBlockStmts.push(returnThisStmtNode());
