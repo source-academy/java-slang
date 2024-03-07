@@ -1,4 +1,4 @@
-import JVM from ".";
+import JVM from "./jvm";
 import { ThreadStatus } from "./constants";
 import { StackFrame, InternalStackFrame, JavaStackFrame } from "./stackframe";
 import { AbstractThreadPool } from "./threadpool";

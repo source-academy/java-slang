@@ -114,7 +114,6 @@ const functions = {
   "getName0()Ljava/lang/String;": (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
     const clsRef = clsObj.getNativeField("classRef") as ClassData;
-    // Replace slashes with ., Class splits by . to get simple name
     const name = clsRef.getClassname().replaceAll("/", ".");
     const strRes = thread.getJVM().getInternedString(name);
     thread.returnStackFrame(strRes);

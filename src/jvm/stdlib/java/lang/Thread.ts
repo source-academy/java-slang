@@ -20,8 +20,6 @@ const functions = {
   },
 
   "setPriority0(I)V": (thread: Thread, locals: any[]) => {
-    // priority field of the thread object is already set.
-    // method serves to update our internal priority if we decide to use it.
     thread.returnStackFrame();
   },
 

@@ -9,6 +9,7 @@ const functions = {
   "registerNatives()V": (thread: Thread) => {
     thread.returnStackFrame();
   },
+
   "arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V": (
     thread: Thread,
     locals: any[]
@@ -72,6 +73,7 @@ const functions = {
 
     thread.returnStackFrame();
   },
+
   "initProperties(Ljava/util/Properties;)Ljava/util/Properties;": (
     thread: Thread,
     locals: any[]
@@ -136,6 +138,7 @@ const functions = {
       );
     });
   },
+
   "setIn0(Ljava/io/InputStream;)V": (thread: Thread, locals: any[]) => {
     const stream = locals[0] as JvmObject;
     const sysCls = (
@@ -151,6 +154,7 @@ const functions = {
     }
     thread.returnStackFrame();
   },
+
   "setOut0(Ljava/io/PrintStream;)V": (thread: Thread, locals: any[]) => {
     const stream = locals[0] as JvmObject;
     const sysCls = (
@@ -166,6 +170,7 @@ const functions = {
     }
     thread.returnStackFrame();
   },
+  
   "setErr0(Ljava/io/PrintStream;)V": (thread: Thread, locals: any[]) => {
     const stream = locals[0] as JvmObject;
     const sysCls = (

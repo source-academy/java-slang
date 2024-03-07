@@ -58,8 +58,6 @@ const functions = {
           MethodHandleReferenceKind.REF_invokeVirtual <<
           MemberNameFlags.MN_REFERENCE_KIND_SHIFT;
       }
-      // constructor should be handled separately
-      // check and |= callersensitive here in the future
 
       memberName._putField("flags", "I", "java/lang/invoke/MemberName", flags);
       memberName._putField(
@@ -71,7 +69,6 @@ const functions = {
       memberName.putNativeField("vmtarget", method.generateBridgeMethod());
       thread.returnStackFrame();
       return;
-      // MemberNameFlags
     } else if (refClassname === "java/lang/reflect/Constructor") {
       const clazz = ref._getField(
         "clazz",

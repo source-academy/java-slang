@@ -17,9 +17,6 @@ const functions = {
   },
 
   "getBooleanAttributes0(Ljava/io/File;)I": (thread: Thread, locals: any[]) => {
-    // const unixFS = locals[0];
-    // const file = locals[1] as JvmObject;
-
     console.warn(
       "Native method not implemented: getBooleanAttributes0(Ljava/io/File;)I"
     );
@@ -30,9 +27,6 @@ const functions = {
     thread: Thread,
     locals: any[]
   ) => {
-    // const unixFS = locals[0];
-    // const file = locals[1] as JvmObject;
-
     console.warn(
       "Native method not implemented: list(Ljava/io/File;)[Ljava/lang/String;"
     );

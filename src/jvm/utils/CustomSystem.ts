@@ -1,7 +1,7 @@
 import { ClassFile } from "../../ClassFile/types";
 import AbstractSystem from "./AbstractSystem";
 
-export default class SourceSystem extends AbstractSystem {
+export default class CustomSystem extends AbstractSystem {
   private readClassFile: (path: string) => ClassFile;
   private readNatives: (path: string) => Promise<any>;
   private stdoutPipe: (message: string) => void;

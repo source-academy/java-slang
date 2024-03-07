@@ -19,8 +19,6 @@ function getCallerClass(
     frame.method.getName() === "invoke"
   ) {
     if (idx === 0) {
-      // No more stack to search!
-      // XXX: What does the JDK do here, throw an exception?
       return null;
     }
     frame = caller[--idx];

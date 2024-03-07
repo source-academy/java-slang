@@ -142,6 +142,7 @@ const functions = {
   "arrayBaseOffset(Ljava/lang/Class;)I": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame(0);
   },
+
   "objectFieldOffset(Ljava/lang/reflect/Field;)J": (
     thread: Thread,
     locals: any[]
@@ -150,6 +151,7 @@ const functions = {
     const slot = field._getField("slot", "I", "java/lang/reflect/Field");
     thread.returnStackFrame64(BigInt(slot as number));
   },
+
   // Used for bitwise operations
   "arrayIndexScale(Ljava/lang/Class;)I": (thread: Thread, locals: any[]) => {
     const clsObj = locals[1] as JvmObject;
@@ -166,9 +168,11 @@ const functions = {
     );
     thread.returnStackFrame(scale);
   },
+
   "addressSize()I": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame(4);
   },
+
   "compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z":
     (thread: Thread, locals: any[]) => {
       const unsafe = locals[0] as JvmObject;
@@ -185,6 +189,7 @@ const functions = {
         unsafeCompareAndSwap(thread, unsafe, obj1, offset, expected, newValue)
       );
     },
+
   "compareAndSwapInt(Ljava/lang/Object;JII)Z": (
     thread: Thread,
     locals: any[]
@@ -199,6 +204,7 @@ const functions = {
       unsafeCompareAndSwap(thread, unsafe, obj1, offset, expected, newValue)
     );
   },
+
   "compareAndSwapLong(Ljava/lang/Object;JJJ)Z": (
     thread: Thread,
     locals: any[]
@@ -213,6 +219,7 @@ const functions = {
       unsafeCompareAndSwap(thread, unsafe, obj1, offset, expected, newValue)
     );
   },
+
   "getIntVolatile(Ljava/lang/Object;J)I": getFromVMIndex,
 
   "getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;": getFromVMIndex,
@@ -225,6 +232,7 @@ const functions = {
     const addr = heap.allocate(size);
     thread.returnStackFrame64(addr);
   },
+
   "putLong(JJ)V": (thread: Thread, locals: any[]) => {
     const address = locals[1] as bigint;
     const value = locals[2] as bigint;
@@ -233,18 +241,21 @@ const functions = {
     view.setBigInt64(0, value);
     thread.returnStackFrame();
   },
+
   "getByte(J)B": (thread: Thread, locals: any[]) => {
     const address = locals[1] as bigint;
     const heap = thread.getJVM().getUnsafeHeap();
     const view = heap.get(address);
     thread.returnStackFrame(view.getInt8(0));
   },
+
   "freeMemory(J)V": (thread: Thread, locals: any[]) => {
     const address = locals[1] as bigint;
     const heap = thread.getJVM().getUnsafeHeap();
     heap.free(address);
     thread.returnStackFrame();
   },
+  
   "defineAnonymousClass(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;":
     (thread: Thread, locals: any[]) => {
       const hostClassObj = locals[1] as JvmObject;
