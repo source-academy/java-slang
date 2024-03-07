@@ -30,6 +30,8 @@ export enum InstrType {
   ENV = 'Env',
   MARKER = 'Marker',
   EVAL_VAR = 'EvalVariable',
+  RES = 'Res',
+  DEREF = 'Deref',
 }
 
 interface BaseInstr {
@@ -61,6 +63,12 @@ export interface EvalVarInstr extends BaseInstr {
   symbol: string;
 }
 
+export interface ResInstr extends BaseInstr {
+  name: string;
+}
+
+export interface DerefInstr extends BaseInstr {}
+
 export type Instr =
   | AssmtInstr
   | BinOpInstr
@@ -69,23 +77,38 @@ export type Instr =
   | EnvInstr
   | MarkerInstr
   | ResetInstr
-  | EvalVarInstr;
+  | EvalVarInstr
+  | ResInstr
+  | DerefInstr;
 
 /**
  * Components
  */
 export type ControlItem = Node | Instr;
-export type StashItem = Literal | Closure | Void | Variable;
+export type StashItem = Primitive | Reference | Value | Void | Type;
 
 export type Name = string;
-export type Value = Variable | Closure;
-
-export type VarValue = any
+export type Value = Variable | Closure | Class;
 
 export interface Variable {
   kind: "Variable";
   name: Name;
   value: VarValue;
+}
+
+export type VarValue = Primitive | Reference | Symbol;
+
+export type Primitive = Literal;
+export type Reference = Object;
+
+export interface Symbol {
+  kind: "Symbol";
+  value: string;
+}
+
+export interface Object {
+  kind: "Object";
+  frame: EnvNode;
 }
 
 export interface Closure {

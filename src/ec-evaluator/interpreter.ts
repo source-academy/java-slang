@@ -41,7 +41,10 @@ import {
   EvalVarInstr,
   Variable,
   VarValue,
+  Object,
   Class,
+  ResInstr,
+  DerefInstr,
 } from "./types";
 import { 
   defaultValues,
@@ -55,6 +58,7 @@ import {
   handleSequence,
   prependInstanceFieldsInit,
   isNode,
+  isQualified,
   makeMtdInvSimpleIdentifierQualified,
   appendOrReplaceReturn,
   appendEmtpyReturn,
@@ -318,11 +322,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // TODO add DEREF instr and standardize ExpressionName eval to Variable
-    const value: VarValue = context.environment.getValue(command.name);
-    stash.push(value);
+    control.push(instr.derefInstr(command));
+    control.push(instr.evalVarInstr(command.name, command));
   },
-
 
   BinaryExpression: (
     command: BinaryExpression,
@@ -351,8 +353,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash: Stash,
   ) => {
     // value is popped before variable becuase value is evaluated later than variable.
-    const value: VarValue = stash.pop()! as Literal;
-    const variable: Variable = stash.pop()! as Variable;
+    const value = stash.pop()! as Literal | Object;
+    const variable = stash.pop()! as Variable;
     variable.value = value;
     stash.push(value);
   },
@@ -430,6 +432,39 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
+    if (isQualified(command.symbol)) {
+      const nameParts = command.symbol.split(".");
+      const name = nameParts.splice(0, nameParts.length - 1).join(".");
+      const identifier = nameParts[nameParts.length - 1];
+      control.push(instr.resInstr(identifier, command.srcNode));
+      control.push(instr.evalVarInstr(name, command.srcNode));
+      return;
+    }
     stash.push(context.environment.getVariable(command.symbol));
+  },
+
+  [InstrType.RES]: (
+    command: ResInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // TODO throw NullPointerException if instance field but instance is null
+    const varOrClass = stash.pop()! as Variable | Class;
+    console.assert(varOrClass.kind !== "Variable" || varOrClass.value.kind === "Object");
+    const v = varOrClass.kind === "Variable"
+      ? (varOrClass.value as Object).frame.getVariable(command.name)
+      : /*varOrClass.kind === "Class" ?*/ varOrClass.frame.getVariable(command.name);
+    stash.push(v);
+  },
+
+  [InstrType.DEREF]: (
+    command: DerefInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const variable = stash.pop()! as Variable;
+    stash.push(variable.value as Literal | Object);
   },
 };

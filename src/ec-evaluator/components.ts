@@ -76,10 +76,6 @@ export class Environment {
     return this._current.getVariable(name);
   }
 
-  getValue(name: Name): VarValue {
-    return this._current.getValue(name);
-  }
-
   defineMtdOrCon(name: Name, method: Closure) {
     this._current.setMtdOrCon(name, method);
   }
@@ -155,20 +151,6 @@ export class EnvNode {
     }
     if (this._parent) {
       return this._parent.getVariable(name);
-    }
-    throw new errors.UndeclaredVariableError(name);
-  }
-
-  getValue(name: Name): string {
-    if (this._frame.has(name)) {
-      // Variables must be definitely assigned prior to access
-      if ((this._frame.get(name) as Variable).value === DECLARED_BUT_NOT_YET_ASSIGNED) {
-        throw new errors.UnassignedVariableError(name);
-      }
-      return (this._frame.get(name) as Variable).value;
-    }
-    if (this._parent) {
-      return this._parent.getValue(name);
     }
     throw new errors.UndeclaredVariableError(name);
   }

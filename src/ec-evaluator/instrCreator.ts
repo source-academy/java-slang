@@ -3,12 +3,14 @@ import { EnvNode } from "./components";
 import {
   AssmtInstr,
   BinOpInstr,
+  DerefInstr,
   EnvInstr,
   EvalVarInstr,
   Instr,
   InstrType,
   InvInstr,
-  MarkerInstr
+  MarkerInstr,
+  ResInstr,
 } from "./types";
 
 export const assmtInstr = (
@@ -73,4 +75,20 @@ export const evalVarInstr = (
   instrType: InstrType.EVAL_VAR,
   srcNode,
   symbol,
+});
+
+export const resInstr = (
+  name: string,
+  srcNode: Node,
+): ResInstr => ({
+  instrType: InstrType.RES,
+  srcNode,
+  name,
+});
+
+export const derefInstr = (
+  srcNode: Node,
+): DerefInstr => ({
+  instrType: InstrType.DEREF,
+  srcNode,
 });
