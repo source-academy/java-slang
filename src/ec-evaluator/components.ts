@@ -117,13 +117,6 @@ export class EnvNode {
     this._children.push(child);
   }
 
-  setMethod(name: Name, value: Closure) {
-    if (this._frame.has(name)) {
-      throw new errors.MethodRedeclarationError(name);
-    }
-    this._frame.set(name, value);
-  }
-
   setVariable(name: Name, value: Variable) {
     if (this._frame.has(name)) {
       throw new errors.VariableRedeclarationError(name);
