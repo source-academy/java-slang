@@ -1,15 +1,22 @@
 import {
   Assignment,
   Expression,
+  ExpressionName,
   ExpressionStatement,
   LeftHandSide,
+  Literal,
   LocalVariableDeclarationStatement,
   MethodInvocation,
   ReturnStatement,
   VariableDeclarator,
   VariableDeclaratorId,
 } from "../ast/types/blocks-and-statements";
-import { UnannType } from "../ast/types/classes";
+import {
+  ConstructorBody,
+  ConstructorDeclaration,
+  ConstructorDeclarator,
+  UnannType,
+} from "../ast/types/classes";
 
 export const localVarDeclNoInitNode = (
   localVariableType: UnannType,
@@ -28,7 +35,6 @@ export const localVarDeclNoInitNode = (
 export const expStmtAssmtNode = (
   left: string,
   right: Expression,
-  operator: string = '=',
 ): ExpressionStatement => ({
   kind: "ExpressionStatement",
   stmtExp: {
@@ -37,7 +43,7 @@ export const expStmtAssmtNode = (
       kind: "ExpressionName",
       name: left,
     } as LeftHandSide,
-    operator,
+    operator: "=",
     right,
   } as Assignment,
 });
@@ -55,5 +61,36 @@ export const emptyReturnStmtNode = (): ReturnStatement => ({
   kind: "ReturnStatement",
   exp: {
     kind: "Void",
+  },
+});
+
+export const returnThisStmtNode = (): ReturnStatement => ({
+  kind: "ReturnStatement",
+  exp: {
+    kind: "ExpressionName",
+    name: "this",
+  } as ExpressionName,
+});
+
+export const defaultConstructorDeclNode = (
+  className: string,
+): ConstructorDeclaration => ({
+  kind: "ConstructorDeclaration",
+  constructorModifier: [],
+  constructorDeclarator: {
+    identifier: className,
+    formalParameterList: [],
+  } as ConstructorDeclarator,
+  constructorBody: {
+    kind: "Block",
+    blockStatements: [],
+  } as ConstructorBody,
+});
+
+export const nullLitNode = (): Literal => ({
+  kind: "Literal",
+  literalType: {
+    kind: "NullLiteral",
+    value: "null",
   },
 });

@@ -18,8 +18,8 @@ import {
   FieldDeclaration,
   FormalParameter,
   Identifier,
-  MethodBody,
   MethodDeclaration,
+  NormalClassDeclaration,
   UnannType,
 } from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
@@ -41,13 +41,23 @@ import {
   EvalVarInstr,
   Variable,
   VarValue,
+  Class,
 } from "./types";
 import { 
   defaultValues,
   evaluateBinaryExpression,
+  getConstructors,
+  getInstanceFields,
+  getInstanceMethods,
   getDescriptor,
+  getStaticFields,
+  getStaticMethods,
   handleSequence,
+  prependInstanceFieldsInit,
   isNode,
+  makeMtdInvSimpleIdentifierQualified,
+  appendOrReplaceReturn,
+  appendEmtpyReturn,
 } from "./utils";
 
 type CmdEvaluator = (
@@ -96,6 +106,60 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(node.mainMtdInvExpStmtNode());
     control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations[0].classBody));
   },
+  
+  NormalClassDeclaration: (
+    command: NormalClassDeclaration,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const className = command.typeIdentifier;
+
+    const instanceFields = getInstanceFields(command);
+    const instanceMethods = getInstanceMethods(command);
+    // Make MethodInvocation simple Identifier qualified to facilitate MethodInvocation evaluation.
+    instanceMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, className));
+    instanceMethods.forEach(m => appendEmtpyReturn(m));
+
+    const staticFields = getStaticFields(command);
+    const staticMethods = getStaticMethods(command);
+    // Make MethodInvocation simple Identifier qualified to facilitate MethodInvocation evaluation.
+    staticMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, className));
+    staticMethods.forEach(m => appendEmtpyReturn(m));
+
+    const constructors = getConstructors(command);
+    // Insert default constructor if not overriden.
+    if (!constructors.find(c => c.constructorDeclarator.formalParameterList.length === 0)) {
+      const defaultConstructor = node.defaultConstructorDeclNode(className);
+      constructors.push(defaultConstructor);
+    }
+    // Prepend instance fields initialization at start of constructor body.
+    constructors.forEach(c => prependInstanceFieldsInit(c, instanceFields));
+    // Append ReturnStatement with this keyword at end of constructor body.
+    constructors.forEach(c => appendOrReplaceReturn(c));
+
+    const c = {
+      kind: "Class",
+      // frame to be set after extending env.
+      constructors: constructors,
+      instanceFields,
+      instanceMethods,
+      staticFields,
+      staticMethods,
+    } as Class;
+
+    // To restore current (global) env for next NormalClassDeclarations evaluation.
+    control.push(instr.envInstr(context.environment.current, command));
+    
+    context.environment.defineClass(className, c);
+    context.environment.extendEnv(context.environment.current, className);
+    context.environment.getClass(className).frame = context.environment.current;
+
+    control.push(...handleSequence(instanceMethods));
+    control.push(...handleSequence(staticMethods));
+    control.push(...handleSequence(constructors));
+    control.push(...handleSequence(staticFields));
+  },
 
   Block: (
     command: Block,
@@ -132,14 +196,6 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // Add empty ReturnStatement if absent
-    const methodBody: MethodBody = command.methodBody;
-    if (methodBody.blockStatements.length === 0 ||
-      // TODO deep search
-      methodBody.blockStatements.filter(stmt => stmt.kind === "ReturnStatement").length === 0) {
-      methodBody.blockStatements.push(node.emptyReturnStmtNode());
-    }
-    
     // Use method descriptor as key.
     const mtdDescriptor: string = getDescriptor(command);
     const mtdClosure = {

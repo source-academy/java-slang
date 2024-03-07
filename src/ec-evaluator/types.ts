@@ -1,6 +1,10 @@
 import { Node } from "../ast/types/ast";
 import { Literal, Void } from "../ast/types/blocks-and-statements";
-import { ConstructorDeclaration, MethodDeclaration } from "../ast/types/classes";
+import {
+  ConstructorDeclaration,
+  FieldDeclaration,
+  MethodDeclaration,
+} from "../ast/types/classes";
 import { Control, EnvNode, Environment, Stash } from "./components";
 import { RuntimeError } from "./errors";
 
@@ -88,6 +92,16 @@ export interface Closure {
   kind: "Closure";
   mtdOrCon: MethodDeclaration | ConstructorDeclaration;
   env: EnvNode;
+}
+
+export interface Class {
+  kind: "Class";
+  frame: EnvNode;
+  constructors: ConstructorDeclaration[];
+  instanceFields: FieldDeclaration[];
+  instanceMethods: MethodDeclaration[];
+  staticFields: FieldDeclaration[];
+  staticMethods: MethodDeclaration[];
 }
 
 /**

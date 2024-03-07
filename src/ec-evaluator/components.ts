@@ -1,6 +1,15 @@
 import { DECLARED_BUT_NOT_YET_ASSIGNED } from "./constants";
 import * as errors from "./errors";
-import { Closure, ControlItem, Name, StashItem, Value, VarValue, Variable } from "./types";
+import {
+  Class,
+  Closure,
+  ControlItem,
+  Name,
+  StashItem,
+  Value,
+  VarValue,
+  Variable,
+} from "./types";
 import { Stack } from "./utils";
 
 /**
@@ -14,7 +23,7 @@ export class Environment {
   private _current: EnvNode;
 
   constructor() {
-    const node = new EnvNode("Test");
+    const node = new EnvNode("global");
     this._global = node;
     this._current = node;
   }
@@ -77,6 +86,14 @@ export class Environment {
 
   getMethod(name: Name): Closure {
     return this._current.getMethod(name);
+  }
+
+  defineClass(name: Name, c: Class) {
+    this._current.setClass(name, c);
+  }
+
+  getClass(name: Name): Class {
+    return this._global.getClass(name);
   }
 };
 
@@ -161,6 +178,23 @@ export class EnvNode {
       throw new errors.MtdOrConRedeclarationError(name);
     }
     this._frame.set(name, value);
+  }
+
+  setClass(name: Name, value: Class) {
+    if (this._frame.has(name)) {
+      throw new errors.ClassRedeclarationError(name);
+    }
+    this._frame.set(name, value);
+  }
+
+  getClass(name: Name): Class {
+    if (this._frame.has(name)) {
+      return this._frame.get(name) as Class;
+    }
+    if (this._parent) {
+      return this._parent.getClass(name);
+    }
+    throw new errors.UndeclaredClassError(name);
   }
 }
 
