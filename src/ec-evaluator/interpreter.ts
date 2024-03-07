@@ -148,6 +148,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Fields are always initialized to default value if initializer is absent.
     const init: Expression = declaration?.variableInitializer || defaultValues.get(type)!;
     
+    context.environment.declareVariable(id);
+
     control.push(instr.popInstr(command));
     control.push(instr.assmtInstr(command));
     control.push(init);
