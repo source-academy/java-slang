@@ -235,7 +235,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const declaration: VariableDeclarator = command.variableDeclaratorList[0];
     const id: Identifier = declaration.variableDeclaratorId;
     // Fields are always initialized to default value if initializer is absent.
-    const init: Expression = declaration?.variableInitializer || defaultValues.get(type)!;
+    const init: Expression = declaration?.variableInitializer ||
+      defaultValues.get(type) ||
+      node.nullLitNode();
     
     context.environment.declareVariable(id);
 
