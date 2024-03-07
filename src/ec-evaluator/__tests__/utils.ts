@@ -38,8 +38,14 @@ export const getStashItemStr = (i: StashItem): string => {
   return i.kind === "Literal" 
     ? i.literalType.value 
     : i.kind === "Closure"
-    ? i.method.methodHeader.identifier
+    ? i.mtdOrCon.kind === "MethodDeclaration"
+      ? i.mtdOrCon.methodHeader.identifier
+      : i.mtdOrCon.constructorDeclarator.identifier
     : i.kind === "Variable"
     ? i.name
+    : i.kind === "Class"
+    ? i.frame.name
+    : i.kind === "Type"
+    ? i.type
     : i.kind;
 };
