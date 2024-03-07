@@ -1,7 +1,10 @@
+import { cloneDeep } from "lodash";
+
 import { 
   Assignment,
   BinaryExpression,
   Block,
+  ClassInstanceCreationExpression,
   Expression,
   ExpressionName,
   ExpressionStatement,
@@ -25,6 +28,7 @@ import {
 import { CompilationUnit } from "../ast/types/packages-and-modules";
 import { Control, Stash } from "./components";
 import { STEP_LIMIT } from "./constants";
+import * as errors from "./errors";
 import * as instr from './instrCreator';
 import * as node from './nodeCreator';
 import {
@@ -40,11 +44,16 @@ import {
   ResetInstr,
   EvalVarInstr,
   Variable,
+  NewInstr,
   Object,
   Class,
+  ResTypeInstr,
+  ResOverloadInstr,
   StashItem,
   ResInstr,
   DerefInstr,
+  Type,
+  ResConOverloadInstr,
 } from "./types";
 import { 
   defaultValues,
@@ -60,6 +69,7 @@ import {
   isNode,
   isQualified,
   makeMtdInvSimpleIdentifierQualified,
+  isInstance,
   appendOrReplaceReturn,
   appendEmtpyReturn,
 } from "./utils";
@@ -293,9 +303,34 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
+    // MethodInvocation Identifier always have two parts.
+    const nameParts = command.identifier.split(".");
+    const qualifier = nameParts[0];
+    const identifier = nameParts[1];
+    
+    // Arity may be incremented by 1 if the resolved method to be invoked is an instance method.
     control.push(instr.invInstr(command.argumentList.length, command));
     control.push(...handleSequence(command.argumentList));
-    control.push(command.identifier);
+    control.push(instr.resOverloadInstr(identifier, command.argumentList.length, command));
+    // TODO: only Integer and ExpressionName are allowed as args
+    control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
+    control.push(instr.resTypeInstr(node.exprNameNode(qualifier), command));
+  },
+
+  ClassInstanceCreationExpression: (
+    command: ClassInstanceCreationExpression,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const c: Class = context.environment.getClass(command.identifier);
+
+    control.push(instr.invInstr(command.argumentList.length + 1, command));
+    control.push(...handleSequence(command.argumentList));
+    control.push(instr.newInstr(c, command))
+    control.push(instr.resConOverloadInstr(command.identifier, command.argumentList.length, command));
+    control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
+    control.push(instr.resTypeInstr(c, command));
   },
 
   Literal: (
@@ -382,26 +417,52 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Mark end of method in case method returns halfway.
     control.push(instr.markerInstr(command.srcNode));
 
-    // Retrieve arguments and method to be invoked in reversed order.
-    const args: Literal[] = [];
+    // Retrieve method/constructor to be invoked and args in reversed order.
+    const args: (Literal | Object)[] = [];
     for (let i = 0; i < command.arity; i++) {
-      args.push(stash.pop()! as Literal);
+      args.push(stash.pop()! as Literal | Object);
     }
     args.reverse();
     const closure: Closure = stash.pop()! as Closure;
 
-    // Extend method's environment by binding arguments to corresponding parameters.
-    context.environment.extendEnv(closure.env, closure.method.methodHeader.identifier);
-    const params: FormalParameter[] = closure.method.methodHeader.formalParameterList;
-    params.forEach(param => {
-      context.environment.declareVariable(param.identifier);
-    });
+    const params: FormalParameter[] = closure.mtdOrCon.kind === "MethodDeclaration"
+      ? cloneDeep(closure.mtdOrCon.methodHeader.formalParameterList)
+      : cloneDeep(closure.mtdOrCon.constructorDeclarator.formalParameterList);
+
+    // Extend method/constructor's environment.
+    const isInstanceMtdOrCon = args.length == params.length + 1;
+    const mtdOrConDescriptor = getDescriptor(closure.mtdOrCon);
+    if (isInstanceMtdOrCon) {
+      // Throw NullPointerException if method to be invoked is instance method/constructor
+      // but instance is null.
+      if (args[0].kind === "Literal" && args[0].literalType.kind === "NullLiteral") {
+        throw new errors.NullPointerException();
+      }
+
+      // Extend env from obj frame.
+      context.environment.extendEnv((args[0] as Object).frame, mtdOrConDescriptor);
+
+      // Append implicit FormalParameter this.
+      params.unshift({
+        kind: "FormalParameter",
+        unannType: closure.env.name,
+        identifier: "this",
+      });
+    } else {
+      // Extend env from class frame.
+      context.environment.extendEnv(closure.env, mtdOrConDescriptor);
+    }
+
+    // Bind arguments to corresponding FormalParameters.
     for (let i = 0; i < command.arity; i++) {
       context.environment.defineVariable(params[i].identifier, args[i]);
     }
 
-    // Push method body
-    control.push(closure.method.methodBody);
+    // Push method/constructor body.
+    const body = closure.mtdOrCon.kind === "MethodDeclaration"
+      ? closure.mtdOrCon.methodBody
+      : closure.mtdOrCon.constructorBody;
+    control.push(body);
   },
 
   [InstrType.ENV]: (
@@ -466,5 +527,132 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ) => {
     const variable = stash.pop()! as Variable;
     stash.push(variable.value as Literal | Object);
+  },
+
+  [InstrType.NEW]: (
+    command: NewInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // To be restore after extending curr env to declare instance fields in obj frame.
+    const currEnv = context.environment.current;
+    context.environment.extendEnv(command.c.frame, "object");
+
+    // Declare instance fields.
+    command.c.instanceFields.forEach(i => {
+      const id = i.variableDeclaratorList[0].variableDeclaratorId;
+      context.environment.declareVariable(id);
+    });
+
+    // Push obj on stash.
+    const obj = {
+      kind: "Object",
+      frame: context.environment.current,
+    } as Object;
+    stash.push(obj);
+
+    // Restore env.
+    context.environment.restoreEnv(currEnv);
+  },
+
+  [InstrType.RES_TYPE]: (
+    command: ResTypeInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // TODO need to handle all type of arg expressions
+    const value: Expression | Class = command.value;
+
+    // TODO cleaner way to do this?
+    let type: UnannType;
+    if (value.kind === "Literal") {
+      if (value.literalType.kind === "DecimalIntegerLiteral") {
+        type = "int";
+      } else if (value.literalType.kind === "StringLiteral") {
+        // TODO remove hardcoding
+        type = "String[]";
+      }
+    } else if (value.kind === "ExpressionName") {
+      const v = context.environment.getName(value.name);
+      if (v.kind === "Variable") {
+        if (v.value.kind === "Literal") {
+          type = "int";
+        } else if (v.value.kind === "Object") {
+          // Type of object is name of parent frame
+          type = v.value.frame.parent.name;
+        }
+      } else /*if (v.kind === "Class")*/ {
+        type = v.frame.name;
+      }
+    } else if (value.kind === "Class") {
+      type = value.frame.name;
+    }
+    
+    stash.push({
+      kind: "Type",
+      type: type!,
+    } as Type);
+  },
+
+  [InstrType.RES_OVERLOAD]: (
+    command: ResOverloadInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Retrieve arg types in reversed order for method resolution.
+    const argTypes: Type[] = [];
+    for (let i = 0; i < command.arity; i++) {
+      argTypes.push(stash.pop()! as Type);
+    }
+    argTypes.reverse();
+
+    // Retrieve class to search in for method resolution.
+    const classType: Type = stash.pop()! as Type;
+    const classToSearchIn: Class = context.environment.getClass(classType.type);
+
+    // Method overloading resolution.
+    const closure: Closure = classToSearchIn.frame.resOverload(command.name, argTypes);
+    stash.push(closure);
+
+    // Post-processing required if resolved method is instance method.
+    if (isInstance(closure.mtdOrCon as MethodDeclaration)) {
+      // Increment arity of InvInstr on control.
+      let n = 1;
+      while (control.peekN(n) && (isNode(control.peekN(n)!) || (control.peekN(n)! as Instr).instrType !== InstrType.INVOCATION)) {
+        n++;
+      }
+      (control.peekN(n)! as ResOverloadInstr).arity++;
+      
+      // Push qualifier as implicit FormalParameter this.
+      const qualifier = (command.srcNode as MethodInvocation).identifier.split(".")[0];
+      control.push(node.exprNameNode(qualifier));
+    };
+  },
+
+  [InstrType.RES_CON_OVERLOAD]: (
+    command: ResConOverloadInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Retrieve arg types in reversed order for constructor resolution.
+    const argTypes: Type[] = [];
+    for (let i = 0; i < command.arity; i++) {
+      argTypes.push(stash.pop()! as Type);
+    }
+    argTypes.reverse();
+
+    // Retrieve class to search in for method resolution.
+    const classType: Type = stash.pop()! as Type;
+    const classToSearchIn: Class = context.environment.getClass(classType.type);
+
+    // Constructor overloading resolution.
+    const closure: Closure = classToSearchIn.frame.resConOverload(command.name, argTypes);
+    stash.push(closure);
+
+    // No post-processing required for constructor.
   },
 };

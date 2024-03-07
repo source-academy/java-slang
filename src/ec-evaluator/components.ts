@@ -1,3 +1,4 @@
+import { ConstructorDeclaration, MethodDeclaration } from "../ast/types/classes";
 import { DECLARED_BUT_NOT_YET_ASSIGNED } from "./constants";
 import * as errors from "./errors";
 import {
@@ -6,6 +7,7 @@ import {
   ControlItem,
   Name,
   StashItem,
+  Type,
   Value,
   VarValue,
   Variable,
@@ -72,6 +74,10 @@ export class Environment {
     this._current.setVariable(name, variable);
   }
 
+  getName(name: Name): Variable | Class {
+    return this._current.getName(name);
+  }
+
   getVariable(name: Name): Variable {
     return this._current.getVariable(name);
   }
@@ -124,6 +130,16 @@ export class EnvNode {
     this._frame.set(name, value);
   }
 
+  getName(name: Name): Variable | Class {
+    if (this._frame.has(name)) {
+      return this._frame.get(name) as Variable | Class;
+    }
+    if (this._parent) {
+      return this._parent.getVariable(name);
+    }
+    throw new errors.UndeclaredNameError(name);
+  }
+
   getVariable(name: Name): Variable {
     if (this._frame.has(name)) {
       return this._frame.get(name) as Variable;
@@ -139,6 +155,74 @@ export class EnvNode {
       throw new errors.MtdOrConRedeclarationError(name);
     }
     this._frame.set(name, value);
+  }
+
+  resOverload(name: string, argTypes: Type[]): Closure {
+    const closures: Closure[] = [];
+    for (const [closureName, closure] of this._frame.entries()) {
+      // Methods contains parantheses and must have return type.
+      if (closureName.includes(name + "(") && closureName[closureName.length - 1] !== ")") {
+        closures.push(closure as Closure);
+      }
+    }
+
+    let resolved: Closure | undefined;
+    for (const closure of closures) {
+      const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+        
+      if (argTypes.length != params.length) continue;
+      
+      let match = true;
+      for (let i = 0; i < argTypes.length; i++) {
+        match &&= (params[i].unannType === argTypes[i].type);
+        if (!match) break; // short circuit
+      }
+      
+      if (match) {
+        resolved = closure;
+        break;
+      }
+    }
+
+    if (!resolved) {
+      throw new errors.ResOverloadError(name, argTypes);
+    }
+
+    return resolved;
+  }
+
+  resConOverload(name: string, argTypes: Type[]): Closure {
+    const closures: Closure[] = [];
+    for (const [closureName, closure] of this._frame.entries()) {
+      // Constructors contains parantheses and do not have return type.
+      if (closureName.includes(name + "(") && closureName[closureName.length - 1] === ")") {
+        closures.push(closure as Closure);
+      }
+    }
+
+    let resolved: Closure | undefined;
+    for (const closure of closures) {
+      const params = (closure.mtdOrCon as ConstructorDeclaration).constructorDeclarator.formalParameterList;
+        
+      if (argTypes.length != params.length) continue;
+      
+      let match = true;
+      for (let i = 0; i < argTypes.length; i++) {
+        match &&= (params[i].unannType === argTypes[i].type);
+        if (!match) break; // short circuit
+      }
+      
+      if (match) {
+        resolved = closure;
+        break;
+      }
+    }
+
+    if (!resolved) {
+      throw new errors.ResConOverloadError(name, argTypes);
+    }
+
+    return resolved;
   }
 
   setClass(name: Name, value: Class) {

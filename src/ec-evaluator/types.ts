@@ -1,9 +1,10 @@
 import { Node } from "../ast/types/ast";
-import { Literal, Void } from "../ast/types/blocks-and-statements";
+import { Expression, Literal, Void } from "../ast/types/blocks-and-statements";
 import {
   ConstructorDeclaration,
   FieldDeclaration,
   MethodDeclaration,
+  UnannType,
 } from "../ast/types/classes";
 import { Control, EnvNode, Environment, Stash } from "./components";
 import { RuntimeError } from "./errors";
@@ -32,6 +33,10 @@ export enum InstrType {
   EVAL_VAR = 'EvalVariable',
   RES = 'Res',
   DEREF = 'Deref',
+  NEW = 'New',
+  RES_TYPE = 'ResType',
+  RES_OVERLOAD = 'ResOverload',
+  RES_CON_OVERLOAD = 'ResConOverload',
 }
 
 interface BaseInstr {
@@ -63,6 +68,24 @@ export interface EvalVarInstr extends BaseInstr {
   symbol: string;
 }
 
+export interface NewInstr extends BaseInstr {
+  c: Class;
+}
+
+export interface ResTypeInstr extends BaseInstr {
+  value: Expression | Class;
+}
+
+export interface ResOverloadInstr extends BaseInstr {
+  name: string;
+  arity: number;
+}
+
+export interface ResConOverloadInstr extends BaseInstr {
+  name: string;
+  arity: number;
+}
+
 export interface ResInstr extends BaseInstr {
   name: string;
 }
@@ -79,7 +102,11 @@ export type Instr =
   | ResetInstr
   | EvalVarInstr
   | ResInstr
-  | DerefInstr;
+  | DerefInstr
+  | NewInstr
+  | ResTypeInstr
+  | ResOverloadInstr
+  | ResConOverloadInstr;
 
 /**
  * Components
@@ -125,6 +152,11 @@ export interface Class {
   instanceMethods: MethodDeclaration[];
   staticFields: FieldDeclaration[];
   staticMethods: MethodDeclaration[];
+}
+
+export interface Type {
+  kind: "Type";
+  type: UnannType;
 }
 
 /**

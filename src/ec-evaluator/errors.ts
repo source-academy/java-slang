@@ -1,3 +1,5 @@
+import { Type } from "./types";
+
 export interface RuntimeError {
   explain(): string;
 };
@@ -55,5 +57,35 @@ export class ClassRedeclarationError implements RuntimeError {
 
   public explain() {
     return `Class ${this.name} redeclared.`;
+  }
+}
+
+export class UndeclaredNameError implements RuntimeError {
+  constructor(private name: string) {};
+
+  public explain() {
+    return `Name ${this.name} not declared.`;
+  }
+}
+
+export class ResOverloadError implements RuntimeError {
+  constructor(private name: string, private argTypes: Type[]) {};
+
+  public explain() {
+    return `Overloading resolution of method ${this.name} with argTypes ${this.argTypes.map(t => t.type).join(", ")} failed.`;
+  }
+}
+
+export class ResConOverloadError implements RuntimeError {
+  constructor(private name: string, private argTypes: Type[]) {};
+
+  public explain() {
+    return `Overloading resolution of constructor ${this.name} with argTypes ${this.argTypes.map(t => t.type).join(", ")} failed.`;
+  }
+}
+
+export class NullPointerException implements RuntimeError {
+  public explain() {
+    return `Accessing instance field/method of null value.`;
   }
 }

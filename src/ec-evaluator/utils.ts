@@ -55,6 +55,13 @@ export class Stack<T> implements IStack<T> {
     return this.storage[this.size() - 1]
   }
 
+  public peekN(n: number): T | undefined {
+    if (this.isEmpty()) {
+      return undefined
+    }
+    return this.storage[this.size() - n]
+  }
+
   public size(): number {
     return this.storage.length
   }

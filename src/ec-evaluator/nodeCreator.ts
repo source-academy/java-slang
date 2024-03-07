@@ -94,3 +94,8 @@ export const nullLitNode = (): Literal => ({
     value: "null",
   },
 });
+
+export const exprNameNode = (name: string): ExpressionName => ({
+  kind: "ExpressionName",
+  name,
+});

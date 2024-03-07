@@ -1,8 +1,10 @@
 import { Node } from "../ast/types/ast";
+import { Expression } from "../ast/types/blocks-and-statements";
 import { EnvNode } from "./components";
 import {
   AssmtInstr,
   BinOpInstr,
+  Class,
   DerefInstr,
   EnvInstr,
   EvalVarInstr,
@@ -10,7 +12,11 @@ import {
   InstrType,
   InvInstr,
   MarkerInstr,
+  NewInstr,
+  ResConOverloadInstr,
   ResInstr,
+  ResOverloadInstr,
+  ResTypeInstr,
 } from "./types";
 
 export const assmtInstr = (
@@ -91,4 +97,44 @@ export const derefInstr = (
 ): DerefInstr => ({
   instrType: InstrType.DEREF,
   srcNode,
+});
+
+export const newInstr = (
+  c: Class,
+  srcNode: Node,
+): NewInstr => ({
+  instrType: InstrType.NEW,
+  srcNode,
+  c,
+});
+
+export const resTypeInstr = (
+  value: Expression | Class,
+  srcNode: Node,
+): ResTypeInstr => ({
+  instrType: InstrType.RES_TYPE,
+  srcNode,
+  value,
+});
+
+export const resOverloadInstr = (
+  name: string,
+  arity: number,
+  srcNode: Node,
+): ResOverloadInstr => ({
+  instrType: InstrType.RES_OVERLOAD,
+  srcNode,
+  name,
+  arity,
+});
+
+export const resConOverloadInstr = (
+  name: string,
+  arity: number,
+  srcNode: Node,
+): ResConOverloadInstr => ({
+  instrType: InstrType.RES_CON_OVERLOAD,
+  srcNode,
+  name,
+  arity,
 });
