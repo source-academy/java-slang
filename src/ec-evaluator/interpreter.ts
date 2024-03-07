@@ -40,9 +40,9 @@ import {
   ResetInstr,
   EvalVarInstr,
   Variable,
-  VarValue,
   Object,
   Class,
+  StashItem,
   ResInstr,
   DerefInstr,
 } from "./types";
@@ -71,7 +71,7 @@ type CmdEvaluator = (
   stash: Stash,
 ) => void
 
-export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): VarValue => {
+export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): StashItem | undefined => {
   const control = context.control;
   const stash = context.stash;
 
