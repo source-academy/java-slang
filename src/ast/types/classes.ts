@@ -6,6 +6,7 @@ export interface NormalClassDeclaration {
   kind: "NormalClassDeclaration";
   classModifier: Array<ClassModifier>;
   typeIdentifier: Identifier;
+  sclass?: Identifier;
   classBody: Array<ClassBodyDeclaration>;
 }
 

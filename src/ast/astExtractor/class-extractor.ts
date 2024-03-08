@@ -1,9 +1,10 @@
 import {
   BaseJavaCstVisitorWithDefaults,
   ClassBodyDeclarationCtx,
+  ClassDeclarationCstNode,
   ClassMemberDeclarationCtx,
   ClassModifierCtx,
-  CstNode,
+  ClassTypeCtx,
   TypeIdentifierCtx,
 } from "java-parser";
 
@@ -19,27 +20,19 @@ import { FieldExtractor } from "./field-extractor";
 import { MethodExtractor } from "./method-extractor";
 
 export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
-  private modifier: Array<ClassModifier>;
+  private modifier: Array<ClassModifier> = [];
   private identifier: Identifier;
-  private body: Array<ClassBodyDeclaration>;
+  private body: Array<ClassBodyDeclaration> = [];
+  private sclass: Identifier;
 
-  constructor() {
-    super();
-    this.modifier = [];
-    this.identifier = '';
-    this.body = [];
-  }
-
-  extract(cst: CstNode): ClassDeclaration {
-    this.modifier = [];
-    this.identifier = '';
-    this.body = [];
+  extract(cst: ClassDeclarationCstNode): ClassDeclaration {
     this.visit(cst);
     return {
       kind: "NormalClassDeclaration",
       classModifier: this.modifier,
       typeIdentifier: this.identifier,
       classBody: this.body,
+      sclass: this.sclass,
     } as NormalClassDeclaration;
   }
 
@@ -60,6 +53,10 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
 
   typeIdentifier(ctx: TypeIdentifierCtx) {
     this.identifier = ctx.Identifier[0].image;
+  }
+
+  classType(ctx: ClassTypeCtx) {
+      this.sclass = ctx.Identifier[0].image;
   }
 
   classBodyDeclaration(ctx: ClassBodyDeclarationCtx) {
