@@ -9,10 +9,10 @@ import {
 } from "./utils";
 
 describe("evaluate FieldDeclaration correctly", () => {
-  it("evaluate FieldDeclaration without variableInitializer correctly", () => {
+  it("evaluate static FieldDeclaration without variableInitializer correctly", () => {
     const programStr = `
       public class Test {
-        int x;
+        static Test x;
         public static void main(String[] args) {}
       }
       `;
@@ -28,15 +28,27 @@ describe("evaluate FieldDeclaration correctly", () => {
     const expectedControlTrace = [
       "CompilationUnit",
 
-      "ExpressionStatement", // main();
+      "ExpressionStatement", // Test.main([""]);
+      "NormalClassDeclaration", // public class Test {...}
+
+      "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
-      "FieldDeclaration", // int x;
+      "ConstructorDeclaration", // Test() {...}
+      "FieldDeclaration", // static Test x = null;
 
       "Pop",
-      "MethodInvocation", // main()
+      "Assign", // =
+      "Literal", // null
+      "EvalVariable", // x
+
+      "Pop",
+      "MethodInvocation", // Test.main([""])
 
       "Invocation", // ()
-      "MethodName", // main
+      "Literal", // [""]
+      "ResOverload", // main
+      "ResType", // [""]
+      "ResType", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -51,7 +63,13 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Reset", // skip Env from Invocation
     ];
     const expectedStashTrace = [
-      "main", // MethodName
+      "x", // EvalVariable
+      "null", // Literal
+      "null", // Assign
+      "Test", // ResType
+      "String[]", // ResType
+      "main", // ResOverload
+      `[""]`, // Literal
       "Void", // Void
     ];
   
@@ -61,10 +79,10 @@ describe("evaluate FieldDeclaration correctly", () => {
     // TODO test env
   });
   
-  it("evaluate FieldDeclaration with variableInitializer correctly", () => {
+  it("evaluate static FieldDeclaration with variableInitializer correctly", () => {
     const programStr = `
       public class Test {
-        int x = 1;
+        static int x = 1;
         public static void main(String[] args) {}
       }
       `;
@@ -80,9 +98,13 @@ describe("evaluate FieldDeclaration correctly", () => {
     const expectedControlTrace = [
       "CompilationUnit",
 
-      "ExpressionStatement", // main();
+      "ExpressionStatement", // Test.main([""]);
+      "NormalClassDeclaration", // public class Test {...}
+
+      "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
-      "FieldDeclaration", // int x = 1;
+      "ConstructorDeclaration", // Test() {...}
+      "FieldDeclaration", // static int x = 1;
 
       "Pop",
       "Assign", // =
@@ -90,10 +112,13 @@ describe("evaluate FieldDeclaration correctly", () => {
       "EvalVariable", // x
 
       "Pop",
-      "MethodInvocation", // main()
+      "MethodInvocation", // Test.main([""])
 
       "Invocation", // ()
-      "MethodName", // main
+      "Literal", // [""]
+      "ResOverload", // main
+      "ResType", // [""]
+      "ResType", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -111,7 +136,10 @@ describe("evaluate FieldDeclaration correctly", () => {
       "x", // EvalVariable
       "1", // Literal
       "1", // Assign
-      "main", // MethodName
+      "Test", // ResType
+      "String[]", // ResType
+      "main", // ResOverload
+      `[""]`, // Literal
       "Void", // Void
     ];
   
@@ -141,14 +169,21 @@ describe("evaluate MethodDeclaration correctly", () => {
     const expectedControlTrace = [
       "CompilationUnit",
       
-      "ExpressionStatement", // main();
+      "ExpressionStatement", // Test.main([""]);
+      "NormalClassDeclaration", // public class Test {...}
+
+      "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
+      "ConstructorDeclaration", // Test() {...}
 
       "Pop",
-      "MethodInvocation", // main()
+      "MethodInvocation", // Test.main([""])
 
       "Invocation", // ()
-      "MethodName", // main
+      "Literal", // [""]
+      "ResOverload", // main
+      "ResType", // [""]
+      "ResType", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -163,7 +198,10 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Reset", // Skip Env from Block
     ];
     const expectedStashTrace = [
-      "main", // MethodName
+      "Test", // ResType
+      "String[]", // ResType
+      "main", // ResOverload
+      `[""]`, // Literal
       "Void",
     ];
 
@@ -193,14 +231,21 @@ describe("evaluate MethodDeclaration correctly", () => {
     const expectedControlTrace = [
       "CompilationUnit",
       
-      "ExpressionStatement", // main();
+      "ExpressionStatement", // Test.main([""]);
+      "NormalClassDeclaration", // public class Test {...}
+
+      "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
+      "ConstructorDeclaration", // Test() {...}
 
       "Pop",
-      "MethodInvocation", // main()
+      "MethodInvocation", // Test.main([""])
 
       "Invocation", // ()
-      "MethodName", // main
+      "Literal", // [""]
+      "ResOverload", // main
+      "ResType", // [""]
+      "ResType", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -215,7 +260,10 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Reset", // Skip Env from Block
     ];
     const expectedStashTrace = [
-      "main", // MethodName
+      "Test", // ResType
+      "String[]", // ResType
+      "main", // ResOverload
+      `[""]`, // Literal
       "Void",
     ];
 
@@ -245,16 +293,23 @@ describe("evaluate MethodDeclaration correctly", () => {
     const expectedControlTrace = [
       "CompilationUnit",
       
-      "ExpressionStatement", // main();
+      "ExpressionStatement", // Test.main([""]);
+      "NormalClassDeclaration", // public class Test {...}
+
+      "Env", // from NormalClassDeclaration
       "MethodDeclaration", // private int test2(int x) {}
-      "MethodDeclaration", // void test1() {}
+      "MethodDeclaration", // static void test1() {}
       "MethodDeclaration", // public static void main(String[] args) {...}
+      "ConstructorDeclaration", // Test() {...}
 
       "Pop",
-      "MethodInvocation", // main()
+      "MethodInvocation", // Test.main([""])
 
       "Invocation", // ()
-      "MethodName", // main
+      "Literal", // [""]
+      "ResOverload", // main
+      "ResType", // [""]
+      "ResType", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -269,7 +324,10 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Reset", // Skip Env from Block
     ];
     const expectedStashTrace = [
-      "main", // MethodName
+      "Test", // ResType
+      "String[]", // ResType
+      "main", // ResOverload
+      `[""]`, // Literal
       "Void", // Void
     ];
   

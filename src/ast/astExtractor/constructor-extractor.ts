@@ -1,85 +1,63 @@
 import {
   BaseJavaCstVisitorWithDefaults,
   BlockStatementsCtx,
+  ConstructorDeclarationCstNode,
+  ConstructorModifierCtx,
   FormalParameterCtx,
   FormalParameterListCtx,
-  MethodDeclarationCstNode,
-  MethodDeclaratorCtx,
-  MethodModifierCtx,
-  ResultCtx,
+  SimpleTypeNameCtx,
   VariableArityParameterCtx,
   VariableDeclaratorIdCtx,
   VariableParaRegularParameterCtx,
 } from "java-parser";
 
 import {
-  MethodModifier,
-  MethodDeclaration,
   Identifier,
   FormalParameter,
-  Result,
+  ConstructorModifier,
+  ConstructorDeclaration,
 } from "../types/classes";
-import { BlockStatementExtractor } from "./block-statement-extractor";
 import { BlockStatement } from "../types/blocks-and-statements";
+import { BlockStatementExtractor } from "./block-statement-extractor";
 import { TypeExtractor } from "./type-extractor";
 
-export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
-  private modifier: Array<MethodModifier> = [];
-  private res: Result;
+export class ConstructorExtractor extends BaseJavaCstVisitorWithDefaults {
+  private modifier: Array<ConstructorModifier> = [];
   private identifier: Identifier;
   private params: Array<FormalParameter> = [];
   private body: Array<BlockStatement> = [];
 
-  extract(cst: MethodDeclarationCstNode): MethodDeclaration {
+  extract(cst: ConstructorDeclarationCstNode): ConstructorDeclaration {
     this.visit(cst);
     return {
-      kind: "MethodDeclaration",
-      methodModifier: this.modifier,
-      methodHeader: {
-        result: this.res,
+      kind: "ConstructorDeclaration",
+      constructorModifier: this.modifier,
+      constructorDeclarator: {
         identifier: this.identifier,
-        formalParameterList: this.params
+        formalParameterList: this.params,
       },
-      methodBody: {
+      constructorBody: {
         kind: "Block",
         blockStatements:this.body,
       },
     };
   }
 
-  methodModifier(ctx: MethodModifierCtx) {
+  constructorModifier(ctx: ConstructorModifierCtx) {
     const possibleModifiers = [
       ctx.Public,
       ctx.Protected,
       ctx.Private,
-      ctx.Abstract,
-      ctx.Static,
-      ctx.Final,
-      ctx.Synchronized,
-      ctx.Native,
-      ctx.Strictfp
     ].filter(x => x !== undefined).map(x => x ? x[0].image : x);
-    this.modifier.push(possibleModifiers[0] as MethodModifier);
+    this.modifier.push(possibleModifiers[0] as ConstructorModifier);
   }
-
-  result(ctx: ResultCtx) {
-    const typeExtractor = new TypeExtractor();
-    if (ctx.unannType) {
-      this.res = typeExtractor.extract(ctx.unannType[0]);
-    } else /* if (ctx.Void) */ {
-      this.res = "void";
-    }
-  }
-
-  methodDeclarator(ctx: MethodDeclaratorCtx) {
+  
+  simpleTypeName(ctx: SimpleTypeNameCtx) {
     this.identifier = ctx.Identifier[0].image;
-    if (ctx.formalParameterList) {
-      this.params = this.visit(ctx.formalParameterList);
-    }
   }
 
   formalParameterList(ctx: FormalParameterListCtx) {
-    return ctx.formalParameter.map(p => this.visit(p));
+    this.params = ctx.formalParameter.map(p => this.visit(p));
   }
 
   formalParameter(ctx: FormalParameterCtx) {

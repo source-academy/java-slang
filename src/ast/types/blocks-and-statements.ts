@@ -57,13 +57,8 @@ export type StatementExpression = MethodInvocation | Assignment;
 
 export interface MethodInvocation {
   kind: "MethodInvocation";
-  identifier: MethodName;
+  identifier: Identifier;
   argumentList: ArgumentList;
-}
-
-export interface MethodName {
-  kind: "MethodName";
-  name: string;
 }
 
 export type ArgumentList = Array<Expression>;
@@ -90,7 +85,18 @@ export interface Void {
   kind: "Void";
 }
 
-export type Primary = Literal | ExpressionName | Assignment | MethodInvocation;
+export type Primary = 
+  Literal
+  | ExpressionName
+  | Assignment
+  | MethodInvocation
+  | ClassInstanceCreationExpression;
+
+export interface ClassInstanceCreationExpression {
+  kind: "ClassInstanceCreationExpression",
+  identifier: Identifier;
+  argumentList: ArgumentList;
+}
 
 export interface Literal {
   kind: "Literal";
