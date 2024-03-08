@@ -4,7 +4,16 @@ export interface Block {
   kind: "Block";
   blockStatements: Array<BlockStatement>;
 }
-export type BlockStatement = LocalVariableDeclarationStatement | Statement;
+export type BlockStatement =
+  LocalVariableDeclarationStatement
+  | Statement
+  | ExplicitConstructorInvocation;
+
+export interface ExplicitConstructorInvocation {
+  kind: "ExplicitConstructorInvocation";
+  thisOrSuper: "this" | "super";
+  argumentList: ArgumentList
+}
 
 export interface LocalVariableDeclarationStatement {
   kind: "LocalVariableDeclarationStatement";

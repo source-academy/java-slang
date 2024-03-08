@@ -156,3 +156,120 @@ describe("extract FormalParameter correctly", () => {
     expect(ast).toEqual(expectedAst);
   });
 });
+
+describe("extract ExplicitConstructorInvocation correctly", () => {
+  it("extract this() correctly", () => {
+    const programStr = `
+      class Test {
+        Test() {
+          this(1);
+        }
+        Test(int x) {}
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "ConstructorDeclaration",
+              constructorModifier: [],
+              constructorDeclarator: {
+                identifier: "Test",
+                formalParameterList: [],
+              },
+              constructorBody: {
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "ExplicitConstructorInvocation",
+                    thisOrSuper: "this",
+                    argumentList: [
+                      {
+                        kind: "Literal",
+                        literalType: {
+                          kind: "DecimalIntegerLiteral",
+                          value: "1",
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+            {
+              kind: "ConstructorDeclaration",
+              constructorModifier: [],
+              constructorDeclarator: {
+                identifier: "Test",
+                formalParameterList: [
+                  {
+                    kind: "FormalParameter",
+                    unannType: "int",
+                    identifier: "x",
+                  },
+                ],
+              },
+              constructorBody: {
+                kind: "Block",
+                blockStatements: [],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract super() correctly", () => {
+    const programStr = `
+      class Test {
+        Test() {
+          super();
+        }
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "ConstructorDeclaration",
+              constructorModifier: [],
+              constructorDeclarator: {
+                identifier: "Test",
+                formalParameterList: [],
+              },
+              constructorBody: {
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "ExplicitConstructorInvocation",
+                    thisOrSuper: "super",
+                    argumentList: [],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+});
