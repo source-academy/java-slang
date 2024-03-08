@@ -299,3 +299,17 @@ export const appendEmtpyReturn = (
     mtdBodyBlockStmts.push(emptyReturnStmtNode());
   }
 }
+
+export const searchMainMtdClass = (classes: NormalClassDeclaration[]) => {
+  return classes.find(c =>
+    c.classBody.some(d =>
+      d.kind === "MethodDeclaration"
+      && d.methodModifier.includes("public")
+      && d.methodModifier.includes("static")
+      && d.methodHeader.result === "void"
+      && d.methodHeader.identifier === "main"
+      && d.methodHeader.formalParameterList.length === 1
+      && d.methodHeader.formalParameterList[0].unannType === "String[]"
+      && d.methodHeader.formalParameterList[0].identifier === "args"
+  ))?.typeIdentifier;
+}

@@ -89,3 +89,9 @@ export class NullPointerException implements RuntimeError {
     return `Accessing instance field/method of null value.`;
   }
 }
+
+export class NoMainMtdError implements RuntimeError {
+  public explain() {
+    return `public static void main(String[] args) is not defined in any class.`;
+  }
+}

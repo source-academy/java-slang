@@ -72,6 +72,7 @@ import {
   isInstance,
   appendOrReplaceReturn,
   appendEmtpyReturn,
+  searchMainMtdClass,
 } from "./utils";
 
 type CmdEvaluator = (
@@ -116,9 +117,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // TODO should search for class name whose class defines the main method
-    // TODO throw error if no main method is found
-    const className = command.topLevelClassOrInterfaceDeclarations[0].typeIdentifier;
+    // Get first class that defines the main method according to program order.
+    const className = searchMainMtdClass(command.topLevelClassOrInterfaceDeclarations);
+    if (!className) {
+      throw new errors.NoMainMtdError();
+    }
+
     control.push(node.mainMtdInvExpStmtNode(className));
     control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations));
   },

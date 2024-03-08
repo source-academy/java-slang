@@ -12,7 +12,7 @@ it("evaluate LHS Class correctly", () => {
   const programStr = `
     class Test {
       static int x;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test.x = 1;
       }
     }
@@ -33,7 +33,7 @@ it("evaluate LHS Class correctly", () => {
     "NormalClassDeclaration", // class Test {...}
 
     "Env",
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
     "FieldDeclaration", // static int x = 0;
 
@@ -99,7 +99,7 @@ it("evaluate LHS Object correctly", () => {
   const programStr = `
     class Test {
       int x = 1;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test test = new Test();
         test.x = 2;
       }
@@ -121,7 +121,7 @@ it("evaluate LHS Object correctly", () => {
     "NormalClassDeclaration", // class Test {...}
 
     "Env",
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
 
     "Pop",
@@ -231,7 +231,7 @@ it("evaluate LHS this correctly", () => {
   const programStr = `
     class Test {
       int x = 1;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test test = new Test();
         test.test();
       }
@@ -257,7 +257,7 @@ it("evaluate LHS this correctly", () => {
 
     "Env",
     "MethodDeclaration", // void test() {...}
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
 
     "Pop",
@@ -397,7 +397,7 @@ it("evaluate RHS Class correctly", () => {
   const programStr = `
     class Test {
       static int x;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         int x = Test.x;
       }
     }
@@ -418,7 +418,7 @@ it("evaluate RHS Class correctly", () => {
     "NormalClassDeclaration", // class Test {...}
 
     "Env",
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
     "FieldDeclaration", // static int x = 0;
 
@@ -491,7 +491,7 @@ it("evaluate RHS Object correctly", () => {
   const programStr = `
     class Test {
       int x;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test test = new Test();
         int x = test.x;
       }
@@ -513,7 +513,7 @@ it("evaluate RHS Object correctly", () => {
     "NormalClassDeclaration", // class Test {...}
 
     "Env",
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
 
     "Pop",
@@ -630,7 +630,7 @@ it("evaluate RHS this correctly", () => {
   const programStr = `
     class Test {
       int x = 1;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test test = new Test();
         test.test();
       }
@@ -656,7 +656,7 @@ it("evaluate RHS this correctly", () => {
 
     "Env",
     "MethodDeclaration", // void test() {...}
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
 
     "Pop",

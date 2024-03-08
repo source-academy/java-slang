@@ -12,7 +12,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in static MethodInvocation with simple name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           test();
         }
         static void test() {}
@@ -35,7 +35,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Env",
       "MethodDeclaration", // static void test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -99,7 +99,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in static MethodInvocation with qualified class name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test.test();
         }
         static void test() {}
@@ -122,7 +122,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Env",
       "MethodDeclaration", // static void test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -186,7 +186,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in static MethodInvocation with qualified instance name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -210,7 +210,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Env",
       "MethodDeclaration", // static void test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -312,7 +312,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in instance MethodInvocation with simple name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -340,7 +340,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // static void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -476,7 +476,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in instance MethodInvocation with qualified name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -504,7 +504,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // static void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -640,7 +640,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in instance MethodInvocation with this keyword correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -668,7 +668,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // static void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -806,7 +806,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
   it("evaluate instance MethodInvocation in static MethodInvocation with qualified instance name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           int x = test.test();
         }
@@ -832,7 +832,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Env",
       "MethodDeclaration", // int test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -950,7 +950,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
   it("evaluate instance MethodInvocation in instance MethodInvocation with simple name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -978,7 +978,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -1121,7 +1121,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
   it("evaluate instance MethodInvocation in instance MethodInvocation with qualified instance name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -1152,7 +1152,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // int test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -1337,7 +1337,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
   it("evaluate instance MethodInvocation in instance MethodInvocation with this keyword correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -1367,7 +1367,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // int test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -1516,7 +1516,7 @@ describe("evaluate method overloading resolution correctly", () => {
   it("should resolve to test(int x) instead of test()", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           int x = test(1);
         }
         static void test() {}
@@ -1543,7 +1543,7 @@ describe("evaluate method overloading resolution correctly", () => {
       "Env",
       "MethodDeclaration", // static void test() {...}
       "MethodDeclaration", // static void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
   
       "Pop",
@@ -1631,7 +1631,7 @@ describe("evaluate method overloading resolution correctly", () => {
         Test(int x) {
           this.x = x;
         }
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test Test = new Test(2);
           Test.Test();
         }
@@ -1657,7 +1657,7 @@ describe("evaluate method overloading resolution correctly", () => {
   
       "Env",
       "MethodDeclaration", // void Test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test(int x) {...}
       "ConstructorDeclaration", // Test() {...}
   
@@ -1827,7 +1827,7 @@ describe("evaluate method overloading resolution correctly", () => {
         test(int x) {
           this.x = x;
         }
-        static void main(String[] args) {
+        public static void main(String[] args) {
           test test = new test(2);
           test.test();
         }
@@ -1853,7 +1853,7 @@ describe("evaluate method overloading resolution correctly", () => {
   
       "Env",
       "MethodDeclaration", // void Test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test(int x) {...}
       "ConstructorDeclaration", // Test() {...}
   
