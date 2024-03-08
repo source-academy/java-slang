@@ -158,22 +158,28 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Append ReturnStatement with this keyword at end of constructor body.
     constructors.forEach(c => appendOrReplaceReturn(c));
 
+    // To restore current (global) env for next NormalClassDeclarations evaluation.
+    control.push(instr.envInstr(context.environment.current, command));
+    
+    // TODO no superclass means superclass is Object
+    const superclassName = command.sclass;
+    let superclass: Class | undefined = undefined;
+    superclassName && (superclass = context.environment.getClass(superclassName));
+    // Extend env from superclass env, otherwise global env.
+    const fromEnv = superclass ? superclass.frame : context.environment.global;
+    context.environment.extendEnv(fromEnv, className);
+
     const c = {
       kind: "Class",
-      // frame to be set after extending env.
+      frame: context.environment.current,
       constructors: constructors,
       instanceFields,
       instanceMethods,
       staticFields,
       staticMethods,
+      superclass,
     } as Class;
-
-    // To restore current (global) env for next NormalClassDeclarations evaluation.
-    control.push(instr.envInstr(context.environment.current, command));
-    
     context.environment.defineClass(className, c);
-    context.environment.extendEnv(context.environment.current, className);
-    context.environment.getClass(className).frame = context.environment.current;
 
     control.push(...handleSequence(instanceMethods));
     control.push(...handleSequence(staticMethods));

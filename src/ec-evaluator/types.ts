@@ -152,6 +152,7 @@ export interface Class {
   instanceMethods: MethodDeclaration[];
   staticFields: FieldDeclaration[];
   staticMethods: MethodDeclaration[];
+  superclass?: Class;
 }
 
 export interface Type {

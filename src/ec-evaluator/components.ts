@@ -87,7 +87,7 @@ export class Environment {
   }
 
   defineClass(name: Name, c: Class) {
-    this._current.setClass(name, c);
+    this._global.setClass(name, c);
   }
 
   getClass(name: Name): Class {
