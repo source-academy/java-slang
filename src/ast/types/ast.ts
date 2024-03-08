@@ -4,6 +4,7 @@ import {
   Block,
   BlockStatement,
   ClassInstanceCreationExpression,
+  ExplicitConstructorInvocation,
   Expression,
   ExpressionStatement,
   MethodInvocation,
@@ -30,6 +31,7 @@ interface NodeMap {
   NormalClassDeclaration: NormalClassDeclaration;
   ClassInstanceCreationExpression: ClassInstanceCreationExpression;
   ConstructorDeclaration: ConstructorDeclaration;
+  ExplicitConstructorInvocation: ExplicitConstructorInvocation;
 }
 
 export type Node = NodeMap[keyof NodeMap];
