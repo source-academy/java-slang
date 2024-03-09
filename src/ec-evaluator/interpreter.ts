@@ -342,7 +342,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(instr.invInstr(command.argumentList.length + 1, command));
     control.push(...handleSequence(command.argumentList));
     control.push(instr.newInstr(c, command))
-    control.push(instr.resConOverloadInstr(command.identifier, command.argumentList.length, command));
+    control.push(instr.resConOverloadInstr(command.argumentList.length, command));
     control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
     control.push(instr.resTypeInstr(c, command));
   },
@@ -660,11 +660,11 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     argTypes.reverse();
 
     // Retrieve class to search in for method resolution.
-    const classType: Type = stash.pop()! as Type;
-    const classToSearchIn: Class = context.environment.getClass(classType.type);
+    const className: Identifier = (stash.pop()! as Type).type;
+    const classToSearchIn: Class = context.environment.getClass(className);
 
     // Constructor overloading resolution.
-    const closure: Closure = classToSearchIn.frame.resConOverload(command.name, argTypes);
+    const closure: Closure = classToSearchIn.frame.resConOverload(className, argTypes);
     stash.push(closure);
 
     // No post-processing required for constructor.

@@ -82,7 +82,6 @@ export interface ResOverloadInstr extends BaseInstr {
 }
 
 export interface ResConOverloadInstr extends BaseInstr {
-  name: string;
   arity: number;
 }
 

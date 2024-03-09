@@ -129,12 +129,10 @@ export const resOverloadInstr = (
 });
 
 export const resConOverloadInstr = (
-  name: string,
   arity: number,
   srcNode: Node,
 ): ResConOverloadInstr => ({
   instrType: InstrType.RES_CON_OVERLOAD,
   srcNode,
-  name,
   arity,
 });
