@@ -13,6 +13,7 @@ describe("extract FieldModifier correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -59,6 +60,7 @@ describe("extract field type correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [
             "private",
           ],
@@ -97,6 +99,7 @@ describe("extract field type correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -135,6 +138,7 @@ describe("extract VariableInitializer correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -177,6 +181,7 @@ describe("extract VariableInitializer correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -226,6 +231,7 @@ describe("extract VariableInitializer correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [

@@ -886,7 +886,7 @@ ArrayAccess
 
 MethodInvocation
   = n:Name lparen al:ArgumentList? rparen { 
-    return { kind: "MethodInvocation", identifier: {kind: "MethodName", name: n}, argumentList: al ?? [] }
+    return { kind: "MethodInvocation", identifier:  n, argumentList: al ?? [] }
   }
 
 ArgumentList

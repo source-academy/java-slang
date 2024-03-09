@@ -28,14 +28,21 @@ it("evaluate LocalVariableDeclarationStatement to a basic arithmetic operation c
   const expectedControlTrace = [
     "CompilationUnit",
 
-    "ExpressionStatement", // main();
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+
+    "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
+    "ConstructorDeclaration", // Test() {...}
 
     "Pop",
-    "MethodInvocation", // main()
+    "MethodInvocation", // Test.main([""])
 
     "Invocation", // ()
-    "MethodName", // main
+    "Literal", // [""]
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -65,7 +72,10 @@ it("evaluate LocalVariableDeclarationStatement to a basic arithmetic operation c
     "Reset", // skip Env from Invocation
   ];
   const expectedStashTrace = [
-    "main", // MethodName
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    `[""]`, // Literal
     "y", // EvalVariable
     "10", // Literal
     "2", // Literal
@@ -100,14 +110,21 @@ it("evaluate LocalVariableDeclarationStatement to a complex arithmetic operation
   const expectedControlTrace = [
     "CompilationUnit",
 
-    "ExpressionStatement", // main();
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+
+    "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
+    "ConstructorDeclaration", // Test() {...}
 
     "Pop",
-    "MethodInvocation", // main()
+    "MethodInvocation", // Test.main([""])
 
     "Invocation", // ()
-    "MethodName", // main
+    "Literal", // [""]
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -145,7 +162,10 @@ it("evaluate LocalVariableDeclarationStatement to a complex arithmetic operation
     "Reset", // skip Env from Invocation
   ];
   const expectedStashTrace = [
-    "main", // MethodName
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    `[""]`, // Literal
     "z", // EvalVariable
     "1", // Literal
     "2", // Literal
@@ -167,7 +187,7 @@ it("evaluate LocalVariableDeclarationStatement to a complex arithmetic operation
 it("evaluate FieldDeclaration to a basic arithmetic expression without brackets to enforce precedence correctly", () => {
   const programStr = `
     public class Test {
-      int x = 1 + 2 * 3;
+      static int x = 1 + 2 * 3;
       public static void main(String[] args) {}
     }
     `;
@@ -183,9 +203,13 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
   const expectedControlTrace = [
     "CompilationUnit",
 
-    "ExpressionStatement", // main();
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+
+    "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {}
-    "FieldDeclaration", // int x = 1 + 2 * 3;
+    "ConstructorDeclaration", // Test() {...}
+    "FieldDeclaration", // static int x = 1 + 2 * 3;
 
     "Pop",
     "Assign", // =
@@ -201,10 +225,13 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
     "Literal", // 2
 
     "Pop",
-    "MethodInvocation", // main()
+    "MethodInvocation", // Test.main([""])
 
     "Invocation", // ()
-    "MethodName", // main
+    "Literal", // [""]
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -226,7 +253,10 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
     "6", // BinaryOperation *
     "7", // BinaryOperation +
     "7", // Assign
-    "main", // MethodName
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    `[""]`, // Literal
     "Void", // Void
   ];
 
@@ -239,7 +269,7 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
 it("evaluate FieldDeclaration to a complex arithmetic expression without brackets to enforce precedence correctly", () => {
   const programStr = `
     public class Test {
-      int x = 2 / 1 - 3 * (5 % 4) + 6;
+      static int x = 2 / 1 - 3 * (5 % 4) + 6;
       public static void main(String[] args) {}
     }
     `;
@@ -255,9 +285,13 @@ it("evaluate FieldDeclaration to a complex arithmetic expression without bracket
   const expectedControlTrace = [
     "CompilationUnit",
 
-    "ExpressionStatement", // main();
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+
+    "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {}
-    "FieldDeclaration", // int x = 2 / 1 - 3 * (5 % 4) + 6;
+    "ConstructorDeclaration", // Test() {...}
+    "FieldDeclaration", // static int x = 2 / 1 - 3 * (5 % 4) + 6;
 
     "Pop",
     "Assign", // =
@@ -285,10 +319,13 @@ it("evaluate FieldDeclaration to a complex arithmetic expression without bracket
     "Literal", // 5
 
     "Pop",
-    "MethodInvocation", // main()
+    "MethodInvocation", // Test.main([""])
 
     "Invocation", // ()
-    "MethodName", // main
+    "Literal", // [""]
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -316,7 +353,10 @@ it("evaluate FieldDeclaration to a complex arithmetic expression without bracket
     "6", // Literal
     "5", // BinaryOperation +
     "5", // Assign
-    "main", // MethodName
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    `[""]`, // Literal
     "Void", // Void
   ];
 

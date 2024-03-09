@@ -2,28 +2,27 @@ import {
   BaseJavaCstVisitorWithDefaults,
   FieldDeclarationCstNode,
   FieldModifierCtx,
-  IntegralTypeCtx,
-  UnannClassTypeCtx,
   VariableDeclaratorIdCtx,
   VariableInitializerCtx,
 } from "java-parser";
 
 import { Expression } from "../types/blocks-and-statements";
-import { Identifier, FieldDeclaration, FieldModifier, UnannType } from "../types/classes";
+import { Identifier, FieldDeclaration, FieldModifier } from "../types/classes";
 import { ExpressionExtractor } from "./expression-extractor";
+import { TypeExtractor } from "./type-extractor";
 
 export class FieldExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<FieldModifier> = [];
-  private type: UnannType;
   private identifier: Identifier;
   private value: Expression;
 
   extract(cst: FieldDeclarationCstNode): FieldDeclaration {
     this.visit(cst);
+    const typeExtractor = new TypeExtractor();
     return {
       kind: "FieldDeclaration",
       fieldModifier: this.modifier,
-      fieldType: this.type,
+      fieldType: typeExtractor.extract(cst.children.unannType[0]),
       variableDeclaratorList: [
         {
           kind: "VariableDeclarator",
@@ -45,18 +44,6 @@ export class FieldExtractor extends BaseJavaCstVisitorWithDefaults {
       ctx.Volatile,
     ].filter(x => x !== undefined).map(x => x ? x[0].image : x);
     possibleModifiers.map(m => this.modifier.push(m as FieldModifier));
-  }
-
-  integralType(ctx: IntegralTypeCtx) {
-    ctx.Byte && (this.type = ctx.Byte[0].image);
-    ctx.Char && (this.type = ctx.Char[0].image);
-    ctx.Int && (this.type = ctx.Int[0].image);
-    ctx.Long && (this.type = ctx.Long[0].image);
-    ctx.Short && (this.type = ctx.Short[0].image);
-  }
-
-  unannClassType(ctx: UnannClassTypeCtx) {
-    this.type = ctx.Identifier[0].image;
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {

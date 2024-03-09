@@ -1,14 +1,22 @@
 import {
+  BaseJavaCstVisitorWithDefaults,
+  ClassBodyDeclarationCtx,
   ClassMemberDeclarationCtx,
   ClassModifierCtx,
   CstNode,
   TypeIdentifierCtx,
 } from "java-parser";
 
-import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { ClassModifier, Identifier, ClassBodyDeclaration, ClassDeclaration } from "../types/classes";
-import { MethodExtractor } from "./method-extractor";
+import {
+  ClassModifier,
+  Identifier,
+  ClassBodyDeclaration,
+  ClassDeclaration,
+  NormalClassDeclaration
+} from "../types/classes";
+import { ConstructorExtractor } from "./constructor-extractor";
 import { FieldExtractor } from "./field-extractor";
+import { MethodExtractor } from "./method-extractor";
 
 export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<ClassModifier>;
@@ -28,10 +36,11 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
     this.body = [];
     this.visit(cst);
     return {
+      kind: "NormalClassDeclaration",
       classModifier: this.modifier,
       typeIdentifier: this.identifier,
       classBody: this.body,
-    };
+    } as NormalClassDeclaration;
   }
 
   classModifier(ctx: ClassModifierCtx) {
@@ -51,6 +60,19 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
 
   typeIdentifier(ctx: TypeIdentifierCtx) {
     this.identifier = ctx.Identifier[0].image;
+  }
+
+  classBodyDeclaration(ctx: ClassBodyDeclarationCtx) {
+    if (ctx.constructorDeclaration) {
+      ctx.constructorDeclaration.forEach(x => {
+        const constructorExtractor = new ConstructorExtractor();
+        const constructorNode = constructorExtractor.extract(x);
+        this.body.push(constructorNode);
+      })
+    }
+    if (ctx.classMemberDeclaration) {
+      this.visit(ctx.classMemberDeclaration);
+    }
   }
 
   classMemberDeclaration(ctx: ClassMemberDeclarationCtx) {

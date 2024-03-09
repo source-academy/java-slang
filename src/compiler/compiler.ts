@@ -93,7 +93,7 @@ export class Compiler {
         } else {
           nonStaticFields.push(d);
         }
-      } else {
+      } else if (d.kind === "MethodDeclaration") {
         if (d.methodModifier.includes("static")) {
           staticMethods.push(d);
         } else {

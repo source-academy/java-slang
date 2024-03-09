@@ -3,6 +3,7 @@ import { Block, VariableDeclarator } from "./blocks-and-statements";
 export type ClassDeclaration = NormalClassDeclaration;
 
 export interface NormalClassDeclaration {
+  kind: "NormalClassDeclaration";
   classModifier: Array<ClassModifier>;
   typeIdentifier: Identifier;
   classBody: Array<ClassBodyDeclaration>;
@@ -19,8 +20,27 @@ export type ClassModifier =
   | "non-sealed"
   | "strictfp";
 
-export type ClassBodyDeclaration = ClassMemberDeclaration;
+export type ClassBodyDeclaration = ClassMemberDeclaration | ConstructorDeclaration;
 export type ClassMemberDeclaration = MethodDeclaration | FieldDeclaration;
+
+export interface ConstructorDeclaration {
+  kind: "ConstructorDeclaration";
+  constructorModifier: Array<ConstructorModifier>;
+  constructorDeclarator: ConstructorDeclarator;
+  constructorBody: ConstructorBody;
+}
+
+export type ConstructorModifier =
+  | "public"
+  | "protected"
+  | "private";
+
+export interface ConstructorDeclarator {
+  identifier: Identifier;
+  formalParameterList: Array<FormalParameter>;
+}
+
+export type ConstructorBody = Block;
 
 export interface MethodDeclaration {
   kind: "MethodDeclaration";
@@ -53,7 +73,7 @@ export interface MethodHeader {
   formalParameterList: Array<FormalParameter>;
 }
 
-export type Result = UnannType;
+export type Result = "void" | UnannType;
 
 export interface FormalParameter {
   kind: "FormalParameter";

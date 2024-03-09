@@ -1,14 +1,22 @@
 import { Node } from "../ast/types/ast";
+import { Expression } from "../ast/types/blocks-and-statements";
 import { EnvNode } from "./components";
 import {
   AssmtInstr,
   BinOpInstr,
+  Class,
+  DerefInstr,
   EnvInstr,
   EvalVarInstr,
   Instr,
   InstrType,
   InvInstr,
-  MarkerInstr
+  MarkerInstr,
+  NewInstr,
+  ResConOverloadInstr,
+  ResInstr,
+  ResOverloadInstr,
+  ResTypeInstr,
 } from "./types";
 
 export const assmtInstr = (
@@ -73,4 +81,60 @@ export const evalVarInstr = (
   instrType: InstrType.EVAL_VAR,
   srcNode,
   symbol,
+});
+
+export const resInstr = (
+  name: string,
+  srcNode: Node,
+): ResInstr => ({
+  instrType: InstrType.RES,
+  srcNode,
+  name,
+});
+
+export const derefInstr = (
+  srcNode: Node,
+): DerefInstr => ({
+  instrType: InstrType.DEREF,
+  srcNode,
+});
+
+export const newInstr = (
+  c: Class,
+  srcNode: Node,
+): NewInstr => ({
+  instrType: InstrType.NEW,
+  srcNode,
+  c,
+});
+
+export const resTypeInstr = (
+  value: Expression | Class,
+  srcNode: Node,
+): ResTypeInstr => ({
+  instrType: InstrType.RES_TYPE,
+  srcNode,
+  value,
+});
+
+export const resOverloadInstr = (
+  name: string,
+  arity: number,
+  srcNode: Node,
+): ResOverloadInstr => ({
+  instrType: InstrType.RES_OVERLOAD,
+  srcNode,
+  name,
+  arity,
+});
+
+export const resConOverloadInstr = (
+  name: string,
+  arity: number,
+  srcNode: Node,
+): ResConOverloadInstr => ({
+  instrType: InstrType.RES_CON_OVERLOAD,
+  srcNode,
+  name,
+  arity,
 });

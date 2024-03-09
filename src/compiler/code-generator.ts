@@ -334,7 +334,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let maxStack = 1;
     let resultType = EMPTY_TYPE;
 
-    const symbolInfos = cg.symbolTable.queryMethod(n.identifier.name);
+    const symbolInfos = cg.symbolTable.queryMethod(n.identifier);
     for (let i = 0; i < symbolInfos.length - 1; i++) {
       const fieldInfo = (symbolInfos[i] as FieldInfo);
       const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);

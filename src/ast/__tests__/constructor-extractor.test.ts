@@ -1,11 +1,11 @@
 import { parse } from "../parser";
 import { AST } from "../types/packages-and-modules";
 
-describe("extract MethodModifier correctly", () => {
-  it("extract MethodDeclaration without MethodModifier correctly", () => {
+describe("extract ConstructorModifier correctly", () => {
+  it("extract ConstructorDeclaration without ConstructorModifier correctly", () => {
     const programStr = `
       class Test {
-        void test() {}
+        Test() {}
       }
     `;
 
@@ -18,14 +18,13 @@ describe("extract MethodModifier correctly", () => {
           typeIdentifier: "Test",
           classBody: [
             {
-              kind: "MethodDeclaration",
-              methodModifier: [],
-              methodHeader: {
-                result: "void",
-                identifier: "test",
+              kind: "ConstructorDeclaration",
+              constructorModifier: [],
+              constructorDeclarator: {
+                identifier: "Test",
                 formalParameterList: [],
               },
-              methodBody: {
+              constructorBody: {
                 kind: "Block",
                 blockStatements: [],
               },
@@ -39,10 +38,10 @@ describe("extract MethodModifier correctly", () => {
     expect(ast).toEqual(expectedAst);
   });
 
-  it("extract MethodDeclaration with MethodModifier correctly", () => {
+  it("extract ConstructorDeclaration with ConstructorModifier correctly", () => {
     const programStr = `
-      class Test {
-        public static void test() {}
+      class test {
+        public test() {}
       }
     `;
 
@@ -52,20 +51,18 @@ describe("extract MethodModifier correctly", () => {
         {
           kind: "NormalClassDeclaration",
           classModifier: [],
-          typeIdentifier: "Test",
+          typeIdentifier: "test",
           classBody: [
             {
-              kind: "MethodDeclaration",
-              methodModifier: [
+              kind: "ConstructorDeclaration",
+              constructorModifier: [
                 "public",
-                "static",
               ],
-              methodHeader: {
-                result: "void",
+              constructorDeclarator: {
                 identifier: "test",
                 formalParameterList: [],
               },
-              methodBody: {
+              constructorBody: {
                 kind: "Block",
                 blockStatements: [],
               },
@@ -81,10 +78,10 @@ describe("extract MethodModifier correctly", () => {
 });
 
 describe("extract FormalParameter correctly", () => {
-  it("extract MethodDeclaration without FormalParameter correctly", () => {
+  it("extract ConstructorDeclaration without FormalParameter correctly", () => {
     const programStr = `
-      class Test {
-        void test() {}
+      class test {
+        test() {}
       }
     `;
 
@@ -94,17 +91,16 @@ describe("extract FormalParameter correctly", () => {
         {
           kind: "NormalClassDeclaration",
           classModifier: [],
-          typeIdentifier: "Test",
+          typeIdentifier: "test",
           classBody: [
             {
-              kind: "MethodDeclaration",
-              methodModifier: [],
-              methodHeader: {
-                result: "void",
+              kind: "ConstructorDeclaration",
+              constructorModifier: [],
+              constructorDeclarator: {
                 identifier: "test",
                 formalParameterList: [],
               },
-              methodBody: {
+              constructorBody: {
                 kind: "Block",
                 blockStatements: [],
               },
@@ -118,10 +114,10 @@ describe("extract FormalParameter correctly", () => {
     expect(ast).toEqual(expectedAst);
   });
 
-  it("extract MethodDeclaration with FormalParameter correctly", () => {
+  it("extract ConstructorDeclaration with FormalParameter correctly", () => {
     const programStr = `
       class Test {
-        void test(int x) {}
+        Test(int x) {}
       }
     `;
 
@@ -134,11 +130,10 @@ describe("extract FormalParameter correctly", () => {
           typeIdentifier: "Test",
           classBody: [
             {
-              kind: "MethodDeclaration",
-              methodModifier: [],
-              methodHeader: {
-                result: "void",
-                identifier: "test",
+              kind: "ConstructorDeclaration",
+              constructorModifier: [],
+              constructorDeclarator: {
+                identifier: "Test",
                 formalParameterList: [
                   {
                     kind: "FormalParameter",
@@ -147,7 +142,7 @@ describe("extract FormalParameter correctly", () => {
                   },
                 ],
               },
-              methodBody: {
+              constructorBody: {
                 kind: "Block",
                 blockStatements: [],
               },

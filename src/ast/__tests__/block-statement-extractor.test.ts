@@ -15,6 +15,7 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -77,6 +78,7 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [

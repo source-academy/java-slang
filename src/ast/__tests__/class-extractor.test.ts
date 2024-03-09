@@ -11,6 +11,7 @@ describe("extract NormalClassDeclaration correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [],
@@ -31,6 +32,7 @@ describe("extract NormalClassDeclaration correctly", () => {
       kind: "CompilationUnit",
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [
             "public",
             "static",
