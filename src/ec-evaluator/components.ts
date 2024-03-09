@@ -1,4 +1,4 @@
-import { ConstructorDeclaration, MethodDeclaration } from "../ast/types/classes";
+import { ConstructorDeclaration, MethodDeclaration, UnannType } from "../ast/types/classes";
 import { DECLARED_BUT_NOT_YET_ASSIGNED } from "./constants";
 import * as errors from "./errors";
 import {
@@ -56,18 +56,20 @@ export class Environment {
     this._current = toEnv;
   }
 
-  declareVariable(name: Name) {
+  declareVariable(name: Name, type: UnannType) {
     const variable: Variable = {
       kind: "Variable",
+      type,
       name,
       value: DECLARED_BUT_NOT_YET_ASSIGNED,
     } as Variable;
     this._current.setVariable(name, variable);
   }
 
-  defineVariable(name: Name, value: VarValue) {
+  defineVariable(name: Name, type: UnannType, value: VarValue) {
     const variable = {
       kind: "Variable",
+      type,
       name,
       value,
     } as Variable;

@@ -249,7 +249,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       defaultValues.get(type) ||
       node.nullLitNode();
     
-    context.environment.declareVariable(id);
+    context.environment.declareVariable(id, type);
 
     control.push(instr.popInstr(command));
     control.push(instr.assmtInstr(command));
@@ -277,7 +277,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     }
 
     // Evaluating LocalVariableDeclarationStatement just declares the variable.
-    context.environment.declareVariable(id);
+    context.environment.declareVariable(id, type);
   },
 
   ExpressionStatement: (
@@ -469,7 +469,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // Bind arguments to corresponding FormalParameters.
     for (let i = 0; i < command.arity; i++) {
-      context.environment.defineVariable(params[i].identifier, args[i]);
+      context.environment.defineVariable(params[i].identifier, params[i].unannType, args[i]);
     }
 
     // Push method/constructor body.
@@ -595,7 +595,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
           type = "int";
         } else if (v.value.kind === "Object") {
           // Type of object is name of parent frame
-          type = v.value.frame.parent.name;
+          type = v.type;
         }
       } else /*if (v.kind === "Class")*/ {
         type = v.frame.name;

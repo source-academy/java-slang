@@ -119,6 +119,7 @@ export type Value = Variable | Closure | Class;
 
 export interface Variable {
   kind: "Variable";
+  type: UnannType;
   name: Name;
   value: VarValue;
 }
