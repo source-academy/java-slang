@@ -1,5 +1,6 @@
 import {
   Assignment,
+  ExplicitConstructorInvocation,
   Expression,
   ExpressionName,
   ExpressionStatement,
@@ -106,4 +107,10 @@ export const nullLitNode = (): Literal => ({
 export const exprNameNode = (name: string): ExpressionName => ({
   kind: "ExpressionName",
   name,
+});
+
+export const expConInvNode = (): ExplicitConstructorInvocation => ({
+  kind: "ExplicitConstructorInvocation",
+  thisOrSuper: "super",
+  argumentList: [],
 });

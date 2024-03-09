@@ -5,6 +5,7 @@ import {
   BinaryExpression,
   Block,
   ClassInstanceCreationExpression,
+  ExplicitConstructorInvocation,
   Expression,
   ExpressionName,
   ExpressionStatement,
@@ -73,6 +74,7 @@ import {
   appendOrReplaceReturn,
   appendEmtpyReturn,
   searchMainMtdClass,
+  prependExpConInvIfNeeded,
 } from "./utils";
 
 type CmdEvaluator = (
@@ -125,6 +127,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     control.push(node.mainMtdInvExpStmtNode(className));
     control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations));
+    // TODO add obj class
   },
   
   NormalClassDeclaration: (
@@ -155,6 +158,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     }
     // Prepend instance fields initialization at start of constructor body.
     constructors.forEach(c => prependInstanceFieldsInit(c, instanceFields));
+    // Prepend super() if needed before instance fields initialization.
+    constructors.forEach(c => prependExpConInvIfNeeded(c, command));
     // Append ReturnStatement with this keyword at end of constructor body.
     constructors.forEach(c => appendOrReplaceReturn(c));
 
@@ -347,6 +352,21 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(instr.resTypeInstr(c, command));
   },
 
+  ExplicitConstructorInvocation: (
+    command: ExplicitConstructorInvocation,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    control.push(instr.popInstr(command));
+    control.push(instr.invInstr(command.argumentList.length + 1, command));
+    control.push(...handleSequence(command.argumentList));
+    control.push(node.exprNameNode(command.thisOrSuper));
+    control.push(instr.resConOverloadInstr(command.argumentList.length, command));
+    control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
+    control.push(instr.resTypeInstr(node.exprNameNode(command.thisOrSuper), command));
+  },
+
   Literal: (
     command: Literal,
     context: Context,
@@ -456,19 +476,33 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       // Extend env from obj frame.
       context.environment.extendEnv((args[0] as Object).frame, mtdOrConDescriptor);
 
+      // Append implicit FormalParameter and arg super if needed.
+      if (closure.env.parent.name !== "global") {
+        params.unshift(
+          {
+            kind: "FormalParameter",
+            unannType: closure.env.parent.name,
+            identifier: "super",
+          },
+        );
+        args.unshift(args[0]);
+      }
+
       // Append implicit FormalParameter this.
-      params.unshift({
-        kind: "FormalParameter",
-        unannType: closure.env.name,
-        identifier: "this",
-      });
+      params.unshift(
+        {
+          kind: "FormalParameter",
+          unannType: closure.env.name,
+          identifier: "this",
+        },
+      );
     } else {
       // Extend env from class frame.
       context.environment.extendEnv(closure.env, mtdOrConDescriptor);
     }
 
     // Bind arguments to corresponding FormalParameters.
-    for (let i = 0; i < command.arity; i++) {
+    for (let i = 0; i < args.length; i++) {
       context.environment.defineVariable(params[i].identifier, params[i].unannType, args[i]);
     }
 
@@ -553,11 +587,16 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const currEnv = context.environment.current;
     context.environment.extendEnv(command.c.frame, "object");
 
-    // Declare instance fields.
-    command.c.instanceFields.forEach(i => {
-      const id = i.variableDeclaratorList[0].variableDeclaratorId;
-      context.environment.declareVariable(id);
-    });
+    // Declare declared and inherited instance fields.
+    let currClass: Class | undefined = command.c;
+    while (currClass) {
+      currClass.instanceFields.forEach(i => {
+        const id = i.variableDeclaratorList[0].variableDeclaratorId;
+        const type = i.fieldType;
+        context.environment.declareVariable(id, type);
+      });
+      currClass = currClass.superclass;
+    }
 
     // Push obj on stash.
     const obj = {

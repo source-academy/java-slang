@@ -17,6 +17,7 @@ import {
 import * as errors from "./errors";
 import {
   emptyReturnStmtNode,
+  expConInvNode,
   expStmtAssmtNode,
   exprNameNode,
   nullLitNode,
@@ -264,6 +265,16 @@ export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, clas
     !isQualified(blockStatement.variableDeclaratorList[0].variableInitializer.identifier) &&
     (blockStatement.variableDeclaratorList[0].variableInitializer.identifier = `${qualifier}.${blockStatement.variableDeclaratorList[0].variableInitializer.identifier}`);
   });
+}
+
+export const prependExpConInvIfNeeded = (
+  constructor: ConstructorDeclaration,
+  c: NormalClassDeclaration,
+): void => {
+  const conBodyBlockStmts = constructor.constructorBody.blockStatements;
+  if (c.sclass && !conBodyBlockStmts.some(s => s.kind === "ExplicitConstructorInvocation")) {
+    conBodyBlockStmts.unshift(expConInvNode());
+  }
 }
 
 export const prependInstanceFieldsInit = (
