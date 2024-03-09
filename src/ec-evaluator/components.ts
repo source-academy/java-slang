@@ -137,7 +137,7 @@ export class EnvNode {
       return this._frame.get(name) as Variable | Class;
     }
     if (this._parent) {
-      return this._parent.getVariable(name);
+      return this._parent.getName(name);
     }
     throw new errors.UndeclaredNameError(name);
   }
