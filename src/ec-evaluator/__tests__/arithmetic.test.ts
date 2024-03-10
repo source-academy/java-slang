@@ -40,6 +40,7 @@ it("evaluate LocalVariableDeclarationStatement to a basic arithmetic operation c
 
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -75,6 +76,7 @@ it("evaluate LocalVariableDeclarationStatement to a basic arithmetic operation c
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "y", // EvalVariable
     "10", // Literal
@@ -122,6 +124,7 @@ it("evaluate LocalVariableDeclarationStatement to a complex arithmetic operation
 
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -165,6 +168,7 @@ it("evaluate LocalVariableDeclarationStatement to a complex arithmetic operation
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "z", // EvalVariable
     "1", // Literal
@@ -229,6 +233,7 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
 
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -256,6 +261,7 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "Void", // Void
   ];
@@ -323,6 +329,7 @@ it("evaluate FieldDeclaration to a complex arithmetic expression without bracket
 
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -356,6 +363,7 @@ it("evaluate FieldDeclaration to a complex arithmetic expression without bracket
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "Void", // Void
   ];

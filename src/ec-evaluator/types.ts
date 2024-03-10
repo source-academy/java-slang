@@ -36,6 +36,7 @@ export enum InstrType {
   NEW = 'New',
   RES_TYPE = 'ResType',
   RES_OVERLOAD = 'ResOverload',
+  RES_OVERRIDE = 'ResOverride',
   RES_CON_OVERLOAD = 'ResConOverload',
 }
 
@@ -80,6 +81,8 @@ export interface ResOverloadInstr extends BaseInstr {
   name: string;
   arity: number;
 }
+
+export interface ResOverrideInstr extends BaseInstr {}
 
 export interface ResConOverloadInstr extends BaseInstr {
   arity: number;

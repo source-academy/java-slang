@@ -42,6 +42,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -104,6 +105,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -158,6 +160,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -220,6 +223,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -277,6 +281,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -347,6 +352,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -407,6 +413,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -477,6 +484,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -537,6 +545,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -599,6 +608,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -659,6 +669,7 @@ describe("evaluate constructor overloading resolution", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -737,6 +748,7 @@ describe("evaluate constructor overloading resolution", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -806,6 +818,7 @@ describe("evaluate constructor overloading resolution", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -884,6 +897,7 @@ describe("evaluate constructor overloading resolution", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType

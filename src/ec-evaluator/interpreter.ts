@@ -55,6 +55,7 @@ import {
   DerefInstr,
   Type,
   ResConOverloadInstr,
+  ResOverrideInstr,
 } from "./types";
 import { 
   defaultValues,
@@ -330,6 +331,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Arity may be incremented by 1 if the resolved method to be invoked is an instance method.
     control.push(instr.invInstr(command.argumentList.length, command));
     control.push(...handleSequence(command.argumentList));
+    // Method overriding resolution may push qualifier if resolved method is an instance method.
+    control.push(instr.resOverrideInstr(command));
+    // Method overloading resolution may push qualifier if resolved method is an instance method.
     control.push(instr.resOverloadInstr(identifier, command.argumentList.length, command));
     // TODO: only Integer and ExpressionName are allowed as args
     control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
@@ -655,14 +659,14 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // Retrieve arg types in reversed order for method resolution.
+    // Retrieve arg types in reversed order for method overloading resolution.
     const argTypes: Type[] = [];
     for (let i = 0; i < command.arity; i++) {
       argTypes.push(stash.pop()! as Type);
     }
     argTypes.reverse();
 
-    // Retrieve class to search in for method resolution.
+    // Retrieve class to search in for method overloading resolution.
     const classType: Type = stash.pop()! as Type;
     const classToSearchIn: Class = context.environment.getClass(classType.type);
 
@@ -670,7 +674,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const closure: Closure = classToSearchIn.frame.resOverload(command.name, argTypes);
     stash.push(closure);
 
-    // Post-processing required if resolved method is instance method.
+    // Post-processing required if overload resolved method is instance method.
     if (isInstance(closure.mtdOrCon as MethodDeclaration)) {
       // Increment arity of InvInstr on control.
       let n = 1;
@@ -679,10 +683,39 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       }
       (control.peekN(n)! as ResOverloadInstr).arity++;
       
-      // Push qualifier as implicit FormalParameter this.
+      // Push qualifier to be used in method overriding resolution.
       const qualifier = (command.srcNode as MethodInvocation).identifier.split(".")[0];
       control.push(node.exprNameNode(qualifier));
     };
+  },
+
+  [InstrType.RES_OVERRIDE]: (
+    command: ResOverrideInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const objOrClosure = stash.pop()! as Object | Closure;
+    const isStaticMtd = objOrClosure.kind === "Closure";
+    if (isStaticMtd) {
+      // No method overriding resolution is required if resolved method is a static method.
+      stash.push(objOrClosure);
+      return;
+    }
+
+    const obj = objOrClosure;
+    const overloadResolvedClosure = stash.pop()! as Closure;
+    
+    // Retrieve class to search in for method overriding resolution.
+    const classToSearchIn: Class = context.environment.getClass(obj.frame.parent.name);
+
+    // Method overriding resolution.
+    const overrideResolvedClosure: Closure = classToSearchIn.frame.resOverride(overloadResolvedClosure);
+    stash.push(overrideResolvedClosure);
+   
+    // Push qualifier as implicit FormalParameter this.
+    const qualifier = (command.srcNode as MethodInvocation).identifier.split(".")[0];
+    control.push(node.exprNameNode(qualifier));
   },
 
   [InstrType.RES_CON_OVERLOAD]: (

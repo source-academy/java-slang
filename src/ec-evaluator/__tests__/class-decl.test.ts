@@ -47,6 +47,7 @@ describe("evaluate FieldDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -70,6 +71,7 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
     ];
@@ -117,6 +119,7 @@ describe("evaluate FieldDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -140,6 +143,7 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
     ];
@@ -182,6 +186,7 @@ describe("evaluate MethodDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -202,6 +207,7 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void",
     ];
@@ -244,6 +250,7 @@ describe("evaluate MethodDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -264,6 +271,7 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void",
     ];
@@ -308,6 +316,7 @@ describe("evaluate MethodDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -328,6 +337,7 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
     ];
@@ -409,6 +419,7 @@ describe("evaluate main method correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -429,6 +440,7 @@ describe("evaluate main method correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
     ];

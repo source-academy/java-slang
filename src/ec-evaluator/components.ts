@@ -168,7 +168,7 @@ export class EnvNode {
       }
     }
 
-    let resolved: Closure | undefined;
+    let overloadResolvedClosure: Closure | undefined;
     for (const closure of closures) {
       const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
         
@@ -181,16 +181,52 @@ export class EnvNode {
       }
       
       if (match) {
-        resolved = closure;
+        overloadResolvedClosure = closure;
         break;
       }
     }
 
-    if (!resolved) {
+    if (!overloadResolvedClosure) {
       throw new errors.ResOverloadError(name, argTypes);
     }
 
-    return resolved;
+    return overloadResolvedClosure;
+  }
+
+  resOverride(overloadResolvedClosure: Closure): Closure {
+    const overloadResolvedMtd = overloadResolvedClosure.mtdOrCon as MethodDeclaration;
+    const name = overloadResolvedMtd.methodHeader.identifier;
+    const overloadResolvedClosureParams = overloadResolvedMtd.methodHeader.formalParameterList;
+
+    const closures: Closure[] = [];
+    for (const [closureName, closure] of this._frame.entries()) {
+      // Methods contains parantheses and must have return type.
+      if (closureName.includes(name + "(") && closureName[closureName.length - 1] !== ")") {
+        closures.push(closure as Closure);
+      }
+    }
+
+    let overrideResolvedClosure = overloadResolvedClosure;
+    for (const closure of closures) {
+      const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+        
+      if (overloadResolvedClosureParams.length != params.length) continue;
+      
+      let match = true;
+      for (let i = 0; i < overloadResolvedClosureParams.length; i++) {
+        match &&= (params[i].unannType === overloadResolvedClosureParams[i].unannType);
+        if (!match) break; // short circuit
+      }
+      
+      if (match) {
+        overrideResolvedClosure = closure;
+        break;
+      }
+    }
+
+    // TODO is there method overriding resolution failure?
+
+    return overrideResolvedClosure;
   }
 
   resConOverload(name: string, argTypes: Type[]): Closure {
