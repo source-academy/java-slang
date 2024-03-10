@@ -85,6 +85,10 @@ type CmdEvaluator = (
   stash: Stash,
 ) => void
 
+/**
+ * Evaluate program in context within limited number of steps.
+ * @throws {errors.RuntimeError} Throw error if program is semantically invalid.
+ */
 export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): StashItem | undefined => {
   const control = context.control;
   const stash = context.stash;
