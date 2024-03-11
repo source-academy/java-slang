@@ -1,6 +1,6 @@
 import { ClassFile } from "../ClassFile/types";
 import { AST } from "../ast/types/packages-and-modules";
-import { ClassBodyDeclaration, ClassDeclaration, FieldDeclaration, MethodDeclaration } from "../ast/types/classes";
+import { ClassBodyDeclaration, ClassDeclaration, ConstructorDeclaration, FieldDeclaration, MethodDeclaration } from "../ast/types/classes";
 import { AttributeInfo } from "../ClassFile/types/attributes";
 import { FieldInfo } from "../ClassFile/types/fields";
 import { MethodInfo } from "../ClassFile/types/methods";
@@ -85,6 +85,7 @@ export class Compiler {
     const nonStaticFields: Array<FieldDeclaration> = [];
     const staticMethods: Array<MethodDeclaration> = [];
     const nonStaticMethods: Array<MethodDeclaration> = [];
+    const constructors: Array<ConstructorDeclaration> = [];
 
     classBody.forEach(d => {
       if (d.kind === "FieldDeclaration") {
@@ -99,9 +100,28 @@ export class Compiler {
         } else {
           nonStaticMethods.push(d);
         }
+      } else if (d.kind === "ConstructorDeclaration") {
+        constructors.push(d);
       }
     });
 
+    // insert default constructor
+    if (constructors.length === 0) {
+      constructors.push({
+        kind: "ConstructorDeclaration",
+        constructorModifier: ["public"],
+        constructorDeclarator: {
+          identifier: this.className,
+          formalParameterList: []
+        },
+        constructorBody: {
+          kind: "Block",
+          blockStatements: [],
+        }
+      })
+    }
+
+    constructors.forEach(c => this.recordConstructorInfo(c));
     staticFields.forEach(f => this.recordFieldInfo(f));
     staticMethods.forEach(m => this.recordMethodInfo(m));
     staticMethods.forEach(m => this.compileMethod(m));
@@ -109,6 +129,7 @@ export class Compiler {
     nonStaticFields.forEach(f => this.recordFieldInfo(f));
     nonStaticMethods.forEach(m => this.recordMethodInfo(m));
     nonStaticMethods.forEach(m => this.compileMethod(m));
+    constructors.forEach(c => this.compileConstructor(c));
   }
 
   private recordFieldInfo(fieldNode: FieldDeclaration) {
@@ -149,6 +170,19 @@ export class Compiler {
     });
   }
 
+  private recordConstructorInfo(constructor: ConstructorDeclaration) {
+    const declarator = constructor.constructorDeclarator;
+    const paramsType = declarator.formalParameterList.map(x => x.unannType);
+    const descriptor = this.symbolTable.generateMethodDescriptor(paramsType, "void");
+
+    this.symbolTable.insertMethodInfo({
+      name: "<init>",
+      accessFlags: generateMethodAccessFlags(constructor.constructorModifier),
+      parentClassName: "java/lang/Object",
+      typeDescriptor: descriptor
+    });
+  }
+
   private compileMethod(methodNode: MethodDeclaration) {
     const header = methodNode.methodHeader;
     const methodName = header.identifier;
@@ -169,5 +203,20 @@ export class Compiler {
       attributesCount: attributes.length,
       attributes: attributes
     });
+  }
+
+  private compileConstructor(constructor: ConstructorDeclaration) {
+    const methodNode: MethodDeclaration = {
+      kind: "MethodDeclaration",
+      methodModifier: constructor.constructorModifier,
+      methodHeader: {
+        identifier: "<init>",
+        formalParameterList: constructor.constructorDeclarator.formalParameterList,
+        result: "void",
+      },
+      methodBody: constructor.constructorBody
+    };
+
+    this.compileMethod(methodNode);
   }
 }

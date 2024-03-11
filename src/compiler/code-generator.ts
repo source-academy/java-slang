@@ -22,6 +22,7 @@ import {
   BinaryOperator,
   DoStatement,
   FieldAccess,
+  ClassInstanceCreationExpression,
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration, UnannType } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -307,6 +308,17 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     return f(node, cg.labels[cg.labels.length - 1], false);
   },
 
+  ClassInstanceCreationExpression: (node: Node, cg: CodeGenerator) => {
+    const { identifier: id, argumentList: argLst } = (node as ClassInstanceCreationExpression);
+    let maxStack = 2;
+
+    cg.code.push(OPCODE.NEW, 0, cg.constantPoolManager.indexClassInfo(id), OPCODE.DUP);
+    argLst.forEach((arg, i) => maxStack = Math.max(maxStack, i + 2 + compile(arg, cg).stackSize));
+    cg.code.push(OPCODE.INVOKESPECIAL, 0, cg.constantPoolManager.indexMethodrefInfo(id, "<init>", "()V"));
+
+    return { stackSize: maxStack, resultType: id };
+  },
+
   FieldAccess: (node: Node, cg: CodeGenerator) => {
     const name = (node as FieldAccess).identifier;
     const fieldInfos = cg.symbolTable.queryField(name) as Array<FieldInfo>;
@@ -526,6 +538,7 @@ class CodeGenerator {
   symbolTable: SymbolTable;
   constantPoolManager: ConstantPoolManager;
   maxLocals: number = 0;
+  stackSize: number = 0;
   labels: Label[] = [];
   loopLabels: Label[][] = [];
   code: number[] = [];
@@ -561,6 +574,10 @@ class CodeGenerator {
 
   generateCode(methodNode: MethodDeclaration) {
     this.symbolTable.extend();
+    if (!methodNode.methodModifier.includes("static")) {
+      this.maxLocals++;
+    }
+
     methodNode.methodHeader.formalParameterList.forEach(p => {
       this.symbolTable.insertVariableInfo({
         name: p.identifier,
@@ -572,8 +589,13 @@ class CodeGenerator {
       this.maxLocals++;
     });
 
-    const { methodBody } = methodNode;
-    const { stackSize: stackSize } = compile(methodBody, this);
+    if (methodNode.methodHeader.identifier === "<init>") {
+      this.stackSize = Math.max(this.stackSize, 1);
+      this.code.push(OPCODE.ALOAD_0, OPCODE.INVOKESPECIAL, 0,
+        this.constantPoolManager.indexMethodrefInfo("java/lang/Object", "<init>", "()V"));
+    }
+
+    this.stackSize = Math.max(this.stackSize, compile(methodNode.methodBody, this).stackSize);
     if (methodNode.methodHeader.result === "void") {
       this.code.push(OPCODE.RETURN);
     }
@@ -592,7 +614,7 @@ class CodeGenerator {
     return {
       attributeNameIndex: this.constantPoolManager.indexUtf8Info("Code"),
       attributeLength: attributeLength,
-      maxStack: Math.max(this.maxLocals, stackSize),
+      maxStack: Math.max(this.maxLocals, this.stackSize),
       maxLocals: this.maxLocals,
       codeLength: this.code.length,
       code: dataView,
