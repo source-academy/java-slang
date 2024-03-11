@@ -227,12 +227,12 @@ export interface PostfixExpression extends BaseNode {
   expression: Expression;
 }
 
-export interface BreakStatement {
+export interface BreakStatement extends BaseNode {
   kind: "BreakStatement";
   identifier?: Identifier;
 }
 
-export interface ContinueStatement {
+export interface ContinueStatement extends BaseNode {
   kind: "ContinueStatement";
   identifier?: Identifier;
 }

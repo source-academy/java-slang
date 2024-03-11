@@ -51,13 +51,6 @@ export interface MethodDeclaration extends BaseNode {
   methodBody: MethodBody;
 }
 
-export interface FieldDeclaration {
-  kind: "FieldDeclaration";
-  fieldModifier: Array<FieldModifier>;
-  fieldType: UnannType;
-  variableDeclaratorList: Array<VariableDeclarator>;
-}
-
 export type MethodModifier =
   | "public"
   | "protected"
