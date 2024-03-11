@@ -321,7 +321,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   FieldAccess: (node: Node, cg: CodeGenerator) => {
-    const name = (node as FieldAccess).identifier;
+    const name = (node as FieldAccess).name;
     const fieldInfos = cg.symbolTable.queryField(name) as Array<FieldInfo>;
 
     for (let i = 0; i < fieldInfos.length; i++) {
@@ -405,12 +405,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const size2 = compile(lhs.expression, cg).stackSize;
       maxStack = size1 + size2 + compile(right, cg).stackSize;
       cg.code.push(OPCODE.IASTORE);
-    } else if (lhs.kind === "ExpressionName" && !Array.isArray(cg.symbolTable.queryVariable(lhs.identifier))) {
-      const info = cg.symbolTable.queryVariable(lhs.identifier);
+    } else if (lhs.kind === "ExpressionName" && !Array.isArray(cg.symbolTable.queryVariable(lhs.name))) {
+      const info = cg.symbolTable.queryVariable(lhs.name);
       maxStack = 1 + compile(right, cg).stackSize;
       cg.code.push(OPCODE.ISTORE, (info as VariableInfo).index);
     } else {
-      const info = cg.symbolTable.queryVariable(lhs.identifier);
+      const info = cg.symbolTable.queryVariable(lhs.name);
       const fieldInfos = info as Array<FieldInfo>;
       const fieldInfo = fieldInfos[fieldInfos.length - 1];
       const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
@@ -434,7 +434,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   PrefixExpression: (node: Node, cg: CodeGenerator) => {
     const { operator: op, expression: expr } = node as PostfixExpression;
     if (op === "++" || op === "--") {
-      const { identifier: name } = expr as ExpressionName;
+      const { name: name } = expr as ExpressionName;
       const info = cg.symbolTable.queryVariable(name);
       if (Array.isArray(info)) {
         return { stackSize: 1, resultType: EMPTY_TYPE }; // TODO
@@ -466,7 +466,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   PostfixExpression: (node: Node, cg: CodeGenerator) => {
     const { operator: op, expression: expr } = node as PostfixExpression;
-    const { identifier: name } = expr as ExpressionName;
+    const { name: name } = expr as ExpressionName;
     const info = cg.symbolTable.queryVariable(name);
     if (Array.isArray(info)) {
       return { stackSize: 1, resultType: EMPTY_TYPE }; //TODO
@@ -478,7 +478,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   ExpressionName: (node: Node, cg: CodeGenerator) => {
-    const { identifier: name } = node as ExpressionName;
+    const { name: name } = node as ExpressionName;
     const info = cg.symbolTable.queryVariable(name);
     if (Array.isArray(info)) {
       const fieldInfos = info as Array<FieldInfo>;

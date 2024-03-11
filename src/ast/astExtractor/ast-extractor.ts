@@ -11,6 +11,7 @@ export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
     this.visit(cst);
     return {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: this.topLevelClassOrInterfaceDeclarations,
       location: cst.location,
     }

@@ -136,7 +136,7 @@ export class Compiler {
 
   private recordFieldInfo(fieldNode: FieldDeclaration) {
     const accessFlags = generateFieldAccessFlags(fieldNode.fieldModifier);
-    const type = fieldNode.unannType;
+    const type = fieldNode.fieldType;
     fieldNode.variableDeclaratorList.forEach(v => {
       const fullType = type + v.dims;
       const typeDescriptor = this.symbolTable.generateFieldDescriptor(fullType);

@@ -54,7 +54,7 @@ export interface MethodDeclaration extends BaseNode {
 export interface FieldDeclaration {
   kind: "FieldDeclaration";
   fieldModifier: Array<FieldModifier>;
-  unannType: UnannType;
+  fieldType: UnannType;
   variableDeclaratorList: Array<VariableDeclarator>;
 }
 

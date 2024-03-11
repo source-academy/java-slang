@@ -47,5 +47,5 @@ export interface Location {
 
 export interface BaseNode {
   kind: string;
-  location: Location;
+  location?: Location;
 }

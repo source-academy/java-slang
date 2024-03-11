@@ -78,7 +78,7 @@ export type LocalVariableType = UnannType;
 export interface VariableDeclarator {
   kind: "VariableDeclarator";
   variableDeclaratorId: VariableDeclaratorId;
-  dims: string;
+  dims?: string;
   variableInitializer?: VariableInitializer;
 }
 
@@ -95,7 +95,7 @@ export interface ArrayAccess {
 
 export interface FieldAccess {
   kind: "FieldAccess";
-  identifier: Identifier;
+  name: Identifier;
 }
 
 export interface ReturnStatement extends BaseNode {
@@ -202,7 +202,7 @@ export interface BinaryExpression extends BaseNode {
 
 export interface ExpressionName extends BaseNode {
   kind: "ExpressionName";
-  identifier: string;
+  name: string;
 }
 
 export interface Assignment extends BaseNode {

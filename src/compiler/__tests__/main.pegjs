@@ -422,7 +422,7 @@ ExpressionName
   = n:Name {
     return {
       kind: "ExpressionName",
-      identifier: n
+      name: n,
     }
   }
 
@@ -551,7 +551,7 @@ FieldDeclaration
     return {
       kind: "FieldDeclaration",
       fieldModifier: fm,
-      unannType: ut,
+      fieldType: ut,
       variableDeclaratorList: vdl,
     }
   }
@@ -871,7 +871,7 @@ FieldAccess
   = id:Identifier dot n:Name {
     return {
       kind: "FieldAccess",
-      identifier: id + '.' +  n,
+      name: id + '.' +  n,
     }
   }
 
