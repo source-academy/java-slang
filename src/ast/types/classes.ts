@@ -1,11 +1,13 @@
+import { BaseNode } from "./ast";
 import { Block, VariableDeclarator } from "./blocks-and-statements";
 
 export type ClassDeclaration = NormalClassDeclaration;
 
-export interface NormalClassDeclaration {
+export interface NormalClassDeclaration extends BaseNode {
   kind: "NormalClassDeclaration";
   classModifier: Array<ClassModifier>;
   typeIdentifier: Identifier;
+  sclass?: Identifier;
   classBody: Array<ClassBodyDeclaration>;
 }
 
@@ -23,7 +25,7 @@ export type ClassModifier =
 export type ClassBodyDeclaration = ClassMemberDeclaration | ConstructorDeclaration;
 export type ClassMemberDeclaration = MethodDeclaration | FieldDeclaration;
 
-export interface ConstructorDeclaration {
+export interface ConstructorDeclaration extends BaseNode {
   kind: "ConstructorDeclaration";
   constructorModifier: Array<ConstructorModifier>;
   constructorDeclarator: ConstructorDeclarator;
@@ -42,7 +44,7 @@ export interface ConstructorDeclarator {
 
 export type ConstructorBody = Block;
 
-export interface MethodDeclaration {
+export interface MethodDeclaration extends BaseNode {
   kind: "MethodDeclaration";
   methodModifier: Array<MethodModifier>;
   methodHeader: MethodHeader;
@@ -74,7 +76,7 @@ export interface FormalParameter {
   identifier: Identifier;
 }
 
-export interface FieldDeclaration {
+export interface FieldDeclaration extends BaseNode {
   kind: "FieldDeclaration";
   fieldModifier: Array<FieldModifier>;
   fieldType: UnannType;

@@ -17,6 +17,7 @@ import {
 import * as errors from "./errors";
 import {
   emptyReturnStmtNode,
+  expConInvNode,
   expStmtAssmtNode,
   exprNameNode,
   nullLitNode,
@@ -266,6 +267,16 @@ export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, clas
   });
 }
 
+export const prependExpConInvIfNeeded = (
+  constructor: ConstructorDeclaration,
+  c: NormalClassDeclaration,
+): void => {
+  const conBodyBlockStmts = constructor.constructorBody.blockStatements;
+  if (c.sclass && !conBodyBlockStmts.some(s => s.kind === "ExplicitConstructorInvocation")) {
+    conBodyBlockStmts.unshift(expConInvNode());
+  }
+}
+
 export const prependInstanceFieldsInit = (
   constructor: ConstructorDeclaration,
   instanceFields: FieldDeclaration[],
@@ -298,4 +309,18 @@ export const appendEmtpyReturn = (
     // Add empty ReturnStatement if absent.
     mtdBodyBlockStmts.push(emptyReturnStmtNode());
   }
+}
+
+export const searchMainMtdClass = (classes: NormalClassDeclaration[]) => {
+  return classes.find(c =>
+    c.classBody.some(d =>
+      d.kind === "MethodDeclaration"
+      && d.methodModifier.includes("public")
+      && d.methodModifier.includes("static")
+      && d.methodHeader.result === "void"
+      && d.methodHeader.identifier === "main"
+      && d.methodHeader.formalParameterList.length === 1
+      && d.methodHeader.formalParameterList[0].unannType === "String[]"
+      && d.methodHeader.formalParameterList[0].identifier === "args"
+  ))?.typeIdentifier;
 }

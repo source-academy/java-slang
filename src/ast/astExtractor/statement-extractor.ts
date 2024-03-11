@@ -27,27 +27,32 @@ import {
   Void,
 } from "../types/blocks-and-statements";
 import { ExpressionExtractor } from "./expression-extractor";
+import { Location } from "../types/ast";
 
 export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   private stmtExp: StatementExpression;
   private exp: Expression;
+  private location: Location;
 
   constructor() {
     super();
   }
 
   extract(cst: StatementCstNode): Statement {
+    this.location = cst.location;
     const statementWithoutTrailingSubstatementCst = cst.children.statementWithoutTrailingSubstatement![0];
     this.visit(statementWithoutTrailingSubstatementCst);
     if (statementWithoutTrailingSubstatementCst.children.expressionStatement) {
       return {
         kind: "ExpressionStatement",
         stmtExp: this.stmtExp,
+        location: this.location,
       };
     } else /* if (statementWithoutTrailingSubstatementCst.children.returnStatement) */ {
       return {
         kind: "ReturnStatement",
         exp: this.exp,
+        location: this.location,
       };
     }
   }
@@ -63,6 +68,7 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
     } else {
       this.exp = {
         kind: "Void",
+        location: this.location,
       } as Void;
     }
   }
@@ -86,9 +92,11 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
         left: {
           kind: "ExpressionName",
           name: this.visit(ctx.unaryExpression[0]),
+          location: this.location,
         },
         operator: "=",
         right: expressionExtractor.extract(ctx.expression[0]),
+        location: this.location,
       } as Assignment;
     }
     // MethodInvocation
@@ -115,6 +123,7 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
           kind: "MethodInvocation",
           identifier: primary,
           argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
+          location: this.location,
         } as MethodInvocation;
       }
     }

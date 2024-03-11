@@ -1,4 +1,4 @@
-import { ConstructorDeclaration, MethodDeclaration } from "../ast/types/classes";
+import { ConstructorDeclaration, MethodDeclaration, UnannType } from "../ast/types/classes";
 import { DECLARED_BUT_NOT_YET_ASSIGNED } from "./constants";
 import * as errors from "./errors";
 import {
@@ -56,18 +56,20 @@ export class Environment {
     this._current = toEnv;
   }
 
-  declareVariable(name: Name) {
+  declareVariable(name: Name, type: UnannType) {
     const variable: Variable = {
       kind: "Variable",
+      type,
       name,
       value: DECLARED_BUT_NOT_YET_ASSIGNED,
     } as Variable;
     this._current.setVariable(name, variable);
   }
 
-  defineVariable(name: Name, value: VarValue) {
+  defineVariable(name: Name, type: UnannType, value: VarValue) {
     const variable = {
       kind: "Variable",
+      type,
       name,
       value,
     } as Variable;
@@ -87,7 +89,7 @@ export class Environment {
   }
 
   defineClass(name: Name, c: Class) {
-    this._current.setClass(name, c);
+    this._global.setClass(name, c);
   }
 
   getClass(name: Name): Class {
@@ -135,7 +137,7 @@ export class EnvNode {
       return this._frame.get(name) as Variable | Class;
     }
     if (this._parent) {
-      return this._parent.getVariable(name);
+      return this._parent.getName(name);
     }
     throw new errors.UndeclaredNameError(name);
   }
@@ -166,7 +168,7 @@ export class EnvNode {
       }
     }
 
-    let resolved: Closure | undefined;
+    let overloadResolvedClosure: Closure | undefined;
     for (const closure of closures) {
       const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
         
@@ -179,16 +181,52 @@ export class EnvNode {
       }
       
       if (match) {
-        resolved = closure;
+        overloadResolvedClosure = closure;
         break;
       }
     }
 
-    if (!resolved) {
+    if (!overloadResolvedClosure) {
       throw new errors.ResOverloadError(name, argTypes);
     }
 
-    return resolved;
+    return overloadResolvedClosure;
+  }
+
+  resOverride(overloadResolvedClosure: Closure): Closure {
+    const overloadResolvedMtd = overloadResolvedClosure.mtdOrCon as MethodDeclaration;
+    const name = overloadResolvedMtd.methodHeader.identifier;
+    const overloadResolvedClosureParams = overloadResolvedMtd.methodHeader.formalParameterList;
+
+    const closures: Closure[] = [];
+    for (const [closureName, closure] of this._frame.entries()) {
+      // Methods contains parantheses and must have return type.
+      if (closureName.includes(name + "(") && closureName[closureName.length - 1] !== ")") {
+        closures.push(closure as Closure);
+      }
+    }
+
+    let overrideResolvedClosure = overloadResolvedClosure;
+    for (const closure of closures) {
+      const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+        
+      if (overloadResolvedClosureParams.length != params.length) continue;
+      
+      let match = true;
+      for (let i = 0; i < overloadResolvedClosureParams.length; i++) {
+        match &&= (params[i].unannType === overloadResolvedClosureParams[i].unannType);
+        if (!match) break; // short circuit
+      }
+      
+      if (match) {
+        overrideResolvedClosure = closure;
+        break;
+      }
+    }
+
+    // TODO is there method overriding resolution failure?
+
+    return overrideResolvedClosure;
   }
 
   resConOverload(name: string, argTypes: Type[]): Closure {

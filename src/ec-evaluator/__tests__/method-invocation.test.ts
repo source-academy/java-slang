@@ -12,7 +12,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in static MethodInvocation with simple name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           test();
         }
         static void test() {}
@@ -35,7 +35,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Env",
       "MethodDeclaration", // static void test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -43,6 +43,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -59,6 +60,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "MethodInvocation", // Test.test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
 
@@ -83,9 +85,11 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Test", // ResType
       "test", // ResOverload
+      "test", // ResOverride
       "Void",
       "Void",
     ];
@@ -99,7 +103,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in static MethodInvocation with qualified class name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test.test();
         }
         static void test() {}
@@ -122,7 +126,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Env",
       "MethodDeclaration", // static void test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -130,6 +134,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -146,6 +151,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "MethodInvocation", // Test.test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
 
@@ -170,9 +176,11 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Test", // ResType
       "test", // ResOverload
+      "test", // ResOverride
       "Void",
       "Void",
     ];
@@ -186,7 +194,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in static MethodInvocation with qualified instance name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -210,7 +218,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Env",
       "MethodDeclaration", // static void test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -218,6 +226,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -265,6 +274,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "MethodInvocation", // test.test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
 
@@ -289,6 +299,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -299,6 +310,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Object", // Assign
       "Test", // ResType
       "test", // ResOverload
+      "test", // ResOverride
       "Void",
       "Void",
     ];
@@ -312,7 +324,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in instance MethodInvocation with simple name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -340,7 +352,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // static void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -348,6 +360,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -395,8 +408,14 @@ describe("evaluate static MethodInvocation correctly", () => {
       "MethodInvocation", // test.test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
+
+      "ExpressionName", // test
+      
+      "Deref",
+      "EvalVariable", // test
 
       "ExpressionName", // test
       
@@ -416,6 +435,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation",
       "Literal", // 1
+      "ResOverride",
       "ResOverload", // test
       "ResType", // 1
       "ResType", // this
@@ -446,6 +466,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -458,9 +479,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "test", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
+      "test", // ResOverride
+      "test", // EvalVariable
+      "Object", // Deref
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
+      "test", // ResOverride
       "1", // Literal
       "Void",
       "Void",
@@ -476,7 +501,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in instance MethodInvocation with qualified name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -504,7 +529,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // static void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -512,6 +537,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -559,8 +585,14 @@ describe("evaluate static MethodInvocation correctly", () => {
       "MethodInvocation", // test.test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
+
+      "ExpressionName", // test
+
+      "Deref",
+      "EvalVariable", // test
 
       "ExpressionName", // test
 
@@ -580,6 +612,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation",
       "Literal", // 1
+      "ResOverride",
       "ResOverload", // test
       "ResType", // 1
       "ResType", // Test
@@ -610,6 +643,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -622,9 +656,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "test", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
+      "test", // ResOverride
+      "test", // EvalVariable
+      "Object", // Deref
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
+      "test", // ResOverride
       "1", // Literal
       "Void",
       "Void",
@@ -640,7 +678,7 @@ describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in instance MethodInvocation with this keyword correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -668,7 +706,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // static void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -676,6 +714,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -723,8 +762,14 @@ describe("evaluate static MethodInvocation correctly", () => {
       "MethodInvocation", // test.test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
+
+      "ExpressionName", // test
+
+      "Deref",
+      "EvalVariable", // test
 
       "ExpressionName", // test
 
@@ -744,6 +789,7 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation",
       "Literal", // 1
+      "ResOverride",
       "ResOverload", // test
       "ResType", // 1
       "ResType", // this
@@ -774,6 +820,7 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -786,9 +833,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "test", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
+      "test", // ResOverride
+      "test", // EvalVariable
+      "Object", // Deref
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
+      "test", // ResOverride
       "1", // Literal
       "Void",
       "Void",
@@ -806,7 +857,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
   it("evaluate instance MethodInvocation in static MethodInvocation with qualified instance name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           int x = test.test();
         }
@@ -832,7 +883,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Env",
       "MethodDeclaration", // int test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -840,6 +891,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -894,8 +946,14 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "EvalVariable", // x
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
+
+      "ExpressionName", // test
+
+      "Deref",
+      "EvalVariable", // test
 
       "ExpressionName", // test
 
@@ -923,6 +981,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -934,6 +993,9 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "x", // EvalVariable
       "Test", // ResType
       "test", // ResOverload
+      "test", // EvalVariable
+      "Object", // Deref
+      "test", // ResOverride
       "test", // EvalVariable
       "Object", // Deref
       "1", // Literal
@@ -950,7 +1012,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
   it("evaluate instance MethodInvocation in instance MethodInvocation with simple name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -978,7 +1040,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -986,6 +1048,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -1033,8 +1096,14 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "MethodInvocation", // test.test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
+
+      "ExpressionName", // test
+
+      "Deref",
+      "EvalVariable", // test
 
       "ExpressionName", // test
 
@@ -1054,9 +1123,15 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // 1
+      "ResOverride",
       "ResOverload", // test
       "ResType", // 1
       "ResType", // this
+
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
 
       "ExpressionName", // this
 
@@ -1089,6 +1164,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -1101,9 +1177,15 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "test", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
+      "test", // ResOverride
+      "test", // EvalVariable
+      "Object", // Deref
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
+      "this", // EvalVariable
+      "Object", // Deref
+      "test", // ResOverride
       "this", // EvalVariable
       "Object", // Deref
       "1", // Literal
@@ -1121,7 +1203,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
   it("evaluate instance MethodInvocation in instance MethodInvocation with qualified instance name correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -1152,7 +1234,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // int test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -1160,6 +1242,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -1207,8 +1290,14 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "MethodInvocation", // test.test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
+
+      "ExpressionName", // test
+
+      "Deref",
+      "EvalVariable", // test
 
       "ExpressionName", // test
 
@@ -1259,9 +1348,15 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // 1
+      "ResOverride",
       "ResOverload", // test
       "ResType", // 1
       "ResType", // test
+
+      "ExpressionName", // test
+
+      "Deref",
+      "EvalVariable", // test
 
       "ExpressionName", // test
 
@@ -1297,6 +1392,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -1309,6 +1405,9 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "test", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
+      "test", // ResOverride
+      "test", // EvalVariable
+      "Object", // Deref
       "test", // EvalVariable
       "Test", // ResType
       "Test", // ResConOverload
@@ -1319,6 +1418,9 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
+      "test", // EvalVariable
+      "Object", // Deref
+      "test", // ResOverride
       "test", // EvalVariable
       "Object", // Deref
       "1", // Literal
@@ -1337,7 +1439,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
   it("evaluate instance MethodInvocation in instance MethodInvocation with this keyword correctly", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
           test.test();
         }
@@ -1367,7 +1469,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Env",
       "MethodDeclaration", // void test() {...}
       "MethodDeclaration", // int test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
 
       "Pop",
@@ -1375,6 +1477,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -1422,8 +1525,14 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "MethodInvocation", // test.test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // test
       "ResType", // Test
+
+      "ExpressionName", // test
+
+      "Deref",
+      "EvalVariable", // test
 
       "ExpressionName", // test
 
@@ -1443,9 +1552,15 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "Literal", // 1
+      "ResOverride",
       "ResOverload", // test
       "ResType", // 1
       "ResType", // this
+
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
 
       "ExpressionName", // this
 
@@ -1481,6 +1596,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -1493,9 +1609,15 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "test", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
+      "test", // ResOverride
+      "test", // EvalVariable
+      "Object", // Deref
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
+      "this", // EvalVariable
+      "Object", // Deref
+      "test", // ResOverride
       "this", // EvalVariable
       "Object", // Deref
       "1", // Literal
@@ -1516,7 +1638,7 @@ describe("evaluate method overloading resolution correctly", () => {
   it("should resolve to test(int x) instead of test()", () => {
     const programStr = `
       class Test {
-        static void main(String[] args) {
+        public static void main(String[] args) {
           int x = test(1);
         }
         static void test() {}
@@ -1543,7 +1665,7 @@ describe("evaluate method overloading resolution correctly", () => {
       "Env",
       "MethodDeclaration", // static void test() {...}
       "MethodDeclaration", // static void test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
   
       "Pop",
@@ -1551,6 +1673,7 @@ describe("evaluate method overloading resolution correctly", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -1575,7 +1698,8 @@ describe("evaluate method overloading resolution correctly", () => {
 
       "Invocation", // ()
       "Literal", // 1
-      "ResOverload", // Test
+      "ResOverride",
+      "ResOverload", // test
       "ResType", // 1
       "ResType", // Test
   
@@ -1603,11 +1727,13 @@ describe("evaluate method overloading resolution correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "x", // EvalVariable
       "Test", // ResType
       "int", // ResType
       "test", // ResOverlaod
+      "test", // ResOverride
       "1", // Literal
       "x", // EvalVariable
       "1", // Deref
@@ -1631,7 +1757,7 @@ describe("evaluate method overloading resolution correctly", () => {
         Test(int x) {
           this.x = x;
         }
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test Test = new Test(2);
           Test.Test();
         }
@@ -1657,7 +1783,7 @@ describe("evaluate method overloading resolution correctly", () => {
   
       "Env",
       "MethodDeclaration", // void Test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test(int x) {...}
       "ConstructorDeclaration", // Test() {...}
   
@@ -1666,6 +1792,7 @@ describe("evaluate method overloading resolution correctly", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -1740,8 +1867,14 @@ describe("evaluate method overloading resolution correctly", () => {
       "MethodInvocation", // Test.Test()
 
       "Invocation", // ()
+      "ResOverride",
       "ResOverload", // Test
       "ResType", // Test
+
+      "ExpressionName", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "ExpressionName", // Test
 
@@ -1780,6 +1913,7 @@ describe("evaluate method overloading resolution correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Test", // EvalVariable
       "Test", // ResType
@@ -1801,6 +1935,9 @@ describe("evaluate method overloading resolution correctly", () => {
       "Object", // Assign
       "Test", // ResType
       "Test", // ResOverload
+      "Test", // EvalVariable
+      "Object", // Deref
+      "Test", // ResOverride
       "Test", // EvalVariable
       "Object", // Deref
       "this", // EvalVariable
@@ -1827,7 +1964,7 @@ describe("evaluate method overloading resolution correctly", () => {
         test(int x) {
           this.x = x;
         }
-        static void main(String[] args) {
+        public static void main(String[] args) {
           test test = new test(2);
           test.test();
         }
@@ -1848,23 +1985,24 @@ describe("evaluate method overloading resolution correctly", () => {
     const expectedControlTrace = [
       "CompilationUnit",
   
-      "ExpressionStatement", // Test.main([""]);
-      "NormalClassDeclaration", // class Test {...}
+      "ExpressionStatement", // test.main([""]);
+      "NormalClassDeclaration", // class test {...}
   
       "Env",
-      "MethodDeclaration", // void Test() {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
-      "ConstructorDeclaration", // Test(int x) {...}
-      "ConstructorDeclaration", // Test() {...}
+      "MethodDeclaration", // void test() {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
+      "ConstructorDeclaration", // test(int x) {...}
+      "ConstructorDeclaration", // test() {...}
   
       "Pop",
-      "MethodInvocation", // Test.main([""])
+      "MethodInvocation", // test.main([""])
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
-      "ResType", // Test
+      "ResType", // test
   
       "Env", // from Invocation
       "Marker",
@@ -1872,25 +2010,25 @@ describe("evaluate method overloading resolution correctly", () => {
   
       "Env", // from Block
       "ReturnStatement", // return;
-      "ExpressionStatement", // Test.Test();
-      "LocalVariableDeclarationStatement", // Test Test = new Test(1);
+      "ExpressionStatement", // test.test();
+      "LocalVariableDeclarationStatement", // test test = new test(1);
   
-      "ExpressionStatement", // Test = new Test(1);
-      "LocalVariableDeclarationStatement", // Test Test;
+      "ExpressionStatement", // test = new test(1);
+      "LocalVariableDeclarationStatement", // test test;
   
       "Pop",
-      "Assignment", // Test = new Test(1)
+      "Assignment", // test = new test(1)
   
       "Assign", // =
-      "ClassInstanceCreationExpression", // new Test(1)
-      "EvalVariable", // Test
+      "ClassInstanceCreationExpression", // new test(1)
+      "EvalVariable", // test
 
       "Invocation", // ()
       "Literal", // 2
       "New", // new
-      "ResConOverload", // Test
+      "ResConOverload", // test
       "ResType", // 1
-      "ResType", // Test
+      "ResType", // test
   
       "Env", // from Invocation
       "Marker",
@@ -1933,16 +2071,22 @@ describe("evaluate method overloading resolution correctly", () => {
       "Reset", // skip Env from Block
 
       "Pop",
-      "MethodInvocation", // Test.Test()
+      "MethodInvocation", // test.test()
 
       "Invocation", // ()
-      "ResOverload", // Test
-      "ResType", // Test
+      "ResOverride",
+      "ResOverload", // test
+      "ResType", // test
 
-      "ExpressionName", // Test
+      "ExpressionName", // test
 
       "Deref",
-      "EvalVariable", // Test
+      "EvalVariable", // test
+
+      "ExpressionName", // test
+
+      "Deref",
+      "EvalVariable", // test
 
       "Env", // from Invocation
       "Marker",
@@ -1976,6 +2120,7 @@ describe("evaluate method overloading resolution correctly", () => {
       "test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "test", // ResType
@@ -1997,6 +2142,9 @@ describe("evaluate method overloading resolution correctly", () => {
       "Object", // Assign
       "test", // ResType
       "test", // ResOverload
+      "test", // EvalVariable
+      "Object", // Deref
+      "test", // ResOverride
       "test", // EvalVariable
       "Object", // Deref
       "this", // EvalVariable

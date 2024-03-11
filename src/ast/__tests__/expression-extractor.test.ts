@@ -31,13 +31,17 @@ describe("extract Literal correctly", () => {
                       kind: "DecimalIntegerLiteral",
                       value: "1",
                     },
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -78,6 +82,7 @@ describe("extract BinaryExpression correctly", () => {
                         kind: "DecimalIntegerLiteral",
                         value: "1",
                       },
+                      location: expect.anything(),
                     },
                     right: {
                       kind: "BinaryExpression",
@@ -88,6 +93,7 @@ describe("extract BinaryExpression correctly", () => {
                           kind: "DecimalIntegerLiteral",
                           value: "2",
                         },
+                        location: expect.anything(),
                       },
                       right: {
                         kind: "Literal",
@@ -95,15 +101,21 @@ describe("extract BinaryExpression correctly", () => {
                           kind: "DecimalIntegerLiteral",
                           value: "3",
                         },
+                        location: expect.anything(),
                       },
+                      location: expect.anything(),
                     },
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -145,6 +157,7 @@ describe("extract BinaryExpression correctly", () => {
                           kind: "DecimalIntegerLiteral",
                           value: "1",
                         },
+                        location: expect.anything(),
                       },
                       right: {
                         kind: "Literal",
@@ -152,7 +165,9 @@ describe("extract BinaryExpression correctly", () => {
                           kind: "DecimalIntegerLiteral",
                           value: "2",
                         },
+                        location: expect.anything(),
                       },
+                      location: expect.anything(),
                     },
                     right: {
                       kind: "Literal",
@@ -160,14 +175,19 @@ describe("extract BinaryExpression correctly", () => {
                         kind: "DecimalIntegerLiteral",
                         value: "3",
                       },
+                      location: expect.anything(),
                     },
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -204,6 +224,7 @@ describe("extract ExpressionName correctly", () => {
                   variableDeclaratorId: "x",
                 },
               ],
+              location: expect.anything(),
             },
             {
               kind: "MethodDeclaration",
@@ -214,28 +235,34 @@ describe("extract ExpressionName correctly", () => {
                 formalParameterList: [],
               },
               methodBody: {
-              kind: "Block",
-              blockStatements: [
-                {
-                  kind: "LocalVariableDeclarationStatement",
-                  localVariableType: "int",
-                  variableDeclaratorList: [
-                    {
-                      kind: "VariableDeclarator",
-                      variableDeclaratorId: "y",
-                      variableInitializer: {
-                        kind: "ExpressionName",
-                        name: "x",
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "LocalVariableDeclarationStatement",
+                    localVariableType: "int",
+                    variableDeclaratorList: [
+                      {
+                        kind: "VariableDeclarator",
+                        variableDeclaratorId: "y",
+                        variableInitializer: {
+                          kind: "ExpressionName",
+                          name: "x",
+                          location: expect.anything(),
+                        },
                       },
-                    },
-                  ],
-                },
-              ],
-            },
+                    ],
+                    location: expect.anything(),
+                  },
+                ],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
     
     const ast = parse(programStr);
@@ -272,6 +299,7 @@ describe("extract ExpressionName correctly", () => {
                   variableDeclaratorId: "x",
                 },
               ],
+              location: expect.anything(),
             },
             {
               kind: "MethodDeclaration",
@@ -282,28 +310,34 @@ describe("extract ExpressionName correctly", () => {
                 formalParameterList: [],
               },
               methodBody: {
-              kind: "Block",
-              blockStatements: [
-                {
-                  kind: "LocalVariableDeclarationStatement",
-                  localVariableType: "int",
-                  variableDeclaratorList: [
-                    {
-                      kind: "VariableDeclarator",
-                      variableDeclaratorId: "y",
-                      variableInitializer: {
-                        kind: "ExpressionName",
-                        name: "Test.x",
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "LocalVariableDeclarationStatement",
+                    localVariableType: "int",
+                    variableDeclaratorList: [
+                      {
+                        kind: "VariableDeclarator",
+                        variableDeclaratorId: "y",
+                        variableInitializer: {
+                          kind: "ExpressionName",
+                          name: "Test.x",
+                          location: expect.anything(),
+                        },
                       },
-                    },
-                  ],
-                },
-              ],
-            },
+                    ],
+                    location: expect.anything(),
+                  },
+                ],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -340,6 +374,7 @@ describe("extract ExpressionName correctly", () => {
                   variableDeclaratorId: "x",
                 },
               ],
+              location: expect.anything(),
             },
             {
               kind: "MethodDeclaration",
@@ -350,28 +385,34 @@ describe("extract ExpressionName correctly", () => {
                 formalParameterList: [],
               },
               methodBody: {
-              kind: "Block",
-              blockStatements: [
-                {
-                  kind: "LocalVariableDeclarationStatement",
-                  localVariableType: "int",
-                  variableDeclaratorList: [
-                    {
-                      kind: "VariableDeclarator",
-                      variableDeclaratorId: "y",
-                      variableInitializer: {
-                        kind: "ExpressionName",
-                        name: "this.x",
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "LocalVariableDeclarationStatement",
+                    localVariableType: "int",
+                    variableDeclaratorList: [
+                      {
+                        kind: "VariableDeclarator",
+                        variableDeclaratorId: "y",
+                        variableInitializer: {
+                          kind: "ExpressionName",
+                          name: "this.x",
+                          location: expect.anything(),
+                        },
                       },
-                    },
-                  ],
-                },
-              ],
-            },
+                    ],
+                    location: expect.anything(),
+                  },
+                ],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -408,6 +449,7 @@ describe("extract Assignment correctly", () => {
                     left: {
                       kind: "ExpressionName",
                       name: "y",
+                      location: expect.anything(),
                     },
                     operator: "=",
                     right: {
@@ -416,14 +458,19 @@ describe("extract Assignment correctly", () => {
                         kind: "DecimalIntegerLiteral",
                         value: "1",
                       },
+                      location: expect.anything(),
                     },
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -458,6 +505,7 @@ describe("extract Assignment correctly", () => {
                     left: {
                       kind: "ExpressionName",
                       name: "Test.y",
+                      location: expect.anything(),
                     },
                     operator: "=",
                     right: {
@@ -466,14 +514,19 @@ describe("extract Assignment correctly", () => {
                         kind: "DecimalIntegerLiteral",
                         value: "1",
                       },
+                      location: expect.anything(),
                     },
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -508,6 +561,7 @@ describe("extract Assignment correctly", () => {
                     left: {
                       kind: "ExpressionName",
                       name: "this.y",
+                      location: expect.anything(),
                     },
                     operator: "=",
                     right: {
@@ -516,14 +570,19 @@ describe("extract Assignment correctly", () => {
                         kind: "DecimalIntegerLiteral",
                         value: "1",
                       },
+                      location: expect.anything(),
                     },
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -559,13 +618,17 @@ describe("extract MethodInvocation correctly", () => {
                     kind: "MethodInvocation",
                     identifier: "test",
                     argumentList: [],
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -599,13 +662,17 @@ describe("extract MethodInvocation correctly", () => {
                     kind: "MethodInvocation",
                     identifier: "Test.test",
                     argumentList: [],
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -639,13 +706,17 @@ describe("extract MethodInvocation correctly", () => {
                     kind: "MethodInvocation",
                     identifier: "this.test",
                     argumentList: [],
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -682,15 +753,20 @@ describe("extract MethodInvocation correctly", () => {
                       {
                         kind: "ExpressionName",
                         name: "y",
+                        location: expect.anything(),
                       },
                     ],
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -727,6 +803,7 @@ describe("extract MethodInvocation correctly", () => {
                       {
                         kind: "ExpressionName",
                         name: "y",
+                        location: expect.anything(),
                       },
                       {
                         kind: "Literal",
@@ -734,15 +811,20 @@ describe("extract MethodInvocation correctly", () => {
                           kind: "DecimalIntegerLiteral",
                           value: "100",
                         },
+                        location: expect.anything(),
                       },
                     ],
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -777,29 +859,35 @@ describe("extract ClassInstanceCreationExpression correctly", () => {
                 formalParameterList: [],
               },
               methodBody: {
-              kind: "Block",
-              blockStatements: [
-                {
-                  kind: "LocalVariableDeclarationStatement",
-                  localVariableType: "Test",
-                  variableDeclaratorList: [
-                    {
-                      kind: "VariableDeclarator",
-                      variableDeclaratorId: "test",
-                      variableInitializer: {
-                        kind: "ClassInstanceCreationExpression",
-                        identifier: "Test",
-                        argumentList: [],
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "LocalVariableDeclarationStatement",
+                    localVariableType: "Test",
+                    variableDeclaratorList: [
+                      {
+                        kind: "VariableDeclarator",
+                        variableDeclaratorId: "test",
+                        variableInitializer: {
+                          kind: "ClassInstanceCreationExpression",
+                          identifier: "Test",
+                          argumentList: [],
+                          location: expect.anything(),
+                        },
                       },
-                    },
-                  ],
-                },
-              ],
-            },
+                    ],
+                    location: expect.anything(),
+                  },
+                ],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -832,44 +920,52 @@ describe("extract ClassInstanceCreationExpression correctly", () => {
                 formalParameterList: [],
               },
               methodBody: {
-              kind: "Block",
-              blockStatements: [
-                {
-                  kind: "LocalVariableDeclarationStatement",
-                  localVariableType: "Test",
-                  variableDeclaratorList: [
-                    {
-                      kind: "VariableDeclarator",
-                      variableDeclaratorId: "test",
-                      variableInitializer: {
-                        kind: "ClassInstanceCreationExpression",
-                        identifier: "Test",
-                        argumentList: [
-                          {
-                            kind: "Literal",
-                            literalType: {
-                              kind: "DecimalIntegerLiteral",
-                              value: "1",
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "LocalVariableDeclarationStatement",
+                    localVariableType: "Test",
+                    variableDeclaratorList: [
+                      {
+                        kind: "VariableDeclarator",
+                        variableDeclaratorId: "test",
+                        variableInitializer: {
+                          kind: "ClassInstanceCreationExpression",
+                          identifier: "Test",
+                          argumentList: [
+                            {
+                              kind: "Literal",
+                              literalType: {
+                                kind: "DecimalIntegerLiteral",
+                                value: "1",
+                              },
+                              location: expect.anything(),
                             },
-                          },
-                          {
-                            kind: "Literal",
-                            literalType: {
-                              kind: "DecimalIntegerLiteral",
-                              value: "2",
+                            {
+                              kind: "Literal",
+                              literalType: {
+                                kind: "DecimalIntegerLiteral",
+                                value: "2",
+                              },
+                              location: expect.anything(),
                             },
-                          },
-                        ],
+                          ],
+                          location: expect.anything(),
+                        },
                       },
-                    },
-                  ],
-                },
-              ],
-            },
+                    ],
+                    location: expect.anything(),
+                  },
+                ],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);

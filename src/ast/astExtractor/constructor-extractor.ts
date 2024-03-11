@@ -1,4 +1,5 @@
 import {
+  ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
   BlockStatementsCtx,
   ConstructorDeclarationCstNode,
@@ -6,6 +7,7 @@ import {
   FormalParameterCtx,
   FormalParameterListCtx,
   SimpleTypeNameCtx,
+  UnqualifiedExplicitConstructorInvocationCtx,
   VariableArityParameterCtx,
   VariableDeclaratorIdCtx,
   VariableParaRegularParameterCtx,
@@ -17,17 +19,21 @@ import {
   ConstructorModifier,
   ConstructorDeclaration,
 } from "../types/classes";
-import { BlockStatement } from "../types/blocks-and-statements";
+import { BlockStatement, ExplicitConstructorInvocation } from "../types/blocks-and-statements";
 import { BlockStatementExtractor } from "./block-statement-extractor";
 import { TypeExtractor } from "./type-extractor";
+import { ExpressionExtractor } from "./expression-extractor";
+import { Location } from "../types/ast";
 
 export class ConstructorExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<ConstructorModifier> = [];
   private identifier: Identifier;
   private params: Array<FormalParameter> = [];
   private body: Array<BlockStatement> = [];
+  private location: Location;
 
   extract(cst: ConstructorDeclarationCstNode): ConstructorDeclaration {
+    this.location = cst.location;
     this.visit(cst);
     return {
       kind: "ConstructorDeclaration",
@@ -38,8 +44,10 @@ export class ConstructorExtractor extends BaseJavaCstVisitorWithDefaults {
       },
       constructorBody: {
         kind: "Block",
-        blockStatements:this.body,
+        blockStatements: this.body,
+        location: this.location,
       },
+      location: this.location,
     };
   }
 
@@ -95,5 +103,20 @@ export class ConstructorExtractor extends BaseJavaCstVisitorWithDefaults {
       const blockStatementExtractor = new BlockStatementExtractor();
       this.body.push(blockStatementExtractor.extract(x));
     })
+  }
+
+  unqualifiedExplicitConstructorInvocation(ctx: UnqualifiedExplicitConstructorInvocationCtx) {
+    const expConInv = {
+      kind: "ExplicitConstructorInvocation",
+      thisOrSuper: ctx.This?.[0].image || ctx.Super?.[0].image,
+      argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : [],
+      location: this.location,
+    } as ExplicitConstructorInvocation;
+    this.body.push(expConInv);
+  }
+
+  argumentList(ctx: ArgumentListCtx) {
+    const expressionExtractor = new ExpressionExtractor();
+    return ctx.expression.map(e => expressionExtractor.extract(e));
   }
 }
