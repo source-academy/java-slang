@@ -23,14 +23,17 @@ import { BlockStatement, ExplicitConstructorInvocation } from "../types/blocks-a
 import { BlockStatementExtractor } from "./block-statement-extractor";
 import { TypeExtractor } from "./type-extractor";
 import { ExpressionExtractor } from "./expression-extractor";
+import { Location } from "../types/ast";
 
 export class ConstructorExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<ConstructorModifier> = [];
   private identifier: Identifier;
   private params: Array<FormalParameter> = [];
   private body: Array<BlockStatement> = [];
+  private location: Location;
 
   extract(cst: ConstructorDeclarationCstNode): ConstructorDeclaration {
+    this.location = cst.location;
     this.visit(cst);
     return {
       kind: "ConstructorDeclaration",
@@ -41,8 +44,10 @@ export class ConstructorExtractor extends BaseJavaCstVisitorWithDefaults {
       },
       constructorBody: {
         kind: "Block",
-        blockStatements:this.body,
+        blockStatements: this.body,
+        location: this.location,
       },
+      location: this.location,
     };
   }
 
@@ -105,6 +110,7 @@ export class ConstructorExtractor extends BaseJavaCstVisitorWithDefaults {
       kind: "ExplicitConstructorInvocation",
       thisOrSuper: ctx.This?.[0].image || ctx.Super?.[0].image,
       argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : [],
+      location: this.location,
     } as ExplicitConstructorInvocation;
     this.body.push(expConInv);
   }

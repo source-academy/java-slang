@@ -15,8 +15,10 @@ describe("extract NormalClassDeclaration correctly", () => {
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -39,8 +41,10 @@ describe("extract NormalClassDeclaration correctly", () => {
           ],
           typeIdentifier: "Test",
           classBody: [],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -63,6 +67,7 @@ describe("extract multiple NormalClassDeclaration correctly", () => {
           classModifier: [],
           typeIdentifier: "Parent",
           classBody: [],
+          location: expect.anything(),
         },
         {
           kind: "NormalClassDeclaration",
@@ -71,8 +76,10 @@ describe("extract multiple NormalClassDeclaration correctly", () => {
           ],
           typeIdentifier: "Test",
           classBody: [],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -93,6 +100,7 @@ describe("extract multiple NormalClassDeclaration correctly", () => {
           classModifier: [],
           typeIdentifier: "Parent",
           classBody: [],
+          location: expect.anything(),
         },
         {
           kind: "NormalClassDeclaration",
@@ -102,8 +110,10 @@ describe("extract multiple NormalClassDeclaration correctly", () => {
           typeIdentifier: "Test",
           sclass: "Parent",
           classBody: [],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);

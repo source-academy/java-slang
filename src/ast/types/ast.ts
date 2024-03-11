@@ -35,3 +35,17 @@ interface NodeMap {
 }
 
 export type Node = NodeMap[keyof NodeMap];
+
+export interface Location {
+  startOffset: number;
+  startLine: number;
+  startColumn?: number;
+  endOffset?: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
+export interface BaseNode {
+  kind: string;
+  location: Location;
+}

@@ -28,11 +28,15 @@ describe("extract MethodModifier correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -68,11 +72,15 @@ describe("extract MethodModifier correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -107,11 +115,15 @@ describe("extract FormalParameter correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -150,11 +162,15 @@ describe("extract FormalParameter correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);

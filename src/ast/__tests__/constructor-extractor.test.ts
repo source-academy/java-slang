@@ -27,11 +27,15 @@ describe("extract ConstructorModifier correctly", () => {
               constructorBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -65,11 +69,15 @@ describe("extract ConstructorModifier correctly", () => {
               constructorBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -103,11 +111,15 @@ describe("extract FormalParameter correctly", () => {
               constructorBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -145,11 +157,15 @@ describe("extract FormalParameter correctly", () => {
               constructorBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -196,11 +212,15 @@ describe("extract ExplicitConstructorInvocation correctly", () => {
                           kind: "DecimalIntegerLiteral",
                           value: "1",
                         },
+                        location: expect.anything(),
                       },
                     ],
+                    location: expect.anything(),
                   },
                 ],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
             {
               kind: "ConstructorDeclaration",
@@ -218,11 +238,15 @@ describe("extract ExplicitConstructorInvocation correctly", () => {
               constructorBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -260,13 +284,18 @@ describe("extract ExplicitConstructorInvocation correctly", () => {
                     kind: "ExplicitConstructorInvocation",
                     thisOrSuper: "super",
                     argumentList: [],
+                    location: expect.anything(),
                   },
                 ],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);

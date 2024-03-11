@@ -34,13 +34,17 @@ describe("extract FieldModifier correctly", () => {
                       kind: "DecimalIntegerLiteral",
                       value: "100",
                     },
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -78,10 +82,13 @@ describe("extract field type correctly", () => {
                   variableDeclaratorId: "x",
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -115,10 +122,13 @@ describe("extract field type correctly", () => {
                   variableDeclaratorId: "test",
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -156,13 +166,17 @@ describe("extract VariableInitializer correctly", () => {
                       kind: "DecimalIntegerLiteral",
                       value: "1",
                     },
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -195,6 +209,7 @@ describe("extract VariableInitializer correctly", () => {
                   variableDeclaratorId: "x",
                 },
               ],
+              location: expect.anything(),
             },
             {
               kind: "FieldDeclaration",
@@ -207,13 +222,17 @@ describe("extract VariableInitializer correctly", () => {
                   variableInitializer: {
                     kind: "ExpressionName",
                     name: "x",
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -254,6 +273,7 @@ describe("extract VariableInitializer correctly", () => {
                         kind: "DecimalIntegerLiteral",
                         value: "10",
                       },
+                      location: expect.anything(),
                     },
                     right: {
                       kind: "Literal",
@@ -261,14 +281,19 @@ describe("extract VariableInitializer correctly", () => {
                         kind: "DecimalIntegerLiteral",
                         value: "2",
                       },
+                      location: expect.anything(),
                     },
+                    location: expect.anything(),
                   },
                 },
               ],
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
