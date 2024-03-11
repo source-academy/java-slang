@@ -1,12 +1,22 @@
+import { BaseNode } from "./ast";
 import { Identifier, UnannType } from "./classes";
 
-export interface Block {
+export interface Block extends BaseNode {
   kind: "Block";
   blockStatements: Array<BlockStatement>;
 }
-export type BlockStatement = LocalVariableDeclarationStatement | Statement;
+export type BlockStatement =
+  LocalVariableDeclarationStatement
+  | Statement
+  | ExplicitConstructorInvocation;
 
-export interface LocalVariableDeclarationStatement {
+export interface ExplicitConstructorInvocation extends BaseNode {
+  kind: "ExplicitConstructorInvocation";
+  thisOrSuper: "this" | "super";
+  argumentList: ArgumentList
+}
+
+export interface LocalVariableDeclarationStatement extends BaseNode {
   kind: "LocalVariableDeclarationStatement";
   localVariableType: LocalVariableType;
   variableDeclaratorList: Array<VariableDeclarator>;
@@ -14,28 +24,27 @@ export interface LocalVariableDeclarationStatement {
 
 export type Statement = StatementWithoutTrailingSubstatement | IfStatement | WhileStatement | ForStatement;
 
-export interface IfStatement {
+export interface IfStatement extends BaseNode {
   kind: "IfStatement";
   condition: Expression;
   consequent: Statement;
   alternate: Statement;
 }
 
-export interface WhileStatement {
+export interface WhileStatement extends BaseNode {
   kind: "WhileStatement";
   condition: Expression;
   body: Statement;
 }
 
-export interface DoStatement {
+export interface DoStatement extends BaseNode {
   kind: "DoStatement";
   condition: Expression;
   body: Statement;
 }
 
 export type ForStatement = BasicForStatement | EnhancedForStatement;
-
-export interface BasicForStatement {
+export interface BasicForStatement extends BaseNode {
   kind: "BasicForStatement";
   forInit: Array<ExpressionStatement> | LocalVariableDeclarationStatement;
   condition: Expression;
@@ -43,20 +52,20 @@ export interface BasicForStatement {
   body: Statement;
 }
 
-export interface EnhancedForStatement {
+export interface EnhancedForStatement extends BaseNode {
   kind: "EnhancedForStatement";
 }
 
 export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement | ReturnStatement | BreakStatement | ContinueStatement;
 
-export interface ExpressionStatement {
+export interface ExpressionStatement extends BaseNode {
   kind: "ExpressionStatement";
   stmtExp: StatementExpression
 }
 
 export type StatementExpression = MethodInvocation | Assignment;
 
-export interface MethodInvocation {
+export interface MethodInvocation extends BaseNode {
   kind: "MethodInvocation";
   identifier: Identifier;
   argumentList: ArgumentList;
@@ -89,14 +98,14 @@ export interface FieldAccess {
   identifier: Identifier;
 }
 
-export interface ReturnStatement {
+export interface ReturnStatement extends BaseNode {
   kind: "ReturnStatement";
   exp: Expression;
 }
 
 export type Expression = Primary | BinaryExpression | UnaryExpression | Void;
 
-export interface Void {
+export interface Void extends BaseNode {
   kind: "Void";
 }
 
@@ -109,13 +118,13 @@ export type Primary =
   | FieldAccess
   | ClassInstanceCreationExpression;
 
-export interface ClassInstanceCreationExpression {
+export interface ClassInstanceCreationExpression extends BaseNode {
   kind: "ClassInstanceCreationExpression",
   identifier: Identifier;
   argumentList: ArgumentList;
 }
 
-export interface Literal {
+export interface Literal extends BaseNode {
   kind: "Literal";
   literalType:
   | IntegerLiteral
@@ -184,19 +193,19 @@ export interface NullLiteral {
 }
 
 export type BinaryOperator = "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "<<" | ">>" | ">>>" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||";
-export interface BinaryExpression {
+export interface BinaryExpression extends BaseNode {
   kind: "BinaryExpression";
   operator: BinaryOperator;
   left: Expression;
   right: Expression;
 }
 
-export interface ExpressionName {
+export interface ExpressionName extends BaseNode {
   kind: "ExpressionName";
   identifier: string;
 }
 
-export interface Assignment {
+export interface Assignment extends BaseNode {
   kind: "Assignment";
   left: LeftHandSide;
   operator: "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "|=" | "&=" | "^=" | "<<=" | ">>=" | ">>>=";
@@ -206,13 +215,13 @@ export interface Assignment {
 export type LeftHandSide = ExpressionName | FieldAccess | ArrayAccess;
 export type UnaryExpression = PrefixExpression | PostfixExpression;
 
-export interface PrefixExpression {
+export interface PrefixExpression extends BaseNode {
   kind: "PrefixExpression";
   operator: "-" | "+" | "++" | "--" | "!" | "~";
   expression: Expression;
 }
 
-export interface PostfixExpression {
+export interface PostfixExpression extends BaseNode {
   kind: "PostfixExpression";
   operator: "++" | "--";
   expression: Expression;

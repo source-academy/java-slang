@@ -12,7 +12,7 @@ it("evaluate LHS Class correctly", () => {
   const programStr = `
     class Test {
       static int x;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test.x = 1;
       }
     }
@@ -33,7 +33,7 @@ it("evaluate LHS Class correctly", () => {
     "NormalClassDeclaration", // class Test {...}
 
     "Env",
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
     "FieldDeclaration", // static int x = 0;
 
@@ -47,6 +47,7 @@ it("evaluate LHS Class correctly", () => {
 
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -81,6 +82,7 @@ it("evaluate LHS Class correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "Test", // EvalVariable
     "x", // EvalVariable
@@ -99,7 +101,7 @@ it("evaluate LHS Object correctly", () => {
   const programStr = `
     class Test {
       int x = 1;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test test = new Test();
         test.x = 2;
       }
@@ -121,7 +123,7 @@ it("evaluate LHS Object correctly", () => {
     "NormalClassDeclaration", // class Test {...}
 
     "Env",
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
 
     "Pop",
@@ -129,6 +131,7 @@ it("evaluate LHS Object correctly", () => {
 
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -202,10 +205,11 @@ it("evaluate LHS Object correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "test", // EvalVariable
     "Test", // ResType
-    "Test", // ResOverload
+    "Test", // ResConOverload
     "Object", // New
     "this", // EvalVariable
     "x", // Res
@@ -231,7 +235,7 @@ it("evaluate LHS this correctly", () => {
   const programStr = `
     class Test {
       int x = 1;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test test = new Test();
         test.test();
       }
@@ -257,7 +261,7 @@ it("evaluate LHS this correctly", () => {
 
     "Env",
     "MethodDeclaration", // void test() {...}
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
 
     "Pop",
@@ -265,6 +269,7 @@ it("evaluate LHS this correctly", () => {
     
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -323,8 +328,14 @@ it("evaluate LHS this correctly", () => {
     "MethodInvocation", // test.test()
 
     "Invocation", // ()
+    "ResOverride",
     "ResOverload", // test
     "ResType", // test
+
+    "ExpressionName", // test
+
+    "Deref",
+    "EvalVariable", // test
 
     "ExpressionName", // test
 
@@ -363,10 +374,11 @@ it("evaluate LHS this correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "test", // EvalVariable
     "Test", // ResType
-    "Test", // ResOverload
+    "Test", // ResConOverload
     "Object", // New
     "this", // EvalVariable
     "x", // Res
@@ -377,6 +389,9 @@ it("evaluate LHS this correctly", () => {
     "Object", // Assign
     "Test", // ResType
     "test", // ResOverload
+    "test", // EvalVariable
+    "Object", // Deref
+    "test", // ResOverride
     "test", // EvalVariable
     "Object", // Deref
     "this", // EvalVariable
@@ -397,7 +412,7 @@ it("evaluate RHS Class correctly", () => {
   const programStr = `
     class Test {
       static int x;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         int x = Test.x;
       }
     }
@@ -418,7 +433,7 @@ it("evaluate RHS Class correctly", () => {
     "NormalClassDeclaration", // class Test {...}
 
     "Env",
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
     "FieldDeclaration", // static int x = 0;
 
@@ -432,6 +447,7 @@ it("evaluate RHS Class correctly", () => {
 
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -472,6 +488,7 @@ it("evaluate RHS Class correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "x", // EvalVariable
     "Test", // EvalVariable
@@ -491,7 +508,7 @@ it("evaluate RHS Object correctly", () => {
   const programStr = `
     class Test {
       int x;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test test = new Test();
         int x = test.x;
       }
@@ -513,7 +530,7 @@ it("evaluate RHS Object correctly", () => {
     "NormalClassDeclaration", // class Test {...}
 
     "Env",
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
 
     "Pop",
@@ -521,6 +538,7 @@ it("evaluate RHS Object correctly", () => {
 
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -600,10 +618,11 @@ it("evaluate RHS Object correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "test", // EvalVariable
     "Test", // ResType
-    "Test", // ResOverload
+    "Test", // ResConOverload
     "Object", // New
     "this", // EvalVariable
     "x", // Res
@@ -630,7 +649,7 @@ it("evaluate RHS this correctly", () => {
   const programStr = `
     class Test {
       int x = 1;
-      static void main(String[] args) {
+      public static void main(String[] args) {
         Test test = new Test();
         test.test();
       }
@@ -656,7 +675,7 @@ it("evaluate RHS this correctly", () => {
 
     "Env",
     "MethodDeclaration", // void test() {...}
-    "MethodDeclaration", // static void main(String[] args) {...}
+    "MethodDeclaration", // public static void main(String[] args) {...}
     "ConstructorDeclaration", // Test() {...}
 
     "Pop",
@@ -664,6 +683,7 @@ it("evaluate RHS this correctly", () => {
 
     "Invocation", // ()
     "Literal", // [""]
+    "ResOverride",
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
@@ -722,8 +742,14 @@ it("evaluate RHS this correctly", () => {
     "MethodInvocation", // test.test()
 
     "Invocation", // ()
+    "ResOverride",
     "ResOverload", // test
     "ResType", // test
+
+    "ExpressionName", // test
+
+    "Deref",
+    "EvalVariable", // test
 
     "ExpressionName", // test
 
@@ -768,9 +794,10 @@ it("evaluate RHS this correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "main", // ResOverride
     `[""]`, // Literal
     "test", // EvalVariable
-    "Test", // ResOverload
+    "Test", // ResConOverload
     "Test", // ResType
     "Object", // New
     "this", // EvalVariable
@@ -782,6 +809,9 @@ it("evaluate RHS this correctly", () => {
     "Object", // Assign
     "Test", // ResType
     "test", // ResOverload
+    "test", // EvalVariable
+    "Object", // Deref
+    "test", // ResOverride
     "test", // EvalVariable
     "Object", // Deref
     "x", // EvalVariable

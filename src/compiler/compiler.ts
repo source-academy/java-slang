@@ -117,7 +117,9 @@ export class Compiler {
         constructorBody: {
           kind: "Block",
           blockStatements: [],
-        }
+          location: { startLine: 0, startOffset: 0 },
+        },
+        location: { startLine: 0, startOffset: 0 },
       })
     }
 
@@ -214,7 +216,8 @@ export class Compiler {
         formalParameterList: constructor.constructorDeclarator.formalParameterList,
         result: "void",
       },
-      methodBody: constructor.constructorBody
+      methodBody: constructor.constructorBody,
+      location: { startLine: 0, startOffset: 0 },
     };
 
     this.compileMethod(methodNode);

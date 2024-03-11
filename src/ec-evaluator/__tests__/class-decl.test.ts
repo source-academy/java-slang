@@ -1,4 +1,5 @@
 import { parse } from "../../ast/parser";
+import { NoMainMtdError } from "../errors";
 import { evaluate } from "../interpreter";
 import {
   ControlStub,
@@ -46,6 +47,7 @@ describe("evaluate FieldDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -69,6 +71,7 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
     ];
@@ -116,6 +119,7 @@ describe("evaluate FieldDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -139,6 +143,7 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
     ];
@@ -181,6 +186,7 @@ describe("evaluate MethodDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -201,6 +207,7 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void",
     ];
@@ -243,6 +250,7 @@ describe("evaluate MethodDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -263,6 +271,7 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void",
     ];
@@ -307,6 +316,7 @@ describe("evaluate MethodDeclaration correctly", () => {
 
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -327,6 +337,110 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
+      `[""]`, // Literal
+      "Void", // Void
+    ];
+  
+    expect(result).toEqual(undefined);
+    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
+    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
+    // TODO test env
+  });
+});
+
+describe("evaluate main method correctly", () => {
+  it("should throw an error when main method is not defined", () => {
+    const programStr = `
+      class Test {}
+      `;
+  
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+  
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+  
+    expect(() => evaluate(context)).toThrowError(NoMainMtdError);
+  });
+
+  it("should not throw an error if main method is defined in at least one class", () => {
+    const programStr = `
+      class Test {}
+      class AnotherTest {
+        public static void main(String[] args) {}
+      }
+      `;
+  
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+  
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+  
+    expect(() => evaluate(context)).not.toThrowError(NoMainMtdError);
+  });
+
+  it("should invoke the main method defined in first class according to program order", () => {
+    const programStr = `
+      class Test {
+        public static void main(String[] args) {}
+      }
+      class AnotherTest {
+        public static void main(String[] args) {}
+      }
+      `;
+  
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+  
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+  
+    const result = evaluate(context);
+  
+    const expectedControlTrace = [
+      "CompilationUnit",
+      
+      "ExpressionStatement", // Test.main([""]);
+      "NormalClassDeclaration", // class AnotherTest {...}
+      "NormalClassDeclaration", // class Test {...}
+
+      "Env", // from NormalClassDeclaration
+      "MethodDeclaration", // static void main(String[] args) {...}
+      "ConstructorDeclaration", // Test() {...}
+
+      "Env", // from NormalClassDeclaration
+      "MethodDeclaration", // static void main(String[] args) {...}
+      "ConstructorDeclaration", // AnotherTest() {...}
+
+      "Pop",
+      "MethodInvocation", // Test.main([""])
+
+      "Invocation", // ()
+      "Literal", // [""]
+      "ResOverride",
+      "ResOverload", // main
+      "ResType", // [""]
+      "ResType", // Test
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return;
+
+      "Reset", // return
+      "Void",
+
+      "Reset", // Skip Env from Block
+    ];
+    const expectedStashTrace = [
+      "Test", // ResType
+      "String[]", // ResType
+      "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
     ];

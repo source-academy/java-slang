@@ -2,7 +2,7 @@ import { OPCODE } from "../ClassFile/constants/instructions";
 import { ExceptionHandler, AttributeInfo } from "../ClassFile/types/attributes";
 import { FIELD_FLAGS } from "../ClassFile/types/fields";
 import { METHOD_FLAGS } from "../ClassFile/types/methods";
-import { Node } from "../ast/types/ast";
+import { BaseNode, Node } from "../ast/types/ast";
 import {
   MethodInvocation,
   Literal,
@@ -97,6 +97,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       return {
         kind: "Literal",
         literalType: { kind: "DecimalIntegerLiteral", value: int.toString() },
+        location: (node as BaseNode).location
       }
     }
     let maxStack = 0;
@@ -383,13 +384,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         kind: "BinaryExpression",
         left: left,
         right: right,
-        operator: op.slice(0, op.length - 1) as BinaryOperator
+        operator: op.slice(0, op.length - 1) as BinaryOperator,
+        location: (node as BaseNode).location,
       };
       const newAssignmentNode: Assignment = {
         kind: "Assignment",
         left: left,
         operator: "=",
         right: subExpr,
+        location: (node as BaseNode).location,
       };
       return compile(newAssignmentNode, cg);
     }

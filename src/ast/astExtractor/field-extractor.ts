@@ -30,6 +30,7 @@ export class FieldExtractor extends BaseJavaCstVisitorWithDefaults {
           variableInitializer: this.value,
         },
       ],
+      location: cst.location,
     };
   }
 

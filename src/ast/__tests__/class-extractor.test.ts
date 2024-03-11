@@ -15,8 +15,10 @@ describe("extract NormalClassDeclaration correctly", () => {
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
@@ -39,8 +41,79 @@ describe("extract NormalClassDeclaration correctly", () => {
           ],
           typeIdentifier: "Test",
           classBody: [],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+});
+
+describe("extract multiple NormalClassDeclaration correctly", () => {
+  it("extract multiple NormalClassDeclaration correctly", () => {
+    const programStr = `
+      class Parent {}
+      public class Test {}
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Parent",
+          classBody: [],
+          location: expect.anything(),
+        },
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [
+            "public",
+          ],
+          typeIdentifier: "Test",
+          classBody: [],
+          location: expect.anything(),
+        },
+      ],
+      location: expect.anything(),
+    };
+  
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract multiple NormalClassDeclaration with superclass correctly", () => {
+    const programStr = `
+      class Parent {}
+      public class Test extends Parent {}
+    `;
+  
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Parent",
+          classBody: [],
+          location: expect.anything(),
+        },
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [
+            "public",
+          ],
+          typeIdentifier: "Test",
+          sclass: "Parent",
+          classBody: [],
+          location: expect.anything(),
+        },
+      ],
+      location: expect.anything(),
     };
   
     const ast = parse(programStr);
