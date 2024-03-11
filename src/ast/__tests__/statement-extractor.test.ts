@@ -11,9 +11,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-    
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -64,7 +65,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-    
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -77,9 +78,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-    
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -130,7 +132,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-    
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -143,9 +145,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-    
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -196,7 +199,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-    
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -209,9 +212,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-    
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -259,7 +263,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-    
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -272,9 +276,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-    
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -322,7 +327,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-    
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -335,9 +340,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-    
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -385,7 +391,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-    
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -400,9 +406,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-  
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -424,7 +431,7 @@ describe("extract ExpressionStatement correctly", () => {
                       kind: "ExpressionStatement",
                       stmtExp: {
                         kind: "MethodInvocation",
-                        identifier:"test",
+                        identifier: "test",
                         argumentList: [],
                         location: expect.anything(),
                       },
@@ -441,7 +448,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-  
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -454,9 +461,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-  
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -495,7 +503,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-  
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -508,9 +516,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-  
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -549,7 +558,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-  
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -562,9 +571,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-  
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -612,7 +622,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-  
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -625,9 +635,10 @@ describe("extract ExpressionStatement correctly", () => {
           }
         }
       `;
-  
+
       const expectedAst: AST = {
         kind: "CompilationUnit",
+        importDeclarations: [],
         topLevelClassOrInterfaceDeclarations: [
           {
             kind: "NormalClassDeclaration",
@@ -680,7 +691,7 @@ describe("extract ExpressionStatement correctly", () => {
         ],
         location: expect.anything(),
       };
-  
+
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
@@ -699,6 +710,7 @@ describe("extract ReturnStatement correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -751,6 +763,7 @@ describe("extract ReturnStatement correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",

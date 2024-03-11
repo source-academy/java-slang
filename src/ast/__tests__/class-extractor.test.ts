@@ -6,9 +6,10 @@ describe("extract NormalClassDeclaration correctly", () => {
     const programStr = `
       class Test {}
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -20,18 +21,19 @@ describe("extract NormalClassDeclaration correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
-  
+
   it("extract NormalClassDeclaration with ClassModifier correctly", () => {
     const programStr = `
       public static class Test {}
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -46,7 +48,7 @@ describe("extract NormalClassDeclaration correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
@@ -58,9 +60,10 @@ describe("extract multiple NormalClassDeclaration correctly", () => {
       class Parent {}
       public class Test {}
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -81,7 +84,7 @@ describe("extract multiple NormalClassDeclaration correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
@@ -91,9 +94,10 @@ describe("extract multiple NormalClassDeclaration correctly", () => {
       class Parent {}
       public class Test extends Parent {}
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -115,7 +119,7 @@ describe("extract multiple NormalClassDeclaration correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });

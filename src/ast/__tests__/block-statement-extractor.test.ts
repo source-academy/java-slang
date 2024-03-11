@@ -10,9 +10,10 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
         }
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -66,7 +67,7 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
@@ -79,9 +80,10 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
         }
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -127,7 +129,7 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });

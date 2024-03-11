@@ -11,6 +11,7 @@ describe("extract MethodModifier correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -52,6 +53,7 @@ describe("extract MethodModifier correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -98,6 +100,7 @@ describe("extract FormalParameter correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -139,6 +142,7 @@ describe("extract FormalParameter correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
