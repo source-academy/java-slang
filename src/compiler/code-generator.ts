@@ -21,7 +21,6 @@ import {
   ArrayAccess,
   BinaryOperator,
   DoStatement,
-  FieldAccess,
   ClassInstanceCreationExpression,
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration, UnannType } from "../ast/types/classes";
@@ -338,29 +337,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     return { stackSize: maxStack, resultType: id };
   },
 
-  FieldAccess: (node: Node, cg: CodeGenerator) => {
-    const name = (node as FieldAccess).name;
-    const fieldInfos = cg.symbolTable.queryField(name);
-
-    for (let i = 0; i < fieldInfos.length; i++) {
-      if (i === 0) {
-        const varInfo = (fieldInfos[i] as VariableInfo);
-        if (varInfo.index !== undefined) {
-          cg.code.push(OPCODE.ALOAD, varInfo.index);
-          continue;
-        }
-      }
-      const fieldInfo = fieldInfos[i] as FieldInfo;
-      const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
-      if (i === 0 && !(fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
-        cg.code.push(OPCODE.ALOAD, 0);
-      }
-      cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
-    }
-
-    return { stackSize: 1, resultType: (fieldInfos[fieldInfos.length - 1] as FieldInfo).typeDescriptor };
-  },
-
   ArrayAccess: (node: Node, cg: CodeGenerator) => {
     const n = node as ArrayAccess;
     const { stackSize: size1, resultType: type } = compile(n.primary, cg);
@@ -520,13 +496,23 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { name: name } = node as ExpressionName;
     const info = cg.symbolTable.queryVariable(name);
     if (Array.isArray(info)) {
-      const fieldInfos = info as Array<FieldInfo>;
+      const fieldInfos = info;
       for (let i = 0; i < fieldInfos.length; i++) {
-        const fieldInfo = fieldInfos[i];
+        if (i === 0) {
+          const varInfo = (fieldInfos[i] as VariableInfo);
+          if (varInfo.index !== undefined) {
+            cg.code.push(OPCODE.ALOAD, varInfo.index);
+            continue;
+          }
+        }
+        const fieldInfo = fieldInfos[i] as FieldInfo;
         const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
+        if (i === 0 && !(fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+          cg.code.push(OPCODE.ALOAD, 0);
+        }
         cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
       }
-      return { stackSize: 1, resultType: fieldInfos[fieldInfos.length - 1].typeDescriptor };
+      return { stackSize: 1, resultType: (fieldInfos[fieldInfos.length - 1] as FieldInfo).typeDescriptor };
     } else {
       cg.code.push(info.typeDescriptor.includes('[') ? OPCODE.ALOAD : OPCODE.ILOAD, info.index);
       return { stackSize: 1, resultType: info.typeDescriptor };

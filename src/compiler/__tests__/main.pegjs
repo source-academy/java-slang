@@ -419,10 +419,10 @@ TypeName
   = Name
 
 ExpressionName
-  = n:Name {
+  = t:(this dot)? n:Name {
     return {
       kind: "ExpressionName",
-      name: n,
+      name: (t ? "this." : "") + n,
     }
   }
 
@@ -870,7 +870,6 @@ Primary
   / ClassInstanceCreationExpression
   / MethodInvocation
   / ArrayAccess
-  / FieldAccess
   / Literal 
 
 ClassInstanceCreationExpression
@@ -971,7 +970,6 @@ Assignment
 
 LeftHandSide
   = ArrayAccess
-  / FieldAccess
   / ExpressionName
 
 AssignmentOperator

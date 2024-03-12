@@ -93,11 +93,6 @@ export interface ArrayAccess {
   expression: Expression;
 }
 
-export interface FieldAccess {
-  kind: "FieldAccess";
-  name: Identifier;
-}
-
 export interface ReturnStatement extends BaseNode {
   kind: "ReturnStatement";
   exp: Expression;
@@ -115,7 +110,6 @@ export type Primary =
   | Assignment
   | MethodInvocation
   | ArrayAccess
-  | FieldAccess
   | ClassInstanceCreationExpression;
 
 export interface ClassInstanceCreationExpression extends BaseNode {
@@ -212,7 +206,7 @@ export interface Assignment extends BaseNode {
   right: Expression;
 }
 
-export type LeftHandSide = ExpressionName | FieldAccess | ArrayAccess;
+export type LeftHandSide = ExpressionName | ArrayAccess;
 export type UnaryExpression = PrefixExpression | PostfixExpression;
 
 export interface PrefixExpression extends BaseNode {
