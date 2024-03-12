@@ -901,7 +901,7 @@ TypeArgumentsOrDiamond
   / TypeArguments
 
 FieldAccess
-  = id:Identifier dot n:Name {
+  = id:(Identifier / this) dot n:Name {
     return {
       kind: "FieldAccess",
       name: id + '.' +  n,

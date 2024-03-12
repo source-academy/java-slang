@@ -27,7 +27,7 @@ import {
 import { MethodDeclaration, UnannType } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import { ConstructNotSupportedError } from "./error";
-import { FieldInfo, MethodInfos, SymbolTable, VariableInfo } from "./symbol-table"
+import { FieldInfo, MethodInfos, SymbolInfo, SymbolTable, VariableInfo } from "./symbol-table"
 
 type Label = {
   offset: number;
@@ -340,15 +340,25 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   FieldAccess: (node: Node, cg: CodeGenerator) => {
     const name = (node as FieldAccess).name;
-    const fieldInfos = cg.symbolTable.queryField(name) as Array<FieldInfo>;
+    const fieldInfos = cg.symbolTable.queryField(name);
 
     for (let i = 0; i < fieldInfos.length; i++) {
-      const fieldInfo = fieldInfos[i];
+      if (i === 0) {
+        const varInfo = (fieldInfos[i] as VariableInfo);
+        if (varInfo.index !== undefined) {
+          cg.code.push(OPCODE.ALOAD, varInfo.index);
+          continue;
+        }
+      }
+      const fieldInfo = fieldInfos[i] as FieldInfo;
       const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
+      if (i === 0 && !(fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+        cg.code.push(OPCODE.ALOAD, 0);
+      }
       cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
     }
 
-    return { stackSize: 1, resultType: fieldInfos[fieldInfos.length - 1].typeDescriptor };
+    return { stackSize: 1, resultType: (fieldInfos[fieldInfos.length - 1] as FieldInfo).typeDescriptor };
   },
 
   ArrayAccess: (node: Node, cg: CodeGenerator) => {
@@ -367,6 +377,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     const symbolInfos = cg.symbolTable.queryMethod(n.identifier);
     for (let i = 0; i < symbolInfos.length - 1; i++) {
+      if (i === 0) {
+        const varInfo = (symbolInfos[i] as VariableInfo);
+        if (varInfo.index !== undefined) {
+          cg.code.push(OPCODE.ALOAD, varInfo.index);
+          continue;
+        }
+      }
       const fieldInfo = (symbolInfos[i] as FieldInfo);
       const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
       cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
@@ -426,12 +443,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       maxStack = 1 + compile(right, cg).stackSize;
       cg.code.push(info.typeDescriptor === "I" ? OPCODE.ISTORE : OPCODE.ASTORE, info.index);
     } else {
-      const info = cg.symbolTable.queryVariable(lhs.name);
-      const fieldInfos = info as Array<FieldInfo>;
-      const fieldInfo = fieldInfos[fieldInfos.length - 1];
+      const infos = cg.symbolTable.queryVariable(lhs.name) as Array<SymbolInfo>;
+      const fieldInfo = infos[infos.length - 1] as FieldInfo;
       const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
 
-      cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
+      const varIndex = (infos[0] as VariableInfo).index;
+      if (varIndex !== undefined) {
+        cg.code.push(OPCODE.ALOAD, varIndex);
+      } else if (fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) {
+        cg.code.push(OPCODE.GETSTATIC, 0, field);
+      } else {
+        cg.code.push(OPCODE.ALOAD, 0);
+      }
       maxStack = 1 + compile(right, cg).stackSize;
       cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.PUTSTATIC : OPCODE.PUTFIELD, 0, field);
     }

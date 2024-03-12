@@ -249,17 +249,58 @@ export class SymbolTable {
     this.curTable.set(key, symbolNode);
   }
 
+  private queryClass(name: string): ClassInfo {
+    const root = this.tables[0];
+
+    let key = generateSymbol(name, SymbolType.CLASS);
+    if (root.has(key)) {
+      return root.get(key)!.info as ClassInfo;
+    }
+
+    if (this.importedClassMap.has(name)) {
+      const fullName = this.importedClassMap.get(name)!;
+      key = generateSymbol(fullName, SymbolType.CLASS);
+      if (root.has(key)) {
+        return root.get(key)!.info as ClassInfo;
+      }
+    }
+
+    let p: string;
+    for (p of this.importedPackages) {
+      const fullName = p + name;
+      key = generateSymbol(fullName, SymbolType.CLASS);
+      if (root.has(key)) {
+        return root.get(key)!.info as ClassInfo;
+      }
+    }
+
+    throw new SymbolNotFoundError(name);
+  }
+
   private querySymbol(name: string, symbolType: SymbolType): Array<SymbolInfo> {
     let curTable = this.getNewTable();
     const symbolInfos: Array<SymbolInfo> = [];
 
     const tokens = name.split('.');
     const len = tokens.length;
-    for (let i = 0; i < len; i++) {
-      const token = tokens[i];
+    tokens.forEach((token, i) => {
       if (i === 0) {
-        const key = generateSymbol(this.resolveTypename(token), SymbolType.CLASS);
-        curTable = this.tables[0].get(key)!.children;
+        const key1 = generateSymbol(token, SymbolType.VARIABLE);
+        for (let i = this.curIdx; i > this.curClassIdx; i--) {
+          if (this.tables[i].has(key1)) {
+            const node = this.tables[i].get(key1)!;
+            token = (node.info as VariableInfo).typeName;
+            symbolInfos.push(node.info);
+            break;
+          }
+        }
+
+        if (token === "this") {
+          curTable = this.tables[this.curClassIdx];
+        } else {
+          const key = generateSymbol(this.queryClass(token).name, SymbolType.CLASS);
+          curTable = this.tables[0].get(key)!.children;
+        }
       } else if (i < len - 1) {
         const key = generateSymbol(token, SymbolType.FIELD);
         const node = curTable.get(key);
@@ -267,7 +308,9 @@ export class SymbolTable {
           throw new SymbolCannotBeResolvedError(token, name);
         }
         symbolInfos.push(node.info);
-        const type = generateSymbol((node.info as FieldInfo).typeName, SymbolType.CLASS);
+
+        const typeName = (node.info as FieldInfo).typeName;
+        const type = generateSymbol(this.queryClass(typeName).name, SymbolType.CLASS);
         curTable = this.tables[0].get(type)!.children;
       } else {
         const key = generateSymbol(token, symbolType);
@@ -277,7 +320,7 @@ export class SymbolTable {
         }
         symbolInfos.push(node.info);
       }
-    }
+    });
 
     return symbolInfos;
   }
@@ -339,7 +382,7 @@ export class SymbolTable {
 
     typeName = typeName.slice(0, last);
     return "[".repeat(dim) +
-      (typeMap.has(typeName) ? typeMap.get(typeName) : 'L' + this.resolveTypename(typeName) + ';');
+      (typeMap.has(typeName) ? typeMap.get(typeName) : 'L' + this.queryClass(typeName).name + ';');
   }
 
   generateMethodDescriptor(paramsType: Array<UnannType>, result: string) {
@@ -347,30 +390,5 @@ export class SymbolTable {
     const resultDescriptor = this.generateFieldDescriptor(result);
 
     return '(' + paramsDescriptor + ')' + resultDescriptor;
-  }
-
-  private resolveTypename(name: string): string {
-    let key = generateSymbol(name, SymbolType.CLASS);
-    for (let i = this.curIdx; i >= 0; i--) {
-      const table = this.tables[i];
-      if (table.has(key)) {
-        return name;
-      }
-    }
-
-    if (this.importedClassMap.has(name)) {
-      return this.importedClassMap.get(name)!;
-    }
-
-    let p: string;
-    for (p of this.importedPackages) {
-      const fullName = p + name;
-      const key = generateSymbol(fullName, SymbolType.CLASS);
-      if (this.tables[0].has(key)) {
-        return fullName;
-      }
-    }
-
-    throw new SymbolNotFoundError(name);
   }
 }

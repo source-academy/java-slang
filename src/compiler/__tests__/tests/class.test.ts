@@ -103,6 +103,47 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["in f"],
   },
+  {
+    comment: "instance field",
+    program: `
+      public class Main {
+        public int x;
+        public static void main(String[] args) {
+          Main obj = new Main();
+          System.out.println(obj.x);
+          obj.x = 45;
+          System.out.println(obj.x);
+          obj.x = 20;
+          System.out.println(obj.x);
+        }
+      }
+    `,
+    expectedLines: ["0", "45", "20"],
+  },
+  {
+    comment: "instance field and method",
+    program: `
+      public class Main {
+        public int x;
+        public void inc() {
+          this.x += 1;
+        }
+        public void dec() {
+          this.x -= 1;
+        }
+        public static void main(String[] args) {
+          Main obj = new Main();
+          obj.x = 100;
+          System.out.println(obj.x);
+          obj.inc();
+          System.out.println(obj.x);
+          obj.dec();
+          System.out.println(obj.x);
+        }
+      }
+    `,
+    expectedLines: ["100", "101", "100"],
+  },
 ];
 
 export const classTest = () => describe("fields and methods of class", () => {

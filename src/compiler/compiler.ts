@@ -123,11 +123,11 @@ export class Compiler {
     constructors.forEach(c => this.recordConstructorInfo(c));
     staticFields.forEach(f => this.recordFieldInfo(f));
     staticMethods.forEach(m => this.recordMethodInfo(m));
-    staticMethods.forEach(m => this.compileMethod(m));
 
     nonStaticFields.forEach(f => this.recordFieldInfo(f));
     nonStaticMethods.forEach(m => this.recordMethodInfo(m));
     nonStaticMethods.forEach(m => this.compileMethod(m));
+    staticMethods.forEach(m => this.compileMethod(m));
     constructors.forEach(c => this.compileConstructor(c));
   }
 
