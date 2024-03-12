@@ -56,6 +56,53 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["in f", "ok", "0"],
   },
+  {
+    comment: "instance creation, default constructor",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          Main a = new Main();
+          System.out.println("ok");
+        }
+      }
+    `,
+    expectedLines: ["ok"],
+  },
+  {
+    comment: "instance creation, custom constructor",
+    program: `
+      public class Main {
+        public Main() {
+          System.out.println("obj");
+        }
+        public Main(int x) {
+          System.out.println(x);
+        }
+        public static void main(String[] args) {
+          Main obj = new Main();
+          Main obj2 = new Main(15);
+          Main obj3 = new Main(51);
+          Main obj4 = new Main();
+        }
+      }
+    `,
+    expectedLines: ["obj", "15", "51", "obj"],
+  },
+  {
+    comment: "instance method",
+    program: `
+      public class Main {
+        public void f() {
+          System.out.println("in f");
+        }
+        public static void main(String[] args) {
+          Main obj = new Main();
+          obj.f();
+        }
+      }
+    `,
+    expectedLines: ["in f"],
+  },
 ];
 
 export const classTest = () => describe("fields and methods of class", () => {

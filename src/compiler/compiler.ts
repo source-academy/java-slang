@@ -52,7 +52,6 @@ export class Compiler {
     this.className = classNode.typeIdentifier;
     const accessFlags = generateClassAccessFlags(classNode.classModifier);
     this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags });
-    this.constantPoolManager.indexMethodrefInfo(parentClassName, "<init>", "()V");
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(parentClassName);
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className);
@@ -117,9 +116,7 @@ export class Compiler {
         constructorBody: {
           kind: "Block",
           blockStatements: [],
-          location: { startLine: 0, startOffset: 0 },
         },
-        location: { startLine: 0, startOffset: 0 },
       })
     }
 
@@ -180,8 +177,8 @@ export class Compiler {
     this.symbolTable.insertMethodInfo({
       name: "<init>",
       accessFlags: generateMethodAccessFlags(constructor.constructorModifier),
-      parentClassName: "java/lang/Object",
-      typeDescriptor: descriptor
+      parentClassName: this.className,
+      typeDescriptor: descriptor,
     });
   }
 

@@ -2,7 +2,7 @@ import { OPCODE } from "../ClassFile/constants/instructions";
 import { ExceptionHandler, AttributeInfo } from "../ClassFile/types/attributes";
 import { FIELD_FLAGS } from "../ClassFile/types/fields";
 import { METHOD_FLAGS } from "../ClassFile/types/methods";
-import { BaseNode, Node } from "../ast/types/ast";
+import { Node } from "../ast/types/ast";
 import {
   MethodInvocation,
   Literal,
@@ -97,7 +97,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       return {
         kind: "Literal",
         literalType: { kind: "DecimalIntegerLiteral", value: int.toString() },
-        location: (node as BaseNode).location
       }
     }
     let maxStack = 0;
@@ -105,13 +104,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     lst.forEach(v => {
       const { variableDeclaratorId: identifier, variableInitializer: vi } = v;
       const curIdx = cg.maxLocals++;
-      cg.symbolTable.insertVariableInfo({
+      const variableInfo = {
         name: identifier,
         accessFlags: 0,
         index: curIdx,
         typeName: type + v.dims,
         typeDescriptor: cg.symbolTable.generateFieldDescriptor(type + v.dims),
-      });
+      };
+      cg.symbolTable.insertVariableInfo(variableInfo);
       if (!vi) {
         return;
       }
@@ -128,7 +128,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         cg.code.push(OPCODE.ASTORE, curIdx);
       } else {
         maxStack = Math.max(maxStack, compile(vi, cg).stackSize);
-        cg.code.push(OPCODE.ISTORE, curIdx);
+        cg.code.push(variableInfo.typeDescriptor === "I" ? OPCODE.ISTORE : OPCODE.ASTORE, curIdx);
       }
     });
     return { stackSize: maxStack, resultType: EMPTY_TYPE };
@@ -314,8 +314,26 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let maxStack = 2;
 
     cg.code.push(OPCODE.NEW, 0, cg.constantPoolManager.indexClassInfo(id), OPCODE.DUP);
-    argLst.forEach((arg, i) => maxStack = Math.max(maxStack, i + 2 + compile(arg, cg).stackSize));
-    cg.code.push(OPCODE.INVOKESPECIAL, 0, cg.constantPoolManager.indexMethodrefInfo(id, "<init>", "()V"));
+
+    const argTypes: Array<UnannType> = [];
+    argLst.forEach((x, i) => {
+      const argCompileResult = compile(x, cg);
+      maxStack = Math.max(maxStack, i + 2 + argCompileResult.stackSize);
+      argTypes.push(argCompileResult.resultType);
+    })
+    const argDescriptor = '(' + argTypes.join(',') + ')';
+
+    const symbolInfos = cg.symbolTable.queryMethod("<init>");
+    const methodInfos = symbolInfos[symbolInfos.length - 1] as MethodInfos;
+    for (let i = 0; i < methodInfos.length; i++) {
+      const methodInfo = methodInfos[i];
+      if (methodInfo.typeDescriptor.includes(argDescriptor)) {
+        const method = cg.constantPoolManager.indexMethodrefInfo(methodInfo.parentClassName, methodInfo.name, methodInfo.typeDescriptor);
+        cg.code.push(OPCODE.INVOKESPECIAL, 0, method);
+        break;
+      }
+    }
+
 
     return { stackSize: maxStack, resultType: id };
   },
@@ -385,14 +403,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         left: left,
         right: right,
         operator: op.slice(0, op.length - 1) as BinaryOperator,
-        location: (node as BaseNode).location,
       };
       const newAssignmentNode: Assignment = {
         kind: "Assignment",
         left: left,
         operator: "=",
         right: subExpr,
-        location: (node as BaseNode).location,
       };
       return compile(newAssignmentNode, cg);
     }
@@ -406,9 +422,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       maxStack = size1 + size2 + compile(right, cg).stackSize;
       cg.code.push(OPCODE.IASTORE);
     } else if (lhs.kind === "ExpressionName" && !Array.isArray(cg.symbolTable.queryVariable(lhs.name))) {
-      const info = cg.symbolTable.queryVariable(lhs.name);
+      const info = cg.symbolTable.queryVariable(lhs.name) as VariableInfo;
       maxStack = 1 + compile(right, cg).stackSize;
-      cg.code.push(OPCODE.ISTORE, (info as VariableInfo).index);
+      cg.code.push(info.typeDescriptor === "I" ? OPCODE.ISTORE : OPCODE.ASTORE, info.index);
     } else {
       const info = cg.symbolTable.queryVariable(lhs.name);
       const fieldInfos = info as Array<FieldInfo>;

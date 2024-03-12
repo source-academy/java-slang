@@ -535,9 +535,9 @@ ClassBody
 
 ClassBodyDeclaration
   = ClassMemberDeclaration
+  / ConstructorDeclaration
 //  / InstanceInitializer
 //  / StaticInitializer
-//  / ConstructorDeclaration
 
 ClassMemberDeclaration
   = FieldDeclaration
@@ -655,6 +655,39 @@ VariableModifier
 Throws
   = throw TO_BE_ADDED
 
+ConstructorDeclaration
+  = cm:ConstructorModifier* cd:ConstructorDeclarator Throws? cb:ConstructorBody {
+    return {
+      kind: "ConstructorDeclaration",
+      constructorModifier: cm,
+      constructorDeclarator: cd,
+      constructorBody: cb,
+    }
+  }
+
+ConstructorModifier
+  = public
+  / protected
+  / private
+
+ConstructorDeclarator
+  = TypeParameters? id:TypeIdentifier lparen (ReceiverParameter comma)? fpl:FormalParameterList? rparen {
+   return {
+      identifier: id,
+      formalParameterList: fpl ?? [],
+    }
+  }
+
+ConstructorBody
+  = lcurly ExplicitConstructorInvocation? bs:(@BlockStatement*) rcurly {
+    return {
+      kind: "Block",
+      blockStatements: bs,
+    }
+  }
+
+ExplicitConstructorInvocation
+  = ((Primary / ExpressionName) dot)? TypeArguments? (this / super) lparen ArgumentList? rparen
 
 
 /*
@@ -850,7 +883,7 @@ UnqualifiedClassInstanceCreationExpression
   = new TypeArguments? c:ClassOrInterfaceTypeToInstantiate lparen al:ArgumentList? rparen ClassBody? {
     return {
       kind: "ClassInstanceCreationExpression",
-      classOrInterfaceTypeToInstantiate: c,
+      identifier: c.identifier,
       argumentList: al ?? [],
     }
   }
