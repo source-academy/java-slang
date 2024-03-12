@@ -320,7 +320,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       maxStack = Math.max(maxStack, i + 2 + argCompileResult.stackSize);
       argTypes.push(argCompileResult.resultType);
     })
-    const argDescriptor = '(' + argTypes.join(',') + ')';
+    const argDescriptor = '(' + argTypes.join('') + ')';
 
     const symbolInfos = cg.symbolTable.queryMethod("<init>");
     const methodInfos = symbolInfos[symbolInfos.length - 1] as MethodInfos;
@@ -371,7 +371,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize);
       argTypes.push(argCompileResult.resultType);
     })
-    const argDescriptor = '(' + argTypes.join(',') + ')';
+    const argDescriptor = '(' + argTypes.join('') + ')';
 
     const methodInfos = symbolInfos[symbolInfos.length - 1] as MethodInfos;
     for (let i = 0; i < methodInfos.length; i++) {
