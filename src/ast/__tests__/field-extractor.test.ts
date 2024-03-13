@@ -8,9 +8,10 @@ describe("extract FieldModifier correctly", () => {
         public static int x = 100;
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -46,7 +47,7 @@ describe("extract FieldModifier correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
@@ -59,9 +60,10 @@ describe("extract field type correctly", () => {
         private byte x;
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -90,7 +92,7 @@ describe("extract field type correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
@@ -101,9 +103,10 @@ describe("extract field type correctly", () => {
         protected Test test;
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -130,22 +133,23 @@ describe("extract field type correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
 });
 
-describe("extract VariableInitializer correctly", () => {  
+describe("extract VariableInitializer correctly", () => {
   it("extract Literal VariableInitializer correctly", () => {
     const programStr = `
       class Test {
         int x = 1;
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -178,11 +182,11 @@ describe("extract VariableInitializer correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
-  
+
   it("extract ExpressionName VariableInitializer correctly", () => {
     const programStr = `
       class Test {
@@ -190,9 +194,10 @@ describe("extract VariableInitializer correctly", () => {
         int y = x;
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -234,7 +239,7 @@ describe("extract VariableInitializer correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
@@ -245,9 +250,10 @@ describe("extract VariableInitializer correctly", () => {
         static int x = 10 % 2;
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -295,7 +301,7 @@ describe("extract VariableInitializer correctly", () => {
       ],
       location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });

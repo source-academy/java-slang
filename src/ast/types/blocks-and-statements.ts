@@ -56,7 +56,7 @@ export interface EnhancedForStatement extends BaseNode {
   kind: "EnhancedForStatement";
 }
 
-export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement | ReturnStatement;
+export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement | ReturnStatement | BreakStatement | ContinueStatement;
 
 export interface ExpressionStatement extends BaseNode {
   kind: "ExpressionStatement";
@@ -78,11 +78,20 @@ export type LocalVariableType = UnannType;
 export interface VariableDeclarator {
   kind: "VariableDeclarator";
   variableDeclaratorId: VariableDeclaratorId;
+  dims?: string;
   variableInitializer?: VariableInitializer;
 }
 
 export type VariableDeclaratorId = Identifier;
-export type VariableInitializer = Expression;
+export type VariableInitializer = Expression | ArrayInitializer;
+
+export type ArrayInitializer = Array<VariableInitializer>;
+
+export interface ArrayAccess {
+  kind: "ArrayAccess";
+  primary: Primary;
+  expression: Expression;
+}
 
 export interface ReturnStatement extends BaseNode {
   kind: "ReturnStatement";
@@ -95,11 +104,12 @@ export interface Void extends BaseNode {
   kind: "Void";
 }
 
-export type Primary = 
+export type Primary =
   Literal
   | ExpressionName
   | Assignment
   | MethodInvocation
+  | ArrayAccess
   | ClassInstanceCreationExpression;
 
 export interface ClassInstanceCreationExpression extends BaseNode {
@@ -176,9 +186,10 @@ export interface NullLiteral {
   value: "null";
 }
 
+export type BinaryOperator = "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "<<" | ">>" | ">>>" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||";
 export interface BinaryExpression extends BaseNode {
   kind: "BinaryExpression";
-  operator: "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "<<" | ">>" | ">>>" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||";
+  operator: BinaryOperator;
   left: Expression;
   right: Expression;
 }
@@ -191,11 +202,11 @@ export interface ExpressionName extends BaseNode {
 export interface Assignment extends BaseNode {
   kind: "Assignment";
   left: LeftHandSide;
-  operator: string;
+  operator: "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "|=" | "&=" | "^=" | "<<=" | ">>=" | ">>>=";
   right: Expression;
 }
 
-export type LeftHandSide = ExpressionName;
+export type LeftHandSide = ExpressionName | ArrayAccess;
 export type UnaryExpression = PrefixExpression | PostfixExpression;
 
 export interface PrefixExpression extends BaseNode {
@@ -208,4 +219,14 @@ export interface PostfixExpression extends BaseNode {
   kind: "PostfixExpression";
   operator: "++" | "--";
   expression: Expression;
+}
+
+export interface BreakStatement extends BaseNode {
+  kind: "BreakStatement";
+  identifier?: Identifier;
+}
+
+export interface ContinueStatement extends BaseNode {
+  kind: "ContinueStatement";
+  identifier?: Identifier;
 }
