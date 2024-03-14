@@ -1,5 +1,5 @@
 import { check } from "..";
-import { IncompatibleTypesError } from "../../errors";
+import { BadOperandTypesError, IncompatibleTypesError } from "../../errors";
 import { parse } from "../../../ast/parser";
 import { Type } from "../../types/type";
 
@@ -57,6 +57,27 @@ const testcases: {
       }
     `,
     result: { type: null, errors: [new IncompatibleTypesError()] },
+  },
+  {
+    input: `
+      int test = 0;
+      if (1 * "Hello") {
+        test = 1;
+      }
+    `,
+    result: { type: null, errors: [new BadOperandTypesError()] },
+  },
+
+  {
+    input: `
+      int test = 0;
+      if (true) {
+        if (1 * "Hello") {
+          test = 1;
+        }
+      }
+    `,
+    result: { type: null, errors: [new BadOperandTypesError()] },
   },
 ];
 

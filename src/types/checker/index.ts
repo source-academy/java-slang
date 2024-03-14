@@ -126,14 +126,15 @@ export const check = (
       const errors: Error[] = [];
       const conditionResult = check(node.condition, environmentFrame);
       if (conditionResult.errors) errors.push(...conditionResult.errors);
+      const booleanType = new Boolean();
       if (
         conditionResult.currentType &&
-        !new Boolean().canBeAssigned(conditionResult.currentType)
+        !booleanType.canBeAssigned(conditionResult.currentType)
       )
         errors.push(new IncompatibleTypesError());
       const newEnvironmentFrame = createFrame({}, environmentFrame);
       const consequentResult = check(node.consequent, newEnvironmentFrame);
-      if (consequentResult.errors) errors.push(...conditionResult.errors);
+      if (consequentResult.errors) errors.push(...consequentResult.errors);
       return newResult(null, errors);
     }
     case "Literal": {
