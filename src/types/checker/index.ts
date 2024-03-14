@@ -1,4 +1,8 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
+import {
+  Expression,
+  ExpressionName,
+} from "../../ast/types/blocks-and-statements";
 import { MethodDeclaration } from "../../ast/types/classes";
 import { Node } from "../../ast/types/ast";
 import { String } from "../types/nonPrimitives";
@@ -41,7 +45,8 @@ export const check = (
 ): Result => {
   switch (node.kind) {
     case "Assignment": {
-      const { left, right } = node;
+      const left = node.left as ExpressionName;
+      const right = node.right;
       const leftType = getEnvironmentVariable(environmentFrame, left.name);
       if (leftType instanceof Error) return newResult(null, [leftType]);
       const { currentType, errors } = check(right, environmentFrame);
@@ -196,7 +201,7 @@ export const check = (
         if (!variableInitializer)
           throw new Error("Variable initializer is undefined.");
         const { currentType, errors } = check(
-          variableInitializer,
+          variableInitializer as Expression,
           environmentFrame
         );
         if (errors.length > 0) return { currentType: null, errors };
