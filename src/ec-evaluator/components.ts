@@ -1,4 +1,4 @@
-import { ConstructorDeclaration, MethodDeclaration, UnannType } from "../ast/types/classes";
+import { UnannType } from "../ast/types/classes";
 import { DECLARED_BUT_NOT_YET_ASSIGNED } from "./constants";
 import * as errors from "./errors";
 import {
@@ -7,7 +7,6 @@ import {
   ControlItem,
   Name,
   StashItem,
-  Type,
   Value,
   VarValue,
   Variable,
@@ -157,110 +156,6 @@ export class EnvNode {
       throw new errors.MtdOrConRedeclarationError(name);
     }
     this._frame.set(name, value);
-  }
-
-  resOverload(name: string, argTypes: Type[]): Closure {
-    const closures: Closure[] = [];
-    for (const [closureName, closure] of this._frame.entries()) {
-      // Methods contains parantheses and must have return type.
-      if (closureName.includes(name + "(") && closureName[closureName.length - 1] !== ")") {
-        closures.push(closure as Closure);
-      }
-    }
-
-    let overloadResolvedClosure: Closure | undefined;
-    for (const closure of closures) {
-      const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
-        
-      if (argTypes.length != params.length) continue;
-      
-      let match = true;
-      for (let i = 0; i < argTypes.length; i++) {
-        match &&= (params[i].unannType === argTypes[i].type);
-        if (!match) break; // short circuit
-      }
-      
-      if (match) {
-        overloadResolvedClosure = closure;
-        break;
-      }
-    }
-
-    if (!overloadResolvedClosure) {
-      throw new errors.ResOverloadError(name, argTypes);
-    }
-
-    return overloadResolvedClosure;
-  }
-
-  resOverride(overloadResolvedClosure: Closure): Closure {
-    const overloadResolvedMtd = overloadResolvedClosure.mtdOrCon as MethodDeclaration;
-    const name = overloadResolvedMtd.methodHeader.identifier;
-    const overloadResolvedClosureParams = overloadResolvedMtd.methodHeader.formalParameterList;
-
-    const closures: Closure[] = [];
-    for (const [closureName, closure] of this._frame.entries()) {
-      // Methods contains parantheses and must have return type.
-      if (closureName.includes(name + "(") && closureName[closureName.length - 1] !== ")") {
-        closures.push(closure as Closure);
-      }
-    }
-
-    let overrideResolvedClosure = overloadResolvedClosure;
-    for (const closure of closures) {
-      const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
-        
-      if (overloadResolvedClosureParams.length != params.length) continue;
-      
-      let match = true;
-      for (let i = 0; i < overloadResolvedClosureParams.length; i++) {
-        match &&= (params[i].unannType === overloadResolvedClosureParams[i].unannType);
-        if (!match) break; // short circuit
-      }
-      
-      if (match) {
-        overrideResolvedClosure = closure;
-        break;
-      }
-    }
-
-    // TODO is there method overriding resolution failure?
-
-    return overrideResolvedClosure;
-  }
-
-  resConOverload(name: string, argTypes: Type[]): Closure {
-    const closures: Closure[] = [];
-    for (const [closureName, closure] of this._frame.entries()) {
-      // Constructors contains parantheses and do not have return type.
-      if (closureName.includes(name + "(") && closureName[closureName.length - 1] === ")") {
-        closures.push(closure as Closure);
-      }
-    }
-
-    let resolved: Closure | undefined;
-    for (const closure of closures) {
-      const params = (closure.mtdOrCon as ConstructorDeclaration).constructorDeclarator.formalParameterList;
-        
-      if (argTypes.length != params.length) continue;
-      
-      let match = true;
-      for (let i = 0; i < argTypes.length; i++) {
-        match &&= (params[i].unannType === argTypes[i].type);
-        if (!match) break; // short circuit
-      }
-      
-      if (match) {
-        resolved = closure;
-        break;
-      }
-    }
-
-    if (!resolved) {
-      throw new errors.ResConOverloadError(name, argTypes);
-    }
-
-    return resolved;
   }
 
   setClass(name: Name, value: Class) {

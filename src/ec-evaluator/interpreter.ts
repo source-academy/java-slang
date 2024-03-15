@@ -27,7 +27,7 @@ import {
   UnannType,
 } from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
-import { Control, Stash } from "./components";
+import { Control, EnvNode, Stash } from "./components";
 import { STEP_LIMIT } from "./constants";
 import * as errors from "./errors";
 import * as instr from './instrCreator';
@@ -77,7 +77,11 @@ import {
   searchMainMtdClass,
   prependExpConInvIfNeeded,
   isStatic,
+  resOverload,
+  resOverride,
+  resConOverload,
 } from "./utils";
+// import { astToString } from "../ast/utils/utils";
 
 type CmdEvaluator = (
   command: ControlItem,
@@ -104,11 +108,15 @@ export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): Sta
     }
 
     control.pop();
+    // console.log(isNode(command) ? astToString(command) : command.instrType)
     if (isNode(command)) {
       cmdEvaluators[command.kind](command, context, control, stash);
     } else {
       cmdEvaluators[command.instrType](command, context, control, stash);
     }
+    // console.log("env", context.environment.current);
+    // console.log("control", control.getStack())
+    // console.log("stash", stash.getStack())
 
     command = control.peek();
     step += 1;
@@ -676,7 +684,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const classToSearchIn: Class = context.environment.getClass(targetType.type);
 
     // Method overloading resolution.
-    const closure: Closure = classToSearchIn.frame.resOverload(command.name, argTypes);
+    const classStore: EnvNode = context.environment.global;
+    const closure: Closure = resOverload(classToSearchIn, command.name, argTypes, classStore);
     stash.push(closure);
 
     // Post-processing required if overload resolved method is instance method.
@@ -709,7 +718,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const classToSearchIn: Class = context.environment.getClass(target.frame.parent.name);
 
     // Method overriding resolution.
-    const overrideResolvedClosure: Closure = classToSearchIn.frame.resOverride(overloadResolvedClosure);
+    const overrideResolvedClosure: Closure = resOverride(classToSearchIn, overloadResolvedClosure);
     stash.push(overrideResolvedClosure);
 
     // Push target as implicit FormalParameter this.
@@ -734,7 +743,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const classToSearchIn: Class = context.environment.getClass(className);
 
     // Constructor overloading resolution.
-    const closure: Closure = classToSearchIn.frame.resConOverload(className, argTypes);
+    const closure: Closure = resConOverload(classToSearchIn, className, argTypes);
     stash.push(closure);
 
     // No post-processing required for constructor.

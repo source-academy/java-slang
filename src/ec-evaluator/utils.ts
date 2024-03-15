@@ -16,6 +16,7 @@ import {
   NormalClassDeclaration,
   UnannType,
 } from "../ast/types/classes";
+import { EnvNode } from "./components";
 import * as errors from "./errors";
 import {
   emptyReturnStmtNode,
@@ -25,7 +26,7 @@ import {
   nullLitNode,
   returnThisStmtNode,
 } from "./nodeCreator";
-import { ControlItem, Context, Instr } from "./types";
+import { ControlItem, Context, Instr, Class, Type, Closure } from "./types";
 
 /**
  * Stack is implemented for agenda and stash registers.
@@ -326,3 +327,158 @@ export const searchMainMtdClass = (classes: NormalClassDeclaration[]) => {
       && d.methodHeader.formalParameterList[0].identifier === "args"
   ))?.typeIdentifier;
 }
+
+/**
+ * Method overloading and overriding resolution.
+ */
+const isSubtype = (
+  subtype: UnannType,
+  supertype: UnannType,
+  classStore: EnvNode,
+): boolean => {
+  // TODO handle primitive subtyping relation
+  if (subtype === "String[]" || subtype === "int") return true;
+
+  let isSubtype = false;
+  
+  let subclassSuperclass: Class | undefined = classStore.getClass(subtype).superclass;
+  const superclass = classStore.getClass(supertype);
+  while (subclassSuperclass) {
+    if (subclassSuperclass === superclass) {
+      isSubtype = true;
+      break;
+    }
+    subclassSuperclass = subclassSuperclass.superclass;
+  }
+  
+  return isSubtype;
+}
+
+export const resOverload = (
+  classToSearchIn: Class,
+  mtdName: string,
+  argTypes: Type[],
+  classStore: EnvNode,
+): Closure => {
+  // Identify potentially applicable methods.
+  const appClosures: Closure[] = [];
+  for (const [closureName, closure] of classToSearchIn.frame.frame.entries()) {
+    // Methods contains parantheses and must have return type.
+    if (closureName.includes(mtdName + "(") && closureName[closureName.length - 1] !== ")") {
+      const params = ((closure as Closure).mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+      
+      if (argTypes.length != params.length) continue;
+      
+      let match = true;
+      for (let i = 0; i < argTypes.length; i++) {
+        match &&= (argTypes[i].type === params[i].unannType
+          || isSubtype(argTypes[i].type, params[i].unannType, classStore));
+        if (!match) break; // short circuit
+      }
+      
+      match && appClosures.push(closure as Closure);
+    }
+  }
+  
+  if (appClosures.length === 0) {
+    throw new errors.ResOverloadError(mtdName, argTypes);
+  }
+  
+  if (appClosures.length === 1) {
+    return appClosures[0];
+  }
+  
+  // Choose most specific method.
+  let mostSpecClosure: Closure = appClosures[0];
+  for (const appClosure of appClosures) {
+    const mostSpecParams = (mostSpecClosure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+    const params = (appClosure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+    for (let i = 0; i < params.length; i++) {
+      if (isSubtype(params[i].unannType, mostSpecParams[i].unannType, classStore)) {
+        mostSpecClosure = appClosure;
+        break;
+      }
+    }
+  }
+
+  // TODO throw method invocation ambiguous erro
+
+  return mostSpecClosure;
+};
+
+export const resOverride = (
+  classToSearchIn: Class,
+  overloadResolvedClosure: Closure,
+): Closure => {
+  const overloadResolvedMtd = overloadResolvedClosure.mtdOrCon as MethodDeclaration;
+  const name = overloadResolvedMtd.methodHeader.identifier;
+  const overloadResolvedClosureParams = overloadResolvedMtd.methodHeader.formalParameterList;
+
+  const closures: Closure[] = [];
+  for (const [closureName, closure] of classToSearchIn.frame.frame.entries()) {
+    // Methods contains parantheses and must have return type.
+    if (closureName.includes(name + "(") && closureName[closureName.length - 1] !== ")") {
+      closures.push(closure as Closure);
+    }
+  }
+
+  let overrideResolvedClosure = overloadResolvedClosure;
+  for (const closure of closures) {
+    const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+      
+    if (overloadResolvedClosureParams.length != params.length) continue;
+    
+    let match = true;
+    for (let i = 0; i < overloadResolvedClosureParams.length; i++) {
+      match &&= (params[i].unannType === overloadResolvedClosureParams[i].unannType);
+      if (!match) break; // short circuit
+    }
+    
+    if (match) {
+      overrideResolvedClosure = closure;
+      break;
+    }
+  }
+
+  // TODO is there method overriding resolution failure?
+
+  return overrideResolvedClosure;
+};
+
+export const resConOverload = (
+  classToSearchIn: Class,
+  conName: string,
+  argTypes: Type[]
+): Closure => {
+  const closures: Closure[] = [];
+  for (const [closureName, closure] of classToSearchIn.frame.frame.entries()) {
+    // Constructors contains parantheses and do not have return type.
+    if (closureName.includes(conName + "(") && closureName[closureName.length - 1] === ")") {
+      closures.push(closure as Closure);
+    }
+  }
+
+  let resolved: Closure | undefined;
+  for (const closure of closures) {
+    const params = (closure.mtdOrCon as ConstructorDeclaration).constructorDeclarator.formalParameterList;
+      
+    if (argTypes.length != params.length) continue;
+    
+    let match = true;
+    for (let i = 0; i < argTypes.length; i++) {
+      match &&= (params[i].unannType === argTypes[i].type);
+      if (!match) break; // short circuit
+    }
+    
+    if (match) {
+      resolved = closure;
+      break;
+    }
+  }
+
+  if (!resolved) {
+    throw new errors.ResConOverloadError(conName, argTypes);
+  }
+
+  return resolved;
+};
