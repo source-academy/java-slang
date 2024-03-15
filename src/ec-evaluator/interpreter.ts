@@ -158,7 +158,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const constructors = getConstructors(command);
     // Insert default constructor if not overriden.
     if (!constructors.find(c => c.constructorDeclarator.formalParameterList.length === 0)) {
-      const defaultConstructor = node.defaultConstructorDeclNode(className);
+      const defaultConstructor = node.defaultConstructorDeclNode(className, command);
       constructors.push(defaultConstructor);
     }
     // Prepend instance fields initialization at start of constructor body.
@@ -255,9 +255,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const declaration: VariableDeclarator = command.variableDeclaratorList[0];
     const id: Identifier = declaration.variableDeclaratorId;
     // Fields are always initialized to default value if initializer is absent.
-    const init: Expression = declaration?.variableInitializer ||
+    const init = (declaration?.variableInitializer ||
       defaultValues.get(type) ||
-      node.nullLitNode();
+      node.nullLitNode(command)) as Expression;
     
     context.environment.declareVariable(id, type);
 
@@ -279,10 +279,10 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // Break down LocalVariableDeclarationStatement with VariableInitializer into
     // LocalVariableDeclarationStatement without VariableInitializer and Assignment.
-    const init: Expression | undefined = declaration?.variableInitializer;
+    const init: Expression | undefined = declaration?.variableInitializer as Expression;
     if (init) {
-      control.push(node.expStmtAssmtNode(id, init));
-      control.push(node.localVarDeclNoInitNode(type, id));
+      control.push(node.expStmtAssmtNode(id, init, command));
+      control.push(node.localVarDeclNoInitNode(type, id, command));
       return;
     }
 
@@ -318,7 +318,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ) => {
     control.push(instr.assmtInstr(command));
     control.push(command.right);
-    control.push(instr.evalVarInstr(command.left.name, command));
+    control.push(instr.evalVarInstr((command.left as ExpressionName).name, command));
   },
   
   MethodInvocation: (
@@ -341,7 +341,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(instr.resOverloadInstr(identifier, command.argumentList.length, command));
     // TODO: only Integer and ExpressionName are allowed as args
     control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
-    control.push(instr.resTypeInstr(node.exprNameNode(qualifier), command));
+    control.push(instr.resTypeInstr(node.exprNameNode(qualifier, command), command));
   },
 
   ClassInstanceCreationExpression: (
@@ -369,10 +369,10 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(instr.popInstr(command));
     control.push(instr.invInstr(command.argumentList.length + 1, command));
     control.push(...handleSequence(command.argumentList));
-    control.push(node.exprNameNode(command.thisOrSuper));
+    control.push(node.exprNameNode(command.thisOrSuper, command));
     control.push(instr.resConOverloadInstr(command.argumentList.length, command));
     control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
-    control.push(instr.resTypeInstr(node.exprNameNode(command.thisOrSuper), command));
+    control.push(instr.resTypeInstr(node.exprNameNode(command.thisOrSuper, command), command));
   },
 
   Literal: (
@@ -689,7 +689,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       
       // Push qualifier to be used in method overriding resolution.
       const qualifier = (command.srcNode as MethodInvocation).identifier.split(".")[0];
-      control.push(node.exprNameNode(qualifier));
+      control.push(node.exprNameNode(qualifier, command.srcNode));
     };
   },
 
@@ -719,7 +719,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
    
     // Push qualifier as implicit FormalParameter this.
     const qualifier = (command.srcNode as MethodInvocation).identifier.split(".")[0];
-    control.push(node.exprNameNode(qualifier));
+    control.push(node.exprNameNode(qualifier, command.srcNode));
   },
 
   [InstrType.RES_CON_OVERLOAD]: (

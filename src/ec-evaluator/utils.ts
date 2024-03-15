@@ -2,8 +2,10 @@ import { Node } from "../ast/types/ast";
 import {
   BlockStatement,
   DecimalIntegerLiteral,
+  Expression,
   ExpressionStatement,
   Literal,
+  MethodInvocation,
   ReturnStatement,
 } from "../ast/types/blocks-and-statements";
 import {
@@ -235,10 +237,10 @@ export const isInstance = (fieldOrMtd: FieldDeclaration | MethodDeclaration): bo
 const convertFieldDeclToExpStmtAssmt = (fd: FieldDeclaration): ExpressionStatement => {
   const left = `this.${fd.variableDeclaratorList[0].variableDeclaratorId}`;
   // Fields are always initialized to default value if initializer is absent.
-  const right = fd.variableDeclaratorList[0].variableInitializer ||
+  const right = (fd.variableDeclaratorList[0].variableInitializer ||
     defaultValues.get(fd.fieldType) ||
-    nullLitNode();
-  return expStmtAssmtNode(left, right);
+    nullLitNode(fd)) as Expression;
+  return expStmtAssmtNode(left, right, fd);
 };
 
 export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, className: Identifier) => {
@@ -261,9 +263,9 @@ export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, clas
     // MethodInvocation as VariableInitializer of LocalVariableDeclarationStatement
     blockStatement.kind === "LocalVariableDeclarationStatement" &&
     blockStatement.variableDeclaratorList[0].variableInitializer &&
-    blockStatement.variableDeclaratorList[0].variableInitializer.kind === "MethodInvocation" &&
-    !isQualified(blockStatement.variableDeclaratorList[0].variableInitializer.identifier) &&
-    (blockStatement.variableDeclaratorList[0].variableInitializer.identifier = `${qualifier}.${blockStatement.variableDeclaratorList[0].variableInitializer.identifier}`);
+    (blockStatement.variableDeclaratorList[0].variableInitializer as Expression).kind === "MethodInvocation" &&
+    !isQualified((blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier) &&
+    ((blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier = `${qualifier}.${(blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier}`);
   });
 }
 
@@ -273,7 +275,7 @@ export const prependExpConInvIfNeeded = (
 ): void => {
   const conBodyBlockStmts = constructor.constructorBody.blockStatements;
   if (c.sclass && !conBodyBlockStmts.some(s => s.kind === "ExplicitConstructorInvocation")) {
-    conBodyBlockStmts.unshift(expConInvNode());
+    conBodyBlockStmts.unshift(expConInvNode(constructor));
   }
 }
 
@@ -293,10 +295,10 @@ export const appendOrReplaceReturn = (
   let returnStmt = conBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement" && stmt.exp.kind === "Void");
   if (returnStmt) {
     // Replace empty ReturnStatement with ReturnStatement with this keyword.
-    (returnStmt as ReturnStatement).exp = exprNameNode("this");
+    (returnStmt as ReturnStatement).exp = exprNameNode("this", constructor);
   } else {
     // Add ReturnStatement with this keyword.
-    conBodyBlockStmts.push(returnThisStmtNode());
+    conBodyBlockStmts.push(returnThisStmtNode(constructor));
   }
 }
 
@@ -307,7 +309,7 @@ export const appendEmtpyReturn = (
   // TODO deep search
   if (!mtdBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement")) {
     // Add empty ReturnStatement if absent.
-    mtdBodyBlockStmts.push(emptyReturnStmtNode());
+    mtdBodyBlockStmts.push(emptyReturnStmtNode(method));
   }
 }
 
