@@ -45,9 +45,13 @@ describe("evaluate NormalClassDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -65,6 +69,8 @@ describe("evaluate NormalClassDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Void",
@@ -124,9 +130,13 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -155,6 +165,8 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "x", // EvalVariable
@@ -222,9 +234,13 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -256,6 +272,8 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "x", // EvalVariable
@@ -311,9 +329,13 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -409,6 +431,8 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "t", // EvalVariable
@@ -483,9 +507,13 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -598,6 +626,8 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "t", // EvalVariable
@@ -719,9 +749,13 @@ describe("evaluate method overriding correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -803,15 +837,9 @@ describe("evaluate method overriding correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // p
       "ResOverload", // test
       "ResType", // p
-
-      "ExpressionName", // p
-
-      "Deref",
-      "EvalVariable", // p
-
-      "ExpressionName", // p
 
       "Deref",
       "EvalVariable", // p
@@ -845,6 +873,8 @@ describe("evaluate method overriding correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "p", // EvalVariable
@@ -869,8 +899,7 @@ describe("evaluate method overriding correctly", () => {
       "p", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "p", // EvalVariable
-      "Object", // Deref
+      "Object",
       "x", // EvalVariable
       "2", // Literal
       "2", // Assign
@@ -939,9 +968,13 @@ describe("evaluate method overriding correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -1012,8 +1045,12 @@ describe("evaluate method overriding correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // p
       "ResOverload", // test
       "ResType", // p
+
+      "Deref",
+      "EvalVariable", // p
 
       "Env", // from Invocation
       "Marker",
@@ -1047,6 +1084,8 @@ describe("evaluate method overriding correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "p", // EvalVariable
@@ -1064,6 +1103,8 @@ describe("evaluate method overriding correctly", () => {
       "Object", // Assign
       "Parent", // ResType
       "test", // ResOverload
+      "p", // EvalVariable
+      "Object", // Deref
       "test", // ResOverride
       "x", // EvalVariable
       "1", // Literal

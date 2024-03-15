@@ -44,9 +44,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -61,8 +65,12 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // test
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -85,10 +93,14 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Test", // ResType
       "test", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "test", // ResOverride
       "Void",
       "Void",
@@ -135,9 +147,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -152,8 +168,12 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // test
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -176,10 +196,14 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Test", // ResType
       "test", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "test", // ResOverride
       "Void",
       "Void",
@@ -227,9 +251,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -275,8 +303,12 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // test
 
       "Env", // from Invocation
       "Marker",
@@ -299,6 +331,8 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -310,6 +344,8 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Object", // Assign
       "Test", // ResType
       "test", // ResOverload
+      "test", // EvalVariable
+      "Object", // Deref
       "test", // ResOverride
       "Void",
       "Void",
@@ -361,9 +397,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -409,16 +449,10 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // Test
 
-      "ExpressionName", // test
-      
-      "Deref",
-      "EvalVariable", // test
-
-      "ExpressionName", // test
-      
       "Deref",
       "EvalVariable", // test
 
@@ -436,9 +470,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Invocation",
       "Literal", // 1
       "ResOverride",
+      "ExpressionName", // this
       "ResOverload", // test
       "ResType", // 1
       "ResType", // this
+
+      "Deref",
+      "EvalVariable", // this
 
       "Env", // from Invocation
       "Marker",
@@ -466,6 +504,8 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -480,11 +520,12 @@ describe("evaluate static MethodInvocation correctly", () => {
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
+      "this", // EvalVariable
+      "Object", // Deref
       "test", // ResOverride
       "1", // Literal
       "Void",
@@ -538,9 +579,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -586,15 +631,9 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // Test
-
-      "ExpressionName", // test
-
-      "Deref",
-      "EvalVariable", // test
-
-      "ExpressionName", // test
 
       "Deref",
       "EvalVariable", // test
@@ -613,9 +652,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Invocation",
       "Literal", // 1
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // test
       "ResType", // 1
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -643,6 +686,8 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -657,11 +702,12 @@ describe("evaluate static MethodInvocation correctly", () => {
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "test", // ResOverride
       "1", // Literal
       "Void",
@@ -715,9 +761,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -763,15 +813,9 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // Test
-
-      "ExpressionName", // test
-
-      "Deref",
-      "EvalVariable", // test
-
-      "ExpressionName", // test
 
       "Deref",
       "EvalVariable", // test
@@ -790,9 +834,13 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Invocation",
       "Literal", // 1
       "ResOverride",
+      "ExpressionName", // this
       "ResOverload", // test
       "ResType", // 1
       "ResType", // this
+
+      "Deref",
+      "EvalVariable", // this
 
       "Env", // from Invocation
       "Marker",
@@ -820,6 +868,8 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -834,11 +884,12 @@ describe("evaluate static MethodInvocation correctly", () => {
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
+      "this", // EvalVariable
+      "Object", // Deref
       "test", // ResOverride
       "1", // Literal
       "Void",
@@ -892,9 +943,13 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -947,15 +1002,9 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // Test
-
-      "ExpressionName", // test
-
-      "Deref",
-      "EvalVariable", // test
-
-      "ExpressionName", // test
 
       "Deref",
       "EvalVariable", // test
@@ -981,6 +1030,8 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -996,8 +1047,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "1", // Literal
       "1", // Assign
       "Void",
@@ -1049,9 +1099,13 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -1097,15 +1151,9 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // Test
-
-      "ExpressionName", // test
-
-      "Deref",
-      "EvalVariable", // test
-
-      "ExpressionName", // test
 
       "Deref",
       "EvalVariable", // test
@@ -1124,16 +1172,10 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // 1
       "ResOverride",
+      "ExpressionName", // this
       "ResOverload", // test
       "ResType", // 1
       "ResType", // this
-
-      "ExpressionName", // this
-
-      "Deref",
-      "EvalVariable", // this
-
-      "ExpressionName", // this
 
       "Deref",
       "EvalVariable", // this
@@ -1164,6 +1206,8 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -1178,16 +1222,14 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
       "this", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "this", // EvalVariable
-      "Object", // Deref
+      "Object",
       "1", // Literal
       "Void",
       "Void",
@@ -1243,9 +1285,13 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -1291,15 +1337,9 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // Test
-
-      "ExpressionName", // test
-
-      "Deref",
-      "EvalVariable", // test
-
-      "ExpressionName", // test
 
       "Deref",
       "EvalVariable", // test
@@ -1349,16 +1389,10 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // 1
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // 1
       "ResType", // test
-
-      "ExpressionName", // test
-
-      "Deref",
-      "EvalVariable", // test
-
-      "ExpressionName", // test
 
       "Deref",
       "EvalVariable", // test
@@ -1392,6 +1426,8 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -1406,8 +1442,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "test", // EvalVariable
       "Test", // ResType
       "Test", // ResConOverload
@@ -1421,8 +1456,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "1", // Literal
       "x", // EvalVariable
       "1", // Deref
@@ -1478,9 +1512,13 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -1526,15 +1564,9 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // Test
-
-      "ExpressionName", // test
-
-      "Deref",
-      "EvalVariable", // test
-
-      "ExpressionName", // test
 
       "Deref",
       "EvalVariable", // test
@@ -1553,16 +1585,10 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Invocation", // ()
       "Literal", // 1
       "ResOverride",
+      "ExpressionName", // this
       "ResOverload", // test
       "ResType", // 1
       "ResType", // this
-
-      "ExpressionName", // this
-
-      "Deref",
-      "EvalVariable", // this
-
-      "ExpressionName", // this
 
       "Deref",
       "EvalVariable", // this
@@ -1596,6 +1622,8 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -1610,16 +1638,14 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "Test", // ResType
       "int", // ResType
       "test", // ResOverload
       "this", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "this", // EvalVariable
-      "Object", // Deref
+      "Object",
       "1", // Literal
       "x", // EvalVariable
       "1", // Deref
@@ -1674,9 +1700,13 @@ describe("evaluate method overloading resolution correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -1699,9 +1729,13 @@ describe("evaluate method overloading resolution correctly", () => {
       "Invocation", // ()
       "Literal", // 1
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // test
       "ResType", // 1
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -1727,12 +1761,16 @@ describe("evaluate method overloading resolution correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "x", // EvalVariable
       "Test", // ResType
       "int", // ResType
       "test", // ResOverlaod
+      "Test", // EvalVariable
+      "Test", // Deref
       "test", // ResOverride
       "1", // Literal
       "x", // EvalVariable
@@ -1793,9 +1831,13 @@ describe("evaluate method overloading resolution correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -1868,15 +1910,9 @@ describe("evaluate method overloading resolution correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // Test
       "ResType", // Test
-
-      "ExpressionName", // Test
-
-      "Deref",
-      "EvalVariable", // Test
-
-      "ExpressionName", // Test
 
       "Deref",
       "EvalVariable", // Test
@@ -1913,6 +1949,8 @@ describe("evaluate method overloading resolution correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Test", // EvalVariable
@@ -1938,8 +1976,7 @@ describe("evaluate method overloading resolution correctly", () => {
       "Test", // EvalVariable
       "Object", // Deref
       "Test", // ResOverride
-      "Test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "this", // EvalVariable
       "x", // Res
       "3", // Literal
@@ -2000,9 +2037,13 @@ describe("evaluate method overloading resolution correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // test
+
+      "Deref",
+      "EvalVariable", // test
   
       "Env", // from Invocation
       "Marker",
@@ -2075,15 +2116,9 @@ describe("evaluate method overloading resolution correctly", () => {
 
       "Invocation", // ()
       "ResOverride",
+      "ExpressionName", // test
       "ResOverload", // test
       "ResType", // test
-
-      "ExpressionName", // test
-
-      "Deref",
-      "EvalVariable", // test
-
-      "ExpressionName", // test
 
       "Deref",
       "EvalVariable", // test
@@ -2120,6 +2155,8 @@ describe("evaluate method overloading resolution correctly", () => {
       "test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "test", // EvalVariable
+      "test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -2145,8 +2182,7 @@ describe("evaluate method overloading resolution correctly", () => {
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "test", // EvalVariable
-      "Object", // Deref
+      "Object",
       "this", // EvalVariable
       "x", // Res
       "3", // Literal

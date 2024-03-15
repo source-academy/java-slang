@@ -43,9 +43,13 @@ describe("evaluate default constructor", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -105,6 +109,8 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable,
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -161,9 +167,13 @@ describe("evaluate default constructor", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -223,6 +233,8 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable,
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -282,9 +294,13 @@ describe("evaluate default constructor", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -352,6 +368,8 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable,
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -414,9 +432,13 @@ describe("evaluate default constructor", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -484,6 +506,8 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable,
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -546,9 +570,13 @@ describe("evaluate default constructor", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -608,6 +636,8 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable,
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -670,9 +700,13 @@ describe("evaluate constructor overloading resolution", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -748,6 +782,8 @@ describe("evaluate constructor overloading resolution", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable,
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
@@ -819,9 +855,13 @@ describe("evaluate constructor overloading resolution", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
   
       "Env", // from Invocation
       "Marker",
@@ -897,6 +937,8 @@ describe("evaluate constructor overloading resolution", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable,
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable

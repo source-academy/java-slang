@@ -41,9 +41,13 @@ it("evaluate LocalVariableDeclarationStatement to a basic arithmetic operation c
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -76,6 +80,8 @@ it("evaluate LocalVariableDeclarationStatement to a basic arithmetic operation c
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "y", // EvalVariable
@@ -125,9 +131,13 @@ it("evaluate LocalVariableDeclarationStatement to a complex arithmetic operation
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -168,6 +178,8 @@ it("evaluate LocalVariableDeclarationStatement to a complex arithmetic operation
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "z", // EvalVariable
@@ -234,9 +246,13 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -261,6 +277,8 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "Void", // Void
@@ -330,9 +348,13 @@ it("evaluate FieldDeclaration to a complex arithmetic expression without bracket
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -363,6 +385,8 @@ it("evaluate FieldDeclaration to a complex arithmetic expression without bracket
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "Void", // Void

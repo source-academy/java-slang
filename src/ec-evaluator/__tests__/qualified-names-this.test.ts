@@ -48,9 +48,13 @@ it("evaluate LHS Class correctly", () => {
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -82,6 +86,8 @@ it("evaluate LHS Class correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "Test", // EvalVariable
@@ -132,9 +138,13 @@ it("evaluate LHS Object correctly", () => {
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -205,6 +215,8 @@ it("evaluate LHS Object correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "test", // EvalVariable
@@ -270,9 +282,13 @@ it("evaluate LHS this correctly", () => {
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -329,15 +345,9 @@ it("evaluate LHS this correctly", () => {
 
     "Invocation", // ()
     "ResOverride",
+    "ExpressionName", // test
     "ResOverload", // test
     "ResType", // test
-
-    "ExpressionName", // test
-
-    "Deref",
-    "EvalVariable", // test
-
-    "ExpressionName", // test
 
     "Deref",
     "EvalVariable", // test
@@ -374,6 +384,8 @@ it("evaluate LHS this correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "test", // EvalVariable
@@ -392,8 +404,7 @@ it("evaluate LHS this correctly", () => {
     "test", // EvalVariable
     "Object", // Deref
     "test", // ResOverride
-    "test", // EvalVariable
-    "Object", // Deref
+    "Object",
     "this", // EvalVariable
     "x", // Res
     "2", // Literal
@@ -448,9 +459,13 @@ it("evaluate RHS Class correctly", () => {
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -488,6 +503,8 @@ it("evaluate RHS Class correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "x", // EvalVariable
@@ -539,9 +556,13 @@ it("evaluate RHS Object correctly", () => {
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -618,6 +639,8 @@ it("evaluate RHS Object correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "test", // EvalVariable
@@ -684,9 +707,13 @@ it("evaluate RHS this correctly", () => {
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -743,15 +770,9 @@ it("evaluate RHS this correctly", () => {
 
     "Invocation", // ()
     "ResOverride",
+    "ExpressionName", // test
     "ResOverload", // test
     "ResType", // test
-
-    "ExpressionName", // test
-
-    "Deref",
-    "EvalVariable", // test
-
-    "ExpressionName", // test
 
     "Deref",
     "EvalVariable", // test
@@ -794,6 +815,8 @@ it("evaluate RHS this correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "test", // EvalVariable
@@ -812,8 +835,7 @@ it("evaluate RHS this correctly", () => {
     "test", // EvalVariable
     "Object", // Deref
     "test", // ResOverride
-    "test", // EvalVariable
-    "Object", // Deref
+    "Object",
     "x", // EvalVariable
     "this", // EvalVariable
     "x", // Res

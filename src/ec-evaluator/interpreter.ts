@@ -76,6 +76,7 @@ import {
   appendEmtpyReturn,
   searchMainMtdClass,
   prependExpConInvIfNeeded,
+  isStatic,
 } from "./utils";
 
 type CmdEvaluator = (
@@ -327,21 +328,20 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // MethodInvocation Identifier always have two parts.
+    // TODO can only handle MethodInvocation Identifier with two parts
     const nameParts = command.identifier.split(".");
-    const qualifier = nameParts[0];
+    const target = nameParts[0];
     const identifier = nameParts[1];
     
     // Arity may be incremented by 1 if the resolved method to be invoked is an instance method.
     control.push(instr.invInstr(command.argumentList.length, command));
     control.push(...handleSequence(command.argumentList));
-    // Method overriding resolution may push qualifier if resolved method is an instance method.
     control.push(instr.resOverrideInstr(command));
-    // Method overloading resolution may push qualifier if resolved method is an instance method.
+    control.push(node.exprNameNode(target, command));
     control.push(instr.resOverloadInstr(identifier, command.argumentList.length, command));
     // TODO: only Integer and ExpressionName are allowed as args
     control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
-    control.push(instr.resTypeInstr(node.exprNameNode(qualifier, command), command));
+    control.push(instr.resTypeInstr(node.exprNameNode(target, command), command));
   },
 
   ClassInstanceCreationExpression: (
@@ -581,8 +581,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    const variable = stash.pop()! as Variable;
-    stash.push(variable.value as Literal | Object);
+    const varOrClass = stash.pop()! as Variable | Class;
+    const value = varOrClass.kind === "Class" ? varOrClass : varOrClass.value as Literal | Object;
+    stash.push(value);
   },
 
   [InstrType.NEW]: (
@@ -670,9 +671,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     }
     argTypes.reverse();
 
-    // Retrieve class to search in for method overloading resolution.
-    const classType: Type = stash.pop()! as Type;
-    const classToSearchIn: Class = context.environment.getClass(classType.type);
+    // Retrieve target type for method overloading resolution.
+    const targetType: Type = stash.pop()! as Type;
+    const classToSearchIn: Class = context.environment.getClass(targetType.type);
 
     // Method overloading resolution.
     const closure: Closure = classToSearchIn.frame.resOverload(command.name, argTypes);
@@ -686,10 +687,6 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         n++;
       }
       (control.peekN(n)! as ResOverloadInstr).arity++;
-      
-      // Push qualifier to be used in method overriding resolution.
-      const qualifier = (command.srcNode as MethodInvocation).identifier.split(".")[0];
-      control.push(node.exprNameNode(qualifier, command.srcNode));
     };
   },
 
@@ -699,27 +696,24 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    const objOrClosure = stash.pop()! as Object | Closure;
-    const isStaticMtd = objOrClosure.kind === "Closure";
-    if (isStaticMtd) {
+    const target = stash.pop()! as Object | Class;
+    const overloadResolvedClosure = stash.pop()! as Closure;
+
+    if (isStatic(overloadResolvedClosure.mtdOrCon as MethodDeclaration)) {
       // No method overriding resolution is required if resolved method is a static method.
-      stash.push(objOrClosure);
+      stash.push(overloadResolvedClosure);
       return;
     }
 
-    const obj = objOrClosure;
-    const overloadResolvedClosure = stash.pop()! as Closure;
-    
     // Retrieve class to search in for method overriding resolution.
-    const classToSearchIn: Class = context.environment.getClass(obj.frame.parent.name);
+    const classToSearchIn: Class = context.environment.getClass(target.frame.parent.name);
 
     // Method overriding resolution.
     const overrideResolvedClosure: Closure = classToSearchIn.frame.resOverride(overloadResolvedClosure);
     stash.push(overrideResolvedClosure);
-   
-    // Push qualifier as implicit FormalParameter this.
-    const qualifier = (command.srcNode as MethodInvocation).identifier.split(".")[0];
-    control.push(node.exprNameNode(qualifier, command.srcNode));
+
+    // Push target as implicit FormalParameter this.
+    stash.push(target);
   },
 
   [InstrType.RES_CON_OVERLOAD]: (

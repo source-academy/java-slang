@@ -41,9 +41,13 @@ it("evaluate LocalVariableDeclarationStatement without variableInitializer corre
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -62,6 +66,8 @@ it("evaluate LocalVariableDeclarationStatement without variableInitializer corre
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "Void", // Void
@@ -106,9 +112,13 @@ it("evaluate LocalVariableDeclarationStatement with variableInitializer correctl
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -137,6 +147,8 @@ it("evaluate LocalVariableDeclarationStatement with variableInitializer correctl
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "x", // EvalVariable
@@ -185,9 +197,13 @@ it("evaluate Assignment correctly", () => {
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -214,6 +230,8 @@ it("evaluate Assignment correctly", () => {
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "x", // EvalVariable
@@ -262,9 +280,13 @@ it("evaluate LocalVariableDeclarationStatement with local variable as variableIn
     "Invocation", // ()
     "Literal", // [""]
     "ResOverride",
+    "ExpressionName", // Test
     "ResOverload", // main
     "ResType", // [""]
     "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -307,6 +329,8 @@ it("evaluate LocalVariableDeclarationStatement with local variable as variableIn
     "Test", // ResType
     "String[]", // ResType
     "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
     "main", // ResOverride
     `[""]`, // Literal
     "x", // EvalVariable
