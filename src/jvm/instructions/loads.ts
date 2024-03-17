@@ -1,5 +1,5 @@
 import Thread from "../thread";
-import { checkError } from "../types/Result";
+import { ResultType } from "../types/Result";
 import { JvmArray } from "../types/reference/Array";
 
 export function runIload(thread: Thread): void {
@@ -135,7 +135,10 @@ export function runAload3(thread: Thread): void {
 export function runIaload(thread: Thread): void {
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -159,7 +162,10 @@ export function runIaload(thread: Thread): void {
 export function runLaload(thread: Thread): void {
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const index: number = popResult.result;
@@ -181,7 +187,10 @@ export function runLaload(thread: Thread): void {
 export function runFaload(thread: Thread): void {
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const index: number = popResult.result;
@@ -203,7 +212,10 @@ export function runFaload(thread: Thread): void {
 export function runDaload(thread: Thread): void {
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const index: number = popResult.result;
@@ -225,7 +237,10 @@ export function runDaload(thread: Thread): void {
 export function runAaload(thread: Thread): void {
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const index: number = popResult.result;
@@ -247,7 +262,10 @@ export function runAaload(thread: Thread): void {
 export function runBaload(thread: Thread): void {
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const index: number = popResult.result;
@@ -269,7 +287,10 @@ export function runBaload(thread: Thread): void {
 export function runCaload(thread: Thread): void {
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const index: number = popResult.result;
@@ -291,7 +312,10 @@ export function runCaload(thread: Thread): void {
 export function runSaload(thread: Thread): void {
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const index: number = popResult.result;

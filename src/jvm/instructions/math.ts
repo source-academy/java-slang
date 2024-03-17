@@ -1,5 +1,5 @@
 import Thread from "../thread";
-import { checkError } from "../types/Result";
+import { ResultType } from "../types/Result";
 import { asFloat, asDouble } from "../utils";
 
 const MIN_INT = -2147483648;
@@ -9,7 +9,10 @@ export function runIadd(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -22,7 +25,10 @@ export function runLadd(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -34,7 +40,10 @@ export function runFadd(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asFloat(popResult2.result);
@@ -55,7 +64,10 @@ export function runDadd(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asDouble(popResult2.result);
@@ -67,7 +79,10 @@ export function runIsub(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -80,7 +95,10 @@ export function runLsub(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2: bigint = popResult2.result;
@@ -92,7 +110,10 @@ export function runFsub(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asFloat(popResult2.result);
@@ -113,7 +134,10 @@ export function runDsub(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asDouble(popResult2.result);
@@ -125,7 +149,10 @@ export function runImul(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -137,7 +164,10 @@ export function runLmul(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2: bigint = popResult2.result;
@@ -149,7 +179,10 @@ export function runFmul(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asFloat(popResult2.result);
@@ -161,7 +194,10 @@ export function runDmul(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asDouble(popResult2.result);
@@ -173,7 +209,10 @@ export function runIdiv(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -196,7 +235,10 @@ export function runLdiv(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2: bigint = popResult2.result;
@@ -219,7 +261,10 @@ export function runFdiv(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asFloat(popResult2.result);
@@ -231,7 +276,10 @@ export function runDdiv(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asDouble(popResult2.result);
@@ -243,7 +291,10 @@ export function runIrem(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -261,7 +312,10 @@ export function runLrem(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2: bigint = popResult2.result;
@@ -279,7 +333,10 @@ export function runFrem(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asFloat(popResult2.result);
@@ -291,7 +348,10 @@ export function runDrem(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = asDouble(popResult2.result);
@@ -302,7 +362,7 @@ export function runDrem(thread: Thread): void {
 export function runIneg(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const value = popResult.result;
@@ -312,7 +372,7 @@ export function runIneg(thread: Thread): void {
 export function runLneg(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const value: bigint = popResult.result;
@@ -322,7 +382,7 @@ export function runLneg(thread: Thread): void {
 export function runFneg(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const value = asFloat(popResult.result);
@@ -332,7 +392,7 @@ export function runFneg(thread: Thread): void {
 export function runDneg(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const value = asDouble(popResult.result);
@@ -343,7 +403,10 @@ export function runIshl(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -355,7 +418,10 @@ export function runLshl(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2: number = popResult2.result;
@@ -367,7 +433,10 @@ export function runIshr(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -379,7 +448,10 @@ export function runLshr(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2: number = popResult2.result;
@@ -391,7 +463,10 @@ export function runIushr(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -405,7 +480,10 @@ export function runLushr(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -425,7 +503,10 @@ export function runIand(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -437,7 +518,10 @@ export function runLand(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2: bigint = popResult2.result;
@@ -449,7 +533,10 @@ export function runIor(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -461,7 +548,10 @@ export function runLor(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2: bigint = popResult2.result;
@@ -473,7 +563,10 @@ export function runIxor(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack();
   const popResult = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2 = popResult2.result;
@@ -485,7 +578,10 @@ export function runLxor(thread: Thread): void {
   thread.offsetPc(1);
   const popResult2 = thread.popStack64();
   const popResult = thread.popStack64();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value2: bigint = popResult2.result;

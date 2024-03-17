@@ -1,6 +1,6 @@
 import { OPCODE } from "../../ClassFile/constants/instructions";
 import Thread from "../thread";
-import { checkSuccess, checkError } from "../types/Result";
+import { ResultType } from "../types/Result";
 import { ArrayClassData } from "../types/class/ClassData";
 import { ConstantClass } from "../types/class/Constants";
 import { JvmArray } from "../types/reference/Array";
@@ -29,7 +29,7 @@ export function runWide(thread: Thread): void {
     case OPCODE.ISTORE:
     case OPCODE.ASTORE:
       store = thread.popStack();
-      if (checkError(store)) {
+      if (store.status === ResultType.ERROR) {
         return;
       } else {
         thread.storeLocal(indexbyte, store.result);
@@ -37,7 +37,7 @@ export function runWide(thread: Thread): void {
       }
     case OPCODE.FSTORE:
       store = thread.popStack();
-      if (checkError(store)) {
+      if (store.status === ResultType.ERROR) {
         return;
       } else {
         thread.storeLocal(indexbyte, asFloat(store.result));
@@ -45,7 +45,7 @@ export function runWide(thread: Thread): void {
       }
     case OPCODE.LSTORE:
       store = thread.popStack64();
-      if (checkError(store)) {
+      if (store.status === ResultType.ERROR) {
         return;
       } else {
         thread.storeLocal(indexbyte, store.result);
@@ -53,7 +53,7 @@ export function runWide(thread: Thread): void {
       }
     case OPCODE.DSTORE:
       store = thread.popStack64();
-      if (checkError(store)) {
+      if (store.status === ResultType.ERROR) {
         return;
       } else {
         thread.storeLocal(indexbyte, asDouble(store.result));
@@ -85,7 +85,7 @@ export function runMultianewarray(thread: Thread): void {
   const dimArray = [];
   for (let i = 0; i < dimensions; i++) {
     const popResult = thread.popStack();
-    if (checkError(popResult)) {
+    if (popResult.status === ResultType.ERROR) {
       return;
     }
     const dim = popResult.result;
@@ -101,8 +101,8 @@ export function runMultianewarray(thread: Thread): void {
   }
 
   const clsRes = arrayClsConstant.resolve();
-  if (!checkSuccess(clsRes)) {
-    if (checkError(clsRes)) {
+  if (clsRes.status !== ResultType.SUCCESS) {
+    if (clsRes.status === ResultType.ERROR) {
       thread.throwNewException(clsRes.exceptionCls, clsRes.msg);
     }
     return;
@@ -114,7 +114,7 @@ export function runMultianewarray(thread: Thread): void {
 
   let pendingInit = [res];
   let nextInit = [];
-  let currentType = arrayCls.getClassname();
+  let currentType = arrayCls.getName();
 
   for (let i = 1; i < dimensions; i++) {
     currentType = currentType.slice(1); // remove leading '[', array type should be '[[[...'
@@ -124,7 +124,7 @@ export function runMultianewarray(thread: Thread): void {
       .getClass()
       .getLoader()
       .getClass(currentType);
-    if (checkError(classResolutionResult)) {
+    if (classResolutionResult.status === ResultType.ERROR) {
       thread.throwNewException(
         classResolutionResult.exceptionCls,
         classResolutionResult.msg
@@ -159,7 +159,7 @@ export function runIfnull(thread: Thread): void {
   thread.offsetPc(2);
 
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const ref = popResult.result as JvmObject;
@@ -175,7 +175,7 @@ export function runIfnonnull(thread: Thread): void {
   thread.offsetPc(2);
 
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const ref = popResult.result as JvmObject;

@@ -1,5 +1,5 @@
 import Thread from "../thread";
-import { checkError } from "../types/Result";
+import { ResultType } from "../types/Result";
 import { JvmArray } from "../types/reference/Array";
 import { asFloat, asDouble } from "../utils";
 
@@ -7,7 +7,7 @@ export function runIstore(thread: Thread): void {
   const index = thread.getCode().getUint8(thread.getPC() + 1);
   thread.offsetPc(2);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(index, popResult.result);
@@ -17,7 +17,7 @@ export function runLstore(thread: Thread): void {
   const index = thread.getCode().getUint8(thread.getPC() + 1);
   thread.offsetPc(2);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(index, popResult.result);
@@ -27,7 +27,7 @@ export function runFstore(thread: Thread): void {
   const index = thread.getCode().getUint8(thread.getPC() + 1);
   thread.offsetPc(2);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(index, asFloat(popResult.result));
@@ -37,7 +37,7 @@ export function runDstore(thread: Thread): void {
   const index = thread.getCode().getUint8(thread.getPC() + 1);
   thread.offsetPc(2);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(index, asDouble(popResult.result));
@@ -47,7 +47,7 @@ export function runAstore(thread: Thread): void {
   const index = thread.getCode().getUint8(thread.getPC() + 1);
   thread.offsetPc(2);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(index, popResult.result);
@@ -56,7 +56,7 @@ export function runAstore(thread: Thread): void {
 export function runIstore0(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(0, popResult.result);
@@ -65,7 +65,7 @@ export function runIstore0(thread: Thread): void {
 export function runIstore1(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(1, popResult.result);
@@ -74,7 +74,7 @@ export function runIstore1(thread: Thread): void {
 export function runIstore2(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(2, popResult.result);
@@ -83,7 +83,7 @@ export function runIstore2(thread: Thread): void {
 export function runIstore3(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(3, popResult.result);
@@ -92,7 +92,7 @@ export function runIstore3(thread: Thread): void {
 export function runLstore0(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(0, popResult.result);
@@ -101,7 +101,7 @@ export function runLstore0(thread: Thread): void {
 export function runLstore1(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(1, popResult.result);
@@ -110,7 +110,7 @@ export function runLstore1(thread: Thread): void {
 export function runLstore2(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(2, popResult.result);
@@ -119,7 +119,7 @@ export function runLstore2(thread: Thread): void {
 export function runLstore3(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(3, popResult.result);
@@ -127,7 +127,7 @@ export function runLstore3(thread: Thread): void {
 
 export function runFstore0(thread: Thread): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
 
@@ -137,7 +137,7 @@ export function runFstore0(thread: Thread): void {
 
 export function runFstore1(thread: Thread): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.offsetPc(1);
@@ -146,7 +146,7 @@ export function runFstore1(thread: Thread): void {
 
 export function runFstore2(thread: Thread): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.offsetPc(1);
@@ -155,7 +155,7 @@ export function runFstore2(thread: Thread): void {
 
 export function runFstore3(thread: Thread): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.offsetPc(1);
@@ -165,7 +165,7 @@ export function runFstore3(thread: Thread): void {
 export function runDstore0(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(0, asDouble(popResult.result));
@@ -174,7 +174,7 @@ export function runDstore0(thread: Thread): void {
 export function runDstore1(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(1, asDouble(popResult.result));
@@ -183,7 +183,7 @@ export function runDstore1(thread: Thread): void {
 export function runDstore2(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(2, asDouble(popResult.result));
@@ -192,7 +192,7 @@ export function runDstore2(thread: Thread): void {
 export function runDstore3(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack64();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal64(3, asDouble(popResult.result));
@@ -201,7 +201,7 @@ export function runDstore3(thread: Thread): void {
 export function runAstore0(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(0, popResult.result);
@@ -210,7 +210,7 @@ export function runAstore0(thread: Thread): void {
 export function runAstore1(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(1, popResult.result);
@@ -219,7 +219,7 @@ export function runAstore1(thread: Thread): void {
 export function runAstore2(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(2, popResult.result);
@@ -228,7 +228,7 @@ export function runAstore2(thread: Thread): void {
 export function runAstore3(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   thread.storeLocal(3, popResult.result);
@@ -240,9 +240,9 @@ export function runIastore(thread: Thread): void {
   const ipopResult = thread.popStack();
   const apopResult = thread.popStack();
   if (
-    checkError(vpopResult) ||
-    checkError(ipopResult) ||
-    checkError(apopResult)
+    vpopResult.status === ResultType.ERROR ||
+    ipopResult.status === ResultType.ERROR ||
+    apopResult.status === ResultType.ERROR
   ) {
     return;
   }
@@ -269,9 +269,9 @@ export function runLastore(thread: Thread): void {
   const ipopResult = thread.popStack();
   const apopResult = thread.popStack();
   if (
-    checkError(vpopResult) ||
-    checkError(ipopResult) ||
-    checkError(apopResult)
+    vpopResult.status === ResultType.ERROR ||
+    ipopResult.status === ResultType.ERROR ||
+    apopResult.status === ResultType.ERROR
   ) {
     return;
   }
@@ -298,9 +298,9 @@ export function runFastore(thread: Thread): void {
   const ipopResult = thread.popStack();
   const apopResult = thread.popStack();
   if (
-    checkError(vpopResult) ||
-    checkError(ipopResult) ||
-    checkError(apopResult)
+    vpopResult.status === ResultType.ERROR ||
+    ipopResult.status === ResultType.ERROR ||
+    apopResult.status === ResultType.ERROR
   ) {
     return;
   }
@@ -327,9 +327,9 @@ export function runDastore(thread: Thread): void {
   const ipopResult = thread.popStack();
   const apopResult = thread.popStack();
   if (
-    checkError(vpopResult) ||
-    checkError(ipopResult) ||
-    checkError(apopResult)
+    vpopResult.status === ResultType.ERROR ||
+    ipopResult.status === ResultType.ERROR ||
+    apopResult.status === ResultType.ERROR
   ) {
     return;
   }
@@ -356,9 +356,9 @@ export function runAastore(thread: Thread): void {
   const ipopResult = thread.popStack();
   const apopResult = thread.popStack();
   if (
-    checkError(vpopResult) ||
-    checkError(ipopResult) ||
-    checkError(apopResult)
+    vpopResult.status === ResultType.ERROR ||
+    ipopResult.status === ResultType.ERROR ||
+    apopResult.status === ResultType.ERROR
   ) {
     return;
   }
@@ -385,9 +385,9 @@ export function runBastore(thread: Thread): void {
   const ipopResult = thread.popStack();
   const apopResult = thread.popStack();
   if (
-    checkError(vpopResult) ||
-    checkError(ipopResult) ||
-    checkError(apopResult)
+    vpopResult.status === ResultType.ERROR ||
+    ipopResult.status === ResultType.ERROR ||
+    apopResult.status === ResultType.ERROR
   ) {
     return;
   }
@@ -414,9 +414,9 @@ export function runCastore(thread: Thread): void {
   const ipopResult = thread.popStack();
   const apopResult = thread.popStack();
   if (
-    checkError(vpopResult) ||
-    checkError(ipopResult) ||
-    checkError(apopResult)
+    vpopResult.status === ResultType.ERROR ||
+    ipopResult.status === ResultType.ERROR ||
+    apopResult.status === ResultType.ERROR
   ) {
     return;
   }
@@ -443,9 +443,9 @@ export function runSastore(thread: Thread): void {
   const ipopResult = thread.popStack();
   const apopResult = thread.popStack();
   if (
-    checkError(vpopResult) ||
-    checkError(ipopResult) ||
-    checkError(apopResult)
+    vpopResult.status === ResultType.ERROR ||
+    ipopResult.status === ResultType.ERROR ||
+    apopResult.status === ResultType.ERROR
   ) {
     return;
   }

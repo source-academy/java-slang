@@ -1,9 +1,9 @@
 import { ThreadStatus } from "./constants";
 import Thread from "./thread";
-import { Result } from "./types/Result";
+import { Result, ResultType } from "./types/Result";
 import AbstractSystem from "./utils/AbstractSystem";
 
-type Lib = {
+export type Lib = {
   [className: string]: {
     loader?: (
       onFinish: (lib: {
@@ -67,8 +67,7 @@ export class JNI {
         this.classes[className].blocking = [thread];
         thread.setStatus(ThreadStatus.WAITING);
         if (this.classes[className].loader) {
-          // @ts-ignore
-          this.classes[className].loader((lib) => {
+          this.classes[className].loader?.((lib) => {
             this.classes[className].methods = lib;
             this.classes[className].blocking?.forEach((thread) => {
               thread.setStatus(ThreadStatus.RUNNABLE);
@@ -77,7 +76,9 @@ export class JNI {
           });
         } else {
           this.system
-            .readFile(this.classPath + "/" + className)
+            .readFile(
+              this.classPath ? this.classPath + "/" + className : className
+            )
             .then((lib) => {
               this.classes[className].methods = lib.default;
             })
@@ -95,17 +96,21 @@ export class JNI {
         this.classes[className].blocking!.push(thread);
         thread.setStatus(ThreadStatus.WAITING);
       }
-      return { isDefer: true };
+      return { status: ResultType.DEFER };
     }
 
     // native method does not exist
     if (!this.classes?.[className]?.methods?.[methodName]) {
       return {
+        status: ResultType.ERROR,
         exceptionCls: "java/lang/UnsatisfiedLinkError",
         msg: `${className}.${methodName} implementation not found`,
       };
     }
 
-    return { result: (this.classes[className].methods as any)[methodName] };
+    return {
+      status: ResultType.SUCCESS,
+      result: (this.classes[className].methods as any)[methodName],
+    };
   }
 }

@@ -115,7 +115,7 @@ export abstract class AbstractThreadPool {
 
   abstract quantumOver(thread: Thread): void;
 
-  abstract run(): void;
+  abstract run(onFinish?: () => void): void;
 
   /**
    * Gets all threads in the threadpool.
@@ -133,7 +133,7 @@ export abstract class AbstractThreadPool {
 
   hasThreads(): boolean {
     this.clearTerminated();
-    return this.threads.length > 0;
+    return this.currentThread !== null || this.threads.length > 0;
   }
 
   clearTerminated() {
@@ -216,14 +216,15 @@ export class RoundRobinThreadPool extends AbstractThreadPool {
     }
   }
 
-  run() {
-    if (this.hasThreads()) {
-      setTimeout(() => {
-        if (this.currentThread !== null) {
-          this.currentThread.runFor(10000);
-        }
-        this.run();
-      }, 0);
-    }
+  run(onFinish?: () => void): void {
+    const ID = setInterval(() => {
+      if (this.currentThread !== null) {
+        this.currentThread.runFor(10000);
+      }
+      if (!this.hasThreads()) {
+        clearInterval(ID);
+        onFinish?.();
+      }
+    }, 0);
   }
 }

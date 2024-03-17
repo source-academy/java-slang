@@ -3,12 +3,7 @@ import {
   ConstantClassInfo,
   ConstantUtf8Info,
 } from "../../ClassFile/types/constants";
-import {
-  ErrorResult,
-  ImmediateResult,
-  checkError,
-  checkSuccess,
-} from "../types/Result";
+import { ErrorResult, ImmediateResult, ResultType } from "../types/Result";
 import {
   ClassData,
   ReferenceClassData,
@@ -42,9 +37,15 @@ export default abstract class AbstractClassLoader {
    * @param classFile
    * @returns
    */
-  defineClass(classFile: ClassFile): ClassData {
-    const cls = this.linkClass(classFile);
-    return this.loadClass(cls);
+  defineClass(classFile: ClassFile): ImmediateResult<ClassData> {
+    const linkResult = this.linkClass(classFile);
+    if (linkResult.status === ResultType.ERROR) {
+      return linkResult;
+    }
+    return {
+      status: ResultType.SUCCESS,
+      result: this.loadClass(linkResult.result),
+    };
   }
 
   /**
@@ -55,7 +56,7 @@ export default abstract class AbstractClassLoader {
   protected linkClass(
     cls: ClassFile,
     protectionDomain?: JvmObject
-  ): ReferenceClassData {
+  ): ImmediateResult<ClassData> {
     // resolve classname
     const clsInfo = cls.constantPool[cls.thisClass] as ConstantClassInfo;
     const clsName = cls.constantPool[clsInfo.nameIndex] as ConstantUtf8Info;
@@ -72,10 +73,9 @@ export default abstract class AbstractClassLoader {
     );
 
     if (hasError) {
-      // FIXME: throw java error instead
-      throw new Error((hasError as ErrorResult).exceptionCls);
+      return hasError;
     }
-    return data;
+    return { status: ResultType.SUCCESS, result: data };
   }
 
   /**
@@ -83,7 +83,7 @@ export default abstract class AbstractClassLoader {
    * The same class loaded by a different classloader is considered a different class.
    */
   protected loadClass(cls: ClassData): ClassData {
-    this.loadedClasses[cls.getClassname()] = cls;
+    this.loadedClasses[cls.getName()] = cls;
     return cls;
   }
 
@@ -103,7 +103,10 @@ export default abstract class AbstractClassLoader {
     initiator: AbstractClassLoader
   ): ImmediateResult<ClassData> {
     if (this.loadedClasses[className]) {
-      return { result: this.loadedClasses[className] };
+      return {
+        status: ResultType.SUCCESS,
+        result: this.loadedClasses[className],
+      };
     }
 
     if (className.startsWith("[")) {
@@ -111,13 +114,13 @@ export default abstract class AbstractClassLoader {
       let arrayObjCls;
       if (itemClsName.startsWith("L")) {
         const itemRes = this._getClass(itemClsName.slice(1, -1), initiator);
-        if (checkError(itemRes)) {
+        if (itemRes.status === ResultType.ERROR) {
           return itemRes;
         }
         arrayObjCls = itemRes.result;
       } else if (itemClsName.startsWith("[")) {
         const itemRes = this._getClass(itemClsName, initiator);
-        if (checkError(itemRes)) {
+        if (itemRes.status === ResultType.ERROR) {
           return itemRes;
         }
         arrayObjCls = itemRes.result;
@@ -131,7 +134,7 @@ export default abstract class AbstractClassLoader {
 
     if (this.parentLoader) {
       const res = this.parentLoader._getClass(className, initiator);
-      if (checkSuccess(res)) {
+      if (res.status === ResultType.SUCCESS) {
         return res;
       }
     }
@@ -175,13 +178,21 @@ export default abstract class AbstractClassLoader {
       classFile = this.nativeSystem.readFileSync(path);
     } catch (e) {
       return {
+        status: ResultType.ERROR,
         exceptionCls: "java/lang/ClassNotFoundException",
         msg: className,
       };
     }
 
-    const classData = this.linkClass(classFile);
-    return { result: this.loadClass(classData) };
+    const linkResult = this.linkClass(classFile);
+    if (linkResult.status === ResultType.ERROR) {
+      return linkResult;
+    }
+
+    return {
+      status: ResultType.SUCCESS,
+      result: this.loadClass(linkResult.result),
+    };
   }
 
   getJavaObject(): JvmObject | null {

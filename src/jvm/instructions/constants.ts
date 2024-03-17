@@ -1,5 +1,5 @@
 import Thread from "../thread";
-import { checkSuccess, checkError } from "../types/Result";
+import { ResultType } from "../types/Result";
 import { ReferenceClassData } from "../types/class/ClassData";
 import {
   ConstantClass,
@@ -88,16 +88,14 @@ export function runDconst1(thread: Thread): void {
 }
 
 export function runBipush(thread: Thread): void {
-  thread.offsetPc(1);
-  const byte = thread.getCode().getInt8(thread.getPC());
-  thread.offsetPc(1);
+  const byte = thread.getCode().getInt8(thread.getPC() + 1);
+  thread.offsetPc(2);
   thread.pushStack(byte);
 }
 
 export function runSipush(thread: Thread): void {
-  thread.offsetPc(1);
-  const short = thread.getCode().getInt16(thread.getPC());
-  thread.offsetPc(2);
+  const short = thread.getCode().getInt16(thread.getPC() + 1);
+  thread.offsetPc(3);
   thread.pushStack(short);
 }
 
@@ -110,8 +108,8 @@ export function loadConstant(
   const constant = invoker.getConstant(index);
 
   const resolutionRes = constant.resolve(thread, invoker.getLoader());
-  if (!checkSuccess(resolutionRes)) {
-    if (checkError(resolutionRes)) {
+  if (resolutionRes.status !== ResultType.SUCCESS) {
+    if (resolutionRes.status === ResultType.ERROR) {
       thread.throwNewException(resolutionRes.exceptionCls, resolutionRes.msg);
     }
     return;
@@ -121,8 +119,8 @@ export function loadConstant(
   if (ConstantClass.check(constant)) {
     const clsRef = value as ReferenceClassData;
     const initRes = clsRef.initialize(thread);
-    if (!checkSuccess(initRes)) {
-      if (checkError(initRes)) {
+    if (initRes.status !== ResultType.SUCCESS) {
+      if (initRes.status === ResultType.ERROR) {
         thread.throwNewException(initRes.exceptionCls, initRes.msg);
       }
       return;
@@ -135,7 +133,6 @@ export function loadConstant(
 
 export function runLdc(thread: Thread): void {
   const indexbyte = thread.getCode().getUint8(thread.getPC() + 1);
-
   loadConstant(thread, indexbyte, () => thread.offsetPc(2));
 }
 
@@ -150,6 +147,5 @@ export function runLdc2W(thread: Thread): void {
   const item = thread.getClass().getConstant(indexbyte) as
     | ConstantDouble
     | ConstantLong;
-
   thread.pushStack64(item.get());
 }

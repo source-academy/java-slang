@@ -2,6 +2,7 @@ import { AttributeInfo } from "../../ClassFile/types/attributes";
 import AbstractClassLoader from "../ClassLoader/AbstractClassLoader";
 import { ConstantPool } from "../constant-pool";
 import Thread from "../thread";
+import { SuccessResult, ResultType } from "../types/Result";
 import { IAttribute, info2Attribute } from "../types/class/Attributes";
 import {
   ArrayClassData,
@@ -12,7 +13,6 @@ import { ConstantUtf8 } from "../types/class/Constants";
 import { Field } from "../types/class/Field";
 import { JvmArray } from "../types/reference/Array";
 import { JvmObject, JavaType } from "../types/reference/Object";
-import { SuccessResult, checkError } from "./Result";
 
 /**
  * Converts a Java String to a JS string
@@ -67,7 +67,7 @@ export const typeIndexScale = (cls: ClassData) => {
     return 4;
   }
 
-  const componentName = cls.getClassname();
+  const componentName = cls.getName();
   switch (componentName) {
     case "long":
     case "double":
@@ -172,7 +172,7 @@ export function getArgs(
         break; // should not happen
       case "D":
         popResult = thread.popStack64();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           break;
         }
         args.push(asDouble(popResult.result));
@@ -182,14 +182,14 @@ export function getArgs(
         break;
       case "F":
         popResult = thread.popStack();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           break;
         }
         args.push(asFloat(popResult.result));
         break;
       case "J":
         popResult = thread.popStack64();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           break;
         }
         args.push(popResult.result);
@@ -205,7 +205,7 @@ export function getArgs(
       case "Z":
       default: // also references + arrays
         popResult = thread.popStack();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           break;
         }
         args.push(popResult.result);

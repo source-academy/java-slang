@@ -1,7 +1,7 @@
 import { OPCODE } from "../ClassFile/constants/instructions";
 import { JNI } from "./jni";
 import Thread from "./thread";
-import { checkDefer, checkError } from "./types/Result";
+import { ResultType } from "./types/Result";
 import { Code } from "./types/class/Attributes";
 import { ClassData, ReferenceClassData } from "./types/class/ClassData";
 import { Method } from "./types/class/Method";
@@ -60,7 +60,7 @@ const overwrites: {
 
 const checkOverwritten = (thread: Thread, method: Method) => {
   const overwritten =
-    overwrites[method.getClass().getClassname()]?.[
+    overwrites[method.getClass().getName()]?.[
       method.getName() + method.getDescriptor()
     ];
   if (overwritten) {
@@ -73,624 +73,625 @@ const checkOverwritten = (thread: Thread, method: Method) => {
 const runInstruction = (thread: Thread, method: Method) => {
   const opcode = (method._getCode() as Code).code.getUint8(thread.getPC());
 
+  let result;
   switch (opcode) {
     case OPCODE.NOP:
-      constants.runNop(thread);
+      result = constants.runNop(thread);
       break;
     case OPCODE.ACONST_NULL:
-      constants.runAconstNull(thread);
+      result = constants.runAconstNull(thread);
       break;
     case OPCODE.ICONST_M1:
-      constants.runIconstM1(thread);
+      result = constants.runIconstM1(thread);
       break;
     case OPCODE.ICONST_0:
-      constants.runIconst0(thread);
+      result = constants.runIconst0(thread);
       break;
     case OPCODE.ICONST_1:
-      constants.runIconst1(thread);
+      result = constants.runIconst1(thread);
       break;
     case OPCODE.ICONST_2:
-      constants.runIconst2(thread);
+      result = constants.runIconst2(thread);
       break;
     case OPCODE.ICONST_3:
-      constants.runIconst3(thread);
+      result = constants.runIconst3(thread);
       break;
     case OPCODE.ICONST_4:
-      constants.runIconst4(thread);
+      result = constants.runIconst4(thread);
       break;
     case OPCODE.ICONST_5:
-      constants.runIconst5(thread);
+      result = constants.runIconst5(thread);
       break;
     case OPCODE.LCONST_0:
-      constants.runLconst0(thread);
+      result = constants.runLconst0(thread);
       break;
     case OPCODE.LCONST_1:
-      constants.runLconst1(thread);
+      result = constants.runLconst1(thread);
       break;
     case OPCODE.FCONST_0:
-      constants.runFconst0(thread);
+      result = constants.runFconst0(thread);
       break;
     case OPCODE.FCONST_1:
-      constants.runFconst1(thread);
+      result = constants.runFconst1(thread);
       break;
     case OPCODE.FCONST_2:
-      constants.runFconst2(thread);
+      result = constants.runFconst2(thread);
       break;
     case OPCODE.DCONST_0:
-      constants.runDconst0(thread);
+      result = constants.runDconst0(thread);
       break;
     case OPCODE.DCONST_1:
-      constants.runDconst1(thread);
+      result = constants.runDconst1(thread);
       break;
     case OPCODE.BIPUSH:
-      constants.runBipush(thread);
+      result = constants.runBipush(thread);
       break;
     case OPCODE.SIPUSH:
-      constants.runSipush(thread);
+      result = constants.runSipush(thread);
       break;
     case OPCODE.LDC:
-      constants.runLdc(thread);
+      result = constants.runLdc(thread);
       break;
     case OPCODE.LDC_W:
-      constants.runLdcW(thread);
+      result = constants.runLdcW(thread);
       break;
     case OPCODE.LDC2_W:
-      constants.runLdc2W(thread);
+      result = constants.runLdc2W(thread);
       break;
     case OPCODE.ILOAD:
-      loads.runIload(thread);
+      result = loads.runIload(thread);
       break;
     case OPCODE.LLOAD:
-      loads.runLload(thread);
+      result = loads.runLload(thread);
       break;
     case OPCODE.FLOAD:
-      loads.runFload(thread);
+      result = loads.runFload(thread);
       break;
     case OPCODE.DLOAD:
-      loads.runDload(thread);
+      result = loads.runDload(thread);
       break;
     case OPCODE.ALOAD:
-      loads.runAload(thread);
+      result = loads.runAload(thread);
       break;
     case OPCODE.ILOAD_0:
-      loads.runIload0(thread);
+      result = loads.runIload0(thread);
       break;
     case OPCODE.ILOAD_1:
-      loads.runIload1(thread);
+      result = loads.runIload1(thread);
       break;
     case OPCODE.ILOAD_2:
-      loads.runIload2(thread);
+      result = loads.runIload2(thread);
       break;
     case OPCODE.ILOAD_3:
-      loads.runIload3(thread);
+      result = loads.runIload3(thread);
       break;
     case OPCODE.LLOAD_0:
-      loads.runLload0(thread);
+      result = loads.runLload0(thread);
       break;
     case OPCODE.LLOAD_1:
-      loads.runLload1(thread);
+      result = loads.runLload1(thread);
       break;
     case OPCODE.LLOAD_2:
-      loads.runLload2(thread);
+      result = loads.runLload2(thread);
       break;
     case OPCODE.LLOAD_3:
-      loads.runLload3(thread);
+      result = loads.runLload3(thread);
       break;
     case OPCODE.FLOAD_0:
-      loads.runFload0(thread);
+      result = loads.runFload0(thread);
       break;
     case OPCODE.FLOAD_1:
-      loads.runFload1(thread);
+      result = loads.runFload1(thread);
       break;
     case OPCODE.FLOAD_2:
-      loads.runFload2(thread);
+      result = loads.runFload2(thread);
       break;
     case OPCODE.FLOAD_3:
-      loads.runFload3(thread);
+      result = loads.runFload3(thread);
       break;
     case OPCODE.DLOAD_0:
-      loads.runDload0(thread);
+      result = loads.runDload0(thread);
       break;
     case OPCODE.DLOAD_1:
-      loads.runDload1(thread);
+      result = loads.runDload1(thread);
       break;
     case OPCODE.DLOAD_2:
-      loads.runDload2(thread);
+      result = loads.runDload2(thread);
       break;
     case OPCODE.DLOAD_3:
-      loads.runDload3(thread);
+      result = loads.runDload3(thread);
       break;
     case OPCODE.ALOAD_0:
-      loads.runAload0(thread);
+      result = loads.runAload0(thread);
       break;
     case OPCODE.ALOAD_1:
-      loads.runAload1(thread);
+      result = loads.runAload1(thread);
       break;
     case OPCODE.ALOAD_2:
-      loads.runAload2(thread);
+      result = loads.runAload2(thread);
       break;
     case OPCODE.ALOAD_3:
-      loads.runAload3(thread);
+      result = loads.runAload3(thread);
       break;
     case OPCODE.IALOAD:
-      loads.runIaload(thread);
+      result = loads.runIaload(thread);
       break;
     case OPCODE.LALOAD:
-      loads.runLaload(thread);
+      result = loads.runLaload(thread);
       break;
     case OPCODE.FALOAD:
-      loads.runFaload(thread);
+      result = loads.runFaload(thread);
       break;
     case OPCODE.DALOAD:
-      loads.runDaload(thread);
+      result = loads.runDaload(thread);
       break;
     case OPCODE.AALOAD:
-      loads.runAaload(thread);
+      result = loads.runAaload(thread);
       break;
     case OPCODE.BALOAD:
-      loads.runBaload(thread);
+      result = loads.runBaload(thread);
       break;
     case OPCODE.CALOAD:
-      loads.runCaload(thread);
+      result = loads.runCaload(thread);
       break;
     case OPCODE.SALOAD:
-      loads.runSaload(thread);
+      result = loads.runSaload(thread);
       break;
     case OPCODE.ISTORE:
-      stores.runIstore(thread);
+      result = stores.runIstore(thread);
       break;
     case OPCODE.LSTORE:
-      stores.runLstore(thread);
+      result = stores.runLstore(thread);
       break;
     case OPCODE.FSTORE:
-      stores.runFstore(thread);
+      result = stores.runFstore(thread);
       break;
     case OPCODE.DSTORE:
-      stores.runDstore(thread);
+      result = stores.runDstore(thread);
       break;
     case OPCODE.ASTORE:
-      stores.runAstore(thread);
+      result = stores.runAstore(thread);
       break;
     case OPCODE.ISTORE_0:
-      stores.runIstore0(thread);
+      result = stores.runIstore0(thread);
       break;
     case OPCODE.ISTORE_1:
-      stores.runIstore1(thread);
+      result = stores.runIstore1(thread);
       break;
     case OPCODE.ISTORE_2:
-      stores.runIstore2(thread);
+      result = stores.runIstore2(thread);
       break;
     case OPCODE.ISTORE_3:
-      stores.runIstore3(thread);
+      result = stores.runIstore3(thread);
       break;
     case OPCODE.LSTORE_0:
-      stores.runLstore0(thread);
+      result = stores.runLstore0(thread);
       break;
     case OPCODE.LSTORE_1:
-      stores.runLstore1(thread);
+      result = stores.runLstore1(thread);
       break;
     case OPCODE.LSTORE_2:
-      stores.runLstore2(thread);
+      result = stores.runLstore2(thread);
       break;
     case OPCODE.LSTORE_3:
-      stores.runLstore3(thread);
+      result = stores.runLstore3(thread);
       break;
     case OPCODE.FSTORE_0:
-      stores.runFstore0(thread);
+      result = stores.runFstore0(thread);
       break;
     case OPCODE.FSTORE_1:
-      stores.runFstore1(thread);
+      result = stores.runFstore1(thread);
       break;
     case OPCODE.FSTORE_2:
-      stores.runFstore2(thread);
+      result = stores.runFstore2(thread);
       break;
     case OPCODE.FSTORE_3:
-      stores.runFstore3(thread);
+      result = stores.runFstore3(thread);
       break;
     case OPCODE.DSTORE_0:
-      stores.runDstore0(thread);
+      result = stores.runDstore0(thread);
       break;
     case OPCODE.DSTORE_1:
-      stores.runDstore1(thread);
+      result = stores.runDstore1(thread);
       break;
     case OPCODE.DSTORE_2:
-      stores.runDstore2(thread);
+      result = stores.runDstore2(thread);
       break;
     case OPCODE.DSTORE_3:
-      stores.runDstore3(thread);
+      result = stores.runDstore3(thread);
       break;
     case OPCODE.ASTORE_0:
-      stores.runAstore0(thread);
+      result = stores.runAstore0(thread);
       break;
     case OPCODE.ASTORE_1:
-      stores.runAstore1(thread);
+      result = stores.runAstore1(thread);
       break;
     case OPCODE.ASTORE_2:
-      stores.runAstore2(thread);
+      result = stores.runAstore2(thread);
       break;
     case OPCODE.ASTORE_3:
-      stores.runAstore3(thread);
+      result = stores.runAstore3(thread);
       break;
     case OPCODE.IASTORE:
-      stores.runIastore(thread);
+      result = stores.runIastore(thread);
       break;
     case OPCODE.LASTORE:
-      stores.runLastore(thread);
+      result = stores.runLastore(thread);
       break;
     case OPCODE.FASTORE:
-      stores.runFastore(thread);
+      result = stores.runFastore(thread);
       break;
     case OPCODE.DASTORE:
-      stores.runDastore(thread);
+      result = stores.runDastore(thread);
       break;
     case OPCODE.AASTORE:
-      stores.runAastore(thread);
+      result = stores.runAastore(thread);
       break;
     case OPCODE.BASTORE:
-      stores.runBastore(thread);
+      result = stores.runBastore(thread);
       break;
     case OPCODE.CASTORE:
-      stores.runCastore(thread);
+      result = stores.runCastore(thread);
       break;
     case OPCODE.SASTORE:
-      stores.runSastore(thread);
+      result = stores.runSastore(thread);
       break;
     case OPCODE.POP:
-      stack.runPop(thread);
+      result = stack.runPop(thread);
       break;
     case OPCODE.POP2:
-      stack.runPop2(thread);
+      result = stack.runPop2(thread);
       break;
     case OPCODE.DUP:
-      stack.runDup(thread);
+      result = stack.runDup(thread);
       break;
     case OPCODE.DUP_X1:
-      stack.runDupX1(thread);
+      result = stack.runDupX1(thread);
       break;
     case OPCODE.DUP_X2:
-      stack.runDupX2(thread);
+      result = stack.runDupX2(thread);
       break;
     case OPCODE.DUP2:
-      stack.runDup2(thread);
+      result = stack.runDup2(thread);
       break;
     case OPCODE.DUP2:
-      stack.runDup2(thread);
+      result = stack.runDup2(thread);
       break;
     case OPCODE.DUP2_X1:
-      stack.runDup2X1(thread);
+      result = stack.runDup2X1(thread);
       break;
     case OPCODE.DUP2_X2:
-      stack.runDup2X2(thread);
+      result = stack.runDup2X2(thread);
       break;
     case OPCODE.SWAP:
-      stack.runSwap(thread);
+      result = stack.runSwap(thread);
       break;
     case OPCODE.IADD:
-      math.runIadd(thread);
+      result = math.runIadd(thread);
       break;
     case OPCODE.LADD:
-      math.runLadd(thread);
+      result = math.runLadd(thread);
       break;
     case OPCODE.FADD:
-      math.runFadd(thread);
+      result = math.runFadd(thread);
       break;
     case OPCODE.DADD:
-      math.runDadd(thread);
+      result = math.runDadd(thread);
       break;
     case OPCODE.ISUB:
-      math.runIsub(thread);
+      result = math.runIsub(thread);
       break;
     case OPCODE.LSUB:
-      math.runLsub(thread);
+      result = math.runLsub(thread);
       break;
     case OPCODE.FSUB:
-      math.runFsub(thread);
+      result = math.runFsub(thread);
       break;
     case OPCODE.DSUB:
-      math.runDsub(thread);
+      result = math.runDsub(thread);
       break;
     case OPCODE.IMUL:
-      math.runImul(thread);
+      result = math.runImul(thread);
       break;
     case OPCODE.LMUL:
-      math.runLmul(thread);
+      result = math.runLmul(thread);
       break;
     case OPCODE.FMUL:
-      math.runFmul(thread);
+      result = math.runFmul(thread);
       break;
     case OPCODE.DMUL:
-      math.runDmul(thread);
+      result = math.runDmul(thread);
       break;
     case OPCODE.IDIV:
-      math.runIdiv(thread);
+      result = math.runIdiv(thread);
       break;
     case OPCODE.LDIV:
-      math.runLdiv(thread);
+      result = math.runLdiv(thread);
       break;
     case OPCODE.FDIV:
-      math.runFdiv(thread);
+      result = math.runFdiv(thread);
       break;
     case OPCODE.DDIV:
-      math.runDdiv(thread);
+      result = math.runDdiv(thread);
       break;
     case OPCODE.IREM:
-      math.runIrem(thread);
+      result = math.runIrem(thread);
       break;
     case OPCODE.LREM:
-      math.runLrem(thread);
+      result = math.runLrem(thread);
       break;
     case OPCODE.FREM:
-      math.runFrem(thread);
+      result = math.runFrem(thread);
       break;
     case OPCODE.DREM:
-      math.runDrem(thread);
+      result = math.runDrem(thread);
       break;
     case OPCODE.INEG:
-      math.runIneg(thread);
+      result = math.runIneg(thread);
       break;
     case OPCODE.LNEG:
-      math.runLneg(thread);
+      result = math.runLneg(thread);
       break;
     case OPCODE.FNEG:
-      math.runFneg(thread);
+      result = math.runFneg(thread);
       break;
     case OPCODE.DNEG:
-      math.runDneg(thread);
+      result = math.runDneg(thread);
       break;
     case OPCODE.ISHL:
-      math.runIshl(thread);
+      result = math.runIshl(thread);
       break;
     case OPCODE.LSHL:
-      math.runLshl(thread);
+      result = math.runLshl(thread);
       break;
     case OPCODE.ISHR:
-      math.runIshr(thread);
+      result = math.runIshr(thread);
       break;
     case OPCODE.LSHR:
-      math.runLshr(thread);
+      result = math.runLshr(thread);
       break;
     case OPCODE.IUSHR:
-      math.runIushr(thread);
+      result = math.runIushr(thread);
       break;
     case OPCODE.LUSHR:
-      math.runLushr(thread);
+      result = math.runLushr(thread);
       break;
     case OPCODE.IAND:
-      math.runIand(thread);
+      result = math.runIand(thread);
       break;
     case OPCODE.LAND:
-      math.runLand(thread);
+      result = math.runLand(thread);
       break;
     case OPCODE.IOR:
-      math.runIor(thread);
+      result = math.runIor(thread);
       break;
     case OPCODE.LOR:
-      math.runLor(thread);
+      result = math.runLor(thread);
       break;
     case OPCODE.IXOR:
-      math.runIxor(thread);
+      result = math.runIxor(thread);
       break;
     case OPCODE.LXOR:
-      math.runLxor(thread);
+      result = math.runLxor(thread);
       break;
     case OPCODE.IINC:
-      math.runIinc(thread);
+      result = math.runIinc(thread);
       break;
     case OPCODE.I2L:
-      conversions.runI2l(thread);
+      result = conversions.runI2l(thread);
       break;
     case OPCODE.I2F:
-      conversions.runI2f(thread);
+      result = conversions.runI2f(thread);
       break;
     case OPCODE.I2D:
-      conversions.runI2d(thread);
+      result = conversions.runI2d(thread);
       break;
     case OPCODE.L2I:
-      conversions.runL2i(thread);
+      result = conversions.runL2i(thread);
       break;
     case OPCODE.L2F:
-      conversions.runL2f(thread);
+      result = conversions.runL2f(thread);
       break;
     case OPCODE.L2D:
-      conversions.runL2d(thread);
+      result = conversions.runL2d(thread);
       break;
     case OPCODE.F2I:
-      conversions.runF2i(thread);
+      result = conversions.runF2i(thread);
       break;
     case OPCODE.F2L:
-      conversions.runF2l(thread);
+      result = conversions.runF2l(thread);
       break;
     case OPCODE.F2D:
-      conversions.runF2d(thread);
+      result = conversions.runF2d(thread);
       break;
     case OPCODE.D2I:
-      conversions.runD2i(thread);
+      result = conversions.runD2i(thread);
       break;
     case OPCODE.D2L:
-      conversions.runD2l(thread);
+      result = conversions.runD2l(thread);
       break;
     case OPCODE.D2F:
-      conversions.runD2f(thread);
+      result = conversions.runD2f(thread);
       break;
     case OPCODE.I2B:
-      conversions.runI2b(thread);
+      result = conversions.runI2b(thread);
       break;
     case OPCODE.I2C:
-      conversions.runI2c(thread);
+      result = conversions.runI2c(thread);
       break;
     case OPCODE.I2S:
-      conversions.runI2s(thread);
+      result = conversions.runI2s(thread);
       break;
     case OPCODE.LCMP:
-      comparisons.runLcmp(thread);
+      result = comparisons.runLcmp(thread);
       break;
     case OPCODE.FCMPL:
-      comparisons.runFcmpl(thread);
+      result = comparisons.runFcmpl(thread);
       break;
     case OPCODE.FCMPG:
-      comparisons.runFcmpg(thread);
+      result = comparisons.runFcmpg(thread);
       break;
     case OPCODE.DCMPL:
-      comparisons.runDcmpl(thread);
+      result = comparisons.runDcmpl(thread);
       break;
     case OPCODE.DCMPG:
-      comparisons.runDcmpg(thread);
+      result = comparisons.runDcmpg(thread);
       break;
     case OPCODE.IFEQ:
-      comparisons.runIfeq(thread);
+      result = comparisons.runIfeq(thread);
       break;
     case OPCODE.IFNE:
-      comparisons.runIfne(thread);
+      result = comparisons.runIfne(thread);
       break;
     case OPCODE.IFLT:
-      comparisons.runIflt(thread);
+      result = comparisons.runIflt(thread);
       break;
     case OPCODE.IFGE:
-      comparisons.runIfge(thread);
+      result = comparisons.runIfge(thread);
       break;
     case OPCODE.IFGT:
-      comparisons.runIfgt(thread);
+      result = comparisons.runIfgt(thread);
       break;
     case OPCODE.IFLE:
-      comparisons.runIfle(thread);
+      result = comparisons.runIfle(thread);
       break;
     case OPCODE.IF_ICMPEQ:
-      comparisons.runIfIcmpeq(thread);
+      result = comparisons.runIfIcmpeq(thread);
       break;
     case OPCODE.IF_ICMPNE:
-      comparisons.runIfIcmpne(thread);
+      result = comparisons.runIfIcmpne(thread);
       break;
     case OPCODE.IF_ICMPLT:
-      comparisons.runIfIcmplt(thread);
+      result = comparisons.runIfIcmplt(thread);
       break;
     case OPCODE.IF_ICMPGE:
-      comparisons.runIfIcmpge(thread);
+      result = comparisons.runIfIcmpge(thread);
       break;
     case OPCODE.IF_ICMPGT:
-      comparisons.runIfIcmpgt(thread);
+      result = comparisons.runIfIcmpgt(thread);
       break;
     case OPCODE.IF_ICMPLE:
-      comparisons.runIfIcmple(thread);
+      result = comparisons.runIfIcmple(thread);
       break;
     case OPCODE.IF_ACMPEQ:
-      comparisons.runIfAcmpeq(thread);
+      result = comparisons.runIfAcmpeq(thread);
       break;
     case OPCODE.IF_ACMPNE:
-      comparisons.runIfAcmpne(thread);
+      result = comparisons.runIfAcmpne(thread);
       break;
     case OPCODE.GOTO:
-      control.runGoto(thread);
+      result = control.runGoto(thread);
       break;
     case OPCODE.JSR:
-      control.runJsr(thread);
+      result = control.runJsr(thread);
       break;
     case OPCODE.RET:
-      control.runRet(thread);
+      result = control.runRet(thread);
       break;
     case OPCODE.TABLESWITCH:
-      control.runTableswitch(thread);
+      result = control.runTableswitch(thread);
       break;
     case OPCODE.LOOKUPSWITCH:
-      control.runLookupswitch(thread);
+      result = control.runLookupswitch(thread);
       break;
     case OPCODE.IRETURN:
-      control.runIreturn(thread);
+      result = control.runIreturn(thread);
       break;
     case OPCODE.LRETURN:
-      control.runLreturn(thread);
+      result = control.runLreturn(thread);
       break;
     case OPCODE.FRETURN:
-      control.runFreturn(thread);
+      result = control.runFreturn(thread);
       break;
     case OPCODE.DRETURN:
-      control.runDreturn(thread);
+      result = control.runDreturn(thread);
       break;
     case OPCODE.ARETURN:
-      control.runAreturn(thread);
+      result = control.runAreturn(thread);
       break;
     case OPCODE.RETURN:
-      control.runReturn(thread);
+      result = control.runReturn(thread);
       break;
     case OPCODE.GETSTATIC:
-      references.runGetstatic(thread);
+      result = references.runGetstatic(thread);
       break;
     case OPCODE.PUTSTATIC:
-      references.runPutstatic(thread);
+      result = references.runPutstatic(thread);
       break;
     case OPCODE.GETFIELD:
-      references.runGetfield(thread);
+      result = references.runGetfield(thread);
       break;
     case OPCODE.PUTFIELD:
-      references.runPutfield(thread);
+      result = references.runPutfield(thread);
       break;
     case OPCODE.INVOKEVIRTUAL:
-      references.runInvokevirtual(thread);
+      result = references.runInvokevirtual(thread);
       break;
     case OPCODE.INVOKESPECIAL:
-      references.runInvokespecial(thread);
+      result = references.runInvokespecial(thread);
       break;
     case OPCODE.INVOKESTATIC:
-      references.runInvokestatic(thread);
+      result = references.runInvokestatic(thread);
       break;
     case OPCODE.INVOKEINTERFACE:
-      references.runInvokeinterface(thread);
+      result = references.runInvokeinterface(thread);
       break;
     case OPCODE.INVOKEDYNAMIC:
-      references.runInvokedynamic(thread);
+      result = references.runInvokedynamic(thread);
       break;
     case OPCODE.NEW:
-      references.runNew(thread);
+      result = references.runNew(thread);
       break;
     case OPCODE.NEWARRAY:
-      references.runNewarray(thread);
+      result = references.runNewarray(thread);
       break;
     case OPCODE.ANEWARRAY:
-      references.runAnewarray(thread);
+      result = references.runAnewarray(thread);
       break;
     case OPCODE.ARRAYLENGTH:
-      references.runArraylength(thread);
+      result = references.runArraylength(thread);
       break;
     case OPCODE.ATHROW:
-      references.runAthrow(thread);
+      result = references.runAthrow(thread);
       break;
     case OPCODE.CHECKCAST:
-      references.runCheckcast(thread);
+      result = references.runCheckcast(thread);
       break;
     case OPCODE.INSTANCEOF:
-      references.runInstanceof(thread);
+      result = references.runInstanceof(thread);
       break;
     case OPCODE.MONITORENTER:
-      references.runMonitorenter(thread);
+      result = references.runMonitorenter(thread);
       break;
     case OPCODE.MONITOREXIT:
-      references.runMonitorexit(thread);
+      result = references.runMonitorexit(thread);
       break;
     case OPCODE.WIDE:
-      extended.runWide(thread);
+      result = extended.runWide(thread);
       break;
     case OPCODE.MULTIANEWARRAY:
-      extended.runMultianewarray(thread);
+      result = extended.runMultianewarray(thread);
       break;
     case OPCODE.IFNULL:
-      extended.runIfnull(thread);
+      result = extended.runIfnull(thread);
       break;
     case OPCODE.IFNONNULL:
-      extended.runIfnonnull(thread);
+      result = extended.runIfnonnull(thread);
       break;
     case OPCODE.GOTO_W:
-      extended.runGotoW(thread);
+      result = extended.runGotoW(thread);
       break;
     case OPCODE.JSR_W:
-      extended.runJsrW(thread);
+      result = extended.runJsrW(thread);
       break;
     case OPCODE.BREAKPOINT:
-      reserved.runBreakpoint(thread);
+      result = reserved.runBreakpoint(thread);
       break;
     case OPCODE.IMPDEP1:
-      reserved.runImpdep1(thread);
+      result = reserved.runImpdep1(thread);
       break;
     case OPCODE.IMPDEP2:
-      reserved.runImpdep2(thread);
+      result = reserved.runImpdep2(thread);
       break;
     default:
       throw new Error(`runInstruction: Unknown opcode ${opcode} received!`);
@@ -728,7 +729,10 @@ export abstract class StackFrame {
    */
   public onReturn(thread: Thread, retn: any) {
     if (retn !== undefined) {
-      thread.pushStack(retn);
+      const popResult = thread.pushStack(retn);
+      if (!popResult) {
+        return;
+      }
     }
     thread.offsetPc(this.returnOffset);
   }
@@ -738,7 +742,10 @@ export abstract class StackFrame {
    * Responsible for pushing return value to operand stack of stackframe below it.
    */
   public onReturn64(thread: Thread, retn: any) {
-    thread.pushStack64(retn);
+    const popResult = thread.pushStack64(retn);
+    if (!popResult) {
+      return;
+    }
     thread.offsetPc(this.returnOffset);
   }
 
@@ -814,15 +821,15 @@ export class NativeStackFrame extends StackFrame {
   run(thread: Thread): void {
     const methodRes = this.jni.getNativeMethod(
       thread,
-      this.class.getClassname(),
+      this.class.getName(),
       this.method.getName() + this.method.getDescriptor()
     );
 
-    if (checkDefer(methodRes)) {
+    if (methodRes.status === ResultType.DEFER) {
       return;
     }
 
-    if (checkError(methodRes)) {
+    if (methodRes.status === ResultType.ERROR) {
       thread.throwNewException(methodRes.exceptionCls, methodRes.msg);
       return;
     }
