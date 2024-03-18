@@ -7,10 +7,10 @@ import {
   UnannType,
 } from "../ast/types/classes";
 import { Control, EnvNode, Environment, Stash } from "./components";
-import { RuntimeError } from "./errors";
+import { SourceError } from "./errors";
 
 export interface Context {
-  errors: RuntimeError[],
+  errors: SourceError[],
 
   control: Control,
   stash: Stash,

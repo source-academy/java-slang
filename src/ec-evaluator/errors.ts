@@ -23,8 +23,10 @@ export class SyntaxError implements SourceError {
 export class RuntimeError implements SourceError {
   type = ErrorType.RUNTIME;
   
+  constructor(private msg: string = "") {};
+
   explain(): string {
-    return "RuntimeError";
+    return `RuntimeError${this.msg ? ": " + this.msg : ""}`;
   };
 };
 
