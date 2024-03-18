@@ -98,12 +98,12 @@ export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): Sta
   const control = context.control;
   const stash = context.stash;
 
-  let step = 1;
+  context.totalSteps = 1;
 
   let command = control.peek();
   
   while (command) {
-    if (step === targetStep) {
+    if (context.totalSteps === targetStep) {
       return stash.peek();
     }
 
@@ -119,10 +119,9 @@ export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): Sta
     // console.log("stash", stash.getStack())
 
     command = control.peek();
-    step += 1;
+    context.totalSteps += 1;
   }
 
-  context.totalSteps = step;
   return stash.peek();
 }
 

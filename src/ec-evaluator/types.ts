@@ -168,6 +168,7 @@ export interface Type {
  */
 export interface Error {
   status: 'error';
+  context: Context;
 }
 
 export interface Finished {

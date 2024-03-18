@@ -25,7 +25,7 @@ export const runECEvaluator = (
   } catch (e) {
     context.errors.push(e);
     return new Promise((resolve, _) => {
-      resolve({ status: 'error' } as Error);
+      resolve({ status: 'error', context } as Error);
     });
   }
 }
