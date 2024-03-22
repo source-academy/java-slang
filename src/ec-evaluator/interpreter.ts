@@ -699,16 +699,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       }
     } else if (value.kind === "ExpressionName") {
       const v = context.environment.getName(value.name);
-      if (v.kind === "Variable") {
-        if (v.value.kind === "Literal") {
-          type = "int";
-        } else if (v.value.kind === "Object") {
-          // Type of object is name of parent frame
-          type = v.type;
-        }
-      } else /*if (v.kind === "Class")*/ {
-        type = v.frame.name;
-      }
+      type = v.kind === "Variable" ? v.type : v.frame.name;
     } else if (value.kind === "Class") {
       type = value.frame.name;
     }
@@ -758,7 +749,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    const target = stash.pop()! as Object | Class;
+    const target = stash.pop()!;
     const overloadResolvedClosure = stash.pop()! as Closure;
 
     if (isStatic(overloadResolvedClosure.mtdOrCon as MethodDeclaration)) {
@@ -767,8 +758,14 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       return;
     }
 
+    // Throw NullPointerException if method to be invoked is instance method
+    // but instance is null.
+    if (isNull(target)) {
+      throw new errors.NullPointerException();
+    }
+
     // Retrieve class to search in for method overriding resolution.
-    const classToSearchIn: Class = context.environment.getClass(target.frame.parent.name);
+    const classToSearchIn: Class = context.environment.getClass((target as Object).class.frame.name);
 
     // Method overriding resolution.
     const overrideResolvedClosure: Closure = resOverride(classToSearchIn, overloadResolvedClosure);

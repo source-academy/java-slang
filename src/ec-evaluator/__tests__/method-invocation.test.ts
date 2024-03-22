@@ -1,4 +1,5 @@
 import { parse } from "../../ast/parser";
+import { NullPointerException } from "../errors";
 import { evaluate } from "../interpreter";
 import {
   ControlStub,
@@ -2250,4 +2251,44 @@ describe("evaluate method overloading resolution correctly", () => {
   });
 });
 
-// TODO throw NullPointerException when accesing instance field but instance is null
+describe("should throw NullPointerException correctly", () => {
+  it("should throw NullPointerException when invoking instance method but target is null", () => {
+    const programStr = `
+      class Test {
+        public static void main(String[] args) {
+          Test test = null;
+          test.test();
+        }
+        void test() {}
+      }
+    `;
+  
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+  
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+  
+    expect(() => evaluate(context)).toThrowError(NullPointerException);
+  });
+
+  it("should not throw NullPointerException when invoking static method although target is null", () => {
+    const programStr = `
+      class Test {
+        public static void main(String[] args) {
+          Test test = null;
+          test.test();
+        }
+        static void test() {}
+      }
+    `;
+  
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+  
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+  
+    expect(() => evaluate(context)).not.toThrowError(NullPointerException);
+  });
+});
