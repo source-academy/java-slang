@@ -444,7 +444,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // value is popped before variable becuase value is evaluated later than variable.
     const value = stash.pop()! as Literal | Object;
     const variable = stash.pop()! as Variable;
-    variable.value = value;
+    // Variable can store variable now.
+    variable.value.kind === "Variable" ? variable.value.value = value : variable.value = value;
     stash.push(value);
   },
 
@@ -594,7 +595,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash: Stash,
   ) => {
     const varOrClass = stash.pop()! as Variable | Class;
-    const value = varOrClass.kind === "Class" ? varOrClass : varOrClass.value as Literal | Object;
+    const value = varOrClass.kind === "Class"
+      ? varOrClass
+      // Variable can store variable now.
+      : varOrClass.value.kind === "Variable"
+      ? varOrClass.value.value as Literal | Object
+      : varOrClass.value as Literal | Object;
     stash.push(value);
   },
 
@@ -606,23 +612,43 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ) => {
     // To be restore after extending curr env to declare instance fields in obj frame.
     const currEnv = context.environment.current;
-    context.environment.extendEnv(command.c.frame, "object");
 
-    // Declare declared and inherited instance fields.
-    let currClass: Class | undefined = command.c;
-    while (currClass) {
-      currClass.instanceFields.forEach(i => {
+    // Get class hierarchy.
+    let currClass: Class = command.c;
+    const classHierachy: Class[] = [currClass];
+    while (currClass.superclass) {
+      classHierachy.unshift(currClass.superclass);
+      currClass = currClass.superclass;
+    };
+    
+    // Create obj with both declared and inherited fields.
+    classHierachy.forEach((c, i) => {
+      // Extend first frame from its curr class frame and subsequent frames from preceding frame.
+      // TODO doesn't make sense to extend from class frame, but there should be a reference.
+      const fromEnv = i ? context.environment.current : currClass.frame;
+      context.environment.extendEnv(fromEnv, "object");
+
+      // Declare instance fields.
+      c.instanceFields.forEach(i => {
         const id = i.variableDeclaratorList[0].variableDeclaratorId;
         const type = i.fieldType;
         context.environment.declareVariable(id, type);
       });
-      currClass = currClass.superclass;
-    }
+      
+      // Set alias to static fields.
+      c.staticFields.forEach(i => {
+        const id = i.variableDeclaratorList[0].variableDeclaratorId;
+        const type = i.fieldType;
+        const variable = c.frame.getVariable(id);
+        context.environment.defineVariable(id, type, variable);
+      });
+    });
 
     // Push obj on stash.
     const obj = {
       kind: "Object",
       frame: context.environment.current,
+      class: command.c,
     } as Object;
     stash.push(obj);
 

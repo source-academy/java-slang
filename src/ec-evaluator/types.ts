@@ -126,7 +126,7 @@ export interface Variable {
   value: VarValue;
 }
 
-export type VarValue = Primitive | Reference | Symbol;
+export type VarValue = Primitive | Reference | Symbol | Variable;
 
 export type Primitive = Literal;
 export type Reference = Object;
@@ -139,6 +139,7 @@ export interface Symbol {
 export interface Object {
   kind: "Object";
   frame: EnvNode;
+  class: Class;
 }
 
 export interface Closure {
