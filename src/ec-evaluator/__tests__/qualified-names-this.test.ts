@@ -1,4 +1,5 @@
 import { parse } from "../../ast/parser";
+import { NullPointerException } from "../errors";
 import { evaluate } from "../interpreter";
 import {
   ControlStub,
@@ -875,4 +876,44 @@ it("evaluate RHS this correctly", () => {
   // TODO test env
 });
 
-// TODO throw NullPointerException when accesing instance field but instance is null
+describe("should throw NullPointerException correctly", () => {
+  it("should throw NullPointerException when accessing instance field but target is null", () => {
+    const programStr = `
+      class Test {
+        int x;
+        public static void main(String[] args) {
+          Test test = null;
+          int x = test.x;
+        }
+      }
+    `;
+  
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+  
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+  
+    expect(() => evaluate(context)).toThrowError(NullPointerException);
+  });
+
+  it("should not throw NullPointerException when accessing static field although target is null", () => {
+    const programStr = `
+      class Test {
+        static int x;
+        public static void main(String[] args) {
+          Test test = null;
+          int x = test.x;
+        }
+      }
+    `;
+  
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+  
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+  
+    expect(() => evaluate(context)).not.toThrowError(NullPointerException);
+  });
+});

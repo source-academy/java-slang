@@ -26,7 +26,7 @@ import {
   nullLitNode,
   returnThisStmtNode,
 } from "./nodeCreator";
-import { ControlItem, Context, Instr, Class, Type, Closure } from "./types";
+import { ControlItem, Context, Instr, Class, Type, Closure, StashItem } from "./types";
 
 /**
  * Stack is implemented for agenda and stash registers.
@@ -482,3 +482,7 @@ export const resConOverload = (
 
   return resolved;
 };
+
+export const isNull = (stashItem: StashItem) => {
+  return stashItem.kind === "Literal" && stashItem.literalType.kind === "NullLiteral";
+}

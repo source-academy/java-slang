@@ -80,6 +80,7 @@ import {
   resOverload,
   resOverride,
   resConOverload,
+  isNull,
 } from "./utils";
 // import { astToString } from "../ast/utils/utils";
 
@@ -488,12 +489,6 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const isInstanceMtdOrCon = args.length == params.length + 1;
     const mtdOrConDescriptor = getDescriptor(closure.mtdOrCon);
     if (isInstanceMtdOrCon) {
-      // Throw NullPointerException if method to be invoked is instance method/constructor
-      // but instance is null.
-      if (args[0].kind === "Literal" && args[0].literalType.kind === "NullLiteral") {
-        throw new errors.NullPointerException();
-      }
-
       // Extend env from obj frame.
       context.environment.extendEnv((args[0] as Object).frame, mtdOrConDescriptor);
 
@@ -579,13 +574,41 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // TODO throw NullPointerException if instance field but instance is null
     const varOrClass = stash.pop()! as Variable | Class;
-    console.assert(varOrClass.kind !== "Variable" || varOrClass.value.kind === "Object");
-    const v = varOrClass.kind === "Variable"
-      ? (varOrClass.value as Object).frame.getVariable(command.name)
-      : /*varOrClass.kind === "Class" ?*/ varOrClass.frame.getVariable(command.name);
-    stash.push(v);
+    
+    // Name resolution is based on the target type, not target obj.
+    let variable;
+    if (varOrClass.kind === "Variable") {
+      // Check recursively if static field.
+      let c = context.environment.getClass(varOrClass.type);
+      while (!c.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name) 
+        && !c.instanceFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name)
+        && c.superclass) {
+        c = c.superclass;
+      }
+      if (c.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name)) {
+        variable = c.frame.getVariable(command.name);
+      } else {
+        // Throw NullPointerException if instance field but target is null.
+        if (isNull(varOrClass.value as Literal | Object)) {
+          throw new errors.NullPointerException();
+        }
+
+        // Only declared or inherited fields of var type can be accessed.
+        const obj = varOrClass.value as Object;
+        let objFrameClass = obj.class;
+        let objFrame = obj.frame
+        while (objFrameClass.frame.name !== varOrClass.type && objFrameClass.superclass) {
+          objFrameClass = objFrameClass.superclass;
+          objFrame = objFrame.parent;
+        }
+        variable = objFrame.getVariable(command.name)
+      }
+    } else /*if (varOrClass.kind === "Class")*/ {
+      variable = varOrClass.frame.getVariable(command.name);
+    }
+
+    stash.push(variable);
   },
 
   [InstrType.DEREF]: (
