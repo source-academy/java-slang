@@ -14,6 +14,7 @@ import {
   VariableDeclaratorId,
 } from "../ast/types/blocks-and-statements";
 import {
+  ClassDeclaration,
   ConstructorBody,
   ConstructorDeclaration,
   ConstructorDeclarator,
@@ -130,4 +131,11 @@ export const expConInvNode = (srcNode: Node): ExplicitConstructorInvocation => (
   thisOrSuper: "super",
   argumentList: [],
   location: srcNode.location,
+});
+
+export const objClassDeclNode = (): ClassDeclaration => ({
+  kind: "NormalClassDeclaration",
+  classModifier: [],
+  typeIdentifier: "Object",
+  classBody: [],
 });

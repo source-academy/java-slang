@@ -140,7 +140,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     control.push(node.mainMtdInvExpStmtNode(className));
     control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations));
-    // TODO add obj class
+    control.push(node.objClassDeclNode());
   },
   
   NormalClassDeclaration: (
@@ -179,12 +179,17 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // To restore current (global) env for next NormalClassDeclarations evaluation.
     control.push(instr.envInstr(context.environment.current, command));
     
-    // TODO no superclass means superclass is Object
-    const superclassName = command.sclass;
+    // TODO why NormalClassDeclaration node not modified?
     let superclass: Class | undefined = undefined;
-    superclassName && (superclass = context.environment.getClass(superclassName));
-    // Extend env from superclass env, otherwise global env.
-    const fromEnv = superclass ? superclass.frame : context.environment.global;
+    let fromEnv: EnvNode;
+    if (className === "Object") {
+      fromEnv = context.environment.global;
+    } else {
+      // Class that doesn't explicitly inherit another class implicitly inherit Object.
+      const superclassName = command.sclass = command.sclass ?? "Object";
+      superclass = context.environment.getClass(superclassName);
+      fromEnv = superclass.frame;
+    }
     context.environment.extendEnv(fromEnv, className);
 
     const c = {

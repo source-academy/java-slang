@@ -30,6 +30,10 @@ it("evaluate LocalVariableDeclarationStatement without variableInitializer corre
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // public class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+    
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
 
     "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
@@ -101,6 +105,10 @@ it("evaluate LocalVariableDeclarationStatement with variableInitializer correctl
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // public class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+    
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
 
     "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
@@ -186,6 +194,10 @@ it("evaluate Assignment correctly", () => {
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // public class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+    
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
     
     "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
@@ -269,6 +281,10 @@ it("evaluate LocalVariableDeclarationStatement with local variable as variableIn
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // public class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+    
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
     
     "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}

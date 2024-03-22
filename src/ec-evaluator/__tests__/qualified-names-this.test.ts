@@ -31,6 +31,10 @@ it("evaluate LHS Class correctly", () => {
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
 
     "Env",
     "MethodDeclaration", // public static void main(String[] args) {...}
@@ -127,6 +131,10 @@ it("evaluate LHS Object correctly", () => {
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
 
     "Env",
     "MethodDeclaration", // public static void main(String[] args) {...}
@@ -270,6 +278,10 @@ it("evaluate LHS this correctly", () => {
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
 
     "Env",
     "MethodDeclaration", // void test() {...}
@@ -442,6 +454,10 @@ it("evaluate RHS Class correctly", () => {
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
 
     "Env",
     "MethodDeclaration", // public static void main(String[] args) {...}
@@ -545,6 +561,10 @@ it("evaluate RHS Object correctly", () => {
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
 
     "Env",
     "MethodDeclaration", // public static void main(String[] args) {...}
@@ -695,6 +715,10 @@ it("evaluate RHS this correctly", () => {
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
 
     "Env",
     "MethodDeclaration", // void test() {...}

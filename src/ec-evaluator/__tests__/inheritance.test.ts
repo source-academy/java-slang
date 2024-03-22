@@ -31,6 +31,10 @@ describe("evaluate NormalClassDeclaration correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -110,6 +114,10 @@ describe("evaluate FieldDeclaration correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -208,6 +216,10 @@ describe("evaluate FieldDeclaration correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -315,6 +327,10 @@ describe("evaluate FieldDeclaration correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -493,6 +509,10 @@ describe("evaluate FieldDeclaration correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -730,6 +750,10 @@ describe("evaluate method overloading correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -950,6 +974,10 @@ describe("evaluate method overloading correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -1171,6 +1199,10 @@ describe("evaluate method overloading correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -1402,6 +1434,10 @@ describe("evaluate method overriding correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // void test() {...}
@@ -1615,6 +1651,10 @@ describe("evaluate method overriding correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // static void test() {...}
@@ -1822,6 +1862,10 @@ describe("evaluate method overriding correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // void test(Parent p) {...}
@@ -2128,6 +2172,10 @@ describe("evaluate method overriding correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // void test(Parent p) {...}

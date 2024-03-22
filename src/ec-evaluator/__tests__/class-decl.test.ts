@@ -31,6 +31,10 @@ describe("evaluate FieldDeclaration correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -109,6 +113,10 @@ describe("evaluate FieldDeclaration correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -188,6 +196,10 @@ describe("evaluate MethodDeclaration correctly", () => {
       
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -258,6 +270,10 @@ describe("evaluate MethodDeclaration correctly", () => {
       
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -328,6 +344,10 @@ describe("evaluate MethodDeclaration correctly", () => {
       
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // private int test2(int x) {}
@@ -435,6 +455,10 @@ describe("evaluate main method correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class AnotherTest {...}
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // static void main(String[] args) {...}

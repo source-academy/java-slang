@@ -32,6 +32,10 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // static void test() {...}
@@ -135,6 +139,10 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // static void test() {...}
@@ -239,6 +247,10 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // static void test() {...}
@@ -384,6 +396,10 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -566,6 +582,10 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -748,6 +768,10 @@ describe("evaluate static MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -931,6 +955,10 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // int test() {...}
@@ -1086,6 +1114,10 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -1272,6 +1304,10 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -1499,6 +1535,10 @@ describe("evaluate instance MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -1687,6 +1727,10 @@ describe("evaluate method overloading resolution correctly", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
   
       "Env",
       "MethodDeclaration", // static void test() {...}
@@ -1818,6 +1862,10 @@ describe("evaluate method overloading resolution correctly", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
   
       "Env",
       "MethodDeclaration", // void Test() {...}
@@ -2024,6 +2072,10 @@ describe("evaluate method overloading resolution correctly", () => {
   
       "ExpressionStatement", // test.main([""]);
       "NormalClassDeclaration", // class test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
   
       "Env",
       "MethodDeclaration", // void test() {...}
