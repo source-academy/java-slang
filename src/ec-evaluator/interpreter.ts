@@ -56,6 +56,7 @@ import {
   Type,
   ResConOverloadInstr,
   ResOverrideInstr,
+  ResTypeContInstr,
 } from "./types";
 import { 
   defaultValues,
@@ -348,8 +349,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ) => {
     // TODO can only handle MethodInvocation Identifier with two parts
     const nameParts = command.identifier.split(".");
-    const target = nameParts[0];
-    const identifier = nameParts[1];
+    const target = nameParts.splice(0, nameParts.length - 1).join(".");
+    const identifier = nameParts[nameParts.length - 1];
     
     // Arity may be incremented by 1 if the resolved method to be invoked is an instance method.
     control.push(instr.invInstr(command.argumentList.length, command));
@@ -703,11 +704,37 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         type = "String[]";
       }
     } else if (value.kind === "ExpressionName") {
+      if (isQualified(value.name)) {
+        const nameParts = value.name.split(".");
+        for (const namePart of nameParts.slice(1)) {
+          control.push(instr.resTypeContInstr(namePart, command.srcNode));
+        }
+        control.push(instr.resTypeInstr(node.exprNameNode(nameParts[0], command.srcNode), command.srcNode));
+        return;
+      }
       const v = context.environment.getName(value.name);
       type = v.kind === "Variable" ? v.type : v.frame.name;
     } else if (value.kind === "Class") {
       type = value.frame.name;
     }
+    
+    stash.push({
+      kind: "Type",
+      type: type!,
+    } as Type);
+  },
+
+  [InstrType.RES_TYPE_CONT]: (
+    command: ResTypeContInstr,
+    context: Context,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const typeToSearchIn = stash.pop()! as Type;
+
+    const classToSearchIn: Class = context.environment.getClass(typeToSearchIn.type);
+    const v = classToSearchIn.frame.getName(command.name);
+    const type = v.kind === "Variable" ? v.type : v.frame.name;
     
     stash.push({
       kind: "Type",

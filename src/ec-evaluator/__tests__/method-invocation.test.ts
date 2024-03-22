@@ -2292,3 +2292,130 @@ describe("should throw NullPointerException correctly", () => {
     expect(() => evaluate(context)).not.toThrowError(NullPointerException);
   });
 });
+
+describe("evaluate qualified MethodInvocation correctly", () => {
+  it("evaluate qualified MethodInvocation correctly", () => {
+    const programStr = `
+      class Test {
+        static Test t;
+        public static void main(String[] args) {
+          Test.t.test();
+        }
+        static void test() {}
+      }
+    `;
+
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+
+    const result = evaluate(context);
+
+    const expectedControlTrace = [
+      "CompilationUnit",
+
+      "ExpressionStatement", // Test.main([""]);
+      "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
+
+      "Env",
+      "MethodDeclaration", // static void test() {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
+      "ConstructorDeclaration", // Test() {...}
+      "FieldDeclaration", // static Test x = null;
+
+      "Pop",
+      "Assign", // =
+      "Literal", // null
+      "EvalVariable", // Test
+
+      "Pop",
+      "MethodInvocation", // Test.main([""])
+
+      "Invocation", // ()
+      "Literal", // [""]
+      "ResOverride",
+      "ExpressionName", // Test
+      "ResOverload", // main
+      "ResType", // [""]
+      "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return;
+      "ExpressionStatement", // Test.t.test();
+
+      "Pop",
+      "MethodInvocation", // Test.t.test()
+
+      "Invocation", // ()
+      "ResOverride",
+      "ExpressionName", // Test.t
+      "ResOverload", // test
+      "ResType", // Test.t
+
+      "ResTypeCont", // t
+      "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test.t
+
+      "Res", // t
+      "EvalVariable", // Test
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return;
+
+      "Reset", // return
+      "Void",
+
+      "Reset", // skip Env from Block
+
+      "Reset", // return
+      "Void",
+
+      "Reset", // skip Env from Block
+    ];
+    const expectedStashTrace = [
+      "t", // EvalVariable
+      "null", // Literal
+      "null", // Assign
+      "Test", // ResType
+      "String[]", // ResType
+      "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
+      "main", // ResOverride
+      `[""]`, // Literal
+      "Test", // ResType
+      "Test", // ResTypeCont
+      "test", // ResOverload
+      "Test", // EvalVariable
+      "t", // Res
+      "null", // Deref
+      "test", // ResOverride
+      "Void",
+      "Void",
+    ];
+
+    expect(result).toEqual(undefined);
+    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
+    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
+    // TODO test env
+  });
+});

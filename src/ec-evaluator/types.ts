@@ -35,6 +35,7 @@ export enum InstrType {
   DEREF = 'Deref',
   NEW = 'New',
   RES_TYPE = 'ResType',
+  RES_TYPE_CONT = 'ResTypeCont',
   RES_OVERLOAD = 'ResOverload',
   RES_OVERRIDE = 'ResOverride',
   RES_CON_OVERLOAD = 'ResConOverload',
@@ -77,6 +78,10 @@ export interface ResTypeInstr extends BaseInstr {
   value: Expression | Class;
 }
 
+export interface ResTypeContInstr extends BaseInstr {
+  name: string;
+}
+
 export interface ResOverloadInstr extends BaseInstr {
   name: string;
   arity: number;
@@ -107,6 +112,7 @@ export type Instr =
   | DerefInstr
   | NewInstr
   | ResTypeInstr
+  | ResTypeContInstr
   | ResOverloadInstr
   | ResConOverloadInstr;
 
