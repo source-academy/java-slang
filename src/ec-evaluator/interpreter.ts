@@ -81,6 +81,7 @@ import {
   resOverride,
   resConOverload,
   isNull,
+  makeNonLocalVarSimpleNameQualified,
 } from "./utils";
 // import { astToString } from "../ast/utils/utils";
 
@@ -155,13 +156,17 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const instanceFields = getInstanceFields(command);
     const instanceMethods = getInstanceMethods(command);
     // Make MethodInvocation simple Identifier qualified to facilitate MethodInvocation evaluation.
-    instanceMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, className));
+    instanceMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, "this"));
+    // Make non local var simple name qualified.
+    instanceMethods.forEach(m => makeNonLocalVarSimpleNameQualified(m, "this"));
     instanceMethods.forEach(m => appendEmtpyReturn(m));
 
     const staticFields = getStaticFields(command);
     const staticMethods = getStaticMethods(command);
     // Make MethodInvocation simple Identifier qualified to facilitate MethodInvocation evaluation.
     staticMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, className));
+    // Make non local var simple name qualified.
+    staticMethods.forEach(m => makeNonLocalVarSimpleNameQualified(m, className));
     staticMethods.forEach(m => appendEmtpyReturn(m));
 
     const constructors = getConstructors(command);

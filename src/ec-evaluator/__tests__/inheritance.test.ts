@@ -154,20 +154,23 @@ describe("evaluate FieldDeclaration correctly", () => {
   
         "Env", // from Block
         "ReturnStatement", // return;
-        "LocalVariableDeclarationStatement", // int y = x;
+        "LocalVariableDeclarationStatement", // int y = Test.x;
 
-        "ExpressionStatement", // y = x;
+        "ExpressionStatement", // y = Test.x;
         "LocalVariableDeclarationStatement", // int y;
   
         "Pop",
-        "Assignment", // y = x
+        "Assignment", // y = Test.x
   
         "Assign", // =
-        "ExpressionName", // x
+        "ExpressionName", // Test.x
         "EvalVariable", // y
 
         "Deref",
-        "EvalVariable", // x
+        "EvalVariable", // Test.x
+
+        "Res", // x
+        "EvalVariable", // Test
   
         "Reset", // return
         "Void",
@@ -186,7 +189,8 @@ describe("evaluate FieldDeclaration correctly", () => {
         "main", // ResOverride
         `[""]`, // Literal
         "y", // EvalVariable
-        "x", // EvalVariable
+        "Test", // EvalVariable
+        "x", // Res
         "1", // Deref
         "1", // Assign
         "Void",
@@ -269,20 +273,23 @@ describe("evaluate FieldDeclaration correctly", () => {
   
         "Env", // from Block
         "ReturnStatement", // return;
-        "LocalVariableDeclarationStatement", // int y = x;
+        "LocalVariableDeclarationStatement", // int y = Test.x;
 
-        "ExpressionStatement", // y = x;
+        "ExpressionStatement", // y = Test.x;
         "LocalVariableDeclarationStatement", // int y;
   
         "Pop",
-        "Assignment", // y = x
+        "Assignment", // y = Test.x
   
         "Assign", // =
-        "ExpressionName", // x
+        "ExpressionName", // Test.x
         "EvalVariable", // y
 
         "Deref",
-        "EvalVariable", // x
+        "EvalVariable", // Test.x
+
+        "Res", // x
+        "EvalVariable", // Test
   
         "Reset", // return
         "Void",
@@ -304,7 +311,8 @@ describe("evaluate FieldDeclaration correctly", () => {
         "main", // ResOverride
         `[""]`, // Literal
         "y", // EvalVariable
-        "x", // EvalVariable
+        "Test", // EvalVariable
+        "x", // Res
         "2", // Deref
         "2", // Assign
         "Void",
@@ -1057,20 +1065,23 @@ describe("evaluate FieldDeclaration correctly", () => {
   
         "Env", // from Block
         "ReturnStatement", // return;
-        "LocalVariableDeclarationStatement", // int y = x;
+        "LocalVariableDeclarationStatement", // int y = this.x;
 
-        "ExpressionStatement", // y = x;
+        "ExpressionStatement", // y = this.x;
         "LocalVariableDeclarationStatement", // int y
 
         "Pop",
-        "Assignment", // y = x
+        "Assignment", // y = this.x
   
         "Assign", // =
-        "ExpressionName", // x
+        "ExpressionName", // this.x
         "EvalVariable", // y
   
         "Deref",
-        "EvalVariable", // x
+        "EvalVariable", // this.x
+
+        "Res", // x
+        "EvalVariable", // this
   
         "Reset", // return
         "Void",
@@ -1114,7 +1125,8 @@ describe("evaluate FieldDeclaration correctly", () => {
         "test", // ResOverride
         "Object",
         "y", // EvalVariable
-        "x", // EvalVariable
+        "this", // EvalVariable
+        "x", // Res
         "1", // Deref
         "1", // Assign
         "Void",
@@ -1292,20 +1304,23 @@ describe("evaluate FieldDeclaration correctly", () => {
   
         "Env", // from Block
         "ReturnStatement", // return;
-        "LocalVariableDeclarationStatement", // int y = x;
+        "LocalVariableDeclarationStatement", // int y = this.x;
 
-        "ExpressionStatement", // y = x;
+        "ExpressionStatement", // y = this.x;
         "LocalVariableDeclarationStatement", // int y
 
         "Pop",
-        "Assignment", // y = x
+        "Assignment", // y = this.x
   
         "Assign", // =
-        "ExpressionName", // x
+        "ExpressionName", // this.x
         "EvalVariable", // y
   
         "Deref",
-        "EvalVariable", // x
+        "EvalVariable", // this.x
+
+        "Res", // x
+        "EvalVariable", // this
   
         "Reset", // return
         "Void",
@@ -1353,7 +1368,8 @@ describe("evaluate FieldDeclaration correctly", () => {
         "test", // ResOverride
         "Object",
         "y", // EvalVariable
-        "x", // EvalVariable
+        "this", // EvalVariable
+        "x", // Res
         "2", // Deref
         "2", // Assign
         "Void",

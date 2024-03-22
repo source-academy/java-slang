@@ -1,17 +1,20 @@
 import { Node } from "../ast/types/ast";
 import {
+  Assignment,
+  BinaryExpression,
   BlockStatement,
   DecimalIntegerLiteral,
   Expression,
+  ExpressionName,
   ExpressionStatement,
   Literal,
+  LocalVariableDeclarationStatement,
   MethodInvocation,
   ReturnStatement,
 } from "../ast/types/blocks-and-statements";
 import {
   ConstructorDeclaration,
   FieldDeclaration,
-  Identifier,
   MethodDeclaration,
   NormalClassDeclaration,
   UnannType,
@@ -202,15 +205,19 @@ export const isQualified = (name: string) => {
   return name.includes(".");
 }
 
+export const isSimple = (name: string) => {
+  return !isQualified(name);
+}
+
 /**
  * Class
  */
 export const getInstanceFields = (c: NormalClassDeclaration): FieldDeclaration[] => {
-  return c.classBody.filter(m => m.kind === "FieldDeclaration" && !isStatic(m)) as FieldDeclaration[];
+  return c.classBody.filter(m => m.kind === "FieldDeclaration" && isInstance(m)) as FieldDeclaration[];
 }
 
 export const getInstanceMethods = (c: NormalClassDeclaration): MethodDeclaration[] => {
-  return c.classBody.filter(m => m.kind === "MethodDeclaration" && !isStatic(m)) as MethodDeclaration[];
+  return c.classBody.filter(m => m.kind === "MethodDeclaration" && isInstance(m)) as MethodDeclaration[];
 }
 
 export const getStaticFields = (c: NormalClassDeclaration): FieldDeclaration[] => {
@@ -244,29 +251,66 @@ const convertFieldDeclToExpStmtAssmt = (fd: FieldDeclaration): ExpressionStateme
   return expStmtAssmtNode(left, right, fd);
 };
 
-export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, className: Identifier) => {
-  const qualifier = isStatic(mtd) ? className : "this";
-
+export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, qualifier: string) => {
   mtd.methodBody.blockStatements.forEach(blockStatement => {
     // MethodInvocation as ExpressionStatement
     blockStatement.kind === "ExpressionStatement" &&
     blockStatement.stmtExp.kind === "MethodInvocation" &&
-    !isQualified(blockStatement.stmtExp.identifier) &&
+    isSimple(blockStatement.stmtExp.identifier) &&
     (blockStatement.stmtExp.identifier = `${qualifier}.${blockStatement.stmtExp.identifier}`);
 
     // MethodInvocation as RHS of Assignment ExpressionStatement
     blockStatement.kind === "ExpressionStatement" &&
     blockStatement.stmtExp.kind === "Assignment" &&
     blockStatement.stmtExp.right.kind === "MethodInvocation" &&
-    !isQualified(blockStatement.stmtExp.right.identifier) &&
+    isSimple(blockStatement.stmtExp.right.identifier) &&
     (blockStatement.stmtExp.right.identifier = `${qualifier}.${blockStatement.stmtExp.right.identifier}`);
 
     // MethodInvocation as VariableInitializer of LocalVariableDeclarationStatement
     blockStatement.kind === "LocalVariableDeclarationStatement" &&
     blockStatement.variableDeclaratorList[0].variableInitializer &&
     (blockStatement.variableDeclaratorList[0].variableInitializer as Expression).kind === "MethodInvocation" &&
-    !isQualified((blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier) &&
+    isSimple((blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier) &&
     ((blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier = `${qualifier}.${(blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier}`);
+  });
+}
+
+export const makeNonLocalVarSimpleNameQualified = (mtd: MethodDeclaration, qualifier: string) => {
+  const localVars = new Set<string>();
+
+  const makeSimpleNameQualifiedHelper = (exprOrBlkStmt: Expression | BlockStatement) => {
+    switch(exprOrBlkStmt.kind) {
+      case "ExpressionName":
+        const exprName = exprOrBlkStmt as ExpressionName;
+        isSimple(exprName.name) && !localVars.has(exprName.name) && (exprName.name = `${qualifier}.${exprName.name}`);
+        break;
+      case "Assignment":
+        const asgn = exprOrBlkStmt as Assignment;
+        makeSimpleNameQualifiedHelper(asgn.right);
+        break;
+      case "BinaryExpression":
+        const binExpr = exprOrBlkStmt as BinaryExpression;
+        makeSimpleNameQualifiedHelper(binExpr.left);
+        makeSimpleNameQualifiedHelper(binExpr.right);
+        break;
+      case "LocalVariableDeclarationStatement":
+        const localVarDecl = exprOrBlkStmt as LocalVariableDeclarationStatement;
+        localVarDecl.variableDeclaratorList[0].variableInitializer 
+          && makeSimpleNameQualifiedHelper(localVarDecl.variableDeclaratorList[0].variableInitializer as Expression)
+        break;
+      case "ExpressionStatement":
+        const exprStmt = exprOrBlkStmt as ExpressionStatement;
+        exprStmt.stmtExp.kind === "Assignment" && makeSimpleNameQualifiedHelper(exprStmt.stmtExp)
+      default:
+    }
+  }
+
+  mtd.methodBody.blockStatements.forEach(blockStatement => {
+    // Local var should be added incrementally to ensure correct scoping.
+    blockStatement.kind === "LocalVariableDeclarationStatement" &&
+    localVars.add(blockStatement.variableDeclaratorList[0].variableDeclaratorId);
+
+    makeSimpleNameQualifiedHelper(blockStatement);
   });
 }
 
