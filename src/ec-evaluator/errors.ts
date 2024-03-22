@@ -121,6 +121,17 @@ export class ResOverloadError extends RuntimeError {
   }
 }
 
+export class ResOverloadAmbiguousError extends RuntimeError {
+  constructor(private name: string, private argTypes: Type[]) {
+    super();
+  };
+
+  public explain() {
+    return `${super.explain()}: Overloading resolution of method ${this.name} \
+      with argTypes ${this.argTypes.map(t => t.type).join(", ")} is ambiguous.`;
+  }
+}
+
 export class ResConOverloadError extends RuntimeError {
   constructor(private name: string, private argTypes: Type[]) {
     super();

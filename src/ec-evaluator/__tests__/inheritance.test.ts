@@ -1,5 +1,5 @@
 import { parse } from "../../ast/parser";
-import { ResOverloadError, UndeclaredVariableError } from "../errors";
+import { ResOverloadAmbiguousError, ResOverloadError, UndeclaredVariableError } from "../errors";
 import { evaluate } from "../interpreter";
 import {
   ControlStub,
@@ -2663,6 +2663,34 @@ describe("evaluate method overloading correctly", () => {
     expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
     expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
     // TODO test env
+  });
+
+  it("should throw ambiguous method overloading error", () => {
+    const programStr = `
+      class Parent {
+        int x;
+      }
+      class Test extends Parent {
+        public static void main(String[] args) {
+          Test t = new Test();
+          t.test(t, t);
+        }
+        void test(Parent p, Test t) {
+          x = 3;
+        }
+        void test(Test t, Parent p) {
+          x = 2;
+        }
+      }
+      `;
+
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+
+    expect(() => evaluate(context)).toThrowError(ResOverloadAmbiguousError);
   });
 
   it("should fail method overloading resolution", () => {

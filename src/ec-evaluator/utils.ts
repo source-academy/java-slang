@@ -389,21 +389,24 @@ export const resOverload = (
   }
   
   // Choose most specific method.
-  let mostSpecClosure: Closure = appClosures[0];
-  for (const appClosure of appClosures) {
-    const mostSpecParams = (mostSpecClosure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
-    const params = (appClosure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
-    for (let i = 0; i < params.length; i++) {
+  const mostSpecClosuresByParam = new Set<Closure>();
+  for (let i = 0; i < argTypes.length; i++) {
+    let mostSpecClosureByParam = appClosures[0];
+    for (const appClosure of appClosures) {
+      const mostSpecParams = (mostSpecClosureByParam.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+      const params = (appClosure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
       if (isSubtype(params[i].unannType, mostSpecParams[i].unannType, classStore)) {
-        mostSpecClosure = appClosure;
-        break;
+        mostSpecClosureByParam = appClosure;
       }
     }
+    mostSpecClosuresByParam.add(mostSpecClosureByParam);
+  }
+  const isAmbiguous = mostSpecClosuresByParam.size > 1;
+  if (isAmbiguous) {
+    throw new errors.ResOverloadAmbiguousError(mtdName, argTypes);
   }
 
-  // TODO throw method invocation ambiguous erro
-
-  return mostSpecClosure;
+  return mostSpecClosuresByParam.values().next().value;
 };
 
 export const resOverride = (
