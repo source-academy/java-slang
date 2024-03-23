@@ -170,6 +170,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     staticMethods.forEach(m => makeNonLocalVarSimpleNameQualified(m, className));
     staticMethods.forEach(m => appendEmtpyReturn(m));
 
+    // Class that doesn't explicitly inherit another class implicitly inherits Object, except Object.
+    className !== "Object" && !command.sclass && (command.sclass = "Object");
+
     const constructors = getConstructors(command);
     // Insert default constructor if not overriden.
     if (!constructors.find(c => c.constructorDeclarator.formalParameterList.length === 0)) {
@@ -186,17 +189,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // To restore current (global) env for next NormalClassDeclarations evaluation.
     control.push(instr.envInstr(context.environment.current, command));
     
-    // TODO why NormalClassDeclaration node not modified?
-    let superclass: Class | undefined = undefined;
-    let fromEnv: EnvNode;
-    if (className === "Object") {
-      fromEnv = context.environment.global;
-    } else {
-      // Class that doesn't explicitly inherit another class implicitly inherit Object.
-      const superclassName = command.sclass = command.sclass ?? "Object";
-      superclass = context.environment.getClass(superclassName);
-      fromEnv = superclass.frame;
-    }
+    const superclass: Class | undefined = command.sclass ? context.environment.getClass(command.sclass) : undefined;
+    const fromEnv = superclass ? superclass.frame : context.environment.global;
     context.environment.extendEnv(fromEnv, className);
 
     const c = {
@@ -732,13 +726,38 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ) => {
     const typeToSearchIn = stash.pop()! as Type;
 
-    const classToSearchIn: Class = context.environment.getClass(typeToSearchIn.type);
-    const v = classToSearchIn.frame.getName(command.name);
-    const type = v.kind === "Variable" ? v.type : v.frame.name;
+    let classToSearchIn: Class | undefined = context.environment.getClass(typeToSearchIn.type);
+    let type;
+    do {
+      // Check if instance field.
+      for (const f of classToSearchIn.instanceFields) {
+        if (command.name === f.variableDeclaratorList[0].variableDeclaratorId) {
+          type = f.fieldType;
+          break;
+        }
+      }
+      if (type) break;
+
+      // Check if static field.
+      for (const f of classToSearchIn.staticFields) {
+        if (command.name === f.variableDeclaratorList[0].variableDeclaratorId) {
+          type = f.fieldType;
+          break;
+        }
+      }
+      if (type) break;
+
+      // Check if superclass instance/static field.
+      classToSearchIn = classToSearchIn.superclass;
+    } while (classToSearchIn)
+
+    if (!type) {
+      throw new errors.UndeclaredVariableError(command.name);
+    }
     
     stash.push({
       kind: "Type",
-      type: type!,
+      type,
     } as Type);
   },
 
