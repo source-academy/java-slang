@@ -85,6 +85,31 @@ describe("evaluate default constructor", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -121,6 +146,12 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "Test", // ResConOverlaod
       "Object", // New
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "0", // Literal
@@ -213,6 +244,31 @@ describe("evaluate default constructor", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 1;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 1
@@ -249,6 +305,12 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "Test", // ResConOverlaod
       "Object", // New
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "1", // Literal
@@ -345,6 +407,31 @@ describe("evaluate default constructor", () => {
       "ReturnStatement", // return this;
       "ExpressionStatement", // x = 2;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -388,6 +475,12 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "Test", // ResConOverlaod
       "Object", // New
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "0", // Literal
@@ -487,6 +580,31 @@ describe("evaluate default constructor", () => {
       "ReturnStatement", // return this;
       "ExpressionStatement", // x = 2;
       "ExpressionStatement", // this.x = 1;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 1
@@ -530,6 +648,12 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "Test", // ResConOverlaod
       "Object", // New
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "1", // Literal
@@ -628,6 +752,31 @@ describe("evaluate default constructor", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -664,6 +813,12 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "Test", // ResConOverlaod
       "Object", // New
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "0", // Literal
@@ -765,6 +920,31 @@ describe("evaluate constructor overloading resolution", () => {
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = x;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -816,6 +996,12 @@ describe("evaluate constructor overloading resolution", () => {
       "Test", // ResConOverlaod
       "Object", // New
       "1", // Literal
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "0", // Literal
@@ -924,6 +1110,31 @@ describe("evaluate constructor overloading resolution", () => {
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = x;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -975,6 +1186,12 @@ describe("evaluate constructor overloading resolution", () => {
       "Test", // ResConOverlaod
       "Object", // New
       "1", // Literal
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "0", // Literal

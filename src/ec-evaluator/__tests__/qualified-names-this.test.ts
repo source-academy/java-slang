@@ -187,6 +187,31 @@ describe("evaluate simple qualified names correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 1;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 1
@@ -233,6 +258,12 @@ describe("evaluate simple qualified names correctly", () => {
       "Test", // ResType
       "Test", // ResConOverload
       "Object", // New
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "1", // Literal
@@ -335,6 +366,31 @@ describe("evaluate simple qualified names correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 1;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 1
@@ -406,6 +462,12 @@ describe("evaluate simple qualified names correctly", () => {
       "Test", // ResType
       "Test", // ResConOverload
       "Object", // New
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "1", // Literal
@@ -617,6 +679,31 @@ describe("evaluate simple qualified names correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -669,6 +756,12 @@ describe("evaluate simple qualified names correctly", () => {
       "Test", // ResType
       "Test", // ResConOverload
       "Object", // New
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "0", // Literal
@@ -772,6 +865,31 @@ describe("evaluate simple qualified names correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 1;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 1
@@ -849,6 +967,12 @@ describe("evaluate simple qualified names correctly", () => {
       "Test", // ResConOverload
       "Test", // ResType
       "Object", // New
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "1", // Literal

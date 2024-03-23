@@ -430,6 +430,31 @@ describe("evaluate FieldDeclaration correctly", () => {
   
         "Env", // from Block
         "ReturnStatement", // return this;
+        "ExplicitConstructorInvocation", // super();
+
+        "Pop",
+        "Invocation", // ()
+        "ExpressionName", // super
+        "ResConOverload", // Object
+        "ResType", // super
+
+        "Deref",
+        "EvalVariable", // super
+
+        "Env", // from Invocation
+        "Marker",
+        "Block", // {...}
+
+        "Env", // from Block
+        "ReturnStatement", // return this;
+
+        "Reset", // return
+        "ExpressionName", // this
+
+        "Deref",
+        "EvalVariable", // this
+
+        "Reset", // Skip Env from Block
   
         "Reset", // return
         "ExpressionName", // this
@@ -486,6 +511,12 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Parent", // ResType
         "Parent", // ResConOverload
         "super", // EvalVariable
+        "Object", // Deref
+        "Object", // ResType
+        "Object", // ResConOverload
+        "super", // EvalVariable
+        "Object", // Deref
+        "this", // EvalVariable
         "Object", // Deref
         "this", // EvalVariable
         "Object", // Deref
@@ -619,6 +650,31 @@ describe("evaluate FieldDeclaration correctly", () => {
   
         "Env", // from Block
         "ReturnStatement", // return this;
+        "ExplicitConstructorInvocation", // super();
+
+        "Pop",
+        "Invocation", // ()
+        "ExpressionName", // super
+        "ResConOverload", // Object
+        "ResType", // super
+
+        "Deref",
+        "EvalVariable", // super
+
+        "Env", // from Invocation
+        "Marker",
+        "Block", // {...}
+
+        "Env", // from Block
+        "ReturnStatement", // return this;
+
+        "Reset", // return
+        "ExpressionName", // this
+
+        "Deref",
+        "EvalVariable", // this
+
+        "Reset", // Skip Env from Block
   
         "Reset", // return
         "ExpressionName", // this
@@ -678,6 +734,12 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Parent", // ResType
         "Parent", // ResConOverload
         "super", // EvalVariable
+        "Object", // Deref
+        "Object", // ResType
+        "Object", // ResConOverload
+        "super", // EvalVariable
+        "Object", // Deref
+        "this", // EvalVariable
         "Object", // Deref
         "this", // EvalVariable
         "Object", // Deref
@@ -811,6 +873,31 @@ describe("evaluate FieldDeclaration correctly", () => {
   
         "Env", // from Block
         "ReturnStatement", // return this;
+        "ExplicitConstructorInvocation", // super();
+
+        "Pop",
+        "Invocation", // ()
+        "ExpressionName", // super
+        "ResConOverload", // Object
+        "ResType", // super
+
+        "Deref",
+        "EvalVariable", // super
+
+        "Env", // from Invocation
+        "Marker",
+        "Block", // {...}
+
+        "Env", // from Block
+        "ReturnStatement", // return this;
+
+        "Reset", // return
+        "ExpressionName", // this
+
+        "Deref",
+        "EvalVariable", // this
+
+        "Reset", // Skip Env from Block
   
         "Reset", // return
         "ExpressionName", // this
@@ -870,6 +957,12 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Parent", // ResType
         "Parent", // ResConOverload
         "super", // EvalVariable
+        "Object", // Deref
+        "Object", // ResType
+        "Object", // ResConOverload
+        "super", // EvalVariable
+        "Object", // Deref
+        "this", // EvalVariable
         "Object", // Deref
         "this", // EvalVariable
         "Object", // Deref
@@ -1020,6 +1113,31 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Env", // from Block
         "ReturnStatement", // return this;
         "ExpressionStatement", // this.x = 1;
+        "ExplicitConstructorInvocation", // super();
+
+        "Pop",
+        "Invocation", // ()
+        "ExpressionName", // super
+        "ResConOverload", // Object
+        "ResType", // super
+
+        "Deref",
+        "EvalVariable", // super
+
+        "Env", // from Invocation
+        "Marker",
+        "Block", // {...}
+
+        "Env", // from Block
+        "ReturnStatement", // return this;
+
+        "Reset", // return
+        "ExpressionName", // this
+
+        "Deref",
+        "EvalVariable", // this
+
+        "Reset", // Skip Env from Block
   
         "Pop",
         "Assignment", // this.x = 1
@@ -1108,6 +1226,12 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Parent", // ResType
         "Parent", // ResConOverload
         "super", // EvalVariable
+        "Object", // Deref
+        "Object", // ResType
+        "Object", // ResConOverload
+        "super", // EvalVariable
+        "Object", // Deref
+        "this", // EvalVariable
         "Object", // Deref
         "this", // EvalVariable
         "x", // Res
@@ -1249,6 +1373,31 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Env", // from Block
         "ReturnStatement", // return this;
         "ExpressionStatement", // this.x = 1;
+        "ExplicitConstructorInvocation", // super();
+
+        "Pop",
+        "Invocation", // ()
+        "ExpressionName", // super
+        "ResConOverload", // Object
+        "ResType", // super
+
+        "Deref",
+        "EvalVariable", // super
+
+        "Env", // from Invocation
+        "Marker",
+        "Block", // {...}
+
+        "Env", // from Block
+        "ReturnStatement", // return this;
+
+        "Reset", // return
+        "ExpressionName", // this
+
+        "Deref",
+        "EvalVariable", // this
+
+        "Reset", // Skip Env from Block
   
         "Pop",
         "Assignment", // this.x = 1
@@ -1347,6 +1496,12 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Parent", // ResType
         "Parent", // ResConOverload
         "super", // EvalVariable
+        "Object", // Deref
+        "Object", // ResType
+        "Object", // ResConOverload
+        "super", // EvalVariable
+        "Object", // Deref
+        "this", // EvalVariable
         "Object", // Deref
         "this", // EvalVariable
         "x", // Res
@@ -1483,6 +1638,31 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Env", // from Block
         "ReturnStatement", // return this;
         "ExpressionStatement", // this.x = 1;
+        "ExplicitConstructorInvocation", // super();
+
+        "Pop",
+        "Invocation", // ()
+        "ExpressionName", // super
+        "ResConOverload", // Object
+        "ResType", // super
+
+        "Deref",
+        "EvalVariable", // super
+
+        "Env", // from Invocation
+        "Marker",
+        "Block", // {...}
+
+        "Env", // from Block
+        "ReturnStatement", // return this;
+
+        "Reset", // return
+        "ExpressionName", // this
+
+        "Deref",
+        "EvalVariable", // this
+
+        "Reset", // Skip Env from Block
   
         "Pop",
         "Assignment", // this.x = 1
@@ -1546,6 +1726,12 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Parent", // ResType
         "Parent", // ResConOverload
         "super", // EvalVariable
+        "Object", // Deref
+        "Object", // ResType
+        "Object", // ResConOverload
+        "super", // EvalVariable
+        "Object", // Deref
+        "this", // EvalVariable
         "Object", // Deref
         "this", // EvalVariable
         "x", // Res
@@ -1673,6 +1859,31 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Env", // from Block
         "ReturnStatement", // return this;
         "ExpressionStatement", // this.x = 1;
+        "ExplicitConstructorInvocation", // super();
+
+        "Pop",
+        "Invocation", // ()
+        "ExpressionName", // super
+        "ResConOverload", // Object
+        "ResType", // super
+
+        "Deref",
+        "EvalVariable", // super
+
+        "Env", // from Invocation
+        "Marker",
+        "Block", // {...}
+
+        "Env", // from Block
+        "ReturnStatement", // return this;
+
+        "Reset", // return
+        "ExpressionName", // this
+
+        "Deref",
+        "EvalVariable", // this
+
+        "Reset", // Skip Env from Block
   
         "Pop",
         "Assignment", // this.x = 1
@@ -1746,6 +1957,12 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Parent", // ResType
         "Parent", // ResConOverload
         "super", // EvalVariable
+        "Object", // Deref
+        "Object", // ResType
+        "Object", // ResConOverload
+        "super", // EvalVariable
+        "Object", // Deref
+        "this", // EvalVariable
         "Object", // Deref
         "this", // EvalVariable
         "x", // Res
@@ -1877,6 +2094,31 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Env", // from Block
         "ReturnStatement", // return this;
         "ExpressionStatement", // this.x = 1;
+        "ExplicitConstructorInvocation", // super();
+
+        "Pop",
+        "Invocation", // ()
+        "ExpressionName", // super
+        "ResConOverload", // Object
+        "ResType", // super
+
+        "Deref",
+        "EvalVariable", // super
+
+        "Env", // from Invocation
+        "Marker",
+        "Block", // {...}
+
+        "Env", // from Block
+        "ReturnStatement", // return this;
+
+        "Reset", // return
+        "ExpressionName", // this
+
+        "Deref",
+        "EvalVariable", // this
+
+        "Reset", // Skip Env from Block
   
         "Pop",
         "Assignment", // this.x = 1
@@ -1950,6 +2192,12 @@ describe("evaluate FieldDeclaration correctly", () => {
         "Parent", // ResType
         "Parent", // ResConOverload
         "super", // EvalVariable
+        "Object", // Deref
+        "Object", // ResType
+        "Object", // ResConOverload
+        "super", // EvalVariable
+        "Object", // Deref
+        "this", // EvalVariable
         "Object", // Deref
         "this", // EvalVariable
         "x", // Res
@@ -2107,6 +2355,31 @@ describe("evaluate method overloading correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -2191,6 +2464,12 @@ describe("evaluate method overloading correctly", () => {
       "Parent", // ResType
       "Parent", // ResConOverload
       "super", // EvalVariable
+      "Object", // Deref
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
       "Object", // Deref
       "this", // EvalVariable
       "x", // Res
@@ -2332,6 +2611,31 @@ describe("evaluate method overloading correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -2416,6 +2720,12 @@ describe("evaluate method overloading correctly", () => {
       "Parent", // ResType
       "Parent", // ResConOverload
       "super", // EvalVariable
+      "Object", // Deref
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
       "Object", // Deref
       "this", // EvalVariable
       "x", // Res
@@ -2557,6 +2867,31 @@ describe("evaluate method overloading correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -2646,6 +2981,12 @@ describe("evaluate method overloading correctly", () => {
       "Parent", // ResType
       "Parent", // ResConOverload
       "super", // EvalVariable
+      "Object", // Deref
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
       "Object", // Deref
       "this", // EvalVariable
       "x", // Res
@@ -2841,6 +3182,31 @@ describe("evaluate method overriding correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -2920,6 +3286,12 @@ describe("evaluate method overriding correctly", () => {
       "Parent", // ResType
       "Parent", // ResConOverload
       "super", // EvalVariable
+      "Object", // Deref
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
       "Object", // Deref
       "this", // EvalVariable
       "x", // Res
@@ -3063,6 +3435,31 @@ describe("evaluate method overriding correctly", () => {
 
       "Env", // from Block
       "ReturnStatement", // return this;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Reset", // return
       "ExpressionName", // this
@@ -3135,6 +3532,12 @@ describe("evaluate method overriding correctly", () => {
       "Parent", // ResType
       "Parent", // ResConOverload
       "super", // EvalVariable
+      "Object", // Deref
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
       "Object", // Deref
       "this", // EvalVariable
       "Object", // Deref
@@ -3270,6 +3673,31 @@ describe("evaluate method overriding correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -3336,6 +3764,31 @@ describe("evaluate method overriding correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -3421,6 +3874,12 @@ describe("evaluate method overriding correctly", () => {
       "Parent", // ResConOverload
       "super", // EvalVariable
       "Object", // Deref
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "0", // Literal
@@ -3437,6 +3896,12 @@ describe("evaluate method overriding correctly", () => {
       "Parent", // ResType
       "Parent", // ResConOverload
       "super", // EvalVariable
+      "Object", // Deref
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
       "Object", // Deref
       "this", // EvalVariable
       "x", // Res
@@ -3580,6 +4045,31 @@ describe("evaluate method overriding correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -3646,6 +4136,31 @@ describe("evaluate method overriding correctly", () => {
       "Env", // from Block
       "ReturnStatement", // return this;
       "ExpressionStatement", // this.x = 0;
+      "ExplicitConstructorInvocation", // super();
+
+      "Pop",
+      "Invocation", // ()
+      "ExpressionName", // super
+      "ResConOverload", // Object
+      "ResType", // super
+
+      "Deref",
+      "EvalVariable", // super
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return this;
+
+      "Reset", // return
+      "ExpressionName", // this
+
+      "Deref",
+      "EvalVariable", // this
+
+      "Reset", // Skip Env from Block
 
       "Pop",
       "Assignment", // this.x = 0
@@ -3731,6 +4246,12 @@ describe("evaluate method overriding correctly", () => {
       "Parent", // ResConOverload
       "super", // EvalVariable
       "Object", // Deref
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
+      "Object", // Deref
       "this", // EvalVariable
       "x", // Res
       "0", // Literal
@@ -3747,6 +4268,12 @@ describe("evaluate method overriding correctly", () => {
       "Parent", // ResType
       "Parent", // ResConOverload
       "super", // EvalVariable
+      "Object", // Deref
+      "Object", // ResType
+      "Object", // ResConOverload
+      "super", // EvalVariable
+      "Object", // Deref
+      "this", // EvalVariable
       "Object", // Deref
       "this", // EvalVariable
       "x", // Res
