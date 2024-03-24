@@ -275,8 +275,15 @@ export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, qual
   });
 }
 
-export const makeNonLocalVarSimpleNameQualified = (mtd: MethodDeclaration, qualifier: string) => {
-  const localVars = new Set<string>();
+export const makeNonLocalVarNonParamSimpleNameQualified = (
+  mtdOrCon: MethodDeclaration | ConstructorDeclaration,
+  qualifier: string
+) => {
+  const headerOrDeclarator = mtdOrCon.kind === "MethodDeclaration"
+    ? mtdOrCon.methodHeader
+    : mtdOrCon.constructorDeclarator;
+  const params = headerOrDeclarator.formalParameterList.map(p => p.identifier);
+  const localVars = new Set<string>(params);
 
   const makeSimpleNameQualifiedHelper = (exprOrBlkStmt: Expression | BlockStatement) => {
     switch(exprOrBlkStmt.kind) {
@@ -286,6 +293,7 @@ export const makeNonLocalVarSimpleNameQualified = (mtd: MethodDeclaration, quali
         break;
       case "Assignment":
         const asgn = exprOrBlkStmt as Assignment;
+        makeSimpleNameQualifiedHelper(asgn.left);
         makeSimpleNameQualifiedHelper(asgn.right);
         break;
       case "BinaryExpression":
@@ -305,7 +313,10 @@ export const makeNonLocalVarSimpleNameQualified = (mtd: MethodDeclaration, quali
     }
   }
 
-  mtd.methodBody.blockStatements.forEach(blockStatement => {
+  const body = mtdOrCon.kind === "MethodDeclaration"
+    ? mtdOrCon.methodBody
+    : mtdOrCon.constructorBody;
+  body.blockStatements.forEach(blockStatement => {
     // Local var should be added incrementally to ensure correct scoping.
     blockStatement.kind === "LocalVariableDeclarationStatement" &&
     localVars.add(blockStatement.variableDeclaratorList[0].variableDeclaratorId);

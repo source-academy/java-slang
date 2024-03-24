@@ -405,7 +405,7 @@ describe("evaluate default constructor", () => {
   
       "Env", // from Block
       "ReturnStatement", // return this;
-      "ExpressionStatement", // x = 2;
+      "ExpressionStatement", // this.x = 2;
       "ExpressionStatement", // this.x = 0;
       "ExplicitConstructorInvocation", // super();
 
@@ -444,11 +444,14 @@ describe("evaluate default constructor", () => {
       "EvalVariable", // this
 
       "Pop",
-      "Assignment", // x = 2
+      "Assignment", // this.x = 2
 
       "Assign", // =
       "Literal", // 2
-      "EvalVariable", // x
+      "EvalVariable", // this.x
+
+      "Res", // x
+      "EvalVariable", // this
 
       "Reset", // return
       "ExpressionName", // this
@@ -485,7 +488,8 @@ describe("evaluate default constructor", () => {
       "x", // Res
       "0", // Literal
       "0", // Assign
-      "x", // EvalVariable
+      "this", // EvalVariable
+      "x", // Res
       "2", // Literal
       "2", // Assign
       "this", // EvalVariable
@@ -578,7 +582,7 @@ describe("evaluate default constructor", () => {
   
       "Env", // from Block
       "ReturnStatement", // return this;
-      "ExpressionStatement", // x = 2;
+      "ExpressionStatement", // this.x = 2;
       "ExpressionStatement", // this.x = 1;
       "ExplicitConstructorInvocation", // super();
 
@@ -621,7 +625,10 @@ describe("evaluate default constructor", () => {
 
       "Assign", // =
       "Literal", // 2
-      "EvalVariable", // x
+      "EvalVariable", // this.x
+
+      "Res", // x
+      "EvalVariable", // this
 
       "Reset", // return
       "ExpressionName", // this
@@ -658,7 +665,8 @@ describe("evaluate default constructor", () => {
       "x", // Res
       "1", // Literal
       "1", // Assign
-      "x", // EvalVariable
+      "this", // EvalVariable
+      "x", // Res
       "2", // Literal
       "2", // Assign
       "this", // EvalVariable

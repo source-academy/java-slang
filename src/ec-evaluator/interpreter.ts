@@ -82,7 +82,7 @@ import {
   resOverride,
   resConOverload,
   isNull,
-  makeNonLocalVarSimpleNameQualified,
+  makeNonLocalVarNonParamSimpleNameQualified,
 } from "./utils";
 // import { astToString } from "../ast/utils/utils";
 
@@ -159,7 +159,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Make MethodInvocation simple Identifier qualified to facilitate MethodInvocation evaluation.
     instanceMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, "this"));
     // Make non local var simple name qualified.
-    instanceMethods.forEach(m => makeNonLocalVarSimpleNameQualified(m, "this"));
+    instanceMethods.forEach(m => makeNonLocalVarNonParamSimpleNameQualified(m, "this"));
     instanceMethods.forEach(m => appendEmtpyReturn(m));
 
     const staticFields = getStaticFields(command);
@@ -167,7 +167,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Make MethodInvocation simple Identifier qualified to facilitate MethodInvocation evaluation.
     staticMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, className));
     // Make non local var simple name qualified.
-    staticMethods.forEach(m => makeNonLocalVarSimpleNameQualified(m, className));
+    staticMethods.forEach(m => makeNonLocalVarNonParamSimpleNameQualified(m, className));
     staticMethods.forEach(m => appendEmtpyReturn(m));
 
     // Class that doesn't explicitly inherit another class implicitly inherits Object, except Object.
@@ -181,6 +181,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     }
     // Prepend instance fields initialization at start of constructor body.
     constructors.forEach(c => prependInstanceFieldsInit(c, instanceFields));
+    // Make non local var simple name qualified.
+    constructors.forEach(c => makeNonLocalVarNonParamSimpleNameQualified(c, "this"));
     // Prepend super() if needed before instance fields initialization.
     constructors.forEach(c => prependExpConInvIfNeeded(c, command));
     // Append ReturnStatement with this keyword at end of constructor body.
@@ -485,13 +487,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       ? cloneDeep(closure.mtdOrCon.methodHeader.formalParameterList)
       : cloneDeep(closure.mtdOrCon.constructorDeclarator.formalParameterList);
 
-    // Extend method/constructor's environment.
-    const isInstanceMtdOrCon = args.length == params.length + 1;
+    // Extend env from global frame.
     const mtdOrConDescriptor = getDescriptor(closure.mtdOrCon);
-    if (isInstanceMtdOrCon) {
-      // Extend env from obj frame.
-      context.environment.extendEnv((args[0] as Object).frame, mtdOrConDescriptor);
+    context.environment.extendEnv(context.environment.global, mtdOrConDescriptor);
 
+    const isInstanceMtdOrCon = args.length == params.length + 1;
+    if (isInstanceMtdOrCon) {
       // Append implicit FormalParameter and arg super if needed.
       if (closure.env.parent.name !== "global") {
         params.unshift(
@@ -512,9 +513,6 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
           identifier: "this",
         },
       );
-    } else {
-      // Extend env from class frame.
-      context.environment.extendEnv(closure.env, mtdOrConDescriptor);
     }
 
     // Bind arguments to corresponding FormalParameters.

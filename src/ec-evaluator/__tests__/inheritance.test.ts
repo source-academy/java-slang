@@ -2430,14 +2430,17 @@ describe("evaluate method overloading correctly", () => {
 
       "Env", // from Block
       "ReturnStatement", // return;
-      "ExpressionStatement", // x = 2;
+      "ExpressionStatement", // this.x = 2;
 
       "Pop",
-      "Assignment", // x = 2
+      "Assignment", // this.x = 2
 
       "Assign", // =
       "Literal", // 2
-      "EvalVariable", // x
+      "EvalVariable", // this.x
+
+      "Res", // x
+      "EvalVariable", // this
 
       "Reset", // return
       "Void",
@@ -2489,7 +2492,8 @@ describe("evaluate method overloading correctly", () => {
       "Object",
       "t", // EvalVariable
       "Object", // Deref
-      "x", // EvalVariable
+      "this", // EvalVariable
+      "x", // Res
       "2", // Literal
       "2", // Assign
       "Void",
@@ -2686,14 +2690,17 @@ describe("evaluate method overloading correctly", () => {
 
       "Env", // from Block
       "ReturnStatement", // return;
-      "ExpressionStatement", // x = 3;
+      "ExpressionStatement", // this.x = 3;
 
       "Pop",
-      "Assignment", // x = 3
+      "Assignment", // this.x = 3
 
       "Assign", // =
       "Literal", // 3
-      "EvalVariable", // x
+      "EvalVariable", // this.x
+
+      "Res", // x
+      "EvalVariable", // this
 
       "Reset", // return
       "Void",
@@ -2745,7 +2752,8 @@ describe("evaluate method overloading correctly", () => {
       "Object",
       "t", // EvalVariable
       "Object", // Deref
-      "x", // EvalVariable
+      "this", // EvalVariable
+      "x", // Res
       "3", // Literal
       "3", // Assign
       "Void",
@@ -2947,14 +2955,17 @@ describe("evaluate method overloading correctly", () => {
 
       "Env", // from Block
       "ReturnStatement", // return;
-      "ExpressionStatement", // x = 3;
+      "ExpressionStatement", // this.x = 3;
 
       "Pop",
-      "Assignment", // x = 3
+      "Assignment", // this.x = 3
 
       "Assign", // =
       "Literal", // 3
-      "EvalVariable", // x
+      "EvalVariable", // this.x
+
+      "Res", // x
+      "EvalVariable", // this
 
       "Reset", // return
       "Void",
@@ -3009,7 +3020,8 @@ describe("evaluate method overloading correctly", () => {
       "Object", // Deref
       "t", // EvalVariable
       "Object", // Deref
-      "x", // EvalVariable
+      "this", // EvalVariable
+      "x", // Res
       "3", // Literal
       "3", // Assign
       "Void",
@@ -3252,14 +3264,17 @@ describe("evaluate method overriding correctly", () => {
 
       "Env", // from Block
       "ReturnStatement", // return;
-      "ExpressionStatement", // x = 2;
+      "ExpressionStatement", // this.x = 2;
 
       "Pop",
-      "Assignment", // x = 2
+      "Assignment", // this.x = 2
 
       "Assign", // =
       "Literal", // 2
-      "EvalVariable", // x
+      "EvalVariable", // this.x
+
+      "Res", // x
+      "EvalVariable", // this
 
       "Reset", // return
       "Void",
@@ -3308,7 +3323,8 @@ describe("evaluate method overriding correctly", () => {
       "Object", // Deref
       "test", // ResOverride
       "Object",
-      "x", // EvalVariable
+      "this", // EvalVariable
+      "x", // Res
       "2", // Literal
       "2", // Assign
       "Void",
@@ -3495,14 +3511,17 @@ describe("evaluate method overriding correctly", () => {
 
       "Env", // from Block
       "ReturnStatement", // return;
-      "ExpressionStatement", // x = 1;
+      "ExpressionStatement", // this.x = 1;
 
       "Pop",
-      "Assignment", // x = 1
+      "Assignment", // this.x = 1
 
       "Assign", // =
       "Literal", // 1
-      "EvalVariable", // x
+      "EvalVariable", // this.x
+
+      "Res", // x
+      "EvalVariable", // this
 
       "Reset", // return
       "Void",
@@ -3549,7 +3568,8 @@ describe("evaluate method overriding correctly", () => {
       "p", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
-      "x", // EvalVariable
+      "Parent", // EvalVariable
+      "x", // Res
       "1", // Literal
       "1", // Assign
       "Void",
@@ -3839,14 +3859,17 @@ describe("evaluate method overriding correctly", () => {
 
       "Env", // from Block
       "ReturnStatement", // return;
-      "ExpressionStatement", // x = 2;
+      "ExpressionStatement", // this.x = 2;
 
       "Pop",
-      "Assignment", // x = 2
+      "Assignment", // this.x = 2
 
       "Assign", // =
       "Literal", // 2
-      "EvalVariable", // x
+      "EvalVariable", // this.x
+
+      "Res", // x
+      "EvalVariable", // this
 
       "Reset", // return
       "Void",
@@ -3921,7 +3944,8 @@ describe("evaluate method overriding correctly", () => {
       "Object",
       "t", // EvalVariable
       "Object", // Deref
-      "x", // EvalVariable
+      "this", // EvalVariable
+      "x", // Res
       "2", // Literal
       "2", // Assign
       "Void",
@@ -4211,14 +4235,17 @@ describe("evaluate method overriding correctly", () => {
 
       "Env", // from Block
       "ReturnStatement", // return;
-      "ExpressionStatement", // x = 1;
+      "ExpressionStatement", // this.x = 1;
 
       "Pop",
-      "Assignment", // x = 1
+      "Assignment", // this.x = 1
 
       "Assign", // =
       "Literal", // 1
-      "EvalVariable", // x
+      "EvalVariable", // this.x
+
+      "Res", // x
+      "EvalVariable", // this
 
       "Reset", // return
       "Void",
@@ -4293,7 +4320,8 @@ describe("evaluate method overriding correctly", () => {
       "Object",
       "t", // EvalVariable
       "Object", // Deref
-      "x", // EvalVariable
+      "this", // EvalVariable
+      "x", // Res
       "1", // Literal
       "1", // Assign
       "Void",
