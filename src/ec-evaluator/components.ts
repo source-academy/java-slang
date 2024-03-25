@@ -6,6 +6,7 @@ import {
   Closure,
   ControlItem,
   Name,
+  Object,
   StashItem,
   Value,
   VarValue,
@@ -22,6 +23,7 @@ export class Stash extends Stack<StashItem> {};
 export class Environment {
   private _global: EnvNode;
   private _current: EnvNode;
+  private _objects: Object[] = [];
 
   constructor() {
     const node = new EnvNode("global");
@@ -49,6 +51,26 @@ export class Environment {
 
     // Set current environment.
     this._current = node;
+  }
+
+  createObj(c: Class): Object {
+    // Create new environment.
+    const node = new EnvNode("object");
+
+    // Create new object.
+    const obj = {
+      kind: "Object",
+      frame: node,
+      class: c,
+    } as Object;
+
+    // Add to objects arr.
+    this._objects.push(obj);
+
+    // Set current environment.
+    this._current = node;
+
+    return obj;
   }
 
   restoreEnv(toEnv: EnvNode) {

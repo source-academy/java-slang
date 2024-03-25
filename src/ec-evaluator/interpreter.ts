@@ -577,6 +577,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Name resolution is based on the target type, not target obj.
     let variable;
     if (varOrClass.kind === "Variable") {
+      // TODO refactor? logic abit confusing
       // Check recursively if static field.
       let c = context.environment.getClass(varOrClass.type);
       while (!c.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name) 
@@ -584,9 +585,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         && c.superclass) {
         c = c.superclass;
       }
+
+      // If static field.
       if (c.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name)) {
         variable = c.frame.getVariable(command.name);
-      } else {
+      // If instance field.
+      } else if (c.instanceFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name)) {
         // Throw NullPointerException if instance field but target is null.
         if (isNull(varOrClass.value as Literal | Object)) {
           throw new errors.NullPointerException();
@@ -601,6 +605,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
           objFrame = objFrame.parent;
         }
         variable = objFrame.getVariable(command.name)
+      } else {
+        throw new errors.UndeclaredVariableError(command.name)
       }
     } else /*if (varOrClass.kind === "Class")*/ {
       variable = varOrClass.frame.getVariable(command.name);
@@ -635,7 +641,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const currEnv = context.environment.current;
 
     // Get class hierarchy.
-    let currClass: Class = command.c;
+    const objClass = command.c;
+    let currClass: Class = objClass;
     const classHierachy: Class[] = [currClass];
     while (currClass.superclass) {
       classHierachy.unshift(currClass.superclass);
@@ -643,11 +650,10 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     };
     
     // Create obj with both declared and inherited fields.
+    let obj: Object;
     classHierachy.forEach((c, i) => {
-      // Extend first frame from its curr class frame and subsequent frames from preceding frame.
-      // TODO doesn't make sense to extend from class frame, but there should be a reference.
-      const fromEnv = i ? context.environment.current : currClass.frame;
-      context.environment.extendEnv(fromEnv, "object");
+      // Only 1 object is created.
+      i === 0 ? (obj = context.environment.createObj(objClass)) : context.environment.extendEnv(context.environment.current, "object");
 
       // Declare instance fields.
       c.instanceFields.forEach(i => {
@@ -665,13 +671,10 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       });
     });
 
+    // Set obj to correct frame.
+    obj!.frame = context.environment.current;
     // Push obj on stash.
-    const obj = {
-      kind: "Object",
-      frame: context.environment.current,
-      class: command.c,
-    } as Object;
-    stash.push(obj);
+    stash.push(obj!);
 
     // Restore env.
     context.environment.restoreEnv(currEnv);
