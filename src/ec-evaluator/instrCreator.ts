@@ -17,6 +17,7 @@ import {
   ResInstr,
   ResOverloadInstr,
   ResOverrideInstr,
+  ResTypeContInstr,
   ResTypeInstr,
 } from "./types";
 
@@ -116,6 +117,15 @@ export const resTypeInstr = (
   instrType: InstrType.RES_TYPE,
   srcNode,
   value,
+});
+
+export const resTypeContInstr = (
+  name: string,
+  srcNode: Node,
+): ResTypeContInstr => ({
+  instrType: InstrType.RES_TYPE_CONT,
+  srcNode,
+  name,
 });
 
 export const resOverloadInstr = (

@@ -87,7 +87,7 @@ export type VariableInitializer = Expression | ArrayInitializer;
 
 export type ArrayInitializer = Array<VariableInitializer>;
 
-export interface ArrayAccess {
+export interface ArrayAccess extends BaseNode {
   kind: "ArrayAccess";
   primary: Primary;
   expression: Expression;

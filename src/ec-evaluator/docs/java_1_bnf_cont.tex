@@ -1,0 +1,10 @@
+\begin{alignat*}{9}
+&& \textit{class-instance-creation-expression}   && \quad ::= & \quad && \textbf{\texttt{new}} \ \textit{identifier} \ \textbf{\texttt{(}} \textit{expression} ... \textbf{\texttt{)}} && \\[2mm]
+&& \textit{field-access}                         && \quad ::= & \quad && \textit{primary} \textbf{\texttt{.}} \textit{identifier} && \\[2mm]
+&& \textit{method-invocation}                    && \quad ::= & \quad && \textit{expression-name} \ \textbf{\texttt{(}} \textit{expression} ... \textbf{\texttt{)}} && \\
+&&                                               &&         | & \quad && \textit{primary} \textbf{\texttt{.}} \textit{identifier} \ \textbf{\texttt{(}} \textit{expression} ... \textbf{\texttt{)}} && \\
+&& \textit{expression-name}                      && \quad ::= & \quad && \textit{identifier} \ | \ \textit{expression-name} \textbf{\texttt{.}} \textit{identifier} && \\[1mm]
+&& \textit{literal}                              && \quad ::= & \quad && number && \\
+&&                                               &&         | & \quad && string && \\
+&&                                               &&         | & \quad && \textbf{\texttt{null}} && \\[2mm]
+\end{alignat*}

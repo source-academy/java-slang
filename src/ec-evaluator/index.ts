@@ -1,6 +1,7 @@
 import { parse } from "../ast/parser";
 import { Control, Environment, Stash } from "./components";
 import { STEP_LIMIT } from "./constants";
+import { RuntimeError } from "./errors";
 import { evaluate } from "./interpreter";
 import { Context, Error, Finished, Result } from "./types";
 
@@ -23,9 +24,11 @@ export const runECEvaluator = (
       resolve({ status: 'finished', context, value } as Finished);
     });
   } catch (e) {
-    context.errors.push(e);
+    // Possible interpreting language error thrown, so conversion to RuntimeError may be required.
+    const error = e.type ? e : new RuntimeError(e.message);
+    context.errors.push(error);
     return new Promise((resolve, _) => {
-      resolve({ status: 'error' } as Error);
+      resolve({ status: 'error', context } as Error);
     });
   }
 }

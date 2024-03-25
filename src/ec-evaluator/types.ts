@@ -7,10 +7,10 @@ import {
   UnannType,
 } from "../ast/types/classes";
 import { Control, EnvNode, Environment, Stash } from "./components";
-import { RuntimeError } from "./errors";
+import { SourceError } from "./errors";
 
 export interface Context {
-  errors: RuntimeError[],
+  errors: SourceError[],
 
   control: Control,
   stash: Stash,
@@ -35,6 +35,7 @@ export enum InstrType {
   DEREF = 'Deref',
   NEW = 'New',
   RES_TYPE = 'ResType',
+  RES_TYPE_CONT = 'ResTypeCont',
   RES_OVERLOAD = 'ResOverload',
   RES_OVERRIDE = 'ResOverride',
   RES_CON_OVERLOAD = 'ResConOverload',
@@ -77,6 +78,10 @@ export interface ResTypeInstr extends BaseInstr {
   value: Expression | Class;
 }
 
+export interface ResTypeContInstr extends BaseInstr {
+  name: string;
+}
+
 export interface ResOverloadInstr extends BaseInstr {
   name: string;
   arity: number;
@@ -107,6 +112,7 @@ export type Instr =
   | DerefInstr
   | NewInstr
   | ResTypeInstr
+  | ResTypeContInstr
   | ResOverloadInstr
   | ResConOverloadInstr;
 
@@ -126,7 +132,7 @@ export interface Variable {
   value: VarValue;
 }
 
-export type VarValue = Primitive | Reference | Symbol;
+export type VarValue = Primitive | Reference | Symbol | Variable;
 
 export type Primitive = Literal;
 export type Reference = Object;
@@ -139,6 +145,7 @@ export interface Symbol {
 export interface Object {
   kind: "Object";
   frame: EnvNode;
+  class: Class;
 }
 
 export interface Closure {
@@ -168,6 +175,7 @@ export interface Type {
  */
 export interface Error {
   status: 'error';
+  context: Context;
 }
 
 export interface Finished {

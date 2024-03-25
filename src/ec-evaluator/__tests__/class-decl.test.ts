@@ -31,6 +31,10 @@ describe("evaluate FieldDeclaration correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -48,9 +52,13 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -71,6 +79,8 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
@@ -103,6 +113,10 @@ describe("evaluate FieldDeclaration correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -120,9 +134,13 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -143,6 +161,8 @@ describe("evaluate FieldDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
@@ -176,6 +196,10 @@ describe("evaluate MethodDeclaration correctly", () => {
       
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -187,9 +211,13 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -207,6 +235,8 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Void",
@@ -240,6 +270,10 @@ describe("evaluate MethodDeclaration correctly", () => {
       
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -251,9 +285,13 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -271,6 +309,8 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Void",
@@ -304,6 +344,10 @@ describe("evaluate MethodDeclaration correctly", () => {
       
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // public class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // private int test2(int x) {}
@@ -317,9 +361,13 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -337,6 +385,8 @@ describe("evaluate MethodDeclaration correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void
@@ -405,6 +455,10 @@ describe("evaluate main method correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class AnotherTest {...}
       "NormalClassDeclaration", // class Test {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // static void main(String[] args) {...}
@@ -420,9 +474,13 @@ describe("evaluate main method correctly", () => {
       "Invocation", // ()
       "Literal", // [""]
       "ResOverride",
+      "ExpressionName", // Test
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
 
       "Env", // from Invocation
       "Marker",
@@ -440,6 +498,8 @@ describe("evaluate main method correctly", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Void", // Void

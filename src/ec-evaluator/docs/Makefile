@@ -1,0 +1,17 @@
+PDFLATEX = latexmk -pdf
+
+SPECSNUMS = 1
+
+SPECS = $(SPECSNUMS:%=java_%)
+
+PDFSPECS = $(SPECS:%=%.pdf)
+
+HELPERSTEX = $(HELPERS:%=java_%.tex)
+
+all: $(PDFSPECS)
+
+%.pdf: %.tex
+	$(PDFLATEX) $*
+
+clean:
+	rm -f *~ *.dvi *.aux *.log *.ps *.out *.pdf *.fls *.fdb_latexmk

@@ -23,8 +23,10 @@ export class SyntaxError implements SourceError {
 export class RuntimeError implements SourceError {
   type = ErrorType.RUNTIME;
   
+  constructor(private msg: string = "") {};
+
   explain(): string {
-    return "RuntimeError";
+    return `RuntimeError${this.msg ? ": " + this.msg : ""}`;
   };
 };
 
@@ -116,6 +118,17 @@ export class ResOverloadError extends RuntimeError {
   public explain() {
     return `${super.explain()}: Overloading resolution of method ${this.name} \
       with argTypes ${this.argTypes.map(t => t.type).join(", ")} failed.`;
+  }
+}
+
+export class ResOverloadAmbiguousError extends RuntimeError {
+  constructor(private name: string, private argTypes: Type[]) {
+    super();
+  };
+
+  public explain() {
+    return `${super.explain()}: Overloading resolution of method ${this.name} \
+      with argTypes ${this.argTypes.map(t => t.type).join(", ")} is ambiguous.`;
   }
 }
 
