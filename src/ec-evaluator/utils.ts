@@ -335,12 +335,16 @@ export const prependExpConInvIfNeeded = (
   }
 }
 
-export const prependInstanceFieldsInit = (
+export const prependInstanceFieldsInitIfNeeded = (
   constructor: ConstructorDeclaration,
   instanceFields: FieldDeclaration[],
 ): void => {
-  const expStmtAssmts = instanceFields.map(f => convertFieldDeclToExpStmtAssmt(f));
-  constructor.constructorBody.blockStatements.unshift(...expStmtAssmts);
+  const conBodyBlockStmts = constructor.constructorBody.blockStatements;
+  const isAltConInvAbsent = !conBodyBlockStmts.find(s => s.kind === "ExplicitConstructorInvocation" && s.thisOrSuper === "this");
+  if (isAltConInvAbsent) {
+    const expStmtAssmts = instanceFields.map(f => convertFieldDeclToExpStmtAssmt(f));
+    conBodyBlockStmts.unshift(...expStmtAssmts);
+  }
 }
 
 export const appendOrReplaceReturn = (

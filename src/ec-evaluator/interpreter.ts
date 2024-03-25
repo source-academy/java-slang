@@ -68,7 +68,7 @@ import {
   getStaticFields,
   getStaticMethods,
   handleSequence,
-  prependInstanceFieldsInit,
+  prependInstanceFieldsInitIfNeeded,
   isNode,
   isQualified,
   makeMtdInvSimpleIdentifierQualified,
@@ -179,8 +179,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       const defaultConstructor = node.defaultConstructorDeclNode(className, command);
       constructors.push(defaultConstructor);
     }
-    // Prepend instance fields initialization at start of constructor body.
-    constructors.forEach(c => prependInstanceFieldsInit(c, instanceFields));
+    // Prepend instance fields initialization if needed at start of constructor body.
+    constructors.forEach(c => prependInstanceFieldsInitIfNeeded(c, instanceFields));
     // Make non local var simple name qualified.
     constructors.forEach(c => makeNonLocalVarNonParamSimpleNameQualified(c, "this"));
     // Prepend super() if needed before instance fields initialization.
