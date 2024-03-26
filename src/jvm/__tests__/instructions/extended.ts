@@ -404,7 +404,6 @@ describe('Multianewarray', () => {
     expect(lastFrame.locals.length).toBe(0);
     const arrayRef = (thread.popStack() as SuccessResult<any>).result;
     expect(arrayRef.len()).toBe(0);
-    const cl = arrayRef.getClass();
     expect(arrayRef.getClass().getName()).toBe('[[Ljava/lang/Thread;');
   });
 });

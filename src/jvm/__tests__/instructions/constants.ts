@@ -12,10 +12,8 @@ import { ReferenceClassData } from "../../types/class/ClassData";
 import { ConstantString, ConstantClass } from "../../types/class/Constants";
 import { Method } from "../../types/class/Method";
 import { JvmObject } from "../../types/reference/Object";
-import AbstractSystem from "../../utils/AbstractSystem";
 import { TestClassLoader, setupTest } from "../test-utils";
 
-let testSystem: AbstractSystem;
 let testLoader: TestClassLoader;
 let thread: Thread;
 let code: DataView;
@@ -23,7 +21,6 @@ let testClass: ReferenceClassData;
 
 beforeEach(() => {
   const setup = setupTest();
-  testSystem = setup.testSystem;
   testLoader = setup.testLoader;
   thread = setup.thread;
   code = setup.code;

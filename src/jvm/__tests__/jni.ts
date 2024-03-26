@@ -13,7 +13,6 @@ const callback = jest.fn();
 let threadClass: ReferenceClassData;
 let testSystem: TestSystem;
 let testLoader: TestClassLoader;
-let jni: JNI;
 
 beforeEach(() => {
   testSystem = new TestSystem();
@@ -27,7 +26,6 @@ beforeEach(() => {
     className: 'java/lang/Thread',
     loader: testLoader,
   }) as ReferenceClassData;
-  jni = new JNI('stdlib', testSystem);
 
   jest.resetModules();
   jest.restoreAllMocks();
