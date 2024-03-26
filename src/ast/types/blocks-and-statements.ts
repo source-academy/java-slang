@@ -114,7 +114,12 @@ export interface ReturnStatement extends BaseNode {
   exp: Expression;
 }
 
-export type Expression = Primary | BinaryExpression | UnaryExpression | Void;
+export type Expression =
+  | Primary
+  | BinaryExpression
+  | UnaryExpression
+  | TernaryExpression
+  | Void;
 
 export interface Void extends BaseNode {
   kind: "Void";
@@ -276,4 +281,11 @@ export interface BreakStatement extends BaseNode {
 export interface ContinueStatement extends BaseNode {
   kind: "ContinueStatement";
   identifier?: Identifier;
+}
+
+export interface TernaryExpression extends BaseNode {
+  kind: "TernaryExpression";
+  condition: Expression;
+  consequent: Expression;
+  alternate: Expression;
 }

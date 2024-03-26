@@ -97,6 +97,15 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   ternaryExpression(ctx: TernaryExpressionCtx) {
+    if (
+      ctx.binaryExpression &&
+      ctx.QuestionMark &&
+      ctx.Colon &&
+      ctx.expression
+    ) {
+      const expressionExtractor = new ExpressionExtractor();
+      return expressionExtractor.ternaryExpression(ctx);
+    }
     return this.visit(ctx.binaryExpression);
   }
 

@@ -95,6 +95,32 @@ export const check = (
           if (leftType.canBeAssigned(rightType)) return newResult(leftType);
           if (rightType.canBeAssigned(leftType)) return newResult(rightType);
           return newResult(null, [new BadOperandTypesError()]);
+        case "<":
+        case ">":
+        case "<=":
+        case ">=":
+          if (
+            doubleType.canBeAssigned(leftType) &&
+            doubleType.canBeAssigned(rightType)
+          )
+            return newResult(new Boolean());
+          return newResult(null, [new BadOperandTypesError()]);
+        case "&&":
+        case "||":
+          const booleanType = new Boolean();
+          if (
+            booleanType.canBeAssigned(leftType) &&
+            booleanType.canBeAssigned(rightType)
+          )
+            return newResult(new Boolean());
+          return newResult(null, [new BadOperandTypesError()]);
+        case "==":
+          if (
+            leftType.canBeAssigned(rightType) ||
+            rightType.canBeAssigned(leftType)
+          )
+            return newResult(new Boolean());
+          return newResult(null, [new BadOperandTypesError()]);
         default:
           throw new Error(
             `Unrecgonized operator ${operator} found in binary expression.`
@@ -123,6 +149,11 @@ export const check = (
     }
     case "EmptyStatement": {
       return newResult(null);
+    }
+    case "ExpressionName": {
+      const type = getEnvironmentVariable(environmentFrame, node.name);
+      if (type instanceof Error) return newResult(null, [type]);
+      return newResult(type);
     }
     case "ExpressionStatement": {
       return check(node.stmtExp, environmentFrame);
@@ -252,12 +283,46 @@ export const check = (
         }
         case "+":
           return check(expression, environmentFrame);
+        case "!":
+          const expressionCheck = check(expression, environmentFrame);
+          if (expressionCheck.errors.length > 0) return expressionCheck;
+          if (!expressionCheck.currentType)
+            throw new Error("Type missing in ! prefix expression.");
+          const booleanType = new Boolean();
+          if (booleanType.canBeAssigned(expressionCheck.currentType))
+            return newResult(booleanType);
+          return newResult(null, [new BadOperandTypesError()]);
         default:
           throw new Error(
             `Unrecgonized operator ${operator} found in prefix expression.`
           );
       }
     }
+    case "TernaryExpression":
+      const conditionCheck = check(node.condition, environmentFrame);
+      if (conditionCheck.errors.length > 0) return conditionCheck;
+      if (!conditionCheck.currentType)
+        throw new Error("Type missing in ternary expresion condition.");
+      const booleanType = new Boolean();
+      if (!booleanType.canBeAssigned(conditionCheck.currentType))
+        return newResult(null, [new BadOperandTypesError()]);
+      const consequentCheck = check(node.consequent, environmentFrame);
+      if (consequentCheck.errors.length > 0) return conditionCheck;
+      if (!consequentCheck.currentType)
+        throw new Error(
+          "Type missing in ternary expresion consequent expression."
+        );
+      const alternateCheck = check(node.alternate, environmentFrame);
+      if (alternateCheck.errors.length > 0) return conditionCheck;
+      if (!alternateCheck.currentType)
+        throw new Error(
+          "Type missing in ternary expresion alternate expression."
+        );
+      if (consequentCheck.currentType.canBeAssigned(alternateCheck.currentType))
+        return newResult(consequentCheck.currentType);
+      if (alternateCheck.currentType.canBeAssigned(consequentCheck.currentType))
+        return newResult(alternateCheck.currentType);
+      return newResult(null, [new BadOperandTypesError()]);
     default:
       throw new Error(
         `Check is not implemented for this type of node ${node.kind}.`

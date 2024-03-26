@@ -50,6 +50,22 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   ternaryExpression(ctx: TernaryExpressionCtx) {
+    if (
+      ctx.binaryExpression &&
+      ctx.QuestionMark &&
+      ctx.Colon &&
+      ctx.expression
+    ) {
+      const expressionExtractor = new ExpressionExtractor();
+      return {
+        kind: "TernaryExpression",
+        condition: expressionExtractor.binaryExpression(
+          ctx.binaryExpression[0].children
+        ),
+        consequent: expressionExtractor.extract(ctx.expression[0]),
+        alternate: expressionExtractor.extract(ctx.expression[1]),
+      };
+    }
     return this.visit(ctx.binaryExpression);
   }
 

@@ -79,6 +79,95 @@ const testcases: {
     `,
     result: { type: null, errors: [new BadOperandTypesError()] },
   },
+  {
+    input: `
+      int a = 5; 
+      int b = 10; 
+      if (a < b) {} else {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int a = 5; 
+      int b = 10; 
+      if (a <= b) {} else {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int a = 5; 
+      int b = 10; 
+      if (a > b) {} else {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int a = 5; 
+      int b = 10; 
+      if (a >= b) {} else {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int a = 5; 
+      int b = 10; 
+      if (a < b) { 
+        if (b > 0) {} else {} 
+      } else {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int a = 5; 
+      double b = 10.5; 
+      if (a < b) {} else {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      boolean a = true; 
+      boolean b = false; 
+      if (a && b) {} else {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      boolean a = true; 
+      boolean b = false; 
+      if (a || b) {} else {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      boolean a = true; 
+      if (!a) {} else {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int a = 5; 
+      int b = 10; 
+      (a < b) ? "true" : "false";
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int a = 5; 
+      int b = 10; 
+      a == b ? "true" : "false";
+    `,
+    result: { type: null, errors: [] },
+  },
 ];
 
 describe("Type Checker", () => {
