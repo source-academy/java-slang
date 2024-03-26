@@ -8,10 +8,10 @@ import {
   getArgs,
 } from "../../utils";
 import {
-  ImmediateResult,
-  checkError,
   ErrorResult,
-  checkSuccess,
+  ImmediateResult,
+  ResultType,
+  SuccessResult,
 } from "../Result";
 import { JvmArray } from "../reference/Array";
 import { JavaType, JvmObject } from "../reference/Object";
@@ -61,7 +61,7 @@ export class Method {
     slot: number
   ) {
     this.cls = cls;
-    this.code = (attributes["Code"] as Code) ?? null;
+    this.code = (attributes['Code'] as Code) ?? null;
     this.accessFlags = accessFlags;
     this.name = name;
     this.descriptor = descriptor;
@@ -100,8 +100,8 @@ export class Method {
 
   checkSignaturePolymorphic() {
     return (
-      this.cls.getClassname() === "java/lang/invoke/MethodHandle" &&
-      this.descriptor === "([Ljava/lang/Object;)Ljava/lang/Object;" &&
+      this.cls.getName() === 'java/lang/invoke/MethodHandle' &&
+      this.descriptor === '([Ljava/lang/Object;)Ljava/lang/Object;' &&
       this.checkVarargs() &&
       this.checkNative()
     );
@@ -112,12 +112,12 @@ export class Method {
    */
   getReflectedObject(thread: Thread): ImmediateResult<JvmObject> {
     if (this.javaObject) {
-      return { result: this.javaObject };
+      return { status: ResultType.SUCCESS, result: this.javaObject };
     }
 
     const loader = this.cls.getLoader();
-    const caRes = loader.getClass("[Ljava/lang/Class;");
-    if (checkError(caRes)) {
+    const caRes = loader.getClass('[Ljava/lang/Class;');
+    if (caRes.status === ResultType.ERROR) {
       return caRes;
     }
     const caCls = caRes.result as ArrayClassData;
@@ -128,10 +128,10 @@ export class Method {
     let error: ErrorResult | null = null;
     parameterTypes.initArray(
       args.length,
-      args.map((arg) => {
+      args.map(arg => {
         if (arg.referenceCls) {
           const res = loader.getClass(arg.referenceCls);
-          if (checkError(res)) {
+          if (res.status === ResultType.ERROR) {
             error = res;
             return null;
           }
@@ -150,7 +150,7 @@ export class Method {
     let returnType: JvmObject;
     if (ret.referenceCls) {
       const res = loader.getClass(ret.referenceCls);
-      if (checkError(res)) {
+      if (res.status === ResultType.ERROR) {
         return res;
       }
       returnType = res.result.getJavaObject();
@@ -161,14 +161,14 @@ export class Method {
 
     // create exception class array
     const exceptionTypes = caCls.instantiate();
-    const exceptions = this.attributes["Exceptions"] as Exceptions;
+    const exceptions = this.attributes['Exceptions'] as Exceptions;
     let err;
     if (exceptions) {
       exceptionTypes.initArray(
         exceptions.exceptionTable.length,
-        exceptions.exceptionTable.map((exceptionClass) => {
+        exceptions.exceptionTable.map(exceptionClass => {
           const res = exceptionClass.resolve();
-          if (checkError(res)) {
+          if (res.status === ResultType.ERROR) {
             err = res;
             return null;
           }
@@ -178,7 +178,6 @@ export class Method {
     } else {
       exceptionTypes.initArray(0, []);
     }
-
     if (err) {
       return err;
     }
@@ -187,47 +186,47 @@ export class Method {
     const modifiers = this.accessFlags;
 
     // signature
-    let signature = this.attributes["Signature"]
+    let signature = this.attributes['Signature']
       ? thread
           .getJVM()
           .getInternedString(
-            (this.attributes["Signature"] as Signature).signature
+            (this.attributes['Signature'] as Signature).signature
           )
       : null;
 
     // annotations
-    const baRes = loader.getClass("[B");
-    if (checkError(baRes)) {
+    const baRes = loader.getClass('[B');
+    if (baRes.status === ResultType.ERROR) {
       return baRes;
     }
     const baCls = baRes.result as ArrayClassData;
     const annotations = baCls.instantiate() as JvmArray;
     annotations.initArray(0, []);
-    const anno = this.attributes["RuntimeVisibleAnnotations"];
+    const anno = this.attributes['RuntimeVisibleAnnotations'];
     if (anno) {
       // convert attribute back to byte array
-      console.warn("reflected method annotations not implemented");
+      console.warn('reflected method annotations not implemented');
     }
 
     // parameter annotations
     const parameterAnnotations = baCls.instantiate() as JvmArray;
     parameterAnnotations.initArray(0, []);
-    const pAnno = this.attributes["RuntimeVisibleParameterAnnotations"];
+    const pAnno = this.attributes['RuntimeVisibleParameterAnnotations'];
     if (pAnno) {
       // convert attribute back to byte array
-      console.warn("reflected method annotations not implemented");
+      console.warn('reflected method annotations not implemented');
     }
 
     let javaObject: JvmObject;
 
     // #region create method object
     // constructor
-    const isConstructor = this.name === "<init>";
+    const isConstructor = this.name === '<init>';
     if (isConstructor) {
       // load constructor class
       if (!Method.reflectConstructorClass) {
-        const fRes = loader.getClass("java/lang/reflect/Constructor");
-        if (checkError(fRes)) {
+        const fRes = loader.getClass('java/lang/reflect/Constructor');
+        if (fRes.status === ResultType.ERROR) {
           return fRes;
         }
         Method.reflectConstructorClass = fRes.result as ReferenceClassData;
@@ -235,19 +234,19 @@ export class Method {
 
       javaObject = Method.reflectConstructorClass.instantiate();
       const initRes = javaObject.initialize(thread);
-      if (!checkSuccess(initRes)) {
-        if (checkError(initRes)) {
+      if (initRes.status !== ResultType.SUCCESS) {
+        if (initRes.status === ResultType.ERROR) {
           return initRes;
         }
-        throw new Error("Reflected method should not have static initializer");
+        throw new Error('Reflected method should not have static initializer');
       }
     } else {
       if (!Method.reflectMethodClass) {
         const fRes = thread
           .getClass()
           .getLoader()
-          .getClass("java/lang/reflect/Method");
-        if (checkError(fRes)) {
+          .getClass('java/lang/reflect/Method');
+        if (fRes.status === ResultType.ERROR) {
           return fRes;
         }
         Method.reflectMethodClass = fRes.result as ReferenceClassData;
@@ -255,30 +254,30 @@ export class Method {
 
       javaObject = Method.reflectMethodClass.instantiate();
       const initRes = javaObject.initialize(thread);
-      if (!checkSuccess(initRes)) {
-        if (checkError(initRes)) {
+      if (initRes.status !== ResultType.SUCCESS) {
+        if (initRes.status === ResultType.ERROR) {
           return initRes;
         }
-        throw new Error("Reflected method should not have static initializer");
+        throw new Error('Reflected method should not have static initializer');
       }
 
       javaObject._putField(
-        "name",
-        "Ljava/lang/String;",
-        "java/lang/reflect/Method",
+        'name',
+        'Ljava/lang/String;',
+        'java/lang/reflect/Method',
         thread.getJVM().getInternedString(this.name)
       );
 
       javaObject._putField(
-        "returnType",
-        "Ljava/lang/Class;",
-        "java/lang/reflect/Method",
+        'returnType',
+        'Ljava/lang/Class;',
+        'java/lang/reflect/Method',
         returnType
       );
       javaObject._putField(
-        "annotationDefault",
-        "[B",
-        "java/lang/reflect/Method",
+        'annotationDefault',
+        '[B',
+        'java/lang/reflect/Method',
         null
       );
     }
@@ -286,75 +285,75 @@ export class Method {
 
     // #region put common fields
     javaObject._putField(
-      "clazz",
-      "Ljava/lang/Class;",
+      'clazz',
+      'Ljava/lang/Class;',
       isConstructor
-        ? "java/lang/reflect/Constructor"
-        : "java/lang/reflect/Method",
+        ? 'java/lang/reflect/Constructor'
+        : 'java/lang/reflect/Method',
       this.cls.getJavaObject()
     );
     javaObject._putField(
-      "parameterTypes",
-      "[Ljava/lang/Class;",
+      'parameterTypes',
+      '[Ljava/lang/Class;',
       isConstructor
-        ? "java/lang/reflect/Constructor"
-        : "java/lang/reflect/Method",
+        ? 'java/lang/reflect/Constructor'
+        : 'java/lang/reflect/Method',
       parameterTypes
     );
     javaObject._putField(
-      "exceptionTypes",
-      "[Ljava/lang/Class;",
+      'exceptionTypes',
+      '[Ljava/lang/Class;',
       isConstructor
-        ? "java/lang/reflect/Constructor"
-        : "java/lang/reflect/Method",
+        ? 'java/lang/reflect/Constructor'
+        : 'java/lang/reflect/Method',
       exceptionTypes
     );
     javaObject._putField(
-      "modifiers",
-      "I",
+      'modifiers',
+      'I',
       isConstructor
-        ? "java/lang/reflect/Constructor"
-        : "java/lang/reflect/Method",
+        ? 'java/lang/reflect/Constructor'
+        : 'java/lang/reflect/Method',
       modifiers
     );
     javaObject._putField(
-      "slot",
-      "I",
+      'slot',
+      'I',
       isConstructor
-        ? "java/lang/reflect/Constructor"
-        : "java/lang/reflect/Method",
+        ? 'java/lang/reflect/Constructor'
+        : 'java/lang/reflect/Method',
       this.slot
     );
     javaObject._putField(
-      "signature",
-      "Ljava/lang/String;",
+      'signature',
+      'Ljava/lang/String;',
       isConstructor
-        ? "java/lang/reflect/Constructor"
-        : "java/lang/reflect/Method",
+        ? 'java/lang/reflect/Constructor'
+        : 'java/lang/reflect/Method',
       signature
     );
     javaObject._putField(
-      "annotations",
-      "[B",
+      'annotations',
+      '[B',
       isConstructor
-        ? "java/lang/reflect/Constructor"
-        : "java/lang/reflect/Method",
+        ? 'java/lang/reflect/Constructor'
+        : 'java/lang/reflect/Method',
       annotations
     );
     javaObject._putField(
-      "parameterAnnotations",
-      "[B",
+      'parameterAnnotations',
+      '[B',
       isConstructor
-        ? "java/lang/reflect/Constructor"
-        : "java/lang/reflect/Method",
+        ? 'java/lang/reflect/Constructor'
+        : 'java/lang/reflect/Method',
       parameterAnnotations
     );
     // #endregion
 
-    javaObject.putNativeField("methodRef", this);
+    javaObject.putNativeField('methodRef', this);
 
     this.javaObject = javaObject;
-    return { result: javaObject };
+    return { status: ResultType.SUCCESS, result: javaObject };
   }
 
   getName() {
@@ -378,7 +377,8 @@ export class Method {
   }
 
   getMaxStack() {
-    return this.code ? this.code.maxStack : 0;
+    // we cannot determine max stack for native methods
+    return this.code ? this.code.maxStack : -1;
   }
 
   getExceptionHandlers() {
@@ -400,11 +400,16 @@ export class Method {
     return getArgs(thread, this.descriptor, this.checkNative());
   }
 
+  /**
+   * Generates a public bridge method for this method.
+   * @todo might not be necessary, lambdafactory is currently bugged and not using the bridge anyways.
+   * @returns
+   */
   generateBridgeMethod() {
     const isStatic = this.checkStatic();
     const bridgeDescriptor = isStatic
       ? this.descriptor
-      : `(${this.cls.getClassname()};${this.descriptor.slice(1)}`;
+      : `(${this.cls.getName()};${this.descriptor.slice(1)}`;
 
     const pdesc = parseMethodDescriptor(this.descriptor);
     let maxStack = 0;
@@ -445,7 +450,7 @@ export class Method {
           bytecode.push(OPCODE.ALOAD);
           break;
         case JavaType.void:
-          throw new Error("void type in method descriptor");
+          throw new Error('void type in method descriptor');
       }
       bytecode.push(maxLocals);
       maxStack += stacksize;
@@ -464,7 +469,7 @@ export class Method {
       this.cls.insertConstant(dc);
       this.cls.insertConstant(nt);
 
-      const cnc = new ConstantUtf8(this.cls, this.cls.getClassname());
+      const cnc = new ConstantUtf8(this.cls, this.cls.getName());
       const cc = ConstantClass.asResolved(this.cls, cnc, this.cls);
       this.cls.insertConstant(cnc);
       this.cls.insertConstant(cc);
@@ -520,11 +525,11 @@ export class Method {
     const bridge = new Method(
       this.cls,
       METHOD_FLAGS.ACC_SYNTHETIC | METHOD_FLAGS.ACC_STATIC,
-      this.name + "$" + this.bridgeCounter++,
+      this.name + '$' + this.bridgeCounter++,
       bridgeDescriptor,
       {
         Code: {
-          name: "Code",
+          name: 'Code',
           maxStack: maxStack,
           maxLocals: maxLocals,
           codeLength: dv.buffer.byteLength,
@@ -534,15 +539,14 @@ export class Method {
           attributes: {},
         } as Code,
       },
-      -1
+      -1 // FIXME: get a slot number from cls
     );
 
     return bridge;
   }
 
-  /**
-   * flags
-   */
+  // #region access flags
+
   checkPublic() {
     return (this.accessFlags & METHOD_FLAGS.ACC_PUBLIC) !== 0;
   }
@@ -597,6 +601,8 @@ export class Method {
     return (this.accessFlags & METHOD_FLAGS.ACC_SYNTHETIC) !== 0;
   }
 
+  // #endregion
+
   /**
    * Checks if this method is accessible to a given class through a symbolic reference.
    */
@@ -605,11 +611,15 @@ export class Method {
     symbolicClass: ClassData
   ): ImmediateResult<Method> {
     const declaringCls = this.getClass();
-    const illegalAccessResult = {
-      exceptionCls: "java/lang/IllegalAccessError",
-      msg: "",
+    const illegalAccessResult: ErrorResult = {
+      status: ResultType.ERROR,
+      exceptionCls: 'java/lang/IllegalAccessError',
+      msg: '',
     };
-    const successResult = { result: this };
+    const successResult: SuccessResult<Method> = {
+      status: ResultType.SUCCESS,
+      result: this,
+    };
 
     // this is public
     if (this.checkPublic()) {
@@ -620,7 +630,9 @@ export class Method {
       declaringCls.getPackageName() === accessingClass.getPackageName();
 
     if (this.checkDefault()) {
-      return isSamePackage ? { result: this } : illegalAccessResult;
+      return isSamePackage
+        ? { status: ResultType.SUCCESS, result: this }
+        : illegalAccessResult;
     }
 
     if (this.checkProtected()) {
@@ -647,28 +659,30 @@ export class Method {
       return successResult;
     }
 
-    // nest mate test (se11)
-    // There is currently a bug with lambdas invoking the private bytecode directly.
-    // We add nest information so the invocation succeeds.
-    // https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-5.html#jvms-5.4.4
-    const nestHostAttrD = declaringCls.getAttribute("NestHost") as NestHost;
+    /**
+     * nest mate test (se11)
+     * There is currently a bug with lambdas invoking the private bytecode directly.
+     * We add nest information so the invocation succeeds.
+     * {@link https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-5.html#jvms-5.4.4}
+     */
+    const nestHostAttrD = declaringCls.getAttribute('NestHost') as NestHost;
     let nestHostD;
     if (!nestHostAttrD) {
       nestHostD = declaringCls;
     } else {
       const resolutionResult = nestHostAttrD.hostClass.resolve();
-      if (checkError(resolutionResult)) {
+      if (resolutionResult.status === ResultType.ERROR) {
         return resolutionResult;
       }
       nestHostD = resolutionResult.result;
     }
-    const nestHostArrC = accessingClass.getAttribute("NestHost") as NestHost;
+    const nestHostArrC = accessingClass.getAttribute('NestHost') as NestHost;
     let nestHostC;
     if (!nestHostArrC) {
       nestHostC = accessingClass;
     } else {
       const resolutionResult = nestHostArrC.hostClass.resolve();
-      if (checkError(resolutionResult)) {
+      if (resolutionResult.status === ResultType.ERROR) {
         return resolutionResult;
       }
       nestHostC = resolutionResult.result;

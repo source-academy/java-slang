@@ -1,12 +1,13 @@
 import Thread from "../../../thread";
+import { logger } from "../../../utils";
 
 const functions = {
-  "getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;": (
+  'getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;': (
     thread: Thread,
     locals: any[]
   ) => {
-    console.warn(
-      "Native method not implemented: getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;"
+    logger.warn(
+      'Native method not implemented: getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;'
     );
     thread.returnStackFrame(null);
   },

@@ -90,7 +90,7 @@ export class Deque<T> {
   }
 }
 
-export abstract class AbstractThreadPool {
+export abstract class ThreadPool {
   protected threads: Thread[] = [];
   protected currentThread: Thread | null = null;
   protected onEmpty: () => void;
@@ -115,7 +115,7 @@ export abstract class AbstractThreadPool {
 
   abstract quantumOver(thread: Thread): void;
 
-  abstract run(): void;
+  abstract run(onFinish?: () => void): void;
 
   /**
    * Gets all threads in the threadpool.
@@ -131,19 +131,25 @@ export abstract class AbstractThreadPool {
     return this.currentThread;
   }
 
+  /**
+   * Returns true if there are any non terminated threads in the threadpool.
+   */
   hasThreads(): boolean {
     this.clearTerminated();
-    return this.threads.length > 0;
+    return this.currentThread !== null || this.threads.length > 0;
   }
 
+  /**
+   * Cleans up all terminated threads from the threadpool.
+   */
   clearTerminated() {
     this.threads = this.threads.filter(
-      (x) => x.getStatus() !== ThreadStatus.TERMINATED
+      x => x.getStatus() !== ThreadStatus.TERMINATED
     );
   }
 }
 
-export class RoundRobinThreadPool extends AbstractThreadPool {
+export class RoundRobinThreadPool extends ThreadPool {
   private threadQueue: Deque<Thread>;
 
   constructor(onEmpty: () => void) {
@@ -216,14 +222,15 @@ export class RoundRobinThreadPool extends AbstractThreadPool {
     }
   }
 
-  run() {
-    if (this.hasThreads()) {
-      setTimeout(() => {
-        if (this.currentThread !== null) {
-          this.currentThread.runFor(10000);
-        }
-        this.run();
-      }, 0);
-    }
+  run(onFinish?: () => void): void {
+    const ID = setInterval(() => {
+      if (this.currentThread !== null) {
+        this.currentThread.runFor(10000);
+      }
+      if (!this.hasThreads()) {
+        clearInterval(ID);
+        onFinish?.();
+      }
+    }, 0);
   }
 }

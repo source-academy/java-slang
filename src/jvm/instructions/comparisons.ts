@@ -1,5 +1,5 @@
 import Thread from "../thread";
-import { checkError } from "../types/Result";
+import { ResultType } from "../types/Result";
 import { asFloat, asDouble } from "../utils";
 
 function cmp(value1: number, value2: number, checkNan: number = 0): number {
@@ -21,7 +21,10 @@ function cmp(value1: number, value2: number, checkNan: number = 0): number {
 export function runLcmp(thread: Thread): void {
   const popResult2 = thread.popStack64();
   const popResult1 = thread.popStack64();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -32,7 +35,10 @@ export function runLcmp(thread: Thread): void {
 export function runFcmpl(thread: Thread): void {
   const popResult2 = thread.popStack();
   const popResult1 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   thread.pushStack(
@@ -44,7 +50,10 @@ export function runFcmpl(thread: Thread): void {
 export function runFcmpg(thread: Thread): void {
   const popResult2 = thread.popStack();
   const popResult1 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -57,7 +66,10 @@ export function runFcmpg(thread: Thread): void {
 export function runDcmpl(thread: Thread): void {
   const popResult2 = thread.popStack64();
   const popResult1 = thread.popStack64();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   thread.pushStack(
@@ -69,7 +81,10 @@ export function runDcmpl(thread: Thread): void {
 export function runDcmpg(thread: Thread): void {
   const popResult2 = thread.popStack64();
   const popResult1 = thread.popStack64();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   thread.pushStack(
@@ -81,7 +96,7 @@ export function runDcmpg(thread: Thread): void {
 export function runIfeq(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
 
@@ -95,7 +110,7 @@ export function runIfeq(thread: Thread): void {
 export function runIfne(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
 
@@ -109,7 +124,7 @@ export function runIfne(thread: Thread): void {
 export function runIflt(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
 
@@ -123,7 +138,7 @@ export function runIflt(thread: Thread): void {
 export function runIfge(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
 
@@ -137,7 +152,7 @@ export function runIfge(thread: Thread): void {
 export function runIfgt(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
 
@@ -151,7 +166,7 @@ export function runIfgt(thread: Thread): void {
 export function runIfle(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
 
@@ -166,7 +181,10 @@ export function runIfIcmpeq(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult1 = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -181,7 +199,10 @@ export function runIfIcmpne(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult1 = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -196,7 +217,10 @@ export function runIfIcmplt(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult2 = thread.popStack();
   const popResult1 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -211,7 +235,10 @@ export function runIfIcmpge(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult2 = thread.popStack();
   const popResult1 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -226,7 +253,10 @@ export function runIfIcmpgt(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult2 = thread.popStack();
   const popResult1 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -241,7 +271,10 @@ export function runIfIcmple(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult2 = thread.popStack();
   const popResult1 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -256,7 +289,10 @@ export function runIfAcmpeq(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult2 = thread.popStack();
   const popResult1 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 
@@ -271,7 +307,10 @@ export function runIfAcmpne(thread: Thread): void {
   const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
   const popResult2 = thread.popStack();
   const popResult1 = thread.popStack();
-  if (checkError(popResult1) || checkError(popResult2)) {
+  if (
+    popResult1.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
 

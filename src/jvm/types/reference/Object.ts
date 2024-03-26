@@ -1,6 +1,6 @@
 import Monitor from "../../monitor";
 import Thread from "../../thread";
-import { Result } from "../Result";
+import { Result, ResultType } from "../Result";
 import { ClassData, ReferenceClassData } from "../class/ClassData";
 import { Field } from "../class/Field";
 
@@ -43,13 +43,13 @@ export class JvmObject {
 
   initialize(thread: Thread, ...rest: any[]): Result<JvmObject> {
     if (this.initStatus) {
-      return { result: this };
+      return { status: ResultType.SUCCESS, result: this };
     }
 
-    const initMethod = this.cls.getMethod("<init>()V");
+    const initMethod = this.cls.getMethod('<init>()V');
     if (!initMethod) {
       this.initStatus = true;
-      return { result: this };
+      return { status: ResultType.SUCCESS, result: this };
     }
 
     thread._invokeInternal(
@@ -63,7 +63,7 @@ export class JvmObject {
         }
       }
     );
-    return { isDefer: true };
+    return { status: ResultType.DEFER };
   }
 
   getClass() {
@@ -77,14 +77,18 @@ export class JvmObject {
     return this.monitor;
   }
 
-  getField(fieldRef: Field): any {
+  getField(fieldRef: Field): JvmObject | number | bigint | null {
     const fieldName = fieldRef.getName();
     const fieldDesc = fieldRef.getFieldDesc();
-    const fieldClass = fieldRef.getClass().getClassname();
+    const fieldClass = fieldRef.getClass().getName();
     return this._getField(fieldName, fieldDesc, fieldClass);
   }
 
-  _getField(fieldName: string, fieldDesc: string, fieldClass: string): any {
+  _getField(
+    fieldName: string,
+    fieldDesc: string,
+    fieldClass: string
+  ): JvmObject | number | bigint | null {
     const key = `${fieldClass}.${fieldName}${fieldDesc}`;
 
     if (key in this.fields) {
@@ -94,10 +98,10 @@ export class JvmObject {
     throw new Error(`Invalid field`);
   }
 
-  putField(fieldRef: Field, value: any) {
+  putField(fieldRef: Field, value: JvmObject | number | bigint | null) {
     const fieldName = fieldRef.getName();
     const fieldDesc = fieldRef.getFieldDesc();
-    const fieldClass = fieldRef.getClass().getClassname();
+    const fieldClass = fieldRef.getClass().getName();
     this._putField(fieldName, fieldDesc, fieldClass, value);
   }
 
@@ -105,7 +109,7 @@ export class JvmObject {
     fieldName: string,
     fieldDesc: string,
     fieldClass: string,
-    value: any
+    value: JvmObject | number | bigint | null
   ) {
     const key = `${fieldClass}.${fieldName}${fieldDesc}`;
 
@@ -125,18 +129,18 @@ export class JvmObject {
   }
 
   getFieldFromVMIndex(index: number): Field {
-    const res = this.fieldArr.filter((f) => {
+    const res = this.fieldArr.filter(f => {
       const slot = f.ref.getSlot();
       return slot === index;
     });
 
     if (res.length > 1) {
       // will this happen?
-      throw new Error("Multiple matching slots. Need to check classname");
+      throw new Error('Multiple matching slots. Need to check classname');
     }
 
     if (res.length === 0) {
-      throw new Error("Invalid slot");
+      throw new Error('Invalid slot');
     }
 
     return res[0].ref;
@@ -164,15 +168,15 @@ export class JvmObject {
 }
 
 export enum JavaType {
-  byte = "B",
-  char = "C",
-  double = "D",
-  float = "F",
-  int = "I",
-  long = "J",
-  short = "S",
-  boolean = "Z",
-  reference = "L",
-  array = "[",
-  void = "V",
+  byte = 'B',
+  char = 'C',
+  double = 'D',
+  float = 'F',
+  int = 'I',
+  long = 'J',
+  short = 'S',
+  boolean = 'Z',
+  reference = 'L',
+  array = '[',
+  void = 'V',
 }

@@ -2,6 +2,7 @@ import Thread from "../thread";
 
 export function runBreakpoint(thread: Thread): void {
   thread.offsetPc(1);
+  // TODO: set some kind of breakpoint flag in threadpool, then pause all execution?
   throw new Error('BREAKPOINT: Not implemented');
 }
 

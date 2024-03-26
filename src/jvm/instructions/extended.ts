@@ -1,75 +1,77 @@
 import { OPCODE } from "../../ClassFile/constants/instructions";
 import Thread from "../thread";
-import { checkSuccess, checkError } from "../types/Result";
 import { ArrayClassData } from "../types/class/ClassData";
 import { ConstantClass } from "../types/class/Constants";
 import { JvmArray } from "../types/reference/Array";
 import { JvmObject } from "../types/reference/Object";
+import { ResultType } from "../types/Result";
 import { asFloat, asDouble } from "../utils";
 
 export function runWide(thread: Thread): void {
-  thread.offsetPc(1);
-  const opcode = thread.getCode().getUint8(thread.getPC());
-  thread.offsetPc(1);
+  const opcode = thread.getCode().getUint8(thread.getPC() + 1);
 
-  const indexbyte = thread.getCode().getUint16(thread.getPC());
-  thread.offsetPc(2);
+  const indexbyte = thread.getCode().getUint16(thread.getPC() + 2);
 
   let store;
   switch (opcode) {
     case OPCODE.ILOAD:
     case OPCODE.FLOAD:
     case OPCODE.ALOAD:
-      thread.pushStack(thread.loadLocal(indexbyte));
+      thread.pushStack(thread.loadLocal(indexbyte)) && thread.offsetPc(4);
       return;
     case OPCODE.LLOAD:
     case OPCODE.DLOAD:
-      thread.pushStack64(thread.loadLocal(indexbyte) as bigint | number);
+      thread.pushStack64(thread.loadLocal(indexbyte) as bigint | number) &&
+        thread.offsetPc(4);
       return;
     case OPCODE.ISTORE:
     case OPCODE.ASTORE:
       store = thread.popStack();
-      if (checkError(store)) {
+      if (store.status === ResultType.ERROR) {
         return;
       } else {
         thread.storeLocal(indexbyte, store.result);
+        thread.offsetPc(4);
         return;
       }
     case OPCODE.FSTORE:
       store = thread.popStack();
-      if (checkError(store)) {
+      if (store.status === ResultType.ERROR) {
         return;
       } else {
         thread.storeLocal(indexbyte, asFloat(store.result));
+        thread.offsetPc(4);
         return;
       }
     case OPCODE.LSTORE:
       store = thread.popStack64();
-      if (checkError(store)) {
+      if (store.status === ResultType.ERROR) {
         return;
       } else {
         thread.storeLocal(indexbyte, store.result);
+        thread.offsetPc(4);
         return;
       }
     case OPCODE.DSTORE:
       store = thread.popStack64();
-      if (checkError(store)) {
+      if (store.status === ResultType.ERROR) {
         return;
       } else {
         thread.storeLocal(indexbyte, asDouble(store.result));
+        thread.offsetPc(4);
         return;
       }
     case OPCODE.IINC:
-      const constbyte = thread.getCode().getInt16(thread.getPC());
-      thread.offsetPc(2);
+      const constbyte = thread.getCode().getInt16(thread.getPC() + 4);
 
       thread.storeLocal(
         indexbyte,
         ((thread.loadLocal(indexbyte) as number) + constbyte) | 0
       );
+      thread.offsetPc(6);
       return;
   }
-  throw new Error("Invalid opcode");
+  throw new Error('Invalid opcode');
 }
 
 export function runMultianewarray(thread: Thread): void {
@@ -79,21 +81,20 @@ export function runMultianewarray(thread: Thread): void {
     .getConstant(indexbyte) as ConstantClass;
 
   const dimensions = thread.getCode().getUint8(thread.getPC() + 3);
-  thread.offsetPc(4);
 
   // get dimensions array: [2][3] == [2,3]
   const dimArray = [];
   for (let i = 0; i < dimensions; i++) {
     const popResult = thread.popStack();
-    if (checkError(popResult)) {
+    if (popResult.status === ResultType.ERROR) {
       return;
     }
     const dim = popResult.result;
 
     if (dim < 0) {
       thread.throwNewException(
-        "java/lang/NegativeArraySizeException",
-        "Negative array size"
+        'java/lang/NegativeArraySizeException',
+        'Negative array size'
       );
       return;
     }
@@ -101,8 +102,8 @@ export function runMultianewarray(thread: Thread): void {
   }
 
   const clsRes = arrayClsConstant.resolve();
-  if (!checkSuccess(clsRes)) {
-    if (checkError(clsRes)) {
+  if (clsRes.status !== ResultType.SUCCESS) {
+    if (clsRes.status === ResultType.ERROR) {
       thread.throwNewException(clsRes.exceptionCls, clsRes.msg);
     }
     return;
@@ -114,7 +115,7 @@ export function runMultianewarray(thread: Thread): void {
 
   let pendingInit = [res];
   let nextInit = [];
-  let currentType = arrayCls.getClassname();
+  let currentType = arrayCls.getName();
 
   for (let i = 1; i < dimensions; i++) {
     currentType = currentType.slice(1); // remove leading '[', array type should be '[[[...'
@@ -124,7 +125,7 @@ export function runMultianewarray(thread: Thread): void {
       .getClass()
       .getLoader()
       .getClass(currentType);
-    if (checkError(classResolutionResult)) {
+    if (classResolutionResult.status === ResultType.ERROR) {
       thread.throwNewException(
         classResolutionResult.exceptionCls,
         classResolutionResult.msg
@@ -150,51 +151,46 @@ export function runMultianewarray(thread: Thread): void {
     nextInit = [];
   }
 
-  thread.pushStack(res);
+  thread.pushStack(res) && thread.offsetPc(4);
 }
 
 export function runIfnull(thread: Thread): void {
-  thread.offsetPc(1);
-  const branchbyte = thread.getCode().getInt16(thread.getPC());
-  thread.offsetPc(2);
+  const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
 
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const ref = popResult.result as JvmObject;
   if (ref === null) {
-    thread.offsetPc(branchbyte - 3);
-    return;
+    thread.offsetPc(branchbyte);
+  } else {
+    thread.offsetPc(3);
   }
 }
 
 export function runIfnonnull(thread: Thread): void {
-  thread.offsetPc(1);
-  const branchbyte = thread.getCode().getInt16(thread.getPC());
-  thread.offsetPc(2);
+  const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
 
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const ref = popResult.result as JvmObject;
   if (ref !== null) {
-    thread.offsetPc(branchbyte - 3);
-    return;
+    thread.offsetPc(branchbyte);
+  } else {
+    thread.offsetPc(3);
   }
 }
 
 export function runGotoW(thread: Thread): void {
-  thread.offsetPc(1);
-  const branchbyte = thread.getCode().getInt32(thread.getPC());
-  thread.offsetPc(branchbyte - 1);
+  const branchbyte = thread.getCode().getInt32(thread.getPC() + 1);
+  thread.offsetPc(branchbyte);
 }
 
 export function runJsrW(thread: Thread): void {
-  thread.offsetPc(1);
-  const branchbyte = thread.getCode().getInt32(thread.getPC());
-  thread.offsetPc(4);
-  thread.pushStack(thread.getPC());
-  thread.setPc(thread.getPC() + branchbyte - 5);
+  const branchbyte = thread.getCode().getInt32(thread.getPC() + 1);
+  thread.pushStack(thread.getPC() + 5);
+  thread.setPc(thread.getPC() + branchbyte);
 }

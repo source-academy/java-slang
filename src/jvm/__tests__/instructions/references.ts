@@ -33,39 +33,39 @@ beforeEach(() => {
     .NullPointerException as ReferenceClassData;
 });
 
-describe("Invokestatic", () => {
-  test("INVOKESTATIC: Non static method throws IncompatibleClassChangeError", () => {
+describe('Invokestatic', () => {
+  test('INVOKESTATIC: Non static method throws IncompatibleClassChangeError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 3,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -77,8 +77,8 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -88,7 +88,7 @@ describe("Invokestatic", () => {
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, methodIdx);
 
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
@@ -96,46 +96,46 @@ describe("Invokestatic", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IncompatibleClassChangeError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IncompatibleClassChangeError'
     );
   });
-  test("INVOKESTATIC: Initializes class if not already initialized", () => {
+  test('INVOKESTATIC: Initializes class if not already initialized', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 3,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -147,8 +147,8 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -158,7 +158,7 @@ describe("Invokestatic", () => {
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, methodIdx);
 
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
@@ -166,38 +166,38 @@ describe("Invokestatic", () => {
     thread.runFor(1);
     expect(testClass.status).toBe(CLASS_STATUS.INITIALIZED);
   });
-  test("INVOKESTATIC: Pops args off stack per descriptor", () => {
+  test('INVOKESTATIC: Pops args off stack per descriptor', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 6,
-          value: "(IDJ)V",
+          value: '(IDJ)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -209,8 +209,8 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "(IDJ)V",
+          name: 'test0',
+          descriptor: '(IDJ)V',
           attributes: [],
           code: code,
         },
@@ -219,7 +219,7 @@ describe("Invokestatic", () => {
     });
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, methodIdx);
-    const method = testClass.getMethod("test0(IDJ)V");
+    const method = testClass.getMethod('test0(IDJ)V');
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
@@ -231,38 +231,38 @@ describe("Invokestatic", () => {
     expect(thread.peekStackFrame().locals[1]).toBe(2.5);
     expect(thread.peekStackFrame().locals[3] === BigInt(3)).toBe(true);
   });
-  test("INVOKESTATIC: Undergoes value set conversion", () => {
+  test('INVOKESTATIC: Undergoes value set conversion', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -274,8 +274,8 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: code,
         },
@@ -284,7 +284,7 @@ describe("Invokestatic", () => {
     });
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, methodIdx);
-    const method = testClass.getMethod("test0(FD)V");
+    const method = testClass.getMethod('test0(FD)V');
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
@@ -294,17 +294,17 @@ describe("Invokestatic", () => {
     expect(thread.peekStackFrame().locals[0]).toBe(Math.fround(1.3));
     expect(thread.peekStackFrame().locals[1]).toBe(1.3);
   });
-  test("INVOKESTATIC: private method throws IllegalAccessError", () => {
+  test('INVOKESTATIC: private method throws IllegalAccessError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const superClass = testLoader.createClass({
-      className: "superClass",
+      className: 'superClass',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC, METHOD_FLAGS.ACC_PRIVATE],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -312,34 +312,34 @@ describe("Invokestatic", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -351,8 +351,8 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -362,7 +362,7 @@ describe("Invokestatic", () => {
 
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -371,47 +371,47 @@ describe("Invokestatic", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IllegalAccessError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IllegalAccessError'
     );
   });
-  test("INVOKESTATIC: method lookup checks superclass", () => {
+  test('INVOKESTATIC: method lookup checks superclass', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -423,15 +423,15 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -441,28 +441,28 @@ describe("Invokestatic", () => {
 
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
     thread.pushStack(1.3);
     thread.pushStack64(1.3);
     thread.runFor(1);
-    expect(thread.getClass().getClassname()).toBe("mainClass");
+    expect(thread.getClass().getName()).toBe('mainClass');
     expect(thread.peekStackFrame().locals[0]).toBe(Math.fround(1.3));
     expect(thread.peekStackFrame().locals[1]).toBe(1.3);
   });
-  test("INVOKESTATIC: method lookup checks superclass", () => {
+  test('INVOKESTATIC: method lookup checks superclass', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -470,12 +470,12 @@ describe("Invokestatic", () => {
       loader: testLoader,
     });
     const superClass = testLoader.createClass({
-      className: "superClass",
+      className: 'superClass',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -483,34 +483,34 @@ describe("Invokestatic", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -522,8 +522,8 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -534,28 +534,28 @@ describe("Invokestatic", () => {
 
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
     thread.pushStack(1.3);
     thread.pushStack64(1.3);
     thread.runFor(1);
-    expect(thread.getClass().getClassname()).toBe("superClass");
+    expect(thread.getClass().getName()).toBe('superClass');
     expect(thread.peekStackFrame().locals[0]).toBe(Math.fround(1.3));
     expect(thread.peekStackFrame().locals[1]).toBe(1.3);
   });
-  test("INVOKESTATIC: method lookup interface static methods not called", () => {
+  test('INVOKESTATIC: method lookup interface static methods not called', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -563,33 +563,33 @@ describe("Invokestatic", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -601,8 +601,8 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -613,7 +613,7 @@ describe("Invokestatic", () => {
 
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -622,46 +622,46 @@ describe("Invokestatic", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NoSuchMethodError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NoSuchMethodError'
     );
   });
-  test("INVOKESTATIC: Native method returns int", () => {
+  test('INVOKESTATIC: Native method returns int', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let nativeMethodIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 3,
-          value: "()I",
+          value: '()I',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           return {
             tag: CONSTANT_TAG.Methodref,
             classIndex: cPool.length - 1,
@@ -671,23 +671,23 @@ describe("Invokestatic", () => {
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 3,
-          value: "()I",
+          value: '()I',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "nativeFunc",
+          value: 'nativeFunc',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 1,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 7,
         }),
-        (cPool) => {
+        cPool => {
           nativeMethodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -699,15 +699,15 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "()I",
+          name: 'test0',
+          descriptor: '()I',
           attributes: [],
           code: code,
         },
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC, METHOD_FLAGS.ACC_NATIVE],
-          name: "nativeFunc",
-          descriptor: "()I",
+          name: 'nativeFunc',
+          descriptor: '()I',
           attributes: [],
           code: code,
         },
@@ -716,8 +716,8 @@ describe("Invokestatic", () => {
     });
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, nativeMethodIdx);
-    const method = testClass.getMethod("test0()I") as Method;
-    jni.registerNativeMethod("Test", "nativeFunc()I", (thread: Thread) => {
+    const method = testClass.getMethod('test0()I') as Method;
+    jni.registerNativeMethod('Test', 'nativeFunc()I', (thread: Thread) => {
       thread.returnStackFrame(5);
     });
     thread.invokeStackFrame(
@@ -728,38 +728,38 @@ describe("Invokestatic", () => {
     expect((thread.popStack() as SuccessResult<any>).result).toBe(5);
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
-  test("INVOKESTATIC: Native method returns long", () => {
+  test('INVOKESTATIC: Native method returns long', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let nativeMethodIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()J",
+          value: '()J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           return {
             tag: CONSTANT_TAG.Methodref,
             classIndex: cPool.length - 1,
@@ -769,23 +769,23 @@ describe("Invokestatic", () => {
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()J",
+          value: '()J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "nativeFunc",
+          value: 'nativeFunc',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 1,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 7,
         }),
-        (cPool) => {
+        cPool => {
           nativeMethodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -797,15 +797,15 @@ describe("Invokestatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "()J",
+          name: 'test0',
+          descriptor: '()J',
           attributes: [],
           code: code,
         },
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC, METHOD_FLAGS.ACC_NATIVE],
-          name: "nativeFunc",
-          descriptor: "()J",
+          name: 'nativeFunc',
+          descriptor: '()J',
           attributes: [],
           code: code,
         },
@@ -814,8 +814,8 @@ describe("Invokestatic", () => {
     });
     code.setUint8(0, OPCODE.INVOKESTATIC);
     code.setUint16(1, nativeMethodIdx);
-    const method = testClass.getMethod("test0()J") as Method;
-    jni.registerNativeMethod("Test", "nativeFunc()J", (thread: Thread) => {
+    const method = testClass.getMethod('test0()J') as Method;
+    jni.registerNativeMethod('Test', 'nativeFunc()J', (thread: Thread) => {
       thread.returnStackFrame64(BigInt(5));
     });
     thread.invokeStackFrame(
@@ -830,39 +830,39 @@ describe("Invokestatic", () => {
   });
 });
 
-describe("invokevirtual", () => {
-  test("INVOKEVIRTUAL: static method invoked without error", () => {
+describe('invokevirtual', () => {
+  test('INVOKEVIRTUAL: static method invoked without error', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 3,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -874,8 +874,8 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC, METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -885,7 +885,7 @@ describe("invokevirtual", () => {
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
 
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -894,42 +894,42 @@ describe("invokevirtual", () => {
     thread.pushStack(objRef);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
-    expect(lastFrame.method.getName()).toBe("test0");
-    expect(lastFrame.method.getDescriptor()).toBe("()V");
+    expect(lastFrame.method.getName()).toBe('test0');
+    expect(lastFrame.method.getDescriptor()).toBe('()V');
     expect(thread.getPC()).toBe(0);
   });
-  test("INVOKEVIRTUAL: Pops args off stack per descriptor", () => {
+  test('INVOKEVIRTUAL: Pops args off stack per descriptor', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 6,
-          value: "(IDJ)V",
+          value: '(IDJ)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -941,8 +941,8 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "(IDJ)V",
+          name: 'test0',
+          descriptor: '(IDJ)V',
           attributes: [],
           code: code,
         },
@@ -951,7 +951,7 @@ describe("invokevirtual", () => {
     });
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
-    const method = testClass.getMethod("test0(IDJ)V");
+    const method = testClass.getMethod('test0(IDJ)V');
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
@@ -966,38 +966,38 @@ describe("invokevirtual", () => {
     expect(thread.peekStackFrame().locals[2]).toBe(2.5);
     expect(thread.peekStackFrame().locals[4] === BigInt(3)).toBe(true);
   });
-  test("INVOKEVIRTUAL: Undergoes value set conversion", () => {
+  test('INVOKEVIRTUAL: Undergoes value set conversion', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -1009,8 +1009,8 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: code,
         },
@@ -1019,7 +1019,7 @@ describe("invokevirtual", () => {
     });
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
-    const method = testClass.getMethod("test0(FD)V");
+    const method = testClass.getMethod('test0(FD)V');
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
@@ -1031,17 +1031,17 @@ describe("invokevirtual", () => {
     expect(thread.peekStackFrame().locals[1]).toBe(Math.fround(1.3));
     expect(thread.peekStackFrame().locals[2]).toBe(1.3);
   });
-  test("INVOKEVIRTUAL: private method throws IllegalAccessError", () => {
+  test('INVOKEVIRTUAL: private method throws IllegalAccessError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const superClass = testLoader.createClass({
-      className: "superClass",
+      className: 'superClass',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PRIVATE],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1049,34 +1049,34 @@ describe("invokevirtual", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -1087,8 +1087,8 @@ describe("invokevirtual", () => {
       ],
       methods: [
         {
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -1098,7 +1098,7 @@ describe("invokevirtual", () => {
 
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -1109,46 +1109,46 @@ describe("invokevirtual", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IllegalAccessError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IllegalAccessError'
     );
   });
-  test("INVOKEVIRTUAL: method lookup ok", () => {
+  test('INVOKEVIRTUAL: method lookup ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -1160,15 +1160,15 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1178,7 +1178,7 @@ describe("invokevirtual", () => {
 
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -1187,16 +1187,16 @@ describe("invokevirtual", () => {
     thread.runFor(1);
     expect(thread.peekStackFrame().locals[0] === objRef).toBe(true);
   });
-  test("INVOKEVIRTUAL: method lookup checks superclass", () => {
+  test('INVOKEVIRTUAL: method lookup checks superclass', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const superClass = testLoader.createClass({
-      className: "superClass",
+      className: 'superClass',
       methods: [
         {
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1204,34 +1204,34 @@ describe("invokevirtual", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -1243,8 +1243,8 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -1254,26 +1254,26 @@ describe("invokevirtual", () => {
 
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
     const objRef = new JvmObject(superClass);
     thread.pushStack(objRef);
     thread.runFor(1);
-    expect(thread.getClass().getClassname()).toBe("superClass");
+    expect(thread.getClass().getName()).toBe('superClass');
     expect(thread.peekStackFrame().locals[0] === objRef).toBe(true);
   });
-  test("INVOKEVIRTUAL: method lookup override OK", () => {
+  test('INVOKEVIRTUAL: method lookup override OK', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const superClass = testLoader.createClass({
-      className: "superClass",
+      className: 'superClass',
       methods: [
         {
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1281,34 +1281,34 @@ describe("invokevirtual", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -1320,14 +1320,14 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
         {
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1337,48 +1337,48 @@ describe("invokevirtual", () => {
 
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
     const objRef = new JvmObject(mainClass);
     thread.pushStack(objRef);
     thread.runFor(1);
-    expect(thread.getClass().getClassname()).toBe("mainClass");
+    expect(thread.getClass().getName()).toBe('mainClass');
     expect(thread.peekStackFrame().locals[0] === objRef).toBe(true);
   });
-  test("INVOKEVIRTUAL: objectref is null, throws a NullPointerException", () => {
+  test('INVOKEVIRTUAL: objectref is null, throws a NullPointerException', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -1390,14 +1390,14 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
         {
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1407,7 +1407,7 @@ describe("invokevirtual", () => {
 
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -1415,46 +1415,46 @@ describe("invokevirtual", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
-  test("INVOKEVIRTUAL: lookup abstract method throws AbstractMethodError", () => {
+  test('INVOKEVIRTUAL: lookup abstract method throws AbstractMethodError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -1466,15 +1466,15 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1484,7 +1484,7 @@ describe("invokevirtual", () => {
 
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -1493,46 +1493,46 @@ describe("invokevirtual", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/AbstractMethodError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/AbstractMethodError'
     );
   });
-  test("INVOKEVIRTUAL: lookup method fails throws AbstractMethodError", () => {
+  test('INVOKEVIRTUAL: lookup method fails throws AbstractMethodError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const failLookupClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -1544,8 +1544,8 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -1553,33 +1553,33 @@ describe("invokevirtual", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -1591,15 +1591,15 @@ describe("invokevirtual", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1609,7 +1609,7 @@ describe("invokevirtual", () => {
 
     code.setUint8(0, OPCODE.INVOKEVIRTUAL);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V");
+    const method = mainClass.getMethod('main()V');
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -1618,29 +1618,29 @@ describe("invokevirtual", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/AbstractMethodError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/AbstractMethodError'
     );
   });
 });
 
-describe("Invokeinterface", () => {
-  test("INVOKEINTERFACE: static method invoked without error", () => {
+describe('Invokeinterface', () => {
+  test('INVOKEINTERFACE: static method invoked without error', () => {
     const ab = new ArrayBuffer(40);
     const code = new DataView(ab);
     let methodIdx = 0;
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1648,33 +1648,33 @@ describe("Invokeinterface", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "interfaceClass",
+          value: 'interfaceClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.InterfaceMethodref,
@@ -1686,15 +1686,15 @@ describe("Invokeinterface", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC, METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1708,7 +1708,7 @@ describe("Invokeinterface", () => {
     code.setUint8(3, 0);
     code.setUint8(4, 0);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -1716,22 +1716,22 @@ describe("Invokeinterface", () => {
     thread.pushStack(objRef);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
-    expect(lastFrame.method.getName()).toBe("test0");
-    expect(lastFrame.method.getDescriptor()).toBe("()V");
+    expect(lastFrame.method.getName()).toBe('test0');
+    expect(lastFrame.method.getDescriptor()).toBe('()V');
     expect(thread.getPC()).toBe(0);
   });
-  test("INVOKEINTERFACE: Pops args off stack per descriptor", () => {
+  test('INVOKEINTERFACE: Pops args off stack per descriptor', () => {
     const ab = new ArrayBuffer(40);
     const code = new DataView(ab);
     let methodIdx = 0;
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1739,33 +1739,33 @@ describe("Invokeinterface", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "interfaceClass",
+          value: 'interfaceClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.InterfaceMethodref,
@@ -1777,15 +1777,15 @@ describe("Invokeinterface", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC, METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1799,7 +1799,7 @@ describe("Invokeinterface", () => {
     code.setUint8(3, 0);
     code.setUint8(4, 0);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -1809,25 +1809,25 @@ describe("Invokeinterface", () => {
     thread.pushStack64(0.5);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
-    expect(lastFrame.method.getName()).toBe("test0");
-    expect(lastFrame.method.getDescriptor()).toBe("(FD)V");
+    expect(lastFrame.method.getName()).toBe('test0');
+    expect(lastFrame.method.getDescriptor()).toBe('(FD)V');
     expect(lastFrame.locals[0] === objRef).toBe(true);
     expect(lastFrame.locals[1]).toBe(0.5);
     expect(lastFrame.locals[2]).toBe(0.5);
     expect(thread.getPC()).toBe(0);
   });
-  test("INVOKEINTERFACE: Undergoes value set conversion", () => {
+  test('INVOKEINTERFACE: Undergoes value set conversion', () => {
     const ab = new ArrayBuffer(40);
     const code = new DataView(ab);
     let methodIdx = 0;
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1835,33 +1835,33 @@ describe("Invokeinterface", () => {
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "interfaceClass",
+          value: 'interfaceClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.InterfaceMethodref,
@@ -1873,15 +1873,15 @@ describe("Invokeinterface", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC, METHOD_FLAGS.ACC_STATIC],
-          name: "test0",
-          descriptor: "(FD)V",
+          name: 'test0',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1895,7 +1895,7 @@ describe("Invokeinterface", () => {
     code.setUint8(3, 0);
     code.setUint8(4, 0);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -1905,25 +1905,25 @@ describe("Invokeinterface", () => {
     thread.pushStack64(1.3);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
-    expect(lastFrame.method.getName()).toBe("test0");
-    expect(lastFrame.method.getDescriptor()).toBe("(FD)V");
+    expect(lastFrame.method.getName()).toBe('test0');
+    expect(lastFrame.method.getDescriptor()).toBe('(FD)V');
     expect(lastFrame.locals[0] === objRef).toBe(true);
     expect(lastFrame.locals[1]).toBe(Math.fround(1.3));
     expect(lastFrame.locals[2]).toBe(1.3);
     expect(thread.getPC()).toBe(0);
   });
-  test("INVOKEINTERFACE: non public method throws IllegalAccessError", () => {
+  test('INVOKEINTERFACE: non public method throws IllegalAccessError', () => {
     const ab = new ArrayBuffer(40);
     const code = new DataView(ab);
     let methodIdx = 0;
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1932,13 +1932,13 @@ describe("Invokeinterface", () => {
     });
 
     const objClass = testLoader.createClass({
-      className: "objClass",
+      className: 'objClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -1948,33 +1948,33 @@ describe("Invokeinterface", () => {
     });
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "interfaceClass",
+          value: 'interfaceClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.InterfaceMethodref,
@@ -1986,8 +1986,8 @@ describe("Invokeinterface", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2000,7 +2000,7 @@ describe("Invokeinterface", () => {
     code.setUint8(3, 0);
     code.setUint8(4, 0);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2009,26 +2009,26 @@ describe("Invokeinterface", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IllegalAccessError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IllegalAccessError'
     );
   });
-  test("INVOKEINTERFACE: abstract method throws AbstractMethodError", () => {
+  test('INVOKEINTERFACE: abstract method throws AbstractMethodError', () => {
     const ab = new ArrayBuffer(40);
     const code = new DataView(ab);
     let methodIdx = 0;
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2037,13 +2037,13 @@ describe("Invokeinterface", () => {
     });
 
     const objClass = testLoader.createClass({
-      className: "objClass",
+      className: 'objClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC, METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2053,33 +2053,33 @@ describe("Invokeinterface", () => {
     });
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "interfaceClass",
+          value: 'interfaceClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.InterfaceMethodref,
@@ -2091,8 +2091,8 @@ describe("Invokeinterface", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2105,7 +2105,7 @@ describe("Invokeinterface", () => {
     code.setUint8(3, 0);
     code.setUint8(4, 0);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2114,26 +2114,26 @@ describe("Invokeinterface", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/AbstractMethodError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/AbstractMethodError'
     );
   });
-  test("INVOKEINTERFACE: multiple maximally specific throws IncompatibleClassChangeError", () => {
+  test('INVOKEINTERFACE: multiple maximally specific throws IncompatibleClassChangeError', () => {
     const ab = new ArrayBuffer(40);
     const code = new DataView(ab);
     let methodIdx = 0;
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2141,13 +2141,13 @@ describe("Invokeinterface", () => {
       loader: testLoader,
     });
     const superInterA = testLoader.createClass({
-      className: "superInterA",
+      className: 'superInterA',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2155,13 +2155,13 @@ describe("Invokeinterface", () => {
       loader: testLoader,
     });
     const superInterB = testLoader.createClass({
-      className: "superInterB",
+      className: 'superInterB',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2170,7 +2170,7 @@ describe("Invokeinterface", () => {
     });
 
     const objClass = testLoader.createClass({
-      className: "objClass",
+      className: 'objClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       interfaces: [
         interfaceClass as ReferenceClassData,
@@ -2181,33 +2181,33 @@ describe("Invokeinterface", () => {
     });
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "interfaceClass",
+          value: 'interfaceClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -2219,8 +2219,8 @@ describe("Invokeinterface", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2233,7 +2233,7 @@ describe("Invokeinterface", () => {
     code.setUint8(3, 0);
     code.setUint8(4, 0);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2242,26 +2242,26 @@ describe("Invokeinterface", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IncompatibleClassChangeError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IncompatibleClassChangeError'
     );
   });
-  test("INVOKEINTERFACE: no non abstract method throws AbstractMethodError", () => {
+  test('INVOKEINTERFACE: no non abstract method throws AbstractMethodError', () => {
     const ab = new ArrayBuffer(40);
     const code = new DataView(ab);
     let methodIdx = 0;
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2270,40 +2270,40 @@ describe("Invokeinterface", () => {
     });
 
     const objClass = testLoader.createClass({
-      className: "objClass",
+      className: 'objClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       interfaces: [interfaceClass as ReferenceClassData],
       loader: testLoader,
     });
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "test0",
+          value: 'test0',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "interfaceClass",
+          value: 'interfaceClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.InterfaceMethodref,
@@ -2315,8 +2315,8 @@ describe("Invokeinterface", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2329,7 +2329,7 @@ describe("Invokeinterface", () => {
     code.setUint8(3, 0);
     code.setUint8(4, 0);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2338,27 +2338,27 @@ describe("Invokeinterface", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/AbstractMethodError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/AbstractMethodError'
     );
   });
 });
 
-describe("invokespecial", () => {
-  test("INVOKESPECIAL: static method invoked without error", () => {
+describe('invokespecial', () => {
+  test('INVOKESPECIAL: static method invoked without error', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const superClass = testLoader.createClass({
-      className: "superClass",
+      className: 'superClass',
       methods: [
         {
-          name: "<init>",
-          descriptor: "()V",
+          name: '<init>',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2367,12 +2367,12 @@ describe("invokespecial", () => {
     });
 
     const objClass = testLoader.createClass({
-      className: "objClass",
+      className: 'objClass',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC, METHOD_FLAGS.ACC_STATIC],
-          name: "<init>",
-          descriptor: "()V",
+          name: '<init>',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2382,33 +2382,33 @@ describe("invokespecial", () => {
     });
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "<init>",
+          value: '<init>',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "objClass",
+          value: 'objClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -2420,8 +2420,8 @@ describe("invokespecial", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2431,7 +2431,7 @@ describe("invokespecial", () => {
     code.setUint8(0, OPCODE.INVOKESPECIAL);
     code.setUint16(1, methodIdx);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2440,20 +2440,20 @@ describe("invokespecial", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(thread.getPC()).toBe(0);
-    expect(lastFrame.method.getName()).toBe("<init>");
-    expect(lastFrame.method.getDescriptor()).toBe("()V");
+    expect(lastFrame.method.getName()).toBe('<init>');
+    expect(lastFrame.method.getDescriptor()).toBe('()V');
     expect(thread.getPC()).toBe(0);
   });
-  test("INVOKESPECIAL: Pops args off stack per descriptor", () => {
+  test('INVOKESPECIAL: Pops args off stack per descriptor', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const superClass = testLoader.createClass({
-      className: "superClass",
+      className: 'superClass',
       methods: [
         {
-          name: "<init>",
-          descriptor: "(FD)V",
+          name: '<init>',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2462,12 +2462,12 @@ describe("invokespecial", () => {
     });
 
     const objClass = testLoader.createClass({
-      className: "objClass",
+      className: 'objClass',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC, METHOD_FLAGS.ACC_STATIC],
-          name: "<init>",
-          descriptor: "(FD)V",
+          name: '<init>',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2477,33 +2477,33 @@ describe("invokespecial", () => {
     });
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "<init>",
+          value: '<init>',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "objClass",
+          value: 'objClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -2515,8 +2515,8 @@ describe("invokespecial", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2526,7 +2526,7 @@ describe("invokespecial", () => {
     code.setUint8(0, OPCODE.INVOKESPECIAL);
     code.setUint16(1, methodIdx);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2536,23 +2536,23 @@ describe("invokespecial", () => {
     thread.pushStack64(0.5);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
-    expect(lastFrame.method.getName()).toBe("<init>");
-    expect(lastFrame.method.getDescriptor()).toBe("(FD)V");
+    expect(lastFrame.method.getName()).toBe('<init>');
+    expect(lastFrame.method.getDescriptor()).toBe('(FD)V');
     expect(lastFrame.locals[0] === objRef).toBe(true);
     expect(lastFrame.locals[1]).toBe(0.5);
     expect(lastFrame.locals[2]).toBe(0.5);
     expect(thread.getPC()).toBe(0);
   });
-  test("INVOKESPECIAL: Undergoes value set conversion", () => {
+  test('INVOKESPECIAL: Undergoes value set conversion', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const superClass = testLoader.createClass({
-      className: "superClass",
+      className: 'superClass',
       methods: [
         {
-          name: "<init>",
-          descriptor: "(FD)V",
+          name: '<init>',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2561,12 +2561,12 @@ describe("invokespecial", () => {
     });
 
     const objClass = testLoader.createClass({
-      className: "objClass",
+      className: 'objClass',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC, METHOD_FLAGS.ACC_STATIC],
-          name: "<init>",
-          descriptor: "(FD)V",
+          name: '<init>',
+          descriptor: '(FD)V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2576,33 +2576,33 @@ describe("invokespecial", () => {
     });
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "(FD)V",
+          value: '(FD)V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "<init>",
+          value: '<init>',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "objClass",
+          value: 'objClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -2614,8 +2614,8 @@ describe("invokespecial", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2625,7 +2625,7 @@ describe("invokespecial", () => {
     code.setUint8(0, OPCODE.INVOKESPECIAL);
     code.setUint16(1, methodIdx);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2635,24 +2635,24 @@ describe("invokespecial", () => {
     thread.pushStack64(1.3);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
-    expect(lastFrame.method.getName()).toBe("<init>");
-    expect(lastFrame.method.getDescriptor()).toBe("(FD)V");
+    expect(lastFrame.method.getName()).toBe('<init>');
+    expect(lastFrame.method.getDescriptor()).toBe('(FD)V');
     expect(lastFrame.locals[0] === objRef).toBe(true);
     expect(lastFrame.locals[1]).toBe(Math.fround(1.3));
     expect(lastFrame.locals[2]).toBe(1.3);
     expect(thread.getPC()).toBe(0);
   });
-  test("INVOKESPECIAL: Interface method ref ok", () => {
+  test('INVOKESPECIAL: Interface method ref ok', () => {
     const ab = new ArrayBuffer(40);
     const code = new DataView(ab);
     let methodIdx = 0;
     const objClass = testLoader.createClass({
-      className: "java/lang/Object",
+      className: 'java/lang/Object',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "<init>",
-          descriptor: "()V",
+          name: '<init>',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2660,40 +2660,40 @@ describe("invokespecial", () => {
       loader: testLoader,
     });
     const interfaceClass = testLoader.createClass({
-      className: "interfaceClass",
+      className: 'interfaceClass',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [],
       superClass: objClass as ReferenceClassData,
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "<init>",
+          value: '<init>',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "interfaceClass",
+          value: 'interfaceClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.InterfaceMethodref,
@@ -2705,8 +2705,8 @@ describe("invokespecial", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2717,7 +2717,7 @@ describe("invokespecial", () => {
 
     code.setUint8(0, OPCODE.INVOKESPECIAL);
     code.setUint16(1, methodIdx);
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2725,21 +2725,21 @@ describe("invokespecial", () => {
     thread.pushStack(objRef);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
-    expect(lastFrame.method.getName()).toBe("<init>");
-    expect(lastFrame.method.getDescriptor()).toBe("()V");
+    expect(lastFrame.method.getName()).toBe('<init>');
+    expect(lastFrame.method.getDescriptor()).toBe('()V');
     expect(lastFrame.locals[0] === objRef).toBe(true);
     expect(thread.getPC()).toBe(0);
   });
-  test("INVOKESPECIAL: abstract method throws AbstractMethodError", () => {
+  test('INVOKESPECIAL: abstract method throws AbstractMethodError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const superClass = testLoader.createClass({
-      className: "superClass",
+      className: 'superClass',
       methods: [
         {
-          name: "<init>",
-          descriptor: "()V",
+          name: '<init>',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2748,12 +2748,12 @@ describe("invokespecial", () => {
     });
 
     const objClass = testLoader.createClass({
-      className: "objClass",
+      className: 'objClass',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_ABSTRACT],
-          name: "<init>",
-          descriptor: "()V",
+          name: '<init>',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2763,33 +2763,33 @@ describe("invokespecial", () => {
     });
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "<init>",
+          value: '<init>',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "objClass",
+          value: 'objClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -2801,8 +2801,8 @@ describe("invokespecial", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2812,7 +2812,7 @@ describe("invokespecial", () => {
     code.setUint8(0, OPCODE.INVOKESPECIAL);
     code.setUint16(1, methodIdx);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2821,26 +2821,26 @@ describe("invokespecial", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/AbstractMethodError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/AbstractMethodError'
     );
   });
-  test("INVOKESPECIAL: multiple maximally specific throws IncompatibleClassChangeError", () => {
+  test('INVOKESPECIAL: multiple maximally specific throws IncompatibleClassChangeError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let methodIdx = 0;
     const superInterA = testLoader.createClass({
-      className: "superInterA",
+      className: 'superInterA',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "<init>",
-          descriptor: "()V",
+          name: '<init>',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2848,13 +2848,13 @@ describe("invokespecial", () => {
       loader: testLoader,
     });
     const superInterB = testLoader.createClass({
-      className: "superInterB",
+      className: 'superInterB',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "<init>",
-          descriptor: "()V",
+          name: '<init>',
+          descriptor: '()V',
           attributes: [],
           code: new DataView(new ArrayBuffer(8)),
         },
@@ -2863,7 +2863,7 @@ describe("invokespecial", () => {
     });
 
     const objClass = testLoader.createClass({
-      className: "objClass",
+      className: 'objClass',
       interfaces: [
         superInterA as ReferenceClassData,
         superInterB as ReferenceClassData,
@@ -2872,33 +2872,33 @@ describe("invokespecial", () => {
     });
 
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "()V",
+          value: '()V',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 5,
-          value: "<init>",
+          value: '<init>',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "superInterA",
+          value: 'superInterA',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 2,
           descriptorIndex: cPool.length - 3,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           methodIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Methodref,
@@ -2910,8 +2910,8 @@ describe("invokespecial", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2921,7 +2921,7 @@ describe("invokespecial", () => {
     code.setUint8(0, OPCODE.INVOKESPECIAL);
     code.setUint16(1, methodIdx);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -2930,49 +2930,49 @@ describe("invokespecial", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IncompatibleClassChangeError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IncompatibleClassChangeError'
     );
   });
 });
 
-describe("Getstatic", () => {
-  test("GETSTATIC: Initializes class", () => {
+describe('Getstatic', () => {
+  test('GETSTATIC: Initializes class', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "I",
+          value: 'I',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -2984,8 +2984,8 @@ describe("Getstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -2993,8 +2993,8 @@ describe("Getstatic", () => {
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PUBLIC, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "I",
+          name: 'staticField',
+          descriptor: 'I',
           attributes: [],
         },
       ],
@@ -3002,7 +3002,7 @@ describe("Getstatic", () => {
     });
     code.setUint8(0, OPCODE.GETSTATIC);
     code.setUint16(1, fieldIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -3011,38 +3011,38 @@ describe("Getstatic", () => {
     thread.runFor(1);
     expect(testClass.status).toBe(CLASS_STATUS.INITIALIZED);
   });
-  test("GETSTATIC: Gets static int", () => {
+  test('GETSTATIC: Gets static int', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "I",
+          value: 'I',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3054,8 +3054,8 @@ describe("Getstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -3063,18 +3063,18 @@ describe("Getstatic", () => {
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PUBLIC, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "I",
+          name: 'staticField',
+          descriptor: 'I',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
-    testClass.lookupField("staticFieldI")?.putValue(5);
+    testClass.lookupField('staticFieldI')?.putValue(5);
     code.setUint8(0, OPCODE.GETSTATIC);
     code.setUint16(1, fieldIdx);
 
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -3083,38 +3083,38 @@ describe("Getstatic", () => {
     expect((thread.popStack() as SuccessResult<any>).result).toBe(5);
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
-  test("GETSTATIC: Gets static long", () => {
+  test('GETSTATIC: Gets static long', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3126,8 +3126,8 @@ describe("Getstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -3135,18 +3135,18 @@ describe("Getstatic", () => {
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PUBLIC, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "J",
+          name: 'staticField',
+          descriptor: 'J',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
-    testClass.lookupField("staticFieldJ")?.putValue(BigInt(5));
+    testClass.lookupField('staticFieldJ')?.putValue(BigInt(5));
     code.setUint8(0, OPCODE.GETSTATIC);
     code.setUint16(1, fieldIdx);
 
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -3157,51 +3157,51 @@ describe("Getstatic", () => {
     ).toBe(true);
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
-  test("GETSTATIC: gets inherited static long", () => {
+  test('GETSTATIC: gets inherited static long', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const superClass = testLoader.createClass({
-      className: "SuperClass",
+      className: 'SuperClass',
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "J",
+          name: 'staticField',
+          descriptor: 'J',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "SuperClass",
+          value: 'SuperClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3213,19 +3213,19 @@ describe("Getstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    superClass.lookupField("staticFieldJ")?.putValue(BigInt(5));
+    superClass.lookupField('staticFieldJ')?.putValue(BigInt(5));
     code.setUint8(0, OPCODE.GETSTATIC);
     code.setUint16(1, fieldIdx);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -3235,51 +3235,51 @@ describe("Getstatic", () => {
     ).toBe(true);
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
-  test("GETSTATIC: private static int throws IllegalAccessError", () => {
+  test('GETSTATIC: private static int throws IllegalAccessError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const superClass = testLoader.createClass({
-      className: "SuperClass",
+      className: 'SuperClass',
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PRIVATE, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "J",
+          name: 'staticField',
+          descriptor: 'J',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "SuperClass",
+          value: 'SuperClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3291,78 +3291,78 @@ describe("Getstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    superClass.lookupField("staticFieldJ")?.putValue(BigInt(5));
+    superClass.lookupField('staticFieldJ')?.putValue(BigInt(5));
 
     code.setUint8(0, OPCODE.GETSTATIC);
     code.setUint16(1, fieldIdx);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IllegalAccessError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IllegalAccessError'
     );
   });
-  test("GETSTATIC: non static int throws IncompatibleClassChangeError", () => {
+  test('GETSTATIC: non static int throws IncompatibleClassChangeError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const superClass = testLoader.createClass({
-      className: "SuperClass",
+      className: 'SuperClass',
       fields: [
         {
-          name: "staticField",
-          descriptor: "J",
+          name: 'staticField',
+          descriptor: 'J',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "SuperClass",
+          value: 'SuperClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3374,66 +3374,66 @@ describe("Getstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    superClass.lookupField("staticFieldJ")?.putValue(BigInt(5));
+    superClass.lookupField('staticFieldJ')?.putValue(BigInt(5));
 
     code.setUint8(0, OPCODE.GETSTATIC);
     code.setUint16(1, fieldIdx);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IncompatibleClassChangeError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IncompatibleClassChangeError'
     );
   });
-  test("GETSTATIC: Invalid field throws NoSuchFieldError", () => {
+  test('GETSTATIC: Invalid field throws NoSuchFieldError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3445,8 +3445,8 @@ describe("Getstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -3457,7 +3457,7 @@ describe("Getstatic", () => {
     code.setUint8(0, OPCODE.GETSTATIC);
     code.setUint16(1, fieldIdx);
 
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -3465,49 +3465,49 @@ describe("Getstatic", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NoSuchFieldError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NoSuchFieldError'
     );
   });
 });
 
-describe("Putstatic", () => {
-  test("PUTSTATIC: Initializes class", () => {
+describe('Putstatic', () => {
+  test('PUTSTATIC: Initializes class', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "I",
+          value: 'I',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3519,8 +3519,8 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -3528,8 +3528,8 @@ describe("Putstatic", () => {
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PUBLIC, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "I",
+          name: 'staticField',
+          descriptor: 'I',
           attributes: [],
         },
       ],
@@ -3537,7 +3537,7 @@ describe("Putstatic", () => {
     });
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -3547,38 +3547,38 @@ describe("Putstatic", () => {
     thread.runFor(1);
     expect(testClass.status).toBe(CLASS_STATUS.INITIALIZED);
   });
-  test("PUTSTATIC: Puts static int", () => {
+  test('PUTSTATIC: Puts static int', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "I",
+          value: 'I',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3590,8 +3590,8 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -3599,8 +3599,8 @@ describe("Putstatic", () => {
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PUBLIC, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "I",
+          name: 'staticField',
+          descriptor: 'I',
           attributes: [],
         },
       ],
@@ -3608,48 +3608,48 @@ describe("Putstatic", () => {
     });
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
     thread.pushStack(5);
     thread.runFor(1);
-    expect(testClass.lookupField("staticFieldI")?.getValue()).toBe(5);
+    expect(testClass.lookupField('staticFieldI')?.getValue()).toBe(5);
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
-  test("PUTSTATIC: Puts static long", () => {
+  test('PUTSTATIC: Puts static long', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3661,8 +3661,8 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -3670,8 +3670,8 @@ describe("Putstatic", () => {
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PUBLIC, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "J",
+          name: 'staticField',
+          descriptor: 'J',
           attributes: [],
         },
       ],
@@ -3680,7 +3680,7 @@ describe("Putstatic", () => {
 
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -3688,55 +3688,55 @@ describe("Putstatic", () => {
     thread.pushStack64(BigInt(5));
     thread.runFor(1);
     expect(
-      testClass.lookupField("staticFieldJ")?.getValue() === BigInt(5)
+      testClass.lookupField('staticFieldJ')?.getValue() === BigInt(5)
     ).toBe(true);
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
-  test("PUTSTATIC: Puts inherited static long", () => {
+  test('PUTSTATIC: Puts inherited static long', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const superClass = testLoader.createClass({
-      className: "SuperClass",
+      className: 'SuperClass',
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "J",
+          name: 'staticField',
+          descriptor: 'J',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "SuperClass",
+          value: 'SuperClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3748,8 +3748,8 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -3759,62 +3759,62 @@ describe("Putstatic", () => {
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
 
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
     thread.pushStack64(BigInt(5));
     thread.runFor(1);
     expect(
-      superClass.lookupField("staticFieldJ")?.getValue() === BigInt(5)
+      superClass.lookupField('staticFieldJ')?.getValue() === BigInt(5)
     ).toBe(true);
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
-  test("PUTSTATIC: private static int throws IllegalAccessError", () => {
+  test('PUTSTATIC: private static int throws IllegalAccessError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const superClass = testLoader.createClass({
-      className: "SuperClass",
+      className: 'SuperClass',
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PRIVATE, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "J",
+          name: 'staticField',
+          descriptor: 'J',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "SuperClass",
+          value: 'SuperClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3826,19 +3826,19 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    superClass.lookupField("staticFieldJ")?.putValue(BigInt(5));
+    superClass.lookupField('staticFieldJ')?.putValue(BigInt(5));
 
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -3846,58 +3846,58 @@ describe("Putstatic", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IllegalAccessError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IllegalAccessError'
     );
   });
-  test("PUTSTATIC: non static int throws IncompatibleClassChangeError", () => {
+  test('PUTSTATIC: non static int throws IncompatibleClassChangeError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const superClass = testLoader.createClass({
-      className: "SuperClass",
+      className: 'SuperClass',
       fields: [
         {
-          name: "staticField",
-          descriptor: "J",
+          name: 'staticField',
+          descriptor: 'J',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "SuperClass",
+          value: 'SuperClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3909,19 +3909,19 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    superClass.lookupField("staticFieldJ")?.putValue(BigInt(5));
+    superClass.lookupField('staticFieldJ')?.putValue(BigInt(5));
 
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -3929,46 +3929,46 @@ describe("Putstatic", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IncompatibleClassChangeError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IncompatibleClassChangeError'
     );
   });
-  test("PUTSTATIC: Invalid field throws NoSuchFieldError", () => {
+  test('PUTSTATIC: Invalid field throws NoSuchFieldError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -3980,8 +3980,8 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -3992,7 +3992,7 @@ describe("Putstatic", () => {
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
 
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4001,59 +4001,59 @@ describe("Putstatic", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NoSuchFieldError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NoSuchFieldError'
     );
   });
-  test("PUTSTATIC: final static int outside init throws IllegalAccessError", () => {
+  test('PUTSTATIC: final static int outside init throws IllegalAccessError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const superClass = testLoader.createClass({
-      className: "SuperClass",
+      className: 'SuperClass',
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_FINAL, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "J",
+          name: 'staticField',
+          descriptor: 'J',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "J",
+          value: 'J',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "SuperClass",
+          value: 'SuperClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -4065,19 +4065,19 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "main",
-          descriptor: "()V",
+          name: 'main',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    superClass.lookupField("staticFieldJ")?.putValue(BigInt(5));
+    superClass.lookupField('staticFieldJ')?.putValue(BigInt(5));
 
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
-    const method = mainClass.getMethod("main()V") as Method;
+    const method = mainClass.getMethod('main()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -4085,55 +4085,55 @@ describe("Putstatic", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IllegalAccessError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IllegalAccessError'
     );
   });
-  test("PUTSTATIC: final static int inside init ok", () => {
+  test('PUTSTATIC: final static int inside init ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const mainClass = testLoader.createClass({
-      className: "MainClass",
+      className: 'MainClass',
       superClass: null,
 
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_FINAL, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "I",
+          name: 'staticField',
+          descriptor: 'I',
         },
       ],
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "I",
+          value: 'I',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "MainClass",
+          value: 'MainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -4145,8 +4145,8 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "<clinit>",
-          descriptor: "()V",
+          name: '<clinit>',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4158,56 +4158,56 @@ describe("Putstatic", () => {
     mainClass.initialize(thread);
     thread.pushStack(5);
     thread.runFor(1);
-    expect(mainClass.lookupField("staticFieldI")?.getValue()).toBe(5);
+    expect(mainClass.lookupField('staticFieldI')?.getValue()).toBe(5);
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
 
-  test("PUTSTATIC: final static int from child init throws IllegalAccessError", () => {
+  test('PUTSTATIC: final static int from child init throws IllegalAccessError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const superClass = testLoader.createClass({
-      className: "SuperClass",
+      className: 'SuperClass',
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_STATIC, FIELD_FLAGS.ACC_FINAL],
-          name: "staticField",
-          descriptor: "I",
+          name: 'staticField',
+          descriptor: 'I',
           attributes: [],
         },
       ],
       loader: testLoader,
     });
     const mainClass = testLoader.createClass({
-      className: "mainClass",
+      className: 'mainClass',
       status: CLASS_STATUS.INITIALIZING,
       superClass: superClass as ReferenceClassData,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "I",
+          value: 'I',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "mainClass",
+          value: 'mainClass',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -4219,8 +4219,8 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_STATIC],
-          name: "<clinit>",
-          descriptor: "()V",
+          name: '<clinit>',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4230,7 +4230,7 @@ describe("Putstatic", () => {
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
 
-    const method = mainClass.getMethod("<clinit>()V") as Method;
+    const method = mainClass.getMethod('<clinit>()V') as Method;
     thread.invokeStackFrame(
       new JavaStackFrame(mainClass, method as Method, 0, [])
     );
@@ -4238,46 +4238,46 @@ describe("Putstatic", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/IllegalAccessError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/IllegalAccessError'
     );
   });
-  test("PUTSTATIC: float undergoes value set conversion", () => {
+  test('PUTSTATIC: float undergoes value set conversion', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "F",
+          value: 'F',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -4289,8 +4289,8 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4298,8 +4298,8 @@ describe("Putstatic", () => {
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PUBLIC, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "F",
+          name: 'staticField',
+          descriptor: 'F',
           attributes: [],
         },
       ],
@@ -4307,50 +4307,50 @@ describe("Putstatic", () => {
     });
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
     thread.pushStack(1.3);
     thread.runFor(1);
-    expect(testClass.lookupField("staticFieldF")?.getValue()).toBe(
+    expect(testClass.lookupField('staticFieldF')?.getValue()).toBe(
       Math.fround(1.3)
     );
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
-  test("PUTSTATIC: int to boolean narrowed", () => {
+  test('PUTSTATIC: int to boolean narrowed', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let fieldIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 11,
-          value: "staticField",
+          value: 'staticField',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "Z",
+          value: 'Z',
         }),
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.NameAndType,
           nameIndex: cPool.length - 3,
           descriptorIndex: cPool.length - 2,
         }),
-        (cPool) => ({
+        cPool => ({
           tag: CONSTANT_TAG.Class,
           nameIndex: cPool.length - 2,
         }),
-        (cPool) => {
+        cPool => {
           fieldIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Fieldref,
@@ -4362,8 +4362,8 @@ describe("Putstatic", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4371,8 +4371,8 @@ describe("Putstatic", () => {
       fields: [
         {
           accessFlags: [FIELD_FLAGS.ACC_PUBLIC, FIELD_FLAGS.ACC_STATIC],
-          name: "staticField",
-          descriptor: "Z",
+          name: 'staticField',
+          descriptor: 'Z',
           attributes: [],
         },
       ],
@@ -4380,32 +4380,32 @@ describe("Putstatic", () => {
     });
     code.setUint8(0, OPCODE.PUTSTATIC);
     code.setUint16(1, fieldIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
     thread.pushStack(3);
     thread.runFor(1);
-    expect(testClass.lookupField("staticFieldZ")?.getValue()).toBe(1);
+    expect(testClass.lookupField('staticFieldZ')?.getValue()).toBe(1);
     expect(thread.peekStackFrame().operandStack.length).toBe(0);
   });
 });
 
-describe("New", () => {
-  test("NEW: creates new object", () => {
+describe('New', () => {
+  test('NEW: creates new object', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -4416,8 +4416,8 @@ describe("New", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4426,7 +4426,7 @@ describe("New", () => {
     });
     code.setUint8(0, OPCODE.NEW);
     code.setUint16(1, classIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4439,20 +4439,20 @@ describe("New", () => {
     ).toBe(true);
   });
 
-  test("NEW: Interface class throws InstantiationError", () => {
+  test('NEW: Interface class throws InstantiationError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       flags: ACCESS_FLAGS.ACC_INTERFACE,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -4463,8 +4463,8 @@ describe("New", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4473,7 +4473,7 @@ describe("New", () => {
     });
     code.setUint8(0, OPCODE.NEW);
     code.setUint16(1, classIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4481,29 +4481,29 @@ describe("New", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/InstantiationError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/InstantiationError'
     );
   });
 
-  test("NEW: Abstract class throws InstantiationError", () => {
+  test('NEW: Abstract class throws InstantiationError', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       flags: ACCESS_FLAGS.ACC_ABSTRACT,
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -4514,8 +4514,8 @@ describe("New", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4524,7 +4524,7 @@ describe("New", () => {
     });
     code.setUint8(0, OPCODE.NEW);
     code.setUint16(1, classIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4532,28 +4532,28 @@ describe("New", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/InstantiationError"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/InstantiationError'
     );
   });
 
-  test("NEW: initializes class", () => {
+  test('NEW: initializes class', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIdx = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -4564,8 +4564,8 @@ describe("New", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4574,7 +4574,7 @@ describe("New", () => {
     });
     code.setUint8(0, OPCODE.NEW);
     code.setUint16(1, classIdx);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4585,18 +4585,18 @@ describe("New", () => {
   });
 });
 
-describe("Newarray", () => {
-  test("NEWARRAY: creates new array", () => {
+describe('Newarray', () => {
+  test('NEWARRAY: creates new array', () => {
     const ab = new ArrayBuffer(16);
     const code = new DataView(ab);
 
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4605,7 +4605,7 @@ describe("Newarray", () => {
     });
     code.setUint8(0, OPCODE.NEWARRAY);
     code.setUint8(1, ArrayPrimitiveType.boolean);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4616,21 +4616,21 @@ describe("Newarray", () => {
     expect(lastFrame.operandStack.length).toBe(1);
     const arrayObj = (thread.popStack() as SuccessResult<any>)
       .result as JvmArray;
-    expect(arrayObj.getClass().getClassname()).toBe("[Z");
+    expect(arrayObj.getClass().getName()).toBe('[Z');
     expect(arrayObj.len()).toBe(0);
   });
 
-  test("NEWARRAY: sets elements to default value", () => {
+  test('NEWARRAY: sets elements to default value', () => {
     const ab = new ArrayBuffer(16);
     const code = new DataView(ab);
 
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4641,7 +4641,7 @@ describe("Newarray", () => {
 
     // boolean
     code.setUint8(1, ArrayPrimitiveType.boolean);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4730,17 +4730,17 @@ describe("Newarray", () => {
     thread.returnStackFrame();
   });
 
-  test("NEWARRAY: negative array size throws NegativeArraySizeException", () => {
+  test('NEWARRAY: negative array size throws NegativeArraySizeException', () => {
     const ab = new ArrayBuffer(16);
     const code = new DataView(ab);
 
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4749,7 +4749,7 @@ describe("Newarray", () => {
     });
     code.setUint8(0, OPCODE.NEWARRAY);
     code.setUint8(1, ArrayPrimitiveType.boolean);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4758,30 +4758,30 @@ describe("Newarray", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NegativeArraySizeException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NegativeArraySizeException'
     );
   });
 });
 
-describe("Anewarray", () => {
-  test("ANEWARRAY: creates new array", () => {
+describe('Anewarray', () => {
+  test('ANEWARRAY: creates new array', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -4792,8 +4792,8 @@ describe("Anewarray", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4802,7 +4802,7 @@ describe("Anewarray", () => {
     });
     code.setUint8(0, OPCODE.ANEWARRAY);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4813,23 +4813,23 @@ describe("Anewarray", () => {
     expect(lastFrame.operandStack.length).toBe(1);
     const arrayObj = (thread.popStack() as SuccessResult<any>)
       .result as JvmArray;
-    expect(arrayObj.getClass().getClassname()).toBe("[LTest;");
+    expect(arrayObj.getClass().getName()).toBe('[LTest;');
     expect(arrayObj.len()).toBe(0);
   });
 
-  test("ANEWARRAY: sets elements to default value", () => {
+  test('ANEWARRAY: sets elements to default value', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -4840,8 +4840,8 @@ describe("Anewarray", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4850,7 +4850,7 @@ describe("Anewarray", () => {
     });
     code.setUint8(0, OPCODE.ANEWARRAY);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4862,19 +4862,19 @@ describe("Anewarray", () => {
     expect(arrayObj.get(0) === null).toBe(true);
   });
 
-  test("ANEWARRAY: negative array size throws NegativeArraySizeException", () => {
+  test('ANEWARRAY: negative array size throws NegativeArraySizeException', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -4885,8 +4885,8 @@ describe("Anewarray", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4895,7 +4895,7 @@ describe("Anewarray", () => {
     });
     code.setUint8(0, OPCODE.ANEWARRAY);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4904,30 +4904,30 @@ describe("Anewarray", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NegativeArraySizeException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NegativeArraySizeException'
     );
   });
 });
 
-describe("Anewarray", () => {
-  test("ANEWARRAY: creates new array", () => {
+describe('Anewarray', () => {
+  test('ANEWARRAY: creates new array', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -4938,8 +4938,8 @@ describe("Anewarray", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4948,7 +4948,7 @@ describe("Anewarray", () => {
     });
     code.setUint8(0, OPCODE.ANEWARRAY);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -4959,23 +4959,23 @@ describe("Anewarray", () => {
     expect(lastFrame.operandStack.length).toBe(1);
     const arrayObj = (thread.popStack() as SuccessResult<any>)
       .result as JvmArray;
-    expect(arrayObj.getClass().getClassname()).toBe("[LTest;");
+    expect(arrayObj.getClass().getName()).toBe('[LTest;');
     expect(arrayObj.len()).toBe(0);
   });
 
-  test("ANEWARRAY: sets elements to default value", () => {
+  test('ANEWARRAY: sets elements to default value', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -4986,8 +4986,8 @@ describe("Anewarray", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -4996,7 +4996,7 @@ describe("Anewarray", () => {
     });
     code.setUint8(0, OPCODE.ANEWARRAY);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5008,19 +5008,19 @@ describe("Anewarray", () => {
     expect(arrayObj.get(0) === null).toBe(true);
   });
 
-  test("ANEWARRAY: negative array size throws NegativeArraySizeException", () => {
+  test('ANEWARRAY: negative array size throws NegativeArraySizeException', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5031,8 +5031,8 @@ describe("Anewarray", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5041,7 +5041,7 @@ describe("Anewarray", () => {
     });
     code.setUint8(0, OPCODE.ANEWARRAY);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5050,29 +5050,29 @@ describe("Anewarray", () => {
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NegativeArraySizeException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NegativeArraySizeException'
     );
   });
 });
 
-describe("Arraylength", () => {
-  test("ARRAYLENGTH: gets length of array", () => {
+describe('Arraylength', () => {
+  test('ARRAYLENGTH: gets length of array', () => {
     const ab = new ArrayBuffer(8);
     const code = new DataView(ab);
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           return {
             tag: CONSTANT_TAG.Class,
             nameIndex: cPool.length - 1,
@@ -5082,8 +5082,8 @@ describe("Arraylength", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5091,13 +5091,13 @@ describe("Arraylength", () => {
       loader: testLoader,
     });
     code.setUint8(0, OPCODE.ARRAYLENGTH);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
     );
 
-    const arrCls = (testLoader.getClass("[I") as any).result as ArrayClassData;
+    const arrCls = (testLoader.getClass('[I') as any).result as ArrayClassData;
     const arrayRef = arrCls.instantiate();
     arrayRef.initialize(thread, 5);
     thread.pushStack(arrayRef);
@@ -5109,18 +5109,18 @@ describe("Arraylength", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("ARRAYLENGTH: null array throws NullPointerException", () => {
+  test('ARRAYLENGTH: null array throws NullPointerException', () => {
     const ab = new ArrayBuffer(8);
     const code = new DataView(ab);
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 4,
-          value: "Test",
+          value: 'Test',
         }),
-        (cPool) => {
+        cPool => {
           return {
             tag: CONSTANT_TAG.Class,
             nameIndex: cPool.length - 1,
@@ -5130,8 +5130,8 @@ describe("Arraylength", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5139,7 +5139,7 @@ describe("Arraylength", () => {
       loader: testLoader,
     });
     code.setUint8(0, OPCODE.ARRAYLENGTH);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5150,30 +5150,30 @@ describe("Arraylength", () => {
 
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 });
 
-describe("Checkcast", () => {
-  test("CHECKCAST: null ok", () => {
+describe('Checkcast', () => {
+  test('CHECKCAST: null ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5184,8 +5184,8 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5195,7 +5195,7 @@ describe("Checkcast", () => {
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5209,19 +5209,19 @@ describe("Checkcast", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("CHECKCAST: null does not link symbol", () => {
+  test('CHECKCAST: null does not link symbol', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5232,8 +5232,8 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5243,7 +5243,7 @@ describe("Checkcast", () => {
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5257,19 +5257,19 @@ describe("Checkcast", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("CHECKCAST: same class ok", () => {
+  test('CHECKCAST: same class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5280,8 +5280,8 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5290,7 +5290,7 @@ describe("Checkcast", () => {
     });
 
     const sClass = testLoader.createClass({
-      className: "SC",
+      className: 'SC',
       loader: testLoader,
     });
 
@@ -5298,7 +5298,7 @@ describe("Checkcast", () => {
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5312,19 +5312,19 @@ describe("Checkcast", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("CHECKCAST: sub class ok", () => {
+  test('CHECKCAST: sub class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5335,8 +5335,8 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5345,12 +5345,12 @@ describe("Checkcast", () => {
     });
 
     const sClass = testLoader.createClass({
-      className: "SC",
+      className: 'SC',
       loader: testLoader,
     });
 
     const childClass = testLoader.createClass({
-      className: "child",
+      className: 'child',
       superClass: sClass as ReferenceClassData,
       loader: testLoader,
     });
@@ -5359,7 +5359,7 @@ describe("Checkcast", () => {
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5373,19 +5373,19 @@ describe("Checkcast", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("CHECKCAST: interface class ok", () => {
+  test('CHECKCAST: interface class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 2,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5396,8 +5396,8 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5406,12 +5406,12 @@ describe("Checkcast", () => {
     });
 
     const sClass = testLoader.createClass({
-      className: "SC",
+      className: 'SC',
       loader: testLoader,
     });
 
     const childClass = testLoader.createClass({
-      className: "child",
+      className: 'child',
       interfaces: [sClass as ReferenceClassData],
       loader: testLoader,
     });
@@ -5420,7 +5420,7 @@ describe("Checkcast", () => {
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5434,19 +5434,19 @@ describe("Checkcast", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("CHECKCAST: Array obj Object class ok", () => {
+  test('CHECKCAST: Array obj Object class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 16,
-          value: "java/lang/Object",
+          value: 'java/lang/Object',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5457,20 +5457,20 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const arrCls = (testLoader.getClass("[I") as any).result as ArrayClassData;
+    const arrCls = (testLoader.getClass('[I') as any).result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5484,19 +5484,19 @@ describe("Checkcast", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("CHECKCAST: Array obj interface class ok", () => {
+  test('CHECKCAST: Array obj interface class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 16,
-          value: "java/lang/Cloneable",
+          value: 'java/lang/Cloneable',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5507,20 +5507,20 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const arrCls = (testLoader.getClass("[I") as any).result as ArrayClassData;
+    const arrCls = (testLoader.getClass('[I') as any).result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5534,19 +5534,19 @@ describe("Checkcast", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("CHECKCAST: Array primitive ok", () => {
+  test('CHECKCAST: Array primitive ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 2,
-          value: "[I",
+          value: '[I',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5557,20 +5557,20 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const arrCls = (testLoader.getClass("[I") as any).result as ArrayClassData;
+    const arrCls = (testLoader.getClass('[I') as any).result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5584,19 +5584,19 @@ describe("Checkcast", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("CHECKCAST: Array subtype ok", () => {
+  test('CHECKCAST: Array subtype ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 2,
-          value: "[LSC;",
+          value: '[LSC;',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5607,8 +5607,8 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5617,23 +5617,23 @@ describe("Checkcast", () => {
     });
 
     const sClass = testLoader.createClass({
-      className: "SC",
+      className: 'SC',
       loader: testLoader,
     });
 
     testLoader.createClass({
-      className: "Child",
+      className: 'Child',
       loader: testLoader,
       superClass: sClass as ReferenceClassData,
     });
 
-    const arrCls = (testLoader.getClass("[LChild;") as any)
+    const arrCls = (testLoader.getClass('[LChild;') as any)
       .result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5647,19 +5647,19 @@ describe("Checkcast", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("CHECKCAST: Throws ClassCastException on failure", () => {
+  test('CHECKCAST: Throws ClassCastException on failure', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 2,
-          value: "[LSC;",
+          value: '[LSC;',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5670,8 +5670,8 @@ describe("Checkcast", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5679,13 +5679,13 @@ describe("Checkcast", () => {
       loader: testLoader,
     });
 
-    const arrCls = (testLoader.getClass("[LChild;") as any)
+    const arrCls = (testLoader.getClass('[LChild;') as any)
       .result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.CHECKCAST);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5696,30 +5696,30 @@ describe("Checkcast", () => {
 
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method.getName() + lastFrame.method.getDescriptor()).toBe(
-      "dispatchUncaughtException(Ljava/lang/Throwable;)V"
+      'dispatchUncaughtException(Ljava/lang/Throwable;)V'
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ClassCastException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ClassCastException'
     );
   });
 });
 
-describe("Instanceof", () => {
-  test("INSTANCEOF: null returns 0", () => {
+describe('Instanceof', () => {
+  test('INSTANCEOF: null returns 0', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5730,8 +5730,8 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5741,7 +5741,7 @@ describe("Instanceof", () => {
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5755,19 +5755,19 @@ describe("Instanceof", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("INSTANCEOF: null does not link symbol", () => {
+  test('INSTANCEOF: null does not link symbol', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5778,8 +5778,8 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5789,7 +5789,7 @@ describe("Instanceof", () => {
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5803,19 +5803,19 @@ describe("Instanceof", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("INSTANCEOF: same class ok", () => {
+  test('INSTANCEOF: same class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5826,8 +5826,8 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5836,7 +5836,7 @@ describe("Instanceof", () => {
     });
 
     const sClass = testLoader.createClass({
-      className: "SC",
+      className: 'SC',
       loader: testLoader,
     });
 
@@ -5844,7 +5844,7 @@ describe("Instanceof", () => {
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5858,19 +5858,19 @@ describe("Instanceof", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("INSTANCEOF: sub class ok", () => {
+  test('INSTANCEOF: sub class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 1,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5881,8 +5881,8 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5891,12 +5891,12 @@ describe("Instanceof", () => {
     });
 
     const sClass = testLoader.createClass({
-      className: "SC",
+      className: 'SC',
       loader: testLoader,
     });
 
     const childClass = testLoader.createClass({
-      className: "child",
+      className: 'child',
       superClass: sClass as ReferenceClassData,
       loader: testLoader,
     });
@@ -5905,7 +5905,7 @@ describe("Instanceof", () => {
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5919,19 +5919,19 @@ describe("Instanceof", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("INSTANCEOF: interface class ok", () => {
+  test('INSTANCEOF: interface class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 2,
-          value: "SC",
+          value: 'SC',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -5942,8 +5942,8 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -5952,12 +5952,12 @@ describe("Instanceof", () => {
     });
 
     const sClass = testLoader.createClass({
-      className: "SC",
+      className: 'SC',
       loader: testLoader,
     });
 
     const childClass = testLoader.createClass({
-      className: "child",
+      className: 'child',
       interfaces: [sClass as ReferenceClassData],
       loader: testLoader,
     });
@@ -5966,7 +5966,7 @@ describe("Instanceof", () => {
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -5980,19 +5980,19 @@ describe("Instanceof", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("INSTANCEOF: Array obj Object class ok", () => {
+  test('INSTANCEOF: Array obj Object class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 16,
-          value: "java/lang/Object",
+          value: 'java/lang/Object',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -6003,20 +6003,20 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const arrCls = (testLoader.getClass("[I") as any).result as ArrayClassData;
+    const arrCls = (testLoader.getClass('[I') as any).result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -6030,19 +6030,19 @@ describe("Instanceof", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("INSTANCEOF: Array obj interface class ok", () => {
+  test('INSTANCEOF: Array obj interface class ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 16,
-          value: "java/lang/Cloneable",
+          value: 'java/lang/Cloneable',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -6053,20 +6053,20 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const arrCls = (testLoader.getClass("[I") as any).result as ArrayClassData;
+    const arrCls = (testLoader.getClass('[I') as any).result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -6080,19 +6080,19 @@ describe("Instanceof", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("INSTANCEOF: Array primitive ok", () => {
+  test('INSTANCEOF: Array primitive ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 2,
-          value: "[I",
+          value: '[I',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -6103,20 +6103,20 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const arrCls = (testLoader.getClass("[I") as any).result as ArrayClassData;
+    const arrCls = (testLoader.getClass('[I') as any).result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -6130,19 +6130,19 @@ describe("Instanceof", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("INSTANCEOF: Array subtype ok", () => {
+  test('INSTANCEOF: Array subtype ok', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 2,
-          value: "[LSC;",
+          value: '[LSC;',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -6153,8 +6153,8 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -6163,23 +6163,23 @@ describe("Instanceof", () => {
     });
 
     const sClass = testLoader.createClass({
-      className: "SC",
+      className: 'SC',
       loader: testLoader,
     });
 
     testLoader.createClass({
-      className: "Child",
+      className: 'Child',
       loader: testLoader,
       superClass: sClass as ReferenceClassData,
     });
 
-    const arrCls = (testLoader.getClass("[LChild;") as any)
+    const arrCls = (testLoader.getClass('[LChild;') as any)
       .result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -6193,19 +6193,19 @@ describe("Instanceof", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("INSTANCEOF: Returns 0 on failure", () => {
+  test('INSTANCEOF: Returns 0 on failure', () => {
     const ab = new ArrayBuffer(24);
     const code = new DataView(ab);
     let classIndex = 0;
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
           length: 2,
-          value: "[LSC;",
+          value: '[LSC;',
         }),
-        (cPool) => {
+        cPool => {
           classIndex = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -6216,8 +6216,8 @@ describe("Instanceof", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -6225,13 +6225,13 @@ describe("Instanceof", () => {
       loader: testLoader,
     });
 
-    const arrCls = (testLoader.getClass("[LChild;") as any)
+    const arrCls = (testLoader.getClass('[LChild;') as any)
       .result as ArrayClassData;
     const obj = arrCls.instantiate();
 
     code.setUint8(0, OPCODE.INSTANCEOF);
     code.setUint16(1, classIndex);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -6246,17 +6246,17 @@ describe("Instanceof", () => {
   });
 });
 
-describe("Athrow", () => {
-  test("ATHROW: null exception throws NullPointerException", () => {
+describe('Athrow', () => {
+  test('ATHROW: null exception throws NullPointerException', () => {
     const ab = new ArrayBuffer(8);
     const code = new DataView(ab);
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -6264,7 +6264,7 @@ describe("Athrow", () => {
       loader: testLoader,
     });
     code.setUint8(0, OPCODE.ATHROW);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -6274,25 +6274,25 @@ describe("Athrow", () => {
 
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("ATHROW: throws exception", () => {
+  test('ATHROW: throws exception', () => {
     const ab = new ArrayBuffer(8);
     const code = new DataView(ab);
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -6300,7 +6300,7 @@ describe("Athrow", () => {
       loader: testLoader,
     });
     code.setUint8(0, OPCODE.ATHROW);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -6311,30 +6311,30 @@ describe("Athrow", () => {
 
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
     expect(exceptionObj === eObj).toBe(true);
   });
 
-  test("ATHROW: clears operand stack and updates PC", () => {
+  test('ATHROW: clears operand stack and updates PC', () => {
     const ab = new ArrayBuffer(8);
     const code = new DataView(ab);
     const testClass = testLoader.createClass({
-      className: "Test",
+      className: 'Test',
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           exceptionTable: [
             {
               startPc: 0,
               endPc: 2,
               handlerPc: 99,
-              catchType: "java/lang/NullPointerException",
+              catchType: 'java/lang/NullPointerException',
             },
           ],
           code: code,
@@ -6343,7 +6343,7 @@ describe("Athrow", () => {
       loader: testLoader,
     });
     code.setUint8(0, OPCODE.ATHROW);
-    const method = testClass.getMethod("test0()V") as Method;
+    const method = testClass.getMethod('test0()V') as Method;
 
     thread.invokeStackFrame(
       new JavaStackFrame(testClass, method as Method, 0, [])
@@ -6353,7 +6353,7 @@ describe("Athrow", () => {
     thread.pushStack(1);
     thread.pushStack(eObj);
     thread.runFor(1);
-    expect(thread.getMethod().getName()).toBe("test0");
+    expect(thread.getMethod().getName()).toBe('test0');
     expect((thread.popStack() as SuccessResult<any>).result === eObj).toBe(
       true
     );

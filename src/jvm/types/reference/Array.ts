@@ -1,8 +1,7 @@
 import Thread from "../../thread";
-import { Result } from "../Result";
+import { Result, ResultType, SuccessResult } from "../Result";
 import { ArrayClassData } from "../class/ClassData";
 import { JvmObject, JavaType } from "./Object";
-
 
 export class JvmArray extends JvmObject {
   private primitiveType: ArrayPrimitiveType | null;
@@ -10,7 +9,7 @@ export class JvmArray extends JvmObject {
   private array: any[];
   constructor(cls: ArrayClassData) {
     super(cls);
-    switch (cls.getClassname()[1]) {
+    switch (cls.getName()[1]) {
       case JavaType.boolean:
         this.primitiveType = ArrayPrimitiveType.boolean;
         break;
@@ -46,12 +45,12 @@ export class JvmArray extends JvmObject {
     return this.initArray(rest[0], rest[1]);
   }
 
-  initArray(length: number, arr?: any[]): Result<JvmArray> {
+  initArray(length: number, arr?: any[]): SuccessResult<JvmArray> {
     this.length = length;
 
     if (arr) {
       this.array = arr;
-      return { result: this };
+      return { status: ResultType.SUCCESS, result: this };
     }
 
     let def;
@@ -85,7 +84,7 @@ export class JvmArray extends JvmObject {
     }
 
     this.array = new Array(length).fill(def);
-    return { result: this };
+    return { status: ResultType.SUCCESS, result: this };
   }
 
   get(index: number) {
@@ -109,9 +108,19 @@ export class JvmArray extends JvmObject {
   }
 
   clone(): JvmArray {
-    const clone = new JvmArray(this.getClass() as ArrayClassData);
-    clone.length = this.length;
-    clone.array = [...this.array]; // shallow copy
+    const clone = this.cls.instantiate() as JvmArray;
+    clone.initArray(this.length, [...this.array]); // shallow copy
+
+    for (const [key, field] of Object.entries(this.fields)) {
+      clone.fields[key].putValue(field.getValue());
+    }
+
+    for (const [key, value] of Object.entries(this.nativeFields)) {
+      clone.nativeFields[key] = value;
+    }
+
+    clone.initStatus = this.initStatus;
+
     return clone;
   }
 }

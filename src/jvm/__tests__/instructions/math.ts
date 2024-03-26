@@ -5,8 +5,8 @@ import { ReferenceClassData } from "../../types/class/ClassData";
 import { JvmObject } from "../../types/reference/Object";
 import { setupTest } from "../test-utils";
 
-const MAX_LONG = BigInt("9223372036854775807");
-const MIN_LONG = BigInt("-9223372036854775808");
+const MAX_LONG = BigInt('9223372036854775807');
+const MIN_LONG = BigInt('-9223372036854775808');
 const MAX_INT = 2147483647;
 const MIN_INT = -2147483648;
 
@@ -24,8 +24,8 @@ beforeEach(() => {
   thread.invokeStackFrame(new JavaStackFrame(testClass, method, 0, []));
 });
 
-describe("Iadd", () => {
-  test("IADD: int addition", () => {
+describe('Iadd', () => {
+  test('IADD: int addition', () => {
     thread.pushStack(1);
     thread.pushStack(2);
     code.setUint8(0, OPCODE.IADD);
@@ -37,7 +37,7 @@ describe("Iadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IADD: int addition overflows", () => {
+  test('IADD: int addition overflows', () => {
     thread.pushStack(MAX_INT);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IADD);
@@ -49,7 +49,7 @@ describe("Iadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IADD: int addition underflows", () => {
+  test('IADD: int addition underflows', () => {
     thread.pushStack(MIN_INT);
     thread.pushStack(-1);
     code.setUint8(0, OPCODE.IADD);
@@ -62,8 +62,8 @@ describe("Iadd", () => {
   });
 });
 
-describe("Ladd", () => {
-  test("LADD: long addition", () => {
+describe('Ladd', () => {
+  test('LADD: long addition', () => {
     thread.pushStack64(BigInt(1));
     thread.pushStack64(BigInt(2));
     code.setUint8(0, OPCODE.LADD);
@@ -75,7 +75,7 @@ describe("Ladd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LADD: long addition overflows", () => {
+  test('LADD: long addition overflows', () => {
     thread.pushStack64(MAX_LONG);
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LADD);
@@ -87,7 +87,7 @@ describe("Ladd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LADD: long addition underflows", () => {
+  test('LADD: long addition underflows', () => {
     thread.pushStack64(MIN_LONG);
     thread.pushStack64(BigInt(-1));
     code.setUint8(0, OPCODE.LADD);
@@ -100,8 +100,8 @@ describe("Ladd", () => {
   });
 });
 
-describe("Fadd", () => {
-  test("FADD: float addition", () => {
+describe('Fadd', () => {
+  test('FADD: float addition', () => {
     thread.pushStack(1.5);
     thread.pushStack(2.5);
     code.setUint8(0, OPCODE.FADD);
@@ -113,7 +113,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition overflow Infinity", () => {
+  test('FADD: float addition overflow Infinity', () => {
     thread.pushStack(3.4e38);
     thread.pushStack(3.4e38);
     code.setUint8(0, OPCODE.FADD);
@@ -125,7 +125,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition underflow Ininfity", () => {
+  test('FADD: float addition underflow Ininfity', () => {
     thread.pushStack(-3.4e38);
     thread.pushStack(-3.4e38);
     code.setUint8(0, OPCODE.FADD);
@@ -137,7 +137,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition NaN returns NaN", () => {
+  test('FADD: float addition NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FADD);
@@ -149,7 +149,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition NaN returns NaN", () => {
+  test('FADD: float addition NaN returns NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FADD);
@@ -161,7 +161,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition NaN returns NaN", () => {
+  test('FADD: float addition NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FADD);
@@ -173,7 +173,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition Infinity - Infinity = NaN", () => {
+  test('FADD: float addition Infinity - Infinity = NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(-Infinity);
     code.setUint8(0, OPCODE.FADD);
@@ -185,7 +185,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition Infinity + any = Infinity", () => {
+  test('FADD: float addition Infinity + any = Infinity', () => {
     thread.pushStack(Infinity);
     thread.pushStack(5.0);
     code.setUint8(0, OPCODE.FADD);
@@ -197,7 +197,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition -Infinity + any = -Infinity", () => {
+  test('FADD: float addition -Infinity + any = -Infinity', () => {
     thread.pushStack(-Infinity);
     thread.pushStack(5.0);
     code.setUint8(0, OPCODE.FADD);
@@ -209,7 +209,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition Infinity + Infinity = Infinity", () => {
+  test('FADD: float addition Infinity + Infinity = Infinity', () => {
     thread.pushStack(Infinity);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FADD);
@@ -221,7 +221,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition -Infinity + -Infinity = -Infinity", () => {
+  test('FADD: float addition -Infinity + -Infinity = -Infinity', () => {
     thread.pushStack(-Infinity);
     thread.pushStack(-Infinity);
     code.setUint8(0, OPCODE.FADD);
@@ -233,7 +233,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition -0 + 0 = +0", () => {
+  test('FADD: float addition -0 + 0 = +0', () => {
     thread.pushStack(-0);
     thread.pushStack(+0);
     code.setUint8(0, OPCODE.FADD);
@@ -245,7 +245,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition 0 + 0 = +0", () => {
+  test('FADD: float addition 0 + 0 = +0', () => {
     thread.pushStack(+0);
     thread.pushStack(+0);
     code.setUint8(0, OPCODE.FADD);
@@ -257,7 +257,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition -0 + -0 = -0", () => {
+  test('FADD: float addition -0 + -0 = -0', () => {
     thread.pushStack(-0);
     thread.pushStack(-0);
     code.setUint8(0, OPCODE.FADD);
@@ -269,7 +269,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition 0 + any = any", () => {
+  test('FADD: float addition 0 + any = any', () => {
     thread.pushStack(1.33);
     thread.pushStack(0);
     code.setUint8(0, OPCODE.FADD);
@@ -281,7 +281,7 @@ describe("Fadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FADD: float addition any + any = fround of any", () => {
+  test('FADD: float addition any + any = fround of any', () => {
     thread.pushStack(1.33);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.FADD);
@@ -294,8 +294,8 @@ describe("Fadd", () => {
   });
 });
 
-describe("Dadd", () => {
-  test("DADD: double addition", () => {
+describe('Dadd', () => {
+  test('DADD: double addition', () => {
     thread.pushStack64(1.5);
     thread.pushStack64(2.5);
     code.setUint8(0, OPCODE.DADD);
@@ -307,7 +307,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition overflow Infinity", () => {
+  test('DADD: double addition overflow Infinity', () => {
     thread.pushStack64(1.7e308);
     thread.pushStack64(1.7e308);
     code.setUint8(0, OPCODE.DADD);
@@ -319,7 +319,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition underflow Ininfity", () => {
+  test('DADD: double addition underflow Ininfity', () => {
     thread.pushStack64(-1.7e308);
     thread.pushStack64(-1.7e308);
     code.setUint8(0, OPCODE.DADD);
@@ -331,7 +331,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition NaN returns NaN", () => {
+  test('DADD: double addition NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DADD);
@@ -343,7 +343,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition NaN returns NaN", () => {
+  test('DADD: double addition NaN returns NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DADD);
@@ -355,7 +355,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition NaN returns NaN", () => {
+  test('DADD: double addition NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DADD);
@@ -367,7 +367,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition Infinity + -Infinity = NaN", () => {
+  test('DADD: double addition Infinity + -Infinity = NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(-Infinity);
     code.setUint8(0, OPCODE.DADD);
@@ -379,7 +379,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition Infinity + any = Infinity", () => {
+  test('DADD: double addition Infinity + any = Infinity', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(5.0);
     code.setUint8(0, OPCODE.DADD);
@@ -391,7 +391,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition -Infinity + any = -Infinity", () => {
+  test('DADD: double addition -Infinity + any = -Infinity', () => {
     thread.pushStack64(-Infinity);
     thread.pushStack64(5.0);
     code.setUint8(0, OPCODE.DADD);
@@ -403,7 +403,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition Infinity + Infinity = Infinity", () => {
+  test('DADD: double addition Infinity + Infinity = Infinity', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DADD);
@@ -415,7 +415,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition -Infinity + -Infinity = -Infinity", () => {
+  test('DADD: double addition -Infinity + -Infinity = -Infinity', () => {
     thread.pushStack64(-Infinity);
     thread.pushStack64(-Infinity);
     code.setUint8(0, OPCODE.DADD);
@@ -427,7 +427,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition -0 + 0 = +0", () => {
+  test('DADD: double addition -0 + 0 = +0', () => {
     thread.pushStack64(-0);
     thread.pushStack64(+0);
     code.setUint8(0, OPCODE.DADD);
@@ -439,7 +439,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition 0 + 0 = +0", () => {
+  test('DADD: double addition 0 + 0 = +0', () => {
     thread.pushStack64(+0);
     thread.pushStack64(+0);
     code.setUint8(0, OPCODE.DADD);
@@ -451,7 +451,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition -0 + -0 = -0", () => {
+  test('DADD: double addition -0 + -0 = -0', () => {
     thread.pushStack64(-0);
     thread.pushStack64(-0);
     code.setUint8(0, OPCODE.DADD);
@@ -463,7 +463,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition 0 + any = any", () => {
+  test('DADD: double addition 0 + any = any', () => {
     thread.pushStack64(1.33);
     thread.pushStack64(0);
     code.setUint8(0, OPCODE.DADD);
@@ -475,7 +475,7 @@ describe("Dadd", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DADD: double addition any + any", () => {
+  test('DADD: double addition any + any', () => {
     thread.pushStack64(1.33);
     thread.pushStack64(1);
     code.setUint8(0, OPCODE.DADD);
@@ -488,8 +488,8 @@ describe("Dadd", () => {
   });
 });
 
-describe("Isub", () => {
-  test("ISUB: int subtraction", () => {
+describe('Isub', () => {
+  test('ISUB: int subtraction', () => {
     thread.pushStack(2);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.ISUB);
@@ -501,7 +501,7 @@ describe("Isub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("ISUB: int subtraction overflows", () => {
+  test('ISUB: int subtraction overflows', () => {
     thread.pushStack(MAX_INT);
     thread.pushStack(-1);
     code.setUint8(0, OPCODE.ISUB);
@@ -513,7 +513,7 @@ describe("Isub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("ISUB: int subtraction underflows", () => {
+  test('ISUB: int subtraction underflows', () => {
     thread.pushStack(MIN_INT);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.ISUB);
@@ -526,8 +526,8 @@ describe("Isub", () => {
   });
 });
 
-describe("Lsub", () => {
-  test("LSUB: long subtraction", () => {
+describe('Lsub', () => {
+  test('LSUB: long subtraction', () => {
     thread.pushStack64(BigInt(2));
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LSUB);
@@ -539,7 +539,7 @@ describe("Lsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LSUB: long subtraction overflows", () => {
+  test('LSUB: long subtraction overflows', () => {
     thread.pushStack64(MAX_LONG);
     thread.pushStack64(BigInt(-1));
     code.setUint8(0, OPCODE.LSUB);
@@ -551,7 +551,7 @@ describe("Lsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LSUB: long subtraction underflows", () => {
+  test('LSUB: long subtraction underflows', () => {
     thread.pushStack64(MIN_LONG);
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LSUB);
@@ -564,8 +564,8 @@ describe("Lsub", () => {
   });
 });
 
-describe("Fsub", () => {
-  test("FSUB: float subtraction", () => {
+describe('Fsub', () => {
+  test('FSUB: float subtraction', () => {
     thread.pushStack(2.5);
     thread.pushStack(1.5);
     code.setUint8(0, OPCODE.FSUB);
@@ -577,7 +577,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction overflow Infinity", () => {
+  test('FSUB: float subtraction overflow Infinity', () => {
     thread.pushStack(3.4e38);
     thread.pushStack(-3.4e38);
     code.setUint8(0, OPCODE.FSUB);
@@ -589,7 +589,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction underflow Ininfity", () => {
+  test('FSUB: float subtraction underflow Ininfity', () => {
     thread.pushStack(-3.4e38);
     thread.pushStack(3.4e38);
     code.setUint8(0, OPCODE.FSUB);
@@ -601,7 +601,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction NaN returns NaN", () => {
+  test('FSUB: float subtraction NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FSUB);
@@ -613,7 +613,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction NaN returns NaN", () => {
+  test('FSUB: float subtraction NaN returns NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FSUB);
@@ -625,7 +625,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction NaN returns NaN", () => {
+  test('FSUB: float subtraction NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FSUB);
@@ -637,7 +637,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction Infinity - Infinity = NaN", () => {
+  test('FSUB: float subtraction Infinity - Infinity = NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FSUB);
@@ -649,7 +649,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction Infinity - any = Infinity", () => {
+  test('FSUB: float subtraction Infinity - any = Infinity', () => {
     thread.pushStack(Infinity);
     thread.pushStack(5.0);
     code.setUint8(0, OPCODE.FSUB);
@@ -661,7 +661,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction -Infinity - any = -Infinity", () => {
+  test('FSUB: float subtraction -Infinity - any = -Infinity', () => {
     thread.pushStack(-Infinity);
     thread.pushStack(5.0);
     code.setUint8(0, OPCODE.FSUB);
@@ -673,7 +673,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction Infinity - Infinity = NaN", () => {
+  test('FSUB: float subtraction Infinity - Infinity = NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FSUB);
@@ -685,7 +685,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction -Infinity - Infinity = -Infinity", () => {
+  test('FSUB: float subtraction -Infinity - Infinity = -Infinity', () => {
     thread.pushStack(-Infinity);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FSUB);
@@ -697,7 +697,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction 0 - 0 = +0", () => {
+  test('FSUB: float subtraction 0 - 0 = +0', () => {
     thread.pushStack(0);
     thread.pushStack(0);
     code.setUint8(0, OPCODE.FSUB);
@@ -709,7 +709,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction 0 - -0 = +0", () => {
+  test('FSUB: float subtraction 0 - -0 = +0', () => {
     thread.pushStack(+0);
     thread.pushStack(-0);
     code.setUint8(0, OPCODE.FSUB);
@@ -721,7 +721,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction -0 - 0 = -0", () => {
+  test('FSUB: float subtraction -0 - 0 = -0', () => {
     thread.pushStack(-0);
     thread.pushStack(0);
     code.setUint8(0, OPCODE.FSUB);
@@ -733,7 +733,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction 0 + any = any", () => {
+  test('FSUB: float subtraction 0 + any = any', () => {
     thread.pushStack(1.33);
     thread.pushStack(0);
     code.setUint8(0, OPCODE.FSUB);
@@ -745,7 +745,7 @@ describe("Fsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSUB: float subtraction any - any = fround of any", () => {
+  test('FSUB: float subtraction any - any = fround of any', () => {
     thread.pushStack(1.33);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.FSUB);
@@ -760,8 +760,8 @@ describe("Fsub", () => {
   });
 });
 
-describe("Dsub", () => {
-  test("DSUB: double subtraction", () => {
+describe('Dsub', () => {
+  test('DSUB: double subtraction', () => {
     thread.pushStack64(2.5);
     thread.pushStack64(1.5);
     code.setUint8(0, OPCODE.DSUB);
@@ -773,7 +773,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction overflow Infinity", () => {
+  test('DSUB: double subtraction overflow Infinity', () => {
     thread.pushStack64(1.8e308);
     thread.pushStack64(-1.8e308);
     code.setUint8(0, OPCODE.DSUB);
@@ -785,7 +785,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction underflow Ininfity", () => {
+  test('DSUB: double subtraction underflow Ininfity', () => {
     thread.pushStack64(-1.8e308);
     thread.pushStack64(1.8e308);
     code.setUint8(0, OPCODE.DSUB);
@@ -797,7 +797,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction NaN returns NaN", () => {
+  test('DSUB: double subtraction NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DSUB);
@@ -809,7 +809,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction NaN returns NaN", () => {
+  test('DSUB: double subtraction NaN returns NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DSUB);
@@ -821,7 +821,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction NaN returns NaN", () => {
+  test('DSUB: double subtraction NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DSUB);
@@ -833,7 +833,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction Infinity - Infinity = NaN", () => {
+  test('DSUB: double subtraction Infinity - Infinity = NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DSUB);
@@ -845,7 +845,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction Infinity - any = Infinity", () => {
+  test('DSUB: double subtraction Infinity - any = Infinity', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(5.0);
     code.setUint8(0, OPCODE.DSUB);
@@ -857,7 +857,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction -Infinity - any = -Infinity", () => {
+  test('DSUB: double subtraction -Infinity - any = -Infinity', () => {
     thread.pushStack64(-Infinity);
     thread.pushStack64(5.0);
     code.setUint8(0, OPCODE.DSUB);
@@ -869,7 +869,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction Infinity - Infinity = NaN", () => {
+  test('DSUB: double subtraction Infinity - Infinity = NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DSUB);
@@ -881,7 +881,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction -Infinity - Infinity = -Infinity", () => {
+  test('DSUB: double subtraction -Infinity - Infinity = -Infinity', () => {
     thread.pushStack64(-Infinity);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DSUB);
@@ -893,7 +893,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction 0 - 0 = +0", () => {
+  test('DSUB: double subtraction 0 - 0 = +0', () => {
     thread.pushStack64(0);
     thread.pushStack64(0);
     code.setUint8(0, OPCODE.DSUB);
@@ -905,7 +905,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction 0 - -0 = +0", () => {
+  test('DSUB: double subtraction 0 - -0 = +0', () => {
     thread.pushStack64(+0);
     thread.pushStack64(-0);
     code.setUint8(0, OPCODE.DSUB);
@@ -917,7 +917,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction -0 - 0 = -0", () => {
+  test('DSUB: double subtraction -0 - 0 = -0', () => {
     thread.pushStack64(-0);
     thread.pushStack64(0);
     code.setUint8(0, OPCODE.DSUB);
@@ -929,7 +929,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction 0 + any = any", () => {
+  test('DSUB: double subtraction 0 + any = any', () => {
     thread.pushStack64(1.33);
     thread.pushStack64(0);
     code.setUint8(0, OPCODE.DSUB);
@@ -941,7 +941,7 @@ describe("Dsub", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSUB: double subtraction any - any = any", () => {
+  test('DSUB: double subtraction any - any = any', () => {
     thread.pushStack64(1.33);
     thread.pushStack64(1);
     code.setUint8(0, OPCODE.DSUB);
@@ -954,8 +954,8 @@ describe("Dsub", () => {
   });
 });
 
-describe("Imul", () => {
-  test("IMUL: int multiplication", () => {
+describe('Imul', () => {
+  test('IMUL: int multiplication', () => {
     thread.pushStack(2);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IMUL);
@@ -967,7 +967,7 @@ describe("Imul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IMUL: int multiplication overflows", () => {
+  test('IMUL: int multiplication overflows', () => {
     thread.pushStack(MAX_INT);
     thread.pushStack(2);
     code.setUint8(0, OPCODE.IMUL);
@@ -979,7 +979,7 @@ describe("Imul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IMUL: int multiplication underflows", () => {
+  test('IMUL: int multiplication underflows', () => {
     thread.pushStack(MAX_INT);
     thread.pushStack(-2);
     code.setUint8(0, OPCODE.IMUL);
@@ -991,7 +991,7 @@ describe("Imul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IMUL: int overflow precision", () => {
+  test('IMUL: int overflow precision', () => {
     thread.pushStack(1000000007);
     thread.pushStack(1000000007);
     code.setUint8(0, OPCODE.IMUL);
@@ -1004,8 +1004,8 @@ describe("Imul", () => {
   });
 });
 
-describe("Lmul", () => {
-  test("LMUL: long multiplication", () => {
+describe('Lmul', () => {
+  test('LMUL: long multiplication', () => {
     thread.pushStack64(BigInt(2));
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LMUL);
@@ -1017,7 +1017,7 @@ describe("Lmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LMUL: long multiplication overflows", () => {
+  test('LMUL: long multiplication overflows', () => {
     thread.pushStack64(MAX_LONG);
     thread.pushStack64(BigInt(2));
     code.setUint8(0, OPCODE.LMUL);
@@ -1029,7 +1029,7 @@ describe("Lmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LMUL: long multiplication underflows", () => {
+  test('LMUL: long multiplication underflows', () => {
     thread.pushStack64(MAX_LONG);
     thread.pushStack64(BigInt(-2));
     code.setUint8(0, OPCODE.LMUL);
@@ -1042,8 +1042,8 @@ describe("Lmul", () => {
   });
 });
 
-describe("Fmul", () => {
-  test("FMUL: float multiplication", () => {
+describe('Fmul', () => {
+  test('FMUL: float multiplication', () => {
     thread.pushStack(2);
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FMUL);
@@ -1055,7 +1055,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication overflow Infinity", () => {
+  test('FMUL: float multiplication overflow Infinity', () => {
     thread.pushStack(3.4e38);
     thread.pushStack(2.0);
     code.setUint8(0, OPCODE.FMUL);
@@ -1067,7 +1067,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication underflow -Infinity", () => {
+  test('FMUL: float multiplication underflow -Infinity', () => {
     thread.pushStack(-3.4e38);
     thread.pushStack(2);
     code.setUint8(0, OPCODE.FMUL);
@@ -1079,7 +1079,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication NaN returns NaN", () => {
+  test('FMUL: float multiplication NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FMUL);
@@ -1091,7 +1091,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication NaN returns NaN", () => {
+  test('FMUL: float multiplication NaN returns NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FMUL);
@@ -1103,7 +1103,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication NaN returns NaN", () => {
+  test('FMUL: float multiplication NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FMUL);
@@ -1115,7 +1115,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication Infinity * 0 = NaN", () => {
+  test('FMUL: float multiplication Infinity * 0 = NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(0);
     code.setUint8(0, OPCODE.FMUL);
@@ -1127,7 +1127,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication Infinity * +any = Infinity", () => {
+  test('FMUL: float multiplication Infinity * +any = Infinity', () => {
     thread.pushStack(Infinity);
     thread.pushStack(5.0);
     code.setUint8(0, OPCODE.FMUL);
@@ -1139,7 +1139,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication Infinity * -any = -Infinity", () => {
+  test('FMUL: float multiplication Infinity * -any = -Infinity', () => {
     thread.pushStack(Infinity);
     thread.pushStack(-5.0);
     code.setUint8(0, OPCODE.FMUL);
@@ -1151,7 +1151,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication any * any = fround of any", () => {
+  test('FMUL: float multiplication any * any = fround of any', () => {
     thread.pushStack(0.11);
     thread.pushStack(3);
     code.setUint8(0, OPCODE.FMUL);
@@ -1165,7 +1165,7 @@ describe("Fmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FMUL: float multiplication smallest precision = 0", () => {
+  test('FMUL: float multiplication smallest precision = 0', () => {
     thread.pushStack(-4e-32);
     thread.pushStack(-4e-32);
     code.setUint8(0, OPCODE.FMUL);
@@ -1176,7 +1176,7 @@ describe("Fmul", () => {
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
-  test("FMUL: float multiplication negative smallest precision = -0", () => {
+  test('FMUL: float multiplication negative smallest precision = -0', () => {
     thread.pushStack(4e-32);
     thread.pushStack(-4e-32);
     code.setUint8(0, OPCODE.FMUL);
@@ -1189,8 +1189,8 @@ describe("Fmul", () => {
   });
 });
 
-describe("Dmul", () => {
-  test("DMUL: double multiplication", () => {
+describe('Dmul', () => {
+  test('DMUL: double multiplication', () => {
     thread.pushStack64(2);
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DMUL);
@@ -1202,7 +1202,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication overflow Infinity", () => {
+  test('DMUL: double multiplication overflow Infinity', () => {
     thread.pushStack64(1.7e308);
     thread.pushStack64(2.0);
     code.setUint8(0, OPCODE.DMUL);
@@ -1214,7 +1214,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication underflow -Infinity", () => {
+  test('DMUL: double multiplication underflow -Infinity', () => {
     thread.pushStack64(-1.7e308);
     thread.pushStack64(2);
     code.setUint8(0, OPCODE.DMUL);
@@ -1226,7 +1226,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication NaN returns NaN", () => {
+  test('DMUL: double multiplication NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DMUL);
@@ -1238,7 +1238,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication NaN returns NaN", () => {
+  test('DMUL: double multiplication NaN returns NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DMUL);
@@ -1250,7 +1250,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication NaN returns NaN", () => {
+  test('DMUL: double multiplication NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DMUL);
@@ -1262,7 +1262,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication Infinity * 0 = NaN", () => {
+  test('DMUL: double multiplication Infinity * 0 = NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(0);
     code.setUint8(0, OPCODE.DMUL);
@@ -1274,7 +1274,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication Infinity * +any = Infinity", () => {
+  test('DMUL: double multiplication Infinity * +any = Infinity', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(5.0);
     code.setUint8(0, OPCODE.DMUL);
@@ -1286,7 +1286,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication Infinity * -any = -Infinity", () => {
+  test('DMUL: double multiplication Infinity * -any = -Infinity', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(-5.0);
     code.setUint8(0, OPCODE.DMUL);
@@ -1298,7 +1298,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication any * any = any", () => {
+  test('DMUL: double multiplication any * any = any', () => {
     thread.pushStack64(1.1);
     thread.pushStack64(0.3);
     code.setUint8(0, OPCODE.DMUL);
@@ -1310,7 +1310,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication smallest precision = 0", () => {
+  test('DMUL: double multiplication smallest precision = 0', () => {
     thread.pushStack64(-2e-307);
     thread.pushStack64(-2e-307);
     code.setUint8(0, OPCODE.DMUL);
@@ -1322,7 +1322,7 @@ describe("Dmul", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DMUL: double multiplication negative smallest precision = -0", () => {
+  test('DMUL: double multiplication negative smallest precision = -0', () => {
     thread.pushStack64(2e-307);
     thread.pushStack64(-2e-307);
     code.setUint8(0, OPCODE.DMUL);
@@ -1335,8 +1335,8 @@ describe("Dmul", () => {
   });
 });
 
-describe("Idiv", () => {
-  test("IDIV: int division", () => {
+describe('Idiv', () => {
+  test('IDIV: int division', () => {
     thread.pushStack(2);
     thread.pushStack(2);
     code.setUint8(0, OPCODE.IDIV);
@@ -1348,7 +1348,7 @@ describe("Idiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IDIV: int min / -1 division overflow", () => {
+  test('IDIV: int min / -1 division overflow', () => {
     thread.pushStack(MIN_INT);
     thread.pushStack(-1);
     code.setUint8(0, OPCODE.IDIV);
@@ -1360,7 +1360,7 @@ describe("Idiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IDIV: int division rounds to zero", () => {
+  test('IDIV: int division rounds to zero', () => {
     thread.pushStack(9);
     thread.pushStack(10);
     code.setUint8(0, OPCODE.IDIV);
@@ -1372,7 +1372,7 @@ describe("Idiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IDIV: negative int division rounds to zero", () => {
+  test('IDIV: negative int division rounds to zero', () => {
     thread.pushStack(9);
     thread.pushStack(-10);
     code.setUint8(0, OPCODE.IDIV);
@@ -1384,7 +1384,7 @@ describe("Idiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IDIV: divide by zero throws ArithmeticException", () => {
+  test('IDIV: divide by zero throws ArithmeticException', () => {
     thread.pushStack(9);
     thread.pushStack(0);
     code.setUint8(0, OPCODE.IDIV);
@@ -1392,19 +1392,19 @@ describe("Idiv", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class).toBe(threadClass);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArithmeticException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArithmeticException'
     );
   });
 });
 
-describe("Ldiv", () => {
-  test("LDIV: long division", () => {
+describe('Ldiv', () => {
+  test('LDIV: long division', () => {
     thread.pushStack64(BigInt(2));
     thread.pushStack64(BigInt(2));
     code.setUint8(0, OPCODE.LDIV);
@@ -1416,7 +1416,7 @@ describe("Ldiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LDIV: long division rounds to 0", () => {
+  test('LDIV: long division rounds to 0', () => {
     thread.pushStack64(BigInt(9));
     thread.pushStack64(BigInt(10));
     code.setUint8(0, OPCODE.LDIV);
@@ -1428,7 +1428,7 @@ describe("Ldiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LDIV: negative long division rounds to 0", () => {
+  test('LDIV: negative long division rounds to 0', () => {
     thread.pushStack64(BigInt(9));
     thread.pushStack64(BigInt(-10));
     code.setUint8(0, OPCODE.LDIV);
@@ -1440,7 +1440,7 @@ describe("Ldiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LDIV: long min / -1 division overflows", () => {
+  test('LDIV: long min / -1 division overflows', () => {
     thread.pushStack64(MIN_LONG);
     thread.pushStack64(BigInt(-1));
     code.setUint8(0, OPCODE.LDIV);
@@ -1452,7 +1452,7 @@ describe("Ldiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LDIV: divide by zero throws ArithmeticException", () => {
+  test('LDIV: divide by zero throws ArithmeticException', () => {
     thread.pushStack64(BigInt(9));
     thread.pushStack64(BigInt(0));
     code.setUint8(0, OPCODE.LDIV);
@@ -1460,18 +1460,18 @@ describe("Ldiv", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class).toBe(threadClass);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArithmeticException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArithmeticException'
     );
   });
 });
 
-describe("Fdiv", () => {
-  test("FDIV: float division", () => {
+describe('Fdiv', () => {
+  test('FDIV: float division', () => {
     thread.pushStack(2);
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FDIV);
@@ -1483,7 +1483,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division overflow Infinity", () => {
+  test('FDIV: float division overflow Infinity', () => {
     thread.pushStack(3.4e38);
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FDIV);
@@ -1495,7 +1495,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division underflow -Infinity", () => {
+  test('FDIV: float division underflow -Infinity', () => {
     thread.pushStack(-3.4e38);
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FDIV);
@@ -1507,7 +1507,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division NaN returns NaN", () => {
+  test('FDIV: float division NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FDIV);
@@ -1519,7 +1519,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division NaN returns NaN", () => {
+  test('FDIV: float division NaN returns NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FDIV);
@@ -1531,7 +1531,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division NaN returns NaN", () => {
+  test('FDIV: float division NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FDIV);
@@ -1543,7 +1543,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division 0 / 0 = NaN", () => {
+  test('FDIV: float division 0 / 0 = NaN', () => {
     thread.pushStack(0);
     thread.pushStack(0);
     code.setUint8(0, OPCODE.FDIV);
@@ -1555,7 +1555,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division any / 0 = Infinity", () => {
+  test('FDIV: float division any / 0 = Infinity', () => {
     thread.pushStack(5.0);
     thread.pushStack(0.0);
     code.setUint8(0, OPCODE.FDIV);
@@ -1567,7 +1567,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division -any / 0 = -Infinity", () => {
+  test('FDIV: float division -any / 0 = -Infinity', () => {
     thread.pushStack(-5.0);
     thread.pushStack(0.0);
     code.setUint8(0, OPCODE.FDIV);
@@ -1579,7 +1579,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division Infinity / Infinity = NaN", () => {
+  test('FDIV: float division Infinity / Infinity = NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FDIV);
@@ -1591,7 +1591,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division Infinity / +any = Infinity", () => {
+  test('FDIV: float division Infinity / +any = Infinity', () => {
     thread.pushStack(Infinity);
     thread.pushStack(5.0);
     code.setUint8(0, OPCODE.FDIV);
@@ -1603,7 +1603,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division Infinity / -any = -Infinity", () => {
+  test('FDIV: float division Infinity / -any = -Infinity', () => {
     thread.pushStack(Infinity);
     thread.pushStack(-5.0);
     code.setUint8(0, OPCODE.FDIV);
@@ -1615,7 +1615,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division any / Infinity = +0", () => {
+  test('FDIV: float division any / Infinity = +0', () => {
     thread.pushStack(5.0);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FDIV);
@@ -1627,7 +1627,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division any / -Infinity = -0", () => {
+  test('FDIV: float division any / -Infinity = -0', () => {
     thread.pushStack(5.0);
     thread.pushStack(-Infinity);
     code.setUint8(0, OPCODE.FDIV);
@@ -1639,7 +1639,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division any / any = fround of any", () => {
+  test('FDIV: float division any / any = fround of any', () => {
     thread.pushStack(0.99);
     thread.pushStack(3.0);
     code.setUint8(0, OPCODE.FDIV);
@@ -1651,7 +1651,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division smallest precision = +0", () => {
+  test('FDIV: float division smallest precision = +0', () => {
     thread.pushStack(-4e-32);
     thread.pushStack(-4e32);
     code.setUint8(0, OPCODE.FDIV);
@@ -1663,7 +1663,7 @@ describe("Fdiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FDIV: float division negative smallest precision = -0", () => {
+  test('FDIV: float division negative smallest precision = -0', () => {
     thread.pushStack(4e-32);
     thread.pushStack(-4e32);
     code.setUint8(0, OPCODE.FDIV);
@@ -1676,8 +1676,8 @@ describe("Fdiv", () => {
   });
 });
 
-describe("Ddiv", () => {
-  test("DDIV: double division", () => {
+describe('Ddiv', () => {
+  test('DDIV: double division', () => {
     thread.pushStack64(2);
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DDIV);
@@ -1689,7 +1689,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division overflow Infinity", () => {
+  test('DDIV: double division overflow Infinity', () => {
     thread.pushStack64(1.7e308);
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DDIV);
@@ -1701,7 +1701,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division underflow -Infinity", () => {
+  test('DDIV: double division underflow -Infinity', () => {
     thread.pushStack64(-1.7e308);
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DDIV);
@@ -1713,7 +1713,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division NaN returns NaN", () => {
+  test('DDIV: double division NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DDIV);
@@ -1725,7 +1725,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division NaN returns NaN", () => {
+  test('DDIV: double division NaN returns NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DDIV);
@@ -1737,7 +1737,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division NaN returns NaN", () => {
+  test('DDIV: double division NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DDIV);
@@ -1749,7 +1749,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division 0 / 0 = NaN", () => {
+  test('DDIV: double division 0 / 0 = NaN', () => {
     thread.pushStack64(0);
     thread.pushStack64(0);
     code.setUint8(0, OPCODE.DDIV);
@@ -1761,7 +1761,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: float division any / 0 = Infinity", () => {
+  test('DDIV: float division any / 0 = Infinity', () => {
     thread.pushStack64(5.0);
     thread.pushStack64(0.0);
     code.setUint8(0, OPCODE.DDIV);
@@ -1773,7 +1773,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: float division -any / 0 = -Infinity", () => {
+  test('DDIV: float division -any / 0 = -Infinity', () => {
     thread.pushStack64(-5.0);
     thread.pushStack64(0.0);
     code.setUint8(0, OPCODE.DDIV);
@@ -1785,7 +1785,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division Infinity / Infinity = NaN", () => {
+  test('DDIV: double division Infinity / Infinity = NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DDIV);
@@ -1797,7 +1797,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division Infinity / +any = Infinity", () => {
+  test('DDIV: double division Infinity / +any = Infinity', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(5.0);
     code.setUint8(0, OPCODE.DDIV);
@@ -1809,7 +1809,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division Infinity / -any = -Infinity", () => {
+  test('DDIV: double division Infinity / -any = -Infinity', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(-5.0);
     code.setUint8(0, OPCODE.DDIV);
@@ -1821,7 +1821,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division any / Infinity = +0", () => {
+  test('DDIV: double division any / Infinity = +0', () => {
     thread.pushStack64(5.0);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DDIV);
@@ -1833,7 +1833,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division any / -Infinity = -0", () => {
+  test('DDIV: double division any / -Infinity = -0', () => {
     thread.pushStack64(5.0);
     thread.pushStack64(-Infinity);
     code.setUint8(0, OPCODE.DDIV);
@@ -1845,7 +1845,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division smallest precision = +0", () => {
+  test('DDIV: double division smallest precision = +0', () => {
     thread.pushStack64(-4e-302);
     thread.pushStack64(-4e302);
     code.setUint8(0, OPCODE.DDIV);
@@ -1857,7 +1857,7 @@ describe("Ddiv", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DDIV: double division negative smallest precision = -0", () => {
+  test('DDIV: double division negative smallest precision = -0', () => {
     thread.pushStack64(4e-302);
     thread.pushStack64(-4e302);
     code.setUint8(0, OPCODE.DDIV);
@@ -1870,8 +1870,8 @@ describe("Ddiv", () => {
   });
 });
 
-describe("Irem", () => {
-  test("IREM: int remainder", () => {
+describe('Irem', () => {
+  test('IREM: int remainder', () => {
     thread.pushStack(3);
     thread.pushStack(2);
     code.setUint8(0, OPCODE.IREM);
@@ -1883,7 +1883,7 @@ describe("Irem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IREM: int min % -1 remainder returns 0", () => {
+  test('IREM: int min % -1 remainder returns 0', () => {
     thread.pushStack(MIN_INT);
     thread.pushStack(-1);
     code.setUint8(0, OPCODE.IREM);
@@ -1895,7 +1895,7 @@ describe("Irem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IREM: Any remainder zero throws ArithmeticException", () => {
+  test('IREM: Any remainder zero throws ArithmeticException', () => {
     thread.pushStack(9);
     thread.pushStack(0);
     code.setUint8(0, OPCODE.IREM);
@@ -1903,18 +1903,18 @@ describe("Irem", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class).toBe(threadClass);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArithmeticException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArithmeticException'
     );
   });
 });
 
-describe("Lrem", () => {
-  test("LREM: long remainder", () => {
+describe('Lrem', () => {
+  test('LREM: long remainder', () => {
     thread.pushStack64(BigInt(3));
     thread.pushStack64(BigInt(2));
     code.setUint8(0, OPCODE.LREM);
@@ -1926,7 +1926,7 @@ describe("Lrem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LREM: long min % -1 returns 0", () => {
+  test('LREM: long min % -1 returns 0', () => {
     thread.pushStack64(MIN_LONG);
     thread.pushStack64(BigInt(-1));
     code.setUint8(0, OPCODE.LREM);
@@ -1938,7 +1938,7 @@ describe("Lrem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LREM: Remainder by zero throws ArithmeticException", () => {
+  test('LREM: Remainder by zero throws ArithmeticException', () => {
     thread.pushStack64(BigInt(9));
     thread.pushStack64(BigInt(0));
     code.setUint8(0, OPCODE.LREM);
@@ -1946,18 +1946,18 @@ describe("Lrem", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class).toBe(threadClass);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArithmeticException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArithmeticException'
     );
   });
 });
 
-describe("Frem", () => {
-  test("FREM: float remainder", () => {
+describe('Frem', () => {
+  test('FREM: float remainder', () => {
     thread.pushStack(1.3);
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FREM);
@@ -1969,7 +1969,7 @@ describe("Frem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FREM: float remainder NaN returns NaN", () => {
+  test('FREM: float remainder NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FREM);
@@ -1981,7 +1981,7 @@ describe("Frem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FREM: float remainder NaN returns NaN", () => {
+  test('FREM: float remainder NaN returns NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FREM);
@@ -1993,7 +1993,7 @@ describe("Frem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FREM: float remainder NaN returns NaN", () => {
+  test('FREM: float remainder NaN returns NaN', () => {
     thread.pushStack(NaN);
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FREM);
@@ -2005,7 +2005,7 @@ describe("Frem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FREM: float remainder 0 % 0 = NaN", () => {
+  test('FREM: float remainder 0 % 0 = NaN', () => {
     thread.pushStack(0);
     thread.pushStack(0);
     code.setUint8(0, OPCODE.FREM);
@@ -2017,7 +2017,7 @@ describe("Frem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FREM: float remainder Infinity % any = NaN", () => {
+  test('FREM: float remainder Infinity % any = NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(2);
     code.setUint8(0, OPCODE.FREM);
@@ -2029,7 +2029,7 @@ describe("Frem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FREM: float remainder -0 % Infinity = -0", () => {
+  test('FREM: float remainder -0 % Infinity = -0', () => {
     thread.pushStack(-0);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FREM);
@@ -2041,7 +2041,7 @@ describe("Frem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FREM: float remainder Infinity % Infinity = NaN", () => {
+  test('FREM: float remainder Infinity % Infinity = NaN', () => {
     thread.pushStack(Infinity);
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FREM);
@@ -2053,7 +2053,7 @@ describe("Frem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FREM: float remainder any % any = fround of any", () => {
+  test('FREM: float remainder any % any = fround of any', () => {
     thread.pushStack(0.99);
     thread.pushStack(0.66);
     code.setUint8(0, OPCODE.FREM);
@@ -2068,8 +2068,8 @@ describe("Frem", () => {
   });
 });
 
-describe("Drem", () => {
-  test("DREM: double remainder", () => {
+describe('Drem', () => {
+  test('DREM: double remainder', () => {
     thread.pushStack64(1.3);
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DREM);
@@ -2081,7 +2081,7 @@ describe("Drem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DREM: double remainder NaN returns NaN", () => {
+  test('DREM: double remainder NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DREM);
@@ -2093,7 +2093,7 @@ describe("Drem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DREM: double remainder NaN returns NaN", () => {
+  test('DREM: double remainder NaN returns NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DREM);
@@ -2105,7 +2105,7 @@ describe("Drem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DREM: double remainder NaN returns NaN", () => {
+  test('DREM: double remainder NaN returns NaN', () => {
     thread.pushStack64(NaN);
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DREM);
@@ -2117,7 +2117,7 @@ describe("Drem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DREM: double remainder 0 % 0 = NaN", () => {
+  test('DREM: double remainder 0 % 0 = NaN', () => {
     thread.pushStack64(0);
     thread.pushStack64(0);
     code.setUint8(0, OPCODE.DREM);
@@ -2129,7 +2129,7 @@ describe("Drem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DREM: double remainder Infinity % any = NaN", () => {
+  test('DREM: double remainder Infinity % any = NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(2);
     code.setUint8(0, OPCODE.DREM);
@@ -2141,7 +2141,7 @@ describe("Drem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DREM: double remainder -0 % Infinity = -0", () => {
+  test('DREM: double remainder -0 % Infinity = -0', () => {
     thread.pushStack64(-0);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DREM);
@@ -2153,7 +2153,7 @@ describe("Drem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DREM: double remainder Infinity % Infinity = NaN", () => {
+  test('DREM: double remainder Infinity % Infinity = NaN', () => {
     thread.pushStack64(Infinity);
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DREM);
@@ -2165,7 +2165,7 @@ describe("Drem", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DREM: double remainder any % any = any", () => {
+  test('DREM: double remainder any % any = any', () => {
     thread.pushStack64(0.99);
     thread.pushStack64(0.66);
     code.setUint8(0, OPCODE.DREM);
@@ -2178,8 +2178,8 @@ describe("Drem", () => {
   });
 });
 
-describe("Ineg", () => {
-  test("INEG: int negation", () => {
+describe('Ineg', () => {
+  test('INEG: int negation', () => {
     thread.pushStack(1);
     code.setUint8(0, OPCODE.INEG);
     thread.runFor(1);
@@ -2190,7 +2190,7 @@ describe("Ineg", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("INEG: int negation overflows", () => {
+  test('INEG: int negation overflows', () => {
     thread.pushStack(MIN_INT);
     code.setUint8(0, OPCODE.INEG);
     thread.runFor(1);
@@ -2202,8 +2202,8 @@ describe("Ineg", () => {
   });
 });
 
-describe("Lneg", () => {
-  test("LNEG: long negation", () => {
+describe('Lneg', () => {
+  test('LNEG: long negation', () => {
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LNEG);
     thread.runFor(1);
@@ -2214,7 +2214,7 @@ describe("Lneg", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LNEG: long negation overflows", () => {
+  test('LNEG: long negation overflows', () => {
     thread.pushStack64(MIN_LONG);
     code.setUint8(0, OPCODE.LNEG);
     thread.runFor(1);
@@ -2226,8 +2226,8 @@ describe("Lneg", () => {
   });
 });
 
-describe("Fneg", () => {
-  test("FNEG: float negation", () => {
+describe('Fneg', () => {
+  test('FNEG: float negation', () => {
     thread.pushStack(1.0);
     code.setUint8(0, OPCODE.FNEG);
     thread.runFor(1);
@@ -2238,7 +2238,7 @@ describe("Fneg", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FNEG: negates zero", () => {
+  test('FNEG: negates zero', () => {
     thread.pushStack(0.0);
     code.setUint8(0, OPCODE.FNEG);
     thread.runFor(1);
@@ -2249,7 +2249,7 @@ describe("Fneg", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FNEG: NaN negated is NaN", () => {
+  test('FNEG: NaN negated is NaN', () => {
     thread.pushStack(NaN);
     code.setUint8(0, OPCODE.FNEG);
     thread.runFor(1);
@@ -2260,7 +2260,7 @@ describe("Fneg", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FNEG: float Infinity negated is -Infinity", () => {
+  test('FNEG: float Infinity negated is -Infinity', () => {
     thread.pushStack(Infinity);
     code.setUint8(0, OPCODE.FNEG);
     thread.runFor(1);
@@ -2272,8 +2272,8 @@ describe("Fneg", () => {
   });
 });
 
-describe("Dneg", () => {
-  test("DNEG: float negation", () => {
+describe('Dneg', () => {
+  test('DNEG: float negation', () => {
     thread.pushStack64(1.0);
     code.setUint8(0, OPCODE.DNEG);
     thread.runFor(1);
@@ -2284,7 +2284,7 @@ describe("Dneg", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DNEG: negates zero", () => {
+  test('DNEG: negates zero', () => {
     thread.pushStack64(0.0);
     code.setUint8(0, OPCODE.DNEG);
     thread.runFor(1);
@@ -2295,7 +2295,7 @@ describe("Dneg", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DNEG: NaN negated is NaN", () => {
+  test('DNEG: NaN negated is NaN', () => {
     thread.pushStack64(NaN);
     code.setUint8(0, OPCODE.DNEG);
     thread.runFor(1);
@@ -2306,7 +2306,7 @@ describe("Dneg", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DNEG: float Infinity negated is -Infinity", () => {
+  test('DNEG: float Infinity negated is -Infinity', () => {
     thread.pushStack64(Infinity);
     code.setUint8(0, OPCODE.DNEG);
     thread.runFor(1);
@@ -2318,8 +2318,8 @@ describe("Dneg", () => {
   });
 });
 
-describe("Ishl", () => {
-  test("ISHL: shift left int", () => {
+describe('Ishl', () => {
+  test('ISHL: shift left int', () => {
     thread.pushStack(2);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.ISHL);
@@ -2331,7 +2331,7 @@ describe("Ishl", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("ISHL: int shift left overflows", () => {
+  test('ISHL: int shift left overflows', () => {
     thread.pushStack(1);
     thread.pushStack(0x1f);
     code.setUint8(0, OPCODE.ISHL);
@@ -2343,7 +2343,7 @@ describe("Ishl", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("ISHL: int shift left capped at 0x1f", () => {
+  test('ISHL: int shift left capped at 0x1f', () => {
     thread.pushStack(1);
     thread.pushStack(0x3f);
     code.setUint8(0, OPCODE.ISHL);
@@ -2356,8 +2356,8 @@ describe("Ishl", () => {
   });
 });
 
-describe("Lshl", () => {
-  test("LSHL: shift left long", () => {
+describe('Lshl', () => {
+  test('LSHL: shift left long', () => {
     thread.pushStack64(BigInt(2));
     thread.pushStack(1);
     code.setUint8(0, OPCODE.LSHL);
@@ -2369,7 +2369,7 @@ describe("Lshl", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LSHL: int shift left overflows", () => {
+  test('LSHL: int shift left overflows', () => {
     thread.pushStack64(BigInt(1));
     thread.pushStack(0x3f);
     code.setUint8(0, OPCODE.LSHL);
@@ -2381,7 +2381,7 @@ describe("Lshl", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LSHL: int shift left capped at 0x3f", () => {
+  test('LSHL: int shift left capped at 0x3f', () => {
     thread.pushStack64(BigInt(1));
     thread.pushStack(0x7f);
     code.setUint8(0, OPCODE.LSHL);
@@ -2394,8 +2394,8 @@ describe("Lshl", () => {
   });
 });
 
-describe("Ishr", () => {
-  test("ISHR: shift right int", () => {
+describe('Ishr', () => {
+  test('ISHR: shift right int', () => {
     thread.pushStack(2);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.ISHR);
@@ -2407,7 +2407,7 @@ describe("Ishr", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("ISHR: int shift right truncated", () => {
+  test('ISHR: int shift right truncated', () => {
     thread.pushStack(1);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.ISHR);
@@ -2419,7 +2419,7 @@ describe("Ishr", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("ISHR: int shift right capped at 0x1f", () => {
+  test('ISHR: int shift right capped at 0x1f', () => {
     thread.pushStack(MIN_INT);
     thread.pushStack(0x3f);
     code.setUint8(0, OPCODE.ISHR);
@@ -2432,8 +2432,8 @@ describe("Ishr", () => {
   });
 });
 
-describe("Lshr", () => {
-  test("LSHR: shift right long", () => {
+describe('Lshr', () => {
+  test('LSHR: shift right long', () => {
     thread.pushStack64(BigInt(2));
     thread.pushStack(1);
     code.setUint8(0, OPCODE.LSHR);
@@ -2445,7 +2445,7 @@ describe("Lshr", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LSHR: int shift right truncates", () => {
+  test('LSHR: int shift right truncates', () => {
     thread.pushStack64(MIN_LONG);
     thread.pushStack(0x3f);
     code.setUint8(0, OPCODE.LSHR);
@@ -2457,7 +2457,7 @@ describe("Lshr", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LSHR: int shift right capped at 0x3f", () => {
+  test('LSHR: int shift right capped at 0x3f', () => {
     thread.pushStack64(MIN_LONG);
     thread.pushStack(0x7f);
     code.setUint8(0, OPCODE.LSHR);
@@ -2470,8 +2470,8 @@ describe("Lshr", () => {
   });
 });
 
-describe("Iushr", () => {
-  test("IUSHR: shift right int", () => {
+describe('Iushr', () => {
+  test('IUSHR: shift right int', () => {
     thread.pushStack(2);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IUSHR);
@@ -2483,7 +2483,7 @@ describe("Iushr", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IUSHR: int shift right truncated", () => {
+  test('IUSHR: int shift right truncated', () => {
     thread.pushStack(1);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IUSHR);
@@ -2495,7 +2495,7 @@ describe("Iushr", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IUSHR: int shift right capped at 0x1f", () => {
+  test('IUSHR: int shift right capped at 0x1f', () => {
     thread.pushStack(MIN_INT);
     thread.pushStack(0x3f);
     code.setUint8(0, OPCODE.IUSHR);
@@ -2508,8 +2508,8 @@ describe("Iushr", () => {
   });
 });
 
-describe("Lushr", () => {
-  test("LUSHR: shift right long", () => {
+describe('Lushr', () => {
+  test('LUSHR: shift right long', () => {
     thread.pushStack64(BigInt(2));
     thread.pushStack(1);
     code.setUint8(0, OPCODE.LUSHR);
@@ -2521,45 +2521,45 @@ describe("Lushr", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LUSHR: int shift right changes sign", () => {
+  test('LUSHR: int shift right changes sign', () => {
     thread.pushStack64(BigInt(-2));
     thread.pushStack(1);
     code.setUint8(0, OPCODE.LUSHR);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(2);
-    expect(lastFrame.operandStack[0].toString()).toBe("9223372036854775807");
+    expect(lastFrame.operandStack[0].toString()).toBe('9223372036854775807');
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LUSHR: int shift right truncates", () => {
+  test('LUSHR: int shift right truncates', () => {
     thread.pushStack64(MIN_LONG);
     thread.pushStack(0x3f);
     code.setUint8(0, OPCODE.LUSHR);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(2);
-    expect(lastFrame.operandStack[0].toString()).toBe("1");
+    expect(lastFrame.operandStack[0].toString()).toBe('1');
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LUSHR: int shift right capped at 0x3f", () => {
+  test('LUSHR: int shift right capped at 0x3f', () => {
     thread.pushStack64(MIN_LONG);
     thread.pushStack(0x7f);
     code.setUint8(0, OPCODE.LUSHR);
     thread.runFor(1);
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(2);
-    expect(lastFrame.operandStack[0].toString()).toBe("1");
+    expect(lastFrame.operandStack[0].toString()).toBe('1');
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
 });
 
-describe("Iand", () => {
-  test("IAND: int and", () => {
+describe('Iand', () => {
+  test('IAND: int and', () => {
     thread.pushStack(3);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IAND);
@@ -2571,7 +2571,7 @@ describe("Iand", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IAND: int and negatives", () => {
+  test('IAND: int and negatives', () => {
     thread.pushStack(-1);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IAND);
@@ -2584,8 +2584,8 @@ describe("Iand", () => {
   });
 });
 
-describe("Land", () => {
-  test("LAND: long and", () => {
+describe('Land', () => {
+  test('LAND: long and', () => {
     thread.pushStack64(BigInt(3));
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LAND);
@@ -2597,7 +2597,7 @@ describe("Land", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LAND: long and negatives", () => {
+  test('LAND: long and negatives', () => {
     thread.pushStack64(BigInt(-1));
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LAND);
@@ -2610,8 +2610,8 @@ describe("Land", () => {
   });
 });
 
-describe("Ior", () => {
-  test("IOR: int or", () => {
+describe('Ior', () => {
+  test('IOR: int or', () => {
     thread.pushStack(2);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IOR);
@@ -2623,7 +2623,7 @@ describe("Ior", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IOR: int or negatives", () => {
+  test('IOR: int or negatives', () => {
     thread.pushStack(-1);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IOR);
@@ -2636,8 +2636,8 @@ describe("Ior", () => {
   });
 });
 
-describe("Lor", () => {
-  test("LOR: long or", () => {
+describe('Lor', () => {
+  test('LOR: long or', () => {
     thread.pushStack64(BigInt(2));
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LOR);
@@ -2649,7 +2649,7 @@ describe("Lor", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LOR: long or negatives", () => {
+  test('LOR: long or negatives', () => {
     thread.pushStack64(BigInt(-1));
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LOR);
@@ -2662,8 +2662,8 @@ describe("Lor", () => {
   });
 });
 
-describe("IXor", () => {
-  test("IXOR: int Xor", () => {
+describe('IXor', () => {
+  test('IXOR: int Xor', () => {
     thread.pushStack(3);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IXOR);
@@ -2675,7 +2675,7 @@ describe("IXor", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IXOR: int Xor negatives", () => {
+  test('IXOR: int Xor negatives', () => {
     thread.pushStack(-1);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.IXOR);
@@ -2688,8 +2688,8 @@ describe("IXor", () => {
   });
 });
 
-describe("Lxor", () => {
-  test("LXOR: long xor", () => {
+describe('Lxor', () => {
+  test('LXOR: long xor', () => {
     thread.pushStack64(BigInt(3));
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LXOR);
@@ -2701,7 +2701,7 @@ describe("Lxor", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LXOR: long xor negatives", () => {
+  test('LXOR: long xor negatives', () => {
     thread.pushStack64(BigInt(-1));
     thread.pushStack64(BigInt(1));
     code.setUint8(0, OPCODE.LXOR);
@@ -2714,8 +2714,8 @@ describe("Lxor", () => {
   });
 });
 
-describe("Iinc", () => {
-  test("IINC: int increments", () => {
+describe('Iinc', () => {
+  test('IINC: int increments', () => {
     thread.peekStackFrame().locals = [20];
     code.setUint8(0, OPCODE.IINC);
     code.setUint8(1, 0);

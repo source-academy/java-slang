@@ -1,4 +1,4 @@
-import JVM from "..";
+import JVM from "../jvm";
 import SourceSystem from "./SourceSystem";
 
 export function run(mainClass: string) {

@@ -26,8 +26,8 @@ beforeEach(() => {
   thread.invokeStackFrame(new JavaStackFrame(testClass, method, 0, []));
 });
 
-describe("Ifnull", () => {
-  test("IFNULL: null branches", () => {
+describe('Ifnull', () => {
+  test('IFNULL: null branches', () => {
     code.setUint8(0, OPCODE.IFNULL);
     code.setInt16(1, 10);
     thread.pushStack(null);
@@ -38,7 +38,7 @@ describe("Ifnull", () => {
     expect(thread.getPC()).toBe(10);
   });
 
-  test("IFNULL: non null does not branch", () => {
+  test('IFNULL: non null does not branch', () => {
     code.setUint8(0, OPCODE.IFNULL);
     code.setInt16(1, 10);
     thread.pushStack(new JvmObject(threadClass));
@@ -50,8 +50,8 @@ describe("Ifnull", () => {
   });
 });
 
-describe("Ifnonnull", () => {
-  test("IFNONNULL: null does not branch", () => {
+describe('Ifnonnull', () => {
+  test('IFNONNULL: null does not branch', () => {
     code.setUint8(0, OPCODE.IFNONNULL);
     code.setInt16(1, 10);
     thread.pushStack(null);
@@ -62,7 +62,7 @@ describe("Ifnonnull", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("IFNONNULL: non null branches", () => {
+  test('IFNONNULL: non null branches', () => {
     code.setUint8(0, OPCODE.IFNONNULL);
     code.setInt16(1, 10);
     thread.pushStack(new JvmObject(threadClass));
@@ -74,8 +74,8 @@ describe("Ifnonnull", () => {
   });
 });
 
-describe("GotoW", () => {
-  test("GOTO_W: goes to correct offset", () => {
+describe('GotoW', () => {
+  test('GOTO_W: goes to correct offset', () => {
     code.setUint8(0, OPCODE.GOTO_W);
     code.setInt32(1, 65535);
     thread.runFor(1);
@@ -86,8 +86,8 @@ describe("GotoW", () => {
   });
 });
 
-describe("JsrW", () => {
-  test("JSR_W: pushes next pc and jumps to offset", () => {
+describe('JsrW', () => {
+  test('JSR_W: pushes next pc and jumps to offset', () => {
     code.setUint8(0, OPCODE.JSR_W);
     code.setInt32(1, 65535);
 
@@ -100,8 +100,8 @@ describe("JsrW", () => {
   });
 });
 
-describe("Wide", () => {
-  test("ILOAD: reads wide index", () => {
+describe('Wide', () => {
+  test('ILOAD: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.ILOAD);
     code.setUint16(2, 0);
@@ -113,7 +113,7 @@ describe("Wide", () => {
     expect(lastFrame.locals.length).toBe(1);
     expect(thread.getPC()).toBe(4);
   });
-  test("LLOAD: reads wide index", () => {
+  test('LLOAD: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.LLOAD);
     code.setUint16(2, 0);
@@ -127,7 +127,7 @@ describe("Wide", () => {
     expect(lastFrame.locals.length).toBe(1);
     expect(thread.getPC()).toBe(4);
   });
-  test("FLOAD: reads wide index", () => {
+  test('FLOAD: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.FLOAD);
     code.setUint16(2, 0);
@@ -139,7 +139,7 @@ describe("Wide", () => {
     expect(lastFrame.locals.length).toBe(1);
     expect(thread.getPC()).toBe(4);
   });
-  test("DLOAD: reads wide index", () => {
+  test('DLOAD: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.DLOAD);
     code.setUint16(2, 0);
@@ -151,7 +151,7 @@ describe("Wide", () => {
     expect(lastFrame.locals.length).toBe(1);
     expect(thread.getPC()).toBe(4);
   });
-  test("ALOAD: reads wide index", () => {
+  test('ALOAD: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.ALOAD);
     code.setUint16(2, 0);
@@ -163,7 +163,7 @@ describe("Wide", () => {
     expect(lastFrame.locals.length).toBe(1);
     expect(thread.getPC()).toBe(4);
   });
-  test("ISTORE: reads wide index", () => {
+  test('ISTORE: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.ISTORE);
     code.setUint16(2, 0);
@@ -176,7 +176,7 @@ describe("Wide", () => {
     expect(lastFrame.locals.length).toBe(1);
     expect(thread.getPC()).toBe(4);
   });
-  test("LSTORE: reads wide index", () => {
+  test('LSTORE: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.LSTORE);
     code.setUint16(2, 0);
@@ -189,7 +189,7 @@ describe("Wide", () => {
     expect(lastFrame.locals.length).toBe(1);
     expect(thread.getPC()).toBe(4);
   });
-  test("FSTORE: reads wide index", () => {
+  test('FSTORE: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.FSTORE);
     code.setUint16(2, 0);
@@ -202,7 +202,7 @@ describe("Wide", () => {
     expect(lastFrame.locals.length).toBe(1);
     expect(thread.getPC()).toBe(4);
   });
-  test("DSTORE: reads wide index", () => {
+  test('DSTORE: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.DSTORE);
     code.setUint16(2, 0);
@@ -215,7 +215,7 @@ describe("Wide", () => {
     expect(lastFrame.locals.length).toBe(1);
     expect(thread.getPC()).toBe(4);
   });
-  test("ASTORE: reads wide index", () => {
+  test('ASTORE: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.ASTORE);
     code.setUint16(2, 0);
@@ -229,7 +229,7 @@ describe("Wide", () => {
     expect(thread.getPC()).toBe(4);
   });
 
-  test("IINC: reads wide index", () => {
+  test('IINC: reads wide index', () => {
     code.setUint8(0, OPCODE.WIDE);
     code.setUint8(1, OPCODE.IINC);
     code.setUint16(2, 0);
@@ -244,21 +244,21 @@ describe("Wide", () => {
   });
 });
 
-describe("Multianewarray", () => {
-  test("MULTIANEWARRAY: Creates multi dimensional array", () => {
+describe('Multianewarray', () => {
+  test('MULTIANEWARRAY: Creates multi dimensional array', () => {
     thread.returnStackFrame();
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
         () => {
           return {
             tag: CONSTANT_TAG.Utf8,
             length: 20,
-            value: "[[Ljava/lang/Thread;",
+            value: '[[Ljava/lang/Thread;',
           };
         },
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -269,8 +269,8 @@ describe("Multianewarray", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -280,7 +280,7 @@ describe("Multianewarray", () => {
     code.setUint8(0, OPCODE.MULTIANEWARRAY);
     code.setUint16(1, constIdx);
     code.setUint8(3, 2);
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
 
     thread.pushStack(2);
@@ -295,33 +295,29 @@ describe("Multianewarray", () => {
     const arrayRef = (thread.popStack() as SuccessResult<any>)
       .result as JvmArray;
     expect(arrayRef.len()).toBe(2);
-    expect(arrayRef.getClass().getClassname()).toBe("[[Ljava/lang/Thread;");
+    expect(arrayRef.getClass().getName()).toBe('[[Ljava/lang/Thread;');
     expect(arrayRef.get(0).len()).toBe(3);
-    expect(arrayRef.get(0).getClass().getClassname()).toBe(
-      "[Ljava/lang/Thread;"
-    );
+    expect(arrayRef.get(0).getClass().getName()).toBe('[Ljava/lang/Thread;');
     expect(arrayRef.get(0).get(2)).toBe(null);
     expect(arrayRef.get(1).len()).toBe(3);
-    expect(arrayRef.get(1).getClass().getClassname()).toBe(
-      "[Ljava/lang/Thread;"
-    );
+    expect(arrayRef.get(1).getClass().getName()).toBe('[Ljava/lang/Thread;');
     expect(arrayRef.get(1).get(2)).toBe(null);
   });
 
-  test("MULTIANEWARRAY: Negative dimensions throw exception", () => {
+  test('MULTIANEWARRAY: Negative dimensions throw exception', () => {
     thread.returnStackFrame();
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
         () => {
           return {
             tag: CONSTANT_TAG.Utf8,
             length: 20,
-            value: "[[Ljava/lang/Thread;",
+            value: '[[Ljava/lang/Thread;',
           };
         },
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -332,8 +328,8 @@ describe("Multianewarray", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -343,7 +339,7 @@ describe("Multianewarray", () => {
     code.setUint8(0, OPCODE.MULTIANEWARRAY);
     code.setUint16(1, constIdx);
     code.setUint8(3, 2);
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
 
     thread.pushStack(-1);
@@ -355,25 +351,25 @@ describe("Multianewarray", () => {
     expect(lastFrame.class === threadClass).toBe(true);
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NegativeArraySizeException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NegativeArraySizeException'
     );
   });
 
-  test("MULTIANEWARRAY: 0 sized array empty", () => {
+  test('MULTIANEWARRAY: 0 sized array empty', () => {
     thread.returnStackFrame();
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
         () => {
           return {
             tag: CONSTANT_TAG.Utf8,
             length: 20,
-            value: "[[Ljava/lang/Thread;",
+            value: '[[Ljava/lang/Thread;',
           };
         },
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -384,8 +380,8 @@ describe("Multianewarray", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -395,7 +391,7 @@ describe("Multianewarray", () => {
     code.setUint8(0, OPCODE.MULTIANEWARRAY);
     code.setUint16(1, constIdx);
     code.setUint8(3, 2);
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     thread.pushStack(0);
     thread.pushStack(3);
@@ -408,6 +404,6 @@ describe("Multianewarray", () => {
     expect(lastFrame.locals.length).toBe(0);
     const arrayRef = (thread.popStack() as SuccessResult<any>).result;
     expect(arrayRef.len()).toBe(0);
-    expect(arrayRef.getClass().getClassname()).toBe("[[Ljava/lang/Thread;");
+    expect(arrayRef.getClass().getName()).toBe('[[Ljava/lang/Thread;');
   });
 });

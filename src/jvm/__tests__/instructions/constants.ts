@@ -29,8 +29,8 @@ beforeEach(() => {
   thread.invokeStackFrame(new JavaStackFrame(testClass, method, 0, []));
 });
 
-describe("Nop", () => {
-  test("does not modify stack", () => {
+describe('Nop', () => {
+  test('does not modify stack', () => {
     code.setUint8(0, OPCODE.NOP);
     thread.runFor(1);
 
@@ -41,8 +41,8 @@ describe("Nop", () => {
   });
 });
 
-describe("AconstNull", () => {
-  test("pushes null to stack", () => {
+describe('AconstNull', () => {
+  test('pushes null to stack', () => {
     code.setUint8(0, OPCODE.ACONST_NULL);
     thread.runFor(1);
 
@@ -54,8 +54,8 @@ describe("AconstNull", () => {
   });
 });
 
-describe("IconstM1", () => {
-  test("pushes -1 to stack", () => {
+describe('IconstM1', () => {
+  test('pushes -1 to stack', () => {
     code.setUint8(0, OPCODE.ICONST_M1);
     thread.runFor(1);
 
@@ -67,8 +67,8 @@ describe("IconstM1", () => {
   });
 });
 
-describe("Iconst0", () => {
-  test("pushes 0 to stack", () => {
+describe('Iconst0', () => {
+  test('pushes 0 to stack', () => {
     code.setUint8(0, OPCODE.ICONST_0);
     thread.runFor(1);
 
@@ -80,8 +80,8 @@ describe("Iconst0", () => {
   });
 });
 
-describe("Iconst1", () => {
-  test("pushes 1 to stack", () => {
+describe('Iconst1', () => {
+  test('pushes 1 to stack', () => {
     code.setUint8(0, OPCODE.ICONST_1);
     thread.runFor(1);
 
@@ -93,8 +93,8 @@ describe("Iconst1", () => {
   });
 });
 
-describe("Iconst2", () => {
-  test("pushes 2 to stack", () => {
+describe('Iconst2', () => {
+  test('pushes 2 to stack', () => {
     code.setUint8(0, OPCODE.ICONST_2);
     thread.runFor(1);
 
@@ -106,8 +106,8 @@ describe("Iconst2", () => {
   });
 });
 
-describe("Iconst3", () => {
-  test("pushes 3 to stack", () => {
+describe('Iconst3', () => {
+  test('pushes 3 to stack', () => {
     code.setUint8(0, OPCODE.ICONST_3);
     thread.runFor(1);
 
@@ -119,8 +119,8 @@ describe("Iconst3", () => {
   });
 });
 
-describe("Iconst4", () => {
-  test("pushes 4 to stack", () => {
+describe('Iconst4', () => {
+  test('pushes 4 to stack', () => {
     code.setUint8(0, OPCODE.ICONST_4);
     thread.runFor(1);
 
@@ -132,8 +132,8 @@ describe("Iconst4", () => {
   });
 });
 
-describe("Iconst5", () => {
-  test("pushes 5 to stack", () => {
+describe('Iconst5', () => {
+  test('pushes 5 to stack', () => {
     code.setUint8(0, OPCODE.ICONST_5);
     thread.runFor(1);
 
@@ -145,8 +145,8 @@ describe("Iconst5", () => {
   });
 });
 
-describe("Lconst0", () => {
-  test("pushes long 0 to stack", () => {
+describe('Lconst0', () => {
+  test('pushes long 0 to stack', () => {
     code.setUint8(0, OPCODE.LCONST_0);
     thread.runFor(1);
 
@@ -158,8 +158,8 @@ describe("Lconst0", () => {
   });
 });
 
-describe("Lconst1", () => {
-  test("pushes long 1 to stack", () => {
+describe('Lconst1', () => {
+  test('pushes long 1 to stack', () => {
     code.setUint8(0, OPCODE.LCONST_1);
     thread.runFor(1);
 
@@ -171,8 +171,8 @@ describe("Lconst1", () => {
   });
 });
 
-describe("Fconst0", () => {
-  test("pushes float 0 to stack", () => {
+describe('Fconst0', () => {
+  test('pushes float 0 to stack', () => {
     code.setUint8(0, OPCODE.FCONST_0);
     thread.runFor(1);
 
@@ -184,8 +184,8 @@ describe("Fconst0", () => {
   });
 });
 
-describe("Fconst1", () => {
-  test("pushes float 1 to stack", () => {
+describe('Fconst1', () => {
+  test('pushes float 1 to stack', () => {
     code.setUint8(0, OPCODE.FCONST_1);
     thread.runFor(1);
 
@@ -197,8 +197,8 @@ describe("Fconst1", () => {
   });
 });
 
-describe("Fconst2", () => {
-  test("pushes float 2 to stack", () => {
+describe('Fconst2', () => {
+  test('pushes float 2 to stack', () => {
     code.setUint8(0, OPCODE.FCONST_2);
     thread.runFor(1);
 
@@ -210,8 +210,8 @@ describe("Fconst2", () => {
   });
 });
 
-describe("Dconst0", () => {
-  test("pushes double 0 to stack", () => {
+describe('Dconst0', () => {
+  test('pushes double 0 to stack', () => {
     code.setUint8(0, OPCODE.DCONST_0);
     thread.runFor(1);
 
@@ -223,8 +223,8 @@ describe("Dconst0", () => {
   });
 });
 
-describe("Dconst1", () => {
-  test("pushes double 1 to stack", () => {
+describe('Dconst1', () => {
+  test('pushes double 1 to stack', () => {
     code.setUint8(0, OPCODE.DCONST_1);
     thread.runFor(1);
 
@@ -236,8 +236,8 @@ describe("Dconst1", () => {
   });
 });
 
-describe("Bipush", () => {
-  test("pushes byte to stack", () => {
+describe('Bipush', () => {
+  test('pushes byte to stack', () => {
     code.setUint8(0, OPCODE.BIPUSH);
     code.setInt8(1, 128);
     thread.runFor(1);
@@ -249,8 +249,8 @@ describe("Bipush", () => {
   });
 });
 
-describe("Sipush", () => {
-  test("pushes short to stack", () => {
+describe('Sipush', () => {
+  test('pushes short to stack', () => {
     code.setUint8(0, OPCODE.SIPUSH);
     code.setInt16(1, 32768);
     thread.runFor(1);
@@ -263,8 +263,8 @@ describe("Sipush", () => {
   });
 });
 
-describe("Ldc", () => {
-  test("reads int from constant pool and pushes to stack", () => {
+describe('Ldc', () => {
+  test('reads int from constant pool and pushes to stack', () => {
     // use custom class
     thread.returnStackFrame();
     const intConstant = {
@@ -273,9 +273,9 @@ describe("Ldc", () => {
     };
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return intConstant;
         },
@@ -283,15 +283,15 @@ describe("Ldc", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC);
     code.setUint8(1, constIdx);
@@ -304,7 +304,7 @@ describe("Ldc", () => {
     expect(thread.getPC()).toBe(2);
   });
 
-  test("reads float from constant pool and pushes to stack", () => {
+  test('reads float from constant pool and pushes to stack', () => {
     thread.returnStackFrame();
     const floatConstant = {
       tag: CONSTANT_TAG.Float,
@@ -312,9 +312,9 @@ describe("Ldc", () => {
     };
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return floatConstant;
         },
@@ -322,15 +322,15 @@ describe("Ldc", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC);
     code.setUint8(1, constIdx);
@@ -343,18 +343,18 @@ describe("Ldc", () => {
     expect(thread.getPC()).toBe(2);
   });
 
-  test("reads string from constant pool and pushes to stack", () => {
+  test('reads string from constant pool and pushes to stack', () => {
     thread.returnStackFrame();
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
-          value: "hello world",
+          value: 'hello world',
           length: 11,
         }),
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.String,
@@ -365,8 +365,8 @@ describe("Ldc", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -378,7 +378,7 @@ describe("Ldc", () => {
     const str = (cstr.resolve(thread, testLoader) as SuccessResult<JvmObject>)
       .result;
 
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC);
     code.setUint8(1, constIdx);
@@ -391,18 +391,18 @@ describe("Ldc", () => {
     expect(thread.getPC()).toBe(2);
   });
 
-  test("initializes uninitialized string from constant pool", () => {
+  test('initializes uninitialized string from constant pool', () => {
     thread.returnStackFrame();
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
-          value: "hello world",
+          value: 'hello world',
           length: 11,
         }),
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.String,
@@ -413,8 +413,8 @@ describe("Ldc", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -424,7 +424,7 @@ describe("Ldc", () => {
 
     const cstr = customClass.getConstant(constIdx) as ConstantString;
 
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC);
     code.setUint8(1, constIdx);
@@ -438,18 +438,18 @@ describe("Ldc", () => {
     expect(thread.getPC()).toBe(2);
   });
 
-  test("reads classref from constant pool and pushes to stack", () => {
+  test('reads classref from constant pool and pushes to stack', () => {
     thread.returnStackFrame();
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
-          value: "Test",
+          value: 'Test',
           length: 4,
         }),
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.Class,
@@ -460,8 +460,8 @@ describe("Ldc", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -472,7 +472,7 @@ describe("Ldc", () => {
     const clsConstant = customClass.getConstant(constIdx) as ConstantClass;
     clsConstant.resolve();
 
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC);
     code.setUint8(1, constIdx);
@@ -482,15 +482,15 @@ describe("Ldc", () => {
     expect(lastFrame.operandStack.length).toBe(1);
     const clsObj = lastFrame.operandStack[0] as JvmObject;
     expect(clsConstant.get() === testClass).toBe(true);
-    expect(clsObj.getClass().getClassname()).toBe("java/lang/Class");
-    expect(clsObj.getNativeField("classRef") === testClass).toBe(true);
+    expect(clsObj.getClass().getName()).toBe('java/lang/Class');
+    expect(clsObj.getNativeField('classRef') === testClass).toBe(true);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(2);
   });
 });
 
-describe("LdcW", () => {
-  test("reads int from constant pool and pushes to stack", () => {
+describe('LdcW', () => {
+  test('reads int from constant pool and pushes to stack', () => {
     // use custom class
     thread.returnStackFrame();
     const intConstant = {
@@ -499,9 +499,9 @@ describe("LdcW", () => {
     };
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return intConstant;
         },
@@ -509,15 +509,15 @@ describe("LdcW", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC_W);
     code.setUint16(1, constIdx);
@@ -530,7 +530,7 @@ describe("LdcW", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("reads float from constant pool and pushes to stack", () => {
+  test('reads float from constant pool and pushes to stack', () => {
     thread.returnStackFrame();
     const floatConstant = {
       tag: CONSTANT_TAG.Float,
@@ -538,9 +538,9 @@ describe("LdcW", () => {
     };
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return floatConstant;
         },
@@ -548,15 +548,15 @@ describe("LdcW", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC_W);
     code.setUint16(1, constIdx);
@@ -569,18 +569,18 @@ describe("LdcW", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("reads string from constant pool and pushes to stack", () => {
+  test('reads string from constant pool and pushes to stack', () => {
     thread.returnStackFrame();
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
-          value: "hello world",
+          value: 'hello world',
           length: 11,
         }),
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.String,
@@ -591,8 +591,8 @@ describe("LdcW", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -603,7 +603,7 @@ describe("LdcW", () => {
     const cstr = customClass.getConstant(constIdx) as ConstantString;
     const str = (cstr.resolve(thread, testLoader) as SuccessResult<JvmObject>)
       .result;
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC_W);
     code.setUint16(1, constIdx);
@@ -616,18 +616,18 @@ describe("LdcW", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("initializes uninitialized string from constant pool", () => {
+  test('initializes uninitialized string from constant pool', () => {
     thread.returnStackFrame();
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
         () => ({
           tag: CONSTANT_TAG.Utf8,
-          value: "hello world",
+          value: 'hello world',
           length: 11,
         }),
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return {
             tag: CONSTANT_TAG.String,
@@ -638,8 +638,8 @@ describe("LdcW", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
@@ -648,7 +648,7 @@ describe("LdcW", () => {
     });
 
     const cstr = customClass.getConstant(constIdx) as ConstantString;
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC_W);
     code.setUint16(1, constIdx);
@@ -662,19 +662,19 @@ describe("LdcW", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("reads classref from constant pool and pushes to stack", () => {
+  test('reads classref from constant pool and pushes to stack', () => {
     thread.returnStackFrame();
     let classConstant;
     const strContent = {
       tag: CONSTANT_TAG.Utf8,
-      value: "Test",
+      value: 'Test',
     } as ConstantUtf8Info;
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
         () => strContent,
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           classConstant = {
             tag: CONSTANT_TAG.Class,
@@ -687,15 +687,15 @@ describe("LdcW", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC_W);
     code.setUint16(1, constIdx);
@@ -703,19 +703,19 @@ describe("LdcW", () => {
 
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.operandStack.length).toBe(1);
-    expect(lastFrame.operandStack[0].getClass().getClassname()).toBe(
-      "java/lang/Class"
+    expect(lastFrame.operandStack[0].getClass().getName()).toBe(
+      'java/lang/Class'
     );
     expect(
-      lastFrame.operandStack[0].getNativeField("classRef") === testClass
+      lastFrame.operandStack[0].getNativeField('classRef') === testClass
     ).toBe(true);
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(3);
   });
 });
 
-describe("Ldc2W", () => {
-  test("reads long from constant pool and pushes to stack", () => {
+describe('Ldc2W', () => {
+  test('reads long from constant pool and pushes to stack', () => {
     // use custom class
     thread.returnStackFrame();
     const longConstant = {
@@ -724,9 +724,9 @@ describe("Ldc2W", () => {
     };
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return longConstant;
         },
@@ -734,15 +734,15 @@ describe("Ldc2W", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC2_W);
     code.setUint16(1, constIdx);
@@ -755,7 +755,7 @@ describe("Ldc2W", () => {
     expect(thread.getPC()).toBe(3);
   });
 
-  test("reads double from constant pool and pushes to stack", () => {
+  test('reads double from constant pool and pushes to stack', () => {
     // use custom class
     thread.returnStackFrame();
     const doubleConstant = {
@@ -764,9 +764,9 @@ describe("Ldc2W", () => {
     };
     let constIdx = 0;
     const customClass = testLoader.createClass({
-      className: "custom",
+      className: 'custom',
       constants: [
-        (cPool) => {
+        cPool => {
           constIdx = cPool.length;
           return doubleConstant;
         },
@@ -774,15 +774,15 @@ describe("Ldc2W", () => {
       methods: [
         {
           accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
-          name: "test0",
-          descriptor: "()V",
+          name: 'test0',
+          descriptor: '()V',
           attributes: [],
           code: code,
         },
       ],
       loader: testLoader,
     });
-    const method = customClass.getMethod("test0()V") as Method;
+    const method = customClass.getMethod('test0()V') as Method;
     thread.invokeStackFrame(new JavaStackFrame(customClass, method, 0, []));
     code.setUint8(0, OPCODE.LDC2_W);
     code.setUint16(1, constIdx);
