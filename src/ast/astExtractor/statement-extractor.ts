@@ -3,7 +3,6 @@ import {
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
   BlockCtx,
-  BlockStatementCtx,
   BlockStatementsCtx,
   ExpressionCtx,
   FqnOrRefTypeCtx,
@@ -21,6 +20,7 @@ import {
   StatementWithoutTrailingSubstatementCtx,
   TernaryExpressionCtx,
   UnaryExpressionCtx,
+  WhileStatementCtx,
 } from "java-parser";
 
 import {
@@ -31,9 +31,11 @@ import {
   Statement,
   StatementExpression,
   Void,
+  // WhileStatement,
 } from "../types/blocks-and-statements";
 import { ExpressionExtractor } from "./expression-extractor";
 import { Location } from "../types/ast";
+import { BlockStatementExtractor } from "./block-statement-extractor";
 
 export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   private stmtExp: StatementExpression;
@@ -47,6 +49,8 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   extract(cst: StatementCstNode): Statement {
     if (cst.children.ifStatement) {
       return this.visit(cst.children.ifStatement);
+    } else if (cst.children.whileStatement) {
+      return this.visit(cst.children.whileStatement);
     } else {
       return this.visit(cst.children.statementWithoutTrailingSubstatement!);
     }
@@ -55,6 +59,7 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   statementWithoutTrailingSubstatement(
     ctx: StatementWithoutTrailingSubstatementCtx
   ): Statement {
+    console.log(ctx);
     if (ctx.expressionStatement) {
       this.visit(ctx.expressionStatement);
       return {
@@ -64,6 +69,14 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
       };
     } else if (ctx.block) {
       return this.visit(ctx.block);
+    } else if (ctx.breakStatement) {
+      return {
+        kind: "BreakStatement",
+      };
+    } else if (ctx.continueStatement) {
+      return {
+        kind: "ContinueStatement",
+      };
     } /* if (ctx.returnStatement) */ else {
       this.visit(ctx.returnStatement!);
       return {
@@ -249,14 +262,20 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   blockStatements(ctx: BlockStatementsCtx): Statement {
     return {
       kind: "Block",
-      blockStatements: ctx.blockStatement.map((blockStatement) =>
-        this.visit(blockStatement)
-      ),
+      blockStatements: ctx.blockStatement.map((blockStatement) => {
+        const blockStatementExtrator = new BlockStatementExtractor();
+        return blockStatementExtrator.extract(blockStatement);
+      }),
     };
   }
 
-  blockStatement(ctx: BlockStatementCtx): Statement {
-    if (ctx.statement) return this.extract(ctx.statement[0]);
-    return { kind: "EmptyStatement" };
+  whileStatement(ctx: WhileStatementCtx) {
+    const expressionExtractor = new ExpressionExtractor();
+    const statementExtractor = new StatementExtractor();
+    return {
+      kind: "WhileStatement",
+      condition: expressionExtractor.extract(ctx.expression[0]),
+      body: statementExtractor.extract(ctx.statement[0]),
+    };
   }
 }

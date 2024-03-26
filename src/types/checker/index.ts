@@ -136,6 +136,9 @@ export const check = (
       });
       return newResult(null, errors);
     }
+    case "BreakStatement": {
+      return newResult(null);
+    }
     case "CompilationUnit": {
       const { blockStatements } = (
         node.topLevelClassOrInterfaceDeclarations[0]
@@ -146,6 +149,9 @@ export const check = (
         return check(blockStatement, newEnvironmentFrame).errors;
       });
       return { currentType: null, errors };
+    }
+    case "ContinueStatement": {
+      return newResult(null);
     }
     case "EmptyStatement": {
       return newResult(null);
@@ -298,7 +304,7 @@ export const check = (
           );
       }
     }
-    case "TernaryExpression":
+    case "TernaryExpression": {
       const conditionCheck = check(node.condition, environmentFrame);
       if (conditionCheck.errors.length > 0) return conditionCheck;
       if (!conditionCheck.currentType)
@@ -323,6 +329,20 @@ export const check = (
       if (alternateCheck.currentType.canBeAssigned(consequentCheck.currentType))
         return newResult(alternateCheck.currentType);
       return newResult(null, [new BadOperandTypesError()]);
+    }
+    case "WhileStatement": {
+      const conditionCheck = check(node.condition, environmentFrame);
+      if (conditionCheck.errors.length > 0) return conditionCheck;
+      if (!conditionCheck.currentType)
+        throw new Error("Type missing in ternary expresion condition.");
+      const booleanType = new Boolean();
+      if (!booleanType.canBeAssigned(conditionCheck.currentType))
+        return newResult(null, [new BadOperandTypesError()]);
+      const newEnvironmentFrame = createFrame({}, environmentFrame);
+      const bodyCheck = check(node.body, newEnvironmentFrame);
+      if (bodyCheck.errors.length > 0) return bodyCheck;
+      return newResult(null);
+    }
     default:
       throw new Error(
         `Check is not implemented for this type of node ${node.kind}.`
