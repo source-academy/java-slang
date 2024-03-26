@@ -1,30 +1,27 @@
+import { BaseJavaCstVisitorWithDefaults, CstNode, TypeDeclarationCtx } from "java-parser";
+
+import { NormalClassDeclaration } from "../types/classes";
 import { AST } from "../types/packages-and-modules";
-import { BaseJavaCstVisitorWithDefaults } from "java-parser";
 import { ClassExtractor } from "./class-extractor";
-import { CstNode, TypeDeclarationCtx } from "java-parser";
 
 export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
-  private ast: AST;
-
-  constructor() {
-    super();
-    this.ast = {
-      kind: "CompilationUnit",
-      topLevelClassOrInterfaceDeclarations: [],
-    };
-  }
+  private topLevelClassOrInterfaceDeclarations: NormalClassDeclaration[] = [];
 
   extract(cst: CstNode): AST {
-    this.ast.topLevelClassOrInterfaceDeclarations = [];
     this.visit(cst);
-    return this.ast;
+    return {
+      kind: "CompilationUnit",
+      importDeclarations: [],
+      topLevelClassOrInterfaceDeclarations: this.topLevelClassOrInterfaceDeclarations,
+      location: cst.location,
+    }
   }
 
-  typeDeclaration(ctx: TypeDeclarationCtx, param?: any) {
+  typeDeclaration(ctx: TypeDeclarationCtx) {
     if (ctx.classDeclaration) {
       ctx.classDeclaration.forEach((x) => {
         const classExtractor = new ClassExtractor();
-        this.ast.topLevelClassOrInterfaceDeclarations.push(
+        this.topLevelClassOrInterfaceDeclarations.push(
           classExtractor.extract(x)
         );
       });

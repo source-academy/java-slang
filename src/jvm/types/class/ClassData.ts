@@ -2,7 +2,11 @@ import { ACCESS_FLAGS, ClassFile } from "../../../ClassFile/types";
 import { AttributeInfo } from "../../../ClassFile/types/attributes";
 import AbstractClassLoader from "../../ClassLoader/AbstractClassLoader";
 import { ConstantPool } from "../../constant-pool";
-import { CLASS_STATUS, CLASS_TYPE, ThreadStatus } from "../../constants";
+import {
+  CLASS_STATUS,
+  CLASS_TYPE,
+  ThreadStatus,
+} from "../../constants";
 import { InternalStackFrame } from "../../stackframe";
 import Thread from "../../thread";
 import { primitiveNameToType, attrInfo2Interface } from "../../utils";
@@ -50,7 +54,7 @@ class ClassLock {
   }
 
   release() {
-    this.onRelease.forEach((cb) => cb());
+    this.onRelease.forEach(cb => cb());
     this.onRelease = [];
     this.owner = undefined;
   }
@@ -88,7 +92,7 @@ export abstract class ClassData {
     this.accessFlags = accessFlags;
     this.type = type;
     this.thisClass = thisClass;
-    this.packageName = thisClass.split("/").slice(0, -1).join("/");
+    this.packageName = thisClass.split('/').slice(0, -1).join('/');
     this.constantPool = new ConstantPool(this, []);
   }
 
@@ -174,7 +178,7 @@ export abstract class ClassData {
       res = this.superClass.getInstanceFields();
     }
 
-    this.interfaces?.forEach((constantInterfaceCls) => {
+    this.interfaces?.forEach(constantInterfaceCls => {
       const fields = constantInterfaceCls.getInstanceFields();
       for (const [fieldName, fieldRef] of Object.entries(fields)) {
         res[fieldName] = fieldRef;
@@ -219,14 +223,14 @@ export abstract class ClassData {
 
     // If C declares exactly one method with the name specified by the method reference,
     // and the declaration is a signature polymorphic method (§2.9.3), then method lookup succeeds.
-    if (this.thisClass === "java/lang/invoke/MethodHandle") {
+    if (this.thisClass === 'java/lang/invoke/MethodHandle') {
       const polyMethod =
-        this.methods[name + "([Ljava/lang/Object;)Ljava/lang/Object;"];
+        this.methods[name + '([Ljava/lang/Object;)Ljava/lang/Object;'];
       if (
         polyMethod &&
         polyMethod.checkVarargs() &&
         polyMethod.checkNative() &&
-        Object.keys(this.methods).filter((x) => x.startsWith(name + "("))
+        Object.keys(this.methods).filter(x => x.startsWith(name + '('))
           .length === 1
       ) {
         return polyMethod;
@@ -313,7 +317,7 @@ export abstract class ClassData {
     // If method lookup fails, method resolution throws a NoSuchMethodError
     return {
       status: ResultType.ERROR,
-      exceptionCls: "java/lang/NoSuchMethodError",
+      exceptionCls: 'java/lang/NoSuchMethodError',
       msg: name + descriptor,
     };
   }
@@ -341,7 +345,7 @@ export abstract class ClassData {
   }
 
   private _getSignaturePolyMethod(signature: string): Method | null {
-    if (this.thisClass !== "java/lang/invoke/MethodHandle") {
+    if (this.thisClass !== 'java/lang/invoke/MethodHandle') {
       return null;
     }
 
@@ -419,8 +423,8 @@ export abstract class ClassData {
         if (res) {
           return {
             status: ResultType.ERROR,
-            exceptionCls: "java/lang/IncompatibleClassChangeError",
-            msg: "",
+            exceptionCls: 'java/lang/IncompatibleClassChangeError',
+            msg: '',
           };
         }
         res = method;
@@ -432,8 +436,8 @@ export abstract class ClassData {
     }
     return {
       status: ResultType.ERROR,
-      exceptionCls: "java/lang/AbstractMethodError",
-      msg: "",
+      exceptionCls: 'java/lang/AbstractMethodError',
+      msg: '',
     };
   }
 
@@ -448,7 +452,7 @@ export abstract class ClassData {
     let polySignature;
     if (checkSigPoly) {
       polySignature = `${
-        signature.split("(")[0]
+        signature.split('(')[0]
       }([Ljava/lang/Object;)Ljava/lang/Object;`;
     }
     // If C contains a declaration for an instance method m that overrides
@@ -463,16 +467,16 @@ export abstract class ClassData {
       if (checkInterface && !methodRef.checkPublic()) {
         return {
           status: ResultType.ERROR,
-          exceptionCls: "java/lang/IllegalAccessError",
-          msg: "",
+          exceptionCls: 'java/lang/IllegalAccessError',
+          msg: '',
         };
       }
 
       if (!acceptAbstract && methodRef.checkAbstract()) {
         return {
           status: ResultType.ERROR,
-          exceptionCls: "java/lang/AbstractMethodError",
-          msg: "",
+          exceptionCls: 'java/lang/AbstractMethodError',
+          msg: '',
         };
       }
       return { status: ResultType.SUCCESS, result: methodRef };
@@ -496,6 +500,9 @@ export abstract class ClassData {
     return this.methods;
   }
 
+  /**
+   * Gets the method at the given the slot number.
+   */
   getMethodFromSlot(slot: number): Method | null {
     for (const method of Object.values(this.methods)) {
       if (method.getSlot() === slot) {
@@ -506,6 +513,9 @@ export abstract class ClassData {
     return null;
   }
 
+  /**
+   * Gets the field at the given slot number.
+   */
   getFieldFromSlot(slot: number): Field | null {
     for (const field of Object.values(this.fields)) {
       if (field.getSlot() === slot) {
@@ -516,6 +526,9 @@ export abstract class ClassData {
     return null;
   }
 
+  /**
+   * Gets the index of the field in the vmindex array
+   */
   getFieldVmIndex(field: Field): number {
     const fieldArr = this.vmIndexFields
       ? this.vmIndexFields
@@ -523,6 +536,9 @@ export abstract class ClassData {
     return fieldArr.indexOf(field);
   }
 
+  /**
+   * Gets the field at the given vmindex number.
+   */
   getFieldFromVmIndex(index: number): Field | null {
     const fieldArr = this.vmIndexFields
       ? this.vmIndexFields
@@ -530,6 +546,9 @@ export abstract class ClassData {
     return fieldArr[index] ?? null;
   }
 
+  /**
+   * Looks up a field in the current class and its superclasses/interfaces.
+   */
   lookupField(fieldName: string): Field | null {
     if (this.fields[fieldName]) {
       return this.fields[fieldName];
@@ -553,11 +572,18 @@ export abstract class ClassData {
     return superClass.lookupField(fieldName);
   }
 
+  /**
+   * Gets the constant at the given index in the constant pool.
+   */
   getConstant(constantIndex: number): Constant {
     const constItem = this.constantPool.get(constantIndex);
     return constItem;
   }
 
+  /**
+   * Gets the index of the ConstantMethodRef referencing the given method in the constant pool.
+   * @todo used by vmtargetbridge; do we really need it since we use nestmate test to bypass private access?
+   */
   getMethodConstantIndex(method: Method): number {
     const isInterface = this.checkInterface();
     for (let i = 1; i < this.constantPool.size(); i++) {
@@ -584,12 +610,16 @@ export abstract class ClassData {
     return -1;
   }
 
+  /**
+   * Inserts a constant into the constant pool and returns the index.
+   * @todo used by vmtargetbridge; do we really need it since we use nestmate test to bypass private access?
+   */
   insertConstant(con: Constant): number {
     return this.constantPool.insert(con);
   }
 
   /**
-   * Getters
+   * Gets the classloader that loaded the current class.
    */
   getLoader(): AbstractClassLoader {
     return this.loader;
@@ -611,7 +641,7 @@ export abstract class ClassData {
     this.vmIndexFields = this.superClass
       ? [...this.superClass._fillVmIndexFieldArr()]
       : [];
-    this.interfaces.forEach((interfaceCls) => {
+    this.interfaces.forEach(interfaceCls => {
       this.vmIndexFields?.push(...interfaceCls._fillVmIndexFieldArr());
     });
     this.vmIndexFields.push(...Object.values(this.fields));
@@ -634,19 +664,22 @@ export abstract class ClassData {
     return { status: ResultType.SUCCESS, result: this };
   }
 
+  /**
+   * Gets the java/lang/Class object for the current class.
+   */
   getJavaObject(): JvmObject {
     if (!this.javaClassObject) {
       // We assume that java/lang/Class has been loaded at JVM initialization
       const clsCls = (
-        this.loader.getClass("java/lang/Class") as SuccessResult<ClassData>
+        this.loader.getClass('java/lang/Class') as SuccessResult<ClassData>
       ).result;
 
       this.javaClassObject = clsCls.instantiate();
-      this.javaClassObject.putNativeField("classRef", this);
+      this.javaClassObject.putNativeField('classRef', this);
       this.javaClassObject._putField(
-        "classLoader",
-        "Ljava/lang/ClassLoader;",
-        "java/lang/Class",
+        'classLoader',
+        'Ljava/lang/ClassLoader;',
+        'java/lang/Class',
         this.loader.getJavaObject()
       );
     }
@@ -654,10 +687,19 @@ export abstract class ClassData {
     return this.javaClassObject;
   }
 
+  /**
+   * Gets the protection domain associated with this class.
+   * Returns null if absent.
+   * @todo not implemented.
+   */
   getProtectionDomain(): JvmObject | null {
     return null;
   }
 
+  /**
+   * Gets the access flags for the current class.
+   * @returns bitmask of the access flags.
+   */
   getAccessFlags(): number {
     return this.accessFlags;
   }
@@ -681,14 +723,26 @@ export abstract class ClassData {
    */
   abstract checkCast(castTo: ClassData): boolean;
 
+  /**
+   * Creates a new instance of the class.
+   */
   instantiate(): JvmObject {
     return new JvmObject(this);
   }
 
-  getAttribute(key: string) {
-    return this.attributes[key];
+  /**
+   * Gets the attribute of the attribute name.
+   * @param name attribute name, e.g. InnerClasses
+   * @returns Attribute, if any.
+   */
+  getAttribute(name: string) {
+    return this.attributes[name];
   }
 
+  /**
+   * Gets the bootstrap method at the specified index in the
+   * BootstrapMethods attribute array.
+   */
   getBootstrapMethod(methodIndex: number): BootstrapMethod | null {
     return null;
   }
@@ -760,7 +814,7 @@ export class ReferenceClassData extends ClassData {
     }
 
     // interfaces
-    classfile.interfaces.forEach((interfaceIndex) => {
+    classfile.interfaces.forEach(interfaceIndex => {
       const interfaceResolution = (
         this.constantPool.get(interfaceIndex) as ConstantClass
       ).resolve();
@@ -793,7 +847,7 @@ export class ReferenceClassData extends ClassData {
     this.methods = {};
     classfile.methods.forEach((methodInfo, index) => {
       const methodAttributes: { [attributeName: string]: AttributeInfo[] } = {};
-      methodInfo.attributes.forEach((attr) => {
+      methodInfo.attributes.forEach(attr => {
         const attrName = (
           this.constantPool.get(attr.attributeNameIndex) as ConstantUtf8
         ).get();
@@ -812,9 +866,9 @@ export class ReferenceClassData extends ClassData {
       this.methods[method.getName() + method.getDescriptor()] = method;
     });
 
-    if (this.attributes["BootstrapMethods"]) {
+    if (this.attributes['BootstrapMethods']) {
       this.bootstrapMethods = (
-        this.attributes["BootstrapMethods"] as BootstrapMethods
+        this.attributes['BootstrapMethods'] as BootstrapMethods
       ).bootstrapMethods;
     }
   }
@@ -835,7 +889,7 @@ export class ReferenceClassData extends ClassData {
 
     if (this.status === CLASS_STATUS.INITIALIZING) {
       if (!this.classLock) {
-        throw new Error("Class lock not set during initialization");
+        throw new Error('Class lock not set during initialization');
       }
 
       onDefer && onDefer();
@@ -868,10 +922,10 @@ export class ReferenceClassData extends ClassData {
     this.classLock.lock(thread, onInitialized);
 
     // has static initializer
-    if (this.methods["<clinit>()V"]) {
+    if (this.methods['<clinit>()V']) {
       onDefer && onDefer();
       thread.invokeStackFrame(
-        new InternalStackFrame(this, this.methods["<clinit>()V"], 0, [], () => {
+        new InternalStackFrame(this, this.methods['<clinit>()V'], 0, [], () => {
           this.status = CLASS_STATUS.INITIALIZED;
           this.classLock?.release();
         })
@@ -939,21 +993,21 @@ export class ArrayClassData extends ClassData {
     onError: (error: ErrorResult) => void
   ) {
     super(loader, accessFlags, CLASS_TYPE.ARRAY, thisClass);
-    this.packageName = "java/lang";
+    this.packageName = 'java/lang';
     this.componentClass = componentClass;
 
     // #region load array superclasses/interfaces
-    const objRes = loader.getClass("java/lang/Object");
+    const objRes = loader.getClass('java/lang/Object');
     if (objRes.status === ResultType.ERROR) {
       onError(objRes);
       return;
     }
-    const cloneableRes = loader.getClass("java/lang/Cloneable");
+    const cloneableRes = loader.getClass('java/lang/Cloneable');
     if (cloneableRes.status === ResultType.ERROR) {
       onError(cloneableRes);
       return;
     }
-    const serialRes = loader.getClass("java/io/Serializable");
+    const serialRes = loader.getClass('java/io/Serializable');
     if (serialRes.status === ResultType.ERROR) {
       onError(serialRes);
       return;
@@ -970,7 +1024,7 @@ export class ArrayClassData extends ClassData {
 
   getComponentClass(): ClassData {
     if (this.componentClass === undefined) {
-      throw new Error("Array item class not set");
+      throw new Error('Array item class not set');
     }
     return this.componentClass;
   }

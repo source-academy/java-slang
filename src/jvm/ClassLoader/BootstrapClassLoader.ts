@@ -27,7 +27,7 @@ export default class BootstrapClassLoader extends AbstractClassLoader {
       className,
       this,
       componentCls,
-      (e) => (error = e)
+      e => (error = e)
     );
     if (error) {
       return error;

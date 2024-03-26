@@ -1,29 +1,44 @@
 import {
+  ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
+  ClassOrInterfaceTypeToInstantiateCtx,
   ExpressionCstNode,
   ExpressionCtx,
   FqnOrRefTypeCtx,
   FqnOrRefTypePartCommonCtx,
   FqnOrRefTypePartFirstCtx,
+  FqnOrRefTypePartRestCtx,
   IToken,
   IntegerLiteralCtx,
   LiteralCtx,
+  MethodInvocationSuffixCtx,
+  NewExpressionCtx,
   ParenthesisExpressionCtx,
   PrimaryCtx,
   PrimaryPrefixCtx,
+  PrimarySuffixCtx,
   TernaryExpressionCtx,
   UnaryExpressionCstNode,
   UnaryExpressionCtx,
+  UnqualifiedClassInstanceCreationExpressionCtx,
 } from "java-parser";
 
+import { Location } from "../types/ast";
 import {
+  Assignment,
   BinaryExpression,
+  ClassInstanceCreationExpression,
   Expression,
+  ExpressionName,
+  MethodInvocation,
 } from "../types/blocks-and-statements";
 
 export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
+  private location: Location;
+
   extract(cst: ExpressionCstNode): Expression {
+    this.location = cst.location;
     return this.visit(cst);
   }
 
@@ -40,12 +55,21 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   binaryExpression(ctx: BinaryExpressionCtx) {
     if (ctx.BinaryOperator && ctx.BinaryOperator.length > 0) {
       return this.makeBinaryExpression(ctx.BinaryOperator, ctx.unaryExpression);
+    } else if (ctx.AssignmentOperator && ctx.expression) {
+      const expressionExtractor = new ExpressionExtractor();
+      return {
+        kind: "Assignment",
+        left: this.visit(ctx.unaryExpression[0]),
+        operator: "=",
+        right: expressionExtractor.extract(ctx.expression[0]),
+        location: this.location,
+      } as Assignment;
     } else {
       return this.visit(ctx.unaryExpression[0]);
     }
   }
 
-  makeBinaryExpression(
+  private makeBinaryExpression(
     operators: IToken[],
     operands: UnaryExpressionCstNode[]
   ): BinaryExpression {
@@ -63,6 +87,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       operator: processedOperators[0],
       left: processedOperands[0],
       right: processedOperands[1],
+      location: this.location,
     };
 
     for (let i = 1; i < processedOperators.length; i++) {
@@ -71,18 +96,19 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
         operator: processedOperators[i],
         left: res,
         right: processedOperands[i + 1],
+        location: this.location,
       };
     }
 
     return res;
   }
 
-  isMulOp(op: IToken) {
+  private isMulOp(op: IToken) {
     const mulOps = ["*", "/", "%"];
     return mulOps.filter((mulOp) => mulOp === op.image).length > 0;
   }
 
-  processPrecedence(operators: IToken[], operands: UnaryExpressionCstNode[]) {
+  private processPrecedence(operators: IToken[], operands: UnaryExpressionCstNode[]) {
     const newOperators = [];
     const newOperands = [];
 
@@ -96,6 +122,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
             operator: operators[i].image,
             left: accMulRes,
             right: this.visit(operands[i + 1]),
+            location: this.location,
           };
         } else {
           accMulRes = {
@@ -103,6 +130,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
             operator: operators[i].image,
             left: this.visit(operands[i]),
             right: this.visit(operands[i + 1]),
+            location: this.location,
           };
         }
       } else {
@@ -132,13 +160,39 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
         kind: "PrefixExpression",
         operator: ctx.UnaryPrefixOperator[0].image,
         expression: node,
+        location: this.location,
       };
     }
     return this.visit(ctx.primary);
   }
 
   primary(ctx: PrimaryCtx) {
-    return this.visit(ctx.primaryPrefix);
+    let primary = this.visit(ctx.primaryPrefix);
+
+    if (ctx.primarySuffix) {
+      for (const s of ctx.primarySuffix.filter(s => !s.children.methodInvocationSuffix)) {
+        primary += "." + this.visit(s);
+      }
+
+      if (ctx.primarySuffix[ctx.primarySuffix.length - 1].children.methodInvocationSuffix) {
+        return {
+          kind: "MethodInvocation",
+          identifier: primary,
+          argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
+          location: this.location,
+        } as MethodInvocation;
+      }
+    }
+
+    if (ctx.primaryPrefix[0].children.fqnOrRefType || ctx.primaryPrefix[0].children.This) {
+      return {
+        kind: "ExpressionName",
+        name: primary,
+        location: this.location,
+      } as ExpressionName;
+    }
+
+    return primary;
   }
 
   primaryPrefix(ctx: PrimaryPrefixCtx) {
@@ -148,11 +202,57 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       return this.visit(ctx.parenthesisExpression);
     } else if (ctx.fqnOrRefType) {
       return this.visit(ctx.fqnOrRefType);
+    } else if (ctx.newExpression) {
+      return this.visit(ctx.newExpression);
+    } else if (ctx.This) {
+      return ctx.This[0].image;
+    }
+  }
+  
+  primarySuffix(ctx: PrimarySuffixCtx) {
+    if (ctx.methodInvocationSuffix) {
+      return this.visit(ctx.methodInvocationSuffix);
+    } else if (ctx.Identifier) {
+      return ctx.Identifier[0].image;
     }
   }
 
+  methodInvocationSuffix(ctx: MethodInvocationSuffixCtx) {
+    return ctx.argumentList ? this.visit(ctx.argumentList) : [];
+  }
+
+  newExpression(ctx: NewExpressionCtx) {
+    if (ctx.unqualifiedClassInstanceCreationExpression) {
+      return this.visit(ctx.unqualifiedClassInstanceCreationExpression);
+    }
+  }
+
+  unqualifiedClassInstanceCreationExpression(ctx: UnqualifiedClassInstanceCreationExpressionCtx) {
+    return {
+      kind: "ClassInstanceCreationExpression",
+      identifier: this.visit(ctx.classOrInterfaceTypeToInstantiate),
+      argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : [],
+      location: this.location,
+    } as ClassInstanceCreationExpression;
+  }
+
+  classOrInterfaceTypeToInstantiate(ctx: ClassOrInterfaceTypeToInstantiateCtx) {
+    return ctx.Identifier[0].image;
+  }
+
+  argumentList(ctx: ArgumentListCtx) {
+    const expressionExtractor = new ExpressionExtractor();
+    return ctx.expression.map(e => expressionExtractor.extract(e));
+  }
+
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
-    return this.visit(ctx.fqnOrRefTypePartFirst);
+    let fqn = this.visit(ctx.fqnOrRefTypePartFirst);
+    if (ctx.fqnOrRefTypePartRest) {
+      for (const r of ctx.fqnOrRefTypePartRest) {
+        fqn += "." + this.visit(r);
+      }
+    }
+    return fqn;
   }
 
   fqnOrRefTypePartFirst(ctx: FqnOrRefTypePartFirstCtx) {
@@ -160,10 +260,11 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   fqnOrRefTypePartCommon(ctx: FqnOrRefTypePartCommonCtx) {
-    return ctx.Identifier && {
-      kind: "ExpressionName",
-      name: ctx.Identifier[0].image,
-    };
+    return ctx.Identifier && ctx.Identifier[0].image;
+  }
+
+  fqnOrRefTypePartRest(ctx: FqnOrRefTypePartRestCtx) {
+    return this.visit(ctx.fqnOrRefTypePartCommon);
   }
 
   literal(ctx: LiteralCtx) {
@@ -176,12 +277,17 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
           kind: "StringLiteral",
           value: ctx.StringLiteral[0].image,
         },
+        location: this.location,
       };
     }
   }
 
   integerLiteral(ctx: IntegerLiteralCtx) {
-    const literal = { kind: "Literal", literalType: {} };
+    const literal = {
+      kind: "Literal",
+      literalType: {},
+      location: this.location,
+    };
     if (ctx.DecimalLiteral) {
       literal.literalType = {
         kind: "DecimalIntegerLiteral",

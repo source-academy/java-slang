@@ -10,11 +10,13 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
         }
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -48,18 +50,24 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
                             kind: "DecimalIntegerLiteral",
                             value: "1",
                           },
+                          location: expect.anything(),
                         },
                       },
                     ],
+                    location: expect.anything(),
                   },
                 ],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
@@ -72,11 +80,13 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
         }
       }
     `;
-  
+
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -106,15 +116,20 @@ describe("extract LocalVariableDeclarationStatement correctly", () => {
                         variableDeclaratorId: "x",
                       },
                     ],
+                    location: expect.anything(),
                   },
                 ],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
-  
+
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });

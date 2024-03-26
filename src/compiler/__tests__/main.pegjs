@@ -76,13 +76,23 @@ DecimalNumeral
     }
   }
 
-FloatingPointLiteral = HexadecimalFloatingPointLiteral / DecimalFloatingPointLiteral
+FloatingPointLiteral 
+  = pre:[+\-]? val:(HexadecimalFloatingPointLiteral / DecimalFloatingPointLiteral) {
+    val.value = (pre ?? "") + val.value;
+    return val;
+  }
 
 DecimalFloatingPointLiteral
-   = Digits '.' Digits?  ExponentPart? [fFdD]?
+   = value:
+   $(Digits '.' Digits?  ExponentPart? [fFdD]?
     / '.' Digits ExponentPart? [fFdD]?
     / Digits ExponentPart [fFdD]?
-    / Digits ExponentPart? [fFdD]
+    / Digits ExponentPart? [fFdD]) {
+      return {
+        kind: "DecimalFloatingPointLiteral",
+        value: value,
+      }
+    }
 
 ExponentPart = [eE] [+\-]? Digits
 
@@ -406,14 +416,13 @@ PackageName
   = Name
 
 TypeName
-  = TypeIdentifier
-  / Identifier dot TypeName
+  = Name
 
 ExpressionName
-  = n:Name {
+  = t:(this dot)? n:Name {
     return {
       kind: "ExpressionName",
-      name: n
+      name: (t ? "this." : "") + n,
     }
   }
 
@@ -440,9 +449,10 @@ CompilationUnit
   = _ @OrdinaryCompilationUnit
 
 OrdinaryCompilationUnit
-  = PackageDeclaration? ImportDeclaration* tld:TopLevelClassOrInterfaceDeclaration* {
+  = PackageDeclaration? ids:ImportDeclaration* tld:TopLevelClassOrInterfaceDeclaration* {
     return {
       kind: "OrdinaryCompilationUnit",
+      importDeclarations: ids,
       topLevelClassOrInterfaceDeclarations: tld,
     }
   }
@@ -451,7 +461,19 @@ PackageDeclaration
   = TO_BE_ADDED
 
 ImportDeclaration
-  = TO_BE_ADDED
+  = i:(SingleTypeImportDeclaration
+  / TypeImportOnDemandDeclaration) {
+    return {
+      isStatic: false,
+      identifier: i,
+    }
+  }
+
+SingleTypeImportDeclaration
+  = import @TypeName semicolon
+
+TypeImportOnDemandDeclaration
+  = import @$(PackageOrTypeName dot mul) semicolon
 
 TopLevelClassOrInterfaceDeclaration
   = ClassDeclaration
@@ -513,9 +535,9 @@ ClassBody
 
 ClassBodyDeclaration
   = ClassMemberDeclaration
+  / ConstructorDeclaration
 //  / InstanceInitializer
 //  / StaticInitializer
-//  / ConstructorDeclaration
 
 ClassMemberDeclaration
   = FieldDeclaration
@@ -525,7 +547,14 @@ ClassMemberDeclaration
   / semicolon
 
 FieldDeclaration
-  = FieldModifier* UnannType VariableDeclaratorList semicolon
+  = fm:FieldModifier* ut:UnannType vdl:VariableDeclaratorList semicolon {
+    return {
+      kind: "FieldDeclaration",
+      fieldModifier: fm,
+      fieldType: ut,
+      variableDeclaratorList: vdl,
+    }
+  }
 
 FieldModifier
   = public
@@ -550,6 +579,7 @@ VariableDeclarator
 VariableDeclaratorId
   = id:Identifier d:Dims? {
     return {
+      kind: "VariableDeclarator",
       variableDeclaratorId: id,
       dims: d ?? "",
     }
@@ -625,6 +655,39 @@ VariableModifier
 Throws
   = throw TO_BE_ADDED
 
+ConstructorDeclaration
+  = cm:ConstructorModifier* cd:ConstructorDeclarator Throws? cb:ConstructorBody {
+    return {
+      kind: "ConstructorDeclaration",
+      constructorModifier: cm,
+      constructorDeclarator: cd,
+      constructorBody: cb,
+    }
+  }
+
+ConstructorModifier
+  = public
+  / protected
+  / private
+
+ConstructorDeclarator
+  = TypeParameters? id:TypeIdentifier lparen (ReceiverParameter comma)? fpl:FormalParameterList? rparen {
+   return {
+      identifier: id,
+      formalParameterList: fpl ?? [],
+    }
+  }
+
+ConstructorBody
+  = lcurly ExplicitConstructorInvocation? bs:(@BlockStatement*) rcurly {
+    return {
+      kind: "Block",
+      blockStatements: bs,
+    }
+  }
+
+ExplicitConstructorInvocation
+  = ((Primary / ExpressionName) dot)? TypeArguments? (this / super) lparen ArgumentList? rparen
 
 
 /*
@@ -709,10 +772,18 @@ DoStatement
   }
 
 BreakStatement
-  = break semicolon
+  = break semicolon {
+    return {
+      kind: "BreakStatement",
+    }
+  }
 
 ContinueStatement
-  = continue semicolon
+  = continue semicolon {
+    return {
+      kind: "ContinueStatement",
+    }
+  }
 
 YieldStatement
   = yield Expression semicolon
@@ -724,7 +795,7 @@ ReturnStatement
     }
     return {
       kind: "ReturnStatement",
-      expression: expr,
+      exp: expr,
     }
   }
 
@@ -785,10 +856,10 @@ ExpressionStatement
 
 StatementExpression
   = Assignment
+  / ClassInstanceCreationExpression
   / &(increment / decrement) @UnaryExpression
   / !PlusMinus @UnaryExpression
   / MethodInvocation
-//  / ClassInstanceCreationExpression
 
 
 /*
@@ -796,12 +867,58 @@ StatementExpression
 */
 Primary
   = lparen @Expression rparen
+  / ClassInstanceCreationExpression
   / MethodInvocation
+  / ArrayAccess
   / Literal 
+
+ClassInstanceCreationExpression
+  = u:UnqualifiedClassInstanceCreationExpression {
+    u.kind = "ClassInstanceCreationExpression";
+    return u;
+  }
+
+UnqualifiedClassInstanceCreationExpression
+  = new TypeArguments? c:ClassOrInterfaceTypeToInstantiate lparen al:ArgumentList? rparen ClassBody? {
+    return {
+      kind: "ClassInstanceCreationExpression",
+      identifier: c.identifier,
+      argumentList: al ?? [],
+    }
+  }
+
+ClassOrInterfaceTypeToInstantiate
+  = id:Name TypeArgumentsOrDiamond? {
+    return {
+      "kind": "ClassOrInterfaceTypeToInstantiate",
+	    "identifier": id,
+    }
+  }
+
+TypeArgumentsOrDiamond
+  = lt gt
+  / TypeArguments
+
+FieldAccess
+  = id:(Identifier / this) dot n:Name {
+    return {
+      kind: "FieldAccess",
+      name: id + '.' +  n,
+    }
+  }
+
+ArrayAccess
+  = en:ExpressionName lsquare expr:Expression rsquare {
+    return {
+      kind: "ArrayAccess",
+      primary: en,
+      expression: expr,
+    }
+  }
 
 MethodInvocation
   = n:Name lparen al:ArgumentList? rparen { 
-    return { kind: "MethodInvocation", identifier: n, argumentList: al ?? [] }
+    return { kind: "MethodInvocation", identifier:  n, argumentList: al ?? [] }
   }
 
 ArgumentList
@@ -852,7 +969,8 @@ Assignment
   }
 
 LeftHandSide
-  = ExpressionName
+  = ArrayAccess
+  / ExpressionName
 
 AssignmentOperator
   = assign

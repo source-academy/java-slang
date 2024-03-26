@@ -27,7 +27,7 @@ export class JNI {
   }
 
   /**
-   * Registers a lambda function as a native method
+   * Registers a lambda function as a native method.
    * @param className
    * @param methodName
    * @param method
@@ -46,7 +46,8 @@ export class JNI {
   }
 
   /**
-   * Gets the lambda function for a native method
+   * Gets the lambda function for a native method.
+   * Sets the thread to WAITING until the method is loaded if it is not already.
    * @param thread
    * @param className
    * @param methodName
@@ -67,9 +68,9 @@ export class JNI {
         this.classes[className].blocking = [thread];
         thread.setStatus(ThreadStatus.WAITING);
         if (this.classes[className].loader) {
-          this.classes[className].loader?.((lib) => {
+          this.classes[className].loader?.(lib => {
             this.classes[className].methods = lib;
-            this.classes[className].blocking?.forEach((thread) => {
+            this.classes[className].blocking?.forEach(thread => {
               thread.setStatus(ThreadStatus.RUNNABLE);
             });
             this.classes[className].blocking = [];
@@ -77,16 +78,16 @@ export class JNI {
         } else {
           this.system
             .readFile(
-              this.classPath ? this.classPath + "/" + className : className
+              this.classPath ? this.classPath + '/' + className : className
             )
-            .then((lib) => {
+            .then(lib => {
               this.classes[className].methods = lib.default;
             })
-            .catch((e) => {
+            .catch(e => {
               this.classes[className].methods = {};
             })
             .finally(() => {
-              this.classes[className].blocking?.forEach((thread) => {
+              this.classes[className].blocking?.forEach(thread => {
                 thread.setStatus(ThreadStatus.RUNNABLE);
               });
               this.classes[className].blocking = [];
@@ -103,7 +104,7 @@ export class JNI {
     if (!this.classes?.[className]?.methods?.[methodName]) {
       return {
         status: ResultType.ERROR,
-        exceptionCls: "java/lang/UnsatisfiedLinkError",
+        exceptionCls: 'java/lang/UnsatisfiedLinkError',
         msg: `${className}.${methodName} implementation not found`,
       };
     }

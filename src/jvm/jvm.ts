@@ -4,7 +4,7 @@ import { ThreadStatus } from "./constants";
 import { JNI, Lib } from "./jni";
 import { InternalStackFrame, JavaStackFrame } from "./stackframe";
 import Thread from "./thread";
-import { AbstractThreadPool, RoundRobinThreadPool } from "./threadpool";
+import { RoundRobinThreadPool, ThreadPool } from "./threadpool";
 import { ResultType } from "./types/Result";
 import { ReferenceClassData } from "./types/class/ClassData";
 import { JvmObject } from "./types/reference/Object";
@@ -24,7 +24,7 @@ export default class JVM {
   private applicationClassLoader: ApplicationClassLoader;
   private nativeSystem: AbstractSystem;
   private jni: JNI;
-  private threadpool: AbstractThreadPool;
+  private threadpool: ThreadPool;
 
   private internedStrings: { [key: string]: JvmObject } = {};
   private unsafeHeap: UnsafeHeap = new UnsafeHeap();
@@ -39,9 +39,9 @@ export default class JVM {
     }
   ) {
     this.jvmOptions = {
-      javaClassPath: "stdlib",
-      userDir: "example",
-      nativesPath: "src/stdlib",
+      javaClassPath: 'stdlib',
+      userDir: 'example',
+      nativesPath: 'src/stdlib',
       ...options,
     };
     this.nativeSystem = nativeSystem;
@@ -64,15 +64,15 @@ export default class JVM {
 
   run(className: string, onFinish?: () => void) {
     // #region load classes
-    const objRes = this.bootstrapClassLoader.getClass("java/lang/Object");
-    const tRes = this.bootstrapClassLoader.getClass("java/lang/Thread");
-    const sysRes = this.bootstrapClassLoader.getClass("java/lang/System");
-    const clsRes = this.bootstrapClassLoader.getClass("java/lang/Class");
+    const objRes = this.bootstrapClassLoader.getClass('java/lang/Object');
+    const tRes = this.bootstrapClassLoader.getClass('java/lang/Thread');
+    const sysRes = this.bootstrapClassLoader.getClass('java/lang/System');
+    const clsRes = this.bootstrapClassLoader.getClass('java/lang/Class');
     const loaderRes = this.bootstrapClassLoader.getClass(
-      "java/lang/ClassLoader"
+      'java/lang/ClassLoader'
     );
-    const tgRes = this.bootstrapClassLoader.getClass("java/lang/ThreadGroup");
-    const unsafeRes = this.bootstrapClassLoader.getClass("sun/misc/Unsafe");
+    const tgRes = this.bootstrapClassLoader.getClass('java/lang/ThreadGroup');
+    const unsafeRes = this.bootstrapClassLoader.getClass('sun/misc/Unsafe');
     if (
       objRes.status === ResultType.ERROR ||
       sysRes.status === ResultType.ERROR ||
@@ -82,7 +82,7 @@ export default class JVM {
       unsafeRes.status === ResultType.ERROR ||
       loaderRes.status === ResultType.ERROR
     ) {
-      throw new Error("Initialization classes not found");
+      throw new Error('Initialization classes not found');
     }
     const sysCls = sysRes.result;
     const threadCls = tRes.result;
@@ -97,7 +97,7 @@ export default class JVM {
       this.threadpool,
       javaObject
     );
-    javaObject.putNativeField("thread", mainThread);
+    javaObject.putNativeField('thread', mainThread);
 
     const tasks: (() => void)[] = [];
 
@@ -117,10 +117,10 @@ export default class JVM {
     // #endregion
 
     // #region initialize Thread
-    const tgfr = threadCls.lookupField("groupLjava/lang/ThreadGroup;");
-    const pFr = threadCls.lookupField("priorityI");
+    const tgfr = threadCls.lookupField('groupLjava/lang/ThreadGroup;');
+    const pFr = threadCls.lookupField('priorityI');
     if (!tgfr || !pFr) {
-      throw new Error("Initial thread fields not found");
+      throw new Error('Initial thread fields not found');
     }
     const javaThread = mainThread.getJavaObject();
     javaThread.putField(tgfr, initialTg);
@@ -129,9 +129,9 @@ export default class JVM {
     // #endregion
 
     // #region initialize system class
-    const sInitMr = sysCls.getMethod("initializeSystemClass()V");
+    const sInitMr = sysCls.getMethod('initializeSystemClass()V');
     if (!sInitMr) {
-      throw new Error("System initialization method not found");
+      throw new Error('System initialization method not found');
     }
 
     tasks.push(() =>
@@ -149,11 +149,11 @@ export default class JVM {
 
     // #region initialize system classloader
     const clInitMr = loaderCls.getMethod(
-      "getSystemClassLoader()Ljava/lang/ClassLoader;"
+      'getSystemClassLoader()Ljava/lang/ClassLoader;'
     );
     if (!clInitMr) {
       throw new Error(
-        "getSystemClassLoader()Ljava/lang/ClassLoader; method not found"
+        'getSystemClassLoader()Ljava/lang/ClassLoader; method not found'
       );
     }
     tasks.push(() => {
@@ -165,11 +165,11 @@ export default class JVM {
           [],
           (loader: JvmObject, err) => {
             if (err) {
-              throw new Error("Could not load system class loader");
+              throw new Error('Could not load system class loader');
             }
 
             this.applicationClassLoader._setJavaClassLoader(loader);
-            loader.putNativeField("loader", this.applicationClassLoader);
+            loader.putNativeField('loader', this.applicationClassLoader);
 
             this.isInitialized = true;
             mainCls.initialize(mainThread);
@@ -185,14 +185,14 @@ export default class JVM {
     // convert args to Java String[]
     const mainRes = this.applicationClassLoader.getClass(className);
     if (mainRes.status === ResultType.ERROR) {
-      throw new Error("Main class not found");
+      throw new Error('Main class not found');
     }
 
     const mainCls = mainRes.result;
 
-    const mainMethod = mainCls.getMethod("main([Ljava/lang/String;)V");
+    const mainMethod = mainCls.getMethod('main([Ljava/lang/String;)V');
     if (!mainMethod) {
-      throw new Error("Main method not found");
+      throw new Error('Main method not found');
     }
     tasks.push(() => {
       mainThread.invokeStackFrame(
@@ -201,7 +201,7 @@ export default class JVM {
     });
     // #endregion
 
-    tasks.reverse().forEach((task) => task());
+    tasks.reverse().forEach(task => task());
     mainThread.setStatus(ThreadStatus.RUNNABLE);
 
     this.threadpool.addThread(mainThread);

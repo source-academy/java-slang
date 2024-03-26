@@ -25,8 +25,8 @@ beforeEach(() => {
   thread.invokeStackFrame(new JavaStackFrame(testClass, method, 0, []));
 });
 
-describe("Istore", () => {
-  test("ISTORE: stores int into locals", () => {
+describe('Istore', () => {
+  test('ISTORE: stores int into locals', () => {
     thread.pushStack(2);
     code.setUint8(0, OPCODE.ISTORE);
     code.setUint8(1, 0);
@@ -41,8 +41,8 @@ describe("Istore", () => {
   });
 });
 
-describe("Istore0", () => {
-  test("ISTORE_0: stores int into locals", () => {
+describe('Istore0', () => {
+  test('ISTORE_0: stores int into locals', () => {
     thread.pushStack(2);
     code.setUint8(0, OPCODE.ISTORE_0);
 
@@ -56,8 +56,8 @@ describe("Istore0", () => {
   });
 });
 
-describe("Istore1", () => {
-  test("ISTORE_1: stores int into locals", () => {
+describe('Istore1', () => {
+  test('ISTORE_1: stores int into locals', () => {
     thread.pushStack(2);
     code.setUint8(0, OPCODE.ISTORE_1);
 
@@ -71,8 +71,8 @@ describe("Istore1", () => {
   });
 });
 
-describe("Istore2", () => {
-  test("ISTORE_2: stores int into locals", () => {
+describe('Istore2', () => {
+  test('ISTORE_2: stores int into locals', () => {
     thread.pushStack(2);
     code.setUint8(0, OPCODE.ISTORE_2);
 
@@ -86,8 +86,8 @@ describe("Istore2", () => {
   });
 });
 
-describe("Istore3", () => {
-  test("ISTORE_3: stores int into locals", () => {
+describe('Istore3', () => {
+  test('ISTORE_3: stores int into locals', () => {
     thread.pushStack(3);
     code.setUint8(0, OPCODE.ISTORE_3);
 
@@ -101,8 +101,8 @@ describe("Istore3", () => {
   });
 });
 
-describe("Lstore", () => {
-  test("LSTORE: stores long into locals", () => {
+describe('Lstore', () => {
+  test('LSTORE: stores long into locals', () => {
     thread.pushStack64(BigInt(3));
     code.setUint8(0, OPCODE.LSTORE);
     code.setUint8(1, 0);
@@ -117,8 +117,8 @@ describe("Lstore", () => {
   });
 });
 
-describe("Lstore0", () => {
-  test("LSTORE_0: stores long into locals", () => {
+describe('Lstore0', () => {
+  test('LSTORE_0: stores long into locals', () => {
     thread.pushStack64(BigInt(5));
     code.setUint8(0, OPCODE.LSTORE_0);
 
@@ -132,8 +132,8 @@ describe("Lstore0", () => {
   });
 });
 
-describe("Lstore1", () => {
-  test("LSTORE_1: stores long into locals", () => {
+describe('Lstore1', () => {
+  test('LSTORE_1: stores long into locals', () => {
     thread.pushStack64(BigInt(5));
     code.setUint8(0, OPCODE.LSTORE_1);
 
@@ -147,8 +147,8 @@ describe("Lstore1", () => {
   });
 });
 
-describe("Lstore2", () => {
-  test("LSTORE_2: stores long into locals", () => {
+describe('Lstore2', () => {
+  test('LSTORE_2: stores long into locals', () => {
     thread.pushStack64(BigInt(5));
     code.setUint8(0, OPCODE.LSTORE_2);
 
@@ -162,8 +162,8 @@ describe("Lstore2", () => {
   });
 });
 
-describe("Lstore3", () => {
-  test("LSTORE_3: stores long into locals", () => {
+describe('Lstore3', () => {
+  test('LSTORE_3: stores long into locals', () => {
     thread.pushStack64(BigInt(5));
     code.setUint8(0, OPCODE.LSTORE_3);
 
@@ -177,8 +177,8 @@ describe("Lstore3", () => {
   });
 });
 
-describe("Fstore", () => {
-  test("FSTORE: stores double into locals", () => {
+describe('Fstore', () => {
+  test('FSTORE: stores double into locals', () => {
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FSTORE);
     code.setUint8(1, 0);
@@ -192,7 +192,7 @@ describe("Fstore", () => {
     expect(thread.getPC()).toBe(2);
   });
 
-  test("FSTORE: undergoes value set conversion", () => {
+  test('FSTORE: undergoes value set conversion', () => {
     thread.pushStack(0.3);
     code.setUint8(0, OPCODE.FSTORE);
     code.setUint8(1, 0);
@@ -207,8 +207,8 @@ describe("Fstore", () => {
   });
 });
 
-describe("Fstore0", () => {
-  test("FSTORE_0: stores float into locals", () => {
+describe('Fstore0', () => {
+  test('FSTORE_0: stores float into locals', () => {
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FSTORE_0);
 
@@ -221,7 +221,7 @@ describe("Fstore0", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSTORE_0: undergoes value set conversion", () => {
+  test('FSTORE_0: undergoes value set conversion', () => {
     thread.pushStack(0.3);
     code.setUint8(0, OPCODE.FSTORE_0);
 
@@ -235,8 +235,8 @@ describe("Fstore0", () => {
   });
 });
 
-describe("Fstore1", () => {
-  test("FSTORE_1: stores float into locals", () => {
+describe('Fstore1', () => {
+  test('FSTORE_1: stores float into locals', () => {
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FSTORE_1);
 
@@ -249,7 +249,7 @@ describe("Fstore1", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSTORE_1: undergoes value set conversion", () => {
+  test('FSTORE_1: undergoes value set conversion', () => {
     thread.pushStack(0.3);
     code.setUint8(0, OPCODE.FSTORE_1);
 
@@ -263,8 +263,8 @@ describe("Fstore1", () => {
   });
 });
 
-describe("Fstore2", () => {
-  test("FSTORE_2: stores float into locals", () => {
+describe('Fstore2', () => {
+  test('FSTORE_2: stores float into locals', () => {
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FSTORE_2);
 
@@ -277,7 +277,7 @@ describe("Fstore2", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSTORE_2: undergoes value set conversion", () => {
+  test('FSTORE_2: undergoes value set conversion', () => {
     thread.pushStack(0.3);
     code.setUint8(0, OPCODE.FSTORE_2);
 
@@ -291,8 +291,8 @@ describe("Fstore2", () => {
   });
 });
 
-describe("Fstore3", () => {
-  test("FSTORE_3: stores float into locals", () => {
+describe('Fstore3', () => {
+  test('FSTORE_3: stores float into locals', () => {
     thread.pushStack(0.5);
     code.setUint8(0, OPCODE.FSTORE_3);
 
@@ -305,7 +305,7 @@ describe("Fstore3", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FSTORE_3: undergoes value set conversion", () => {
+  test('FSTORE_3: undergoes value set conversion', () => {
     thread.pushStack(0.3);
     code.setUint8(0, OPCODE.FSTORE_3);
 
@@ -319,8 +319,8 @@ describe("Fstore3", () => {
   });
 });
 
-describe("Dstore", () => {
-  test("DSTORE: stores double into locals", () => {
+describe('Dstore', () => {
+  test('DSTORE: stores double into locals', () => {
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DSTORE);
     code.setUint8(1, 0);
@@ -334,7 +334,7 @@ describe("Dstore", () => {
     expect(thread.getPC()).toBe(2);
   });
 
-  test("DSTORE: undergoes value set conversion", () => {
+  test('DSTORE: undergoes value set conversion', () => {
     thread.pushStack64(0.29999995231628423);
     code.setUint8(0, OPCODE.DSTORE);
     code.setUint8(1, 0);
@@ -349,8 +349,8 @@ describe("Dstore", () => {
   });
 });
 
-describe("Dstore0", () => {
-  test("DSTORE_0: stores double into locals", () => {
+describe('Dstore0', () => {
+  test('DSTORE_0: stores double into locals', () => {
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DSTORE_0);
 
@@ -363,7 +363,7 @@ describe("Dstore0", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSTORE_0: undergoes value set conversion", () => {
+  test('DSTORE_0: undergoes value set conversion', () => {
     thread.pushStack64(0.29999995231628423);
     code.setUint8(0, OPCODE.DSTORE_0);
 
@@ -377,8 +377,8 @@ describe("Dstore0", () => {
   });
 });
 
-describe("Dstore1", () => {
-  test("DSTORE_1: stores double into locals", () => {
+describe('Dstore1', () => {
+  test('DSTORE_1: stores double into locals', () => {
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DSTORE_1);
 
@@ -391,7 +391,7 @@ describe("Dstore1", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSTORE_1: undergoes value set conversion", () => {
+  test('DSTORE_1: undergoes value set conversion', () => {
     thread.pushStack64(0.29999995231628423);
     code.setUint8(0, OPCODE.DSTORE_1);
 
@@ -405,8 +405,8 @@ describe("Dstore1", () => {
   });
 });
 
-describe("Dstore2", () => {
-  test("DSTORE_2: stores double into locals", () => {
+describe('Dstore2', () => {
+  test('DSTORE_2: stores double into locals', () => {
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DSTORE_2);
 
@@ -419,7 +419,7 @@ describe("Dstore2", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSTORE_2: undergoes value set conversion", () => {
+  test('DSTORE_2: undergoes value set conversion', () => {
     thread.pushStack64(0.29999995231628423);
     code.setUint8(0, OPCODE.DSTORE_2);
 
@@ -433,8 +433,8 @@ describe("Dstore2", () => {
   });
 });
 
-describe("Dstore3", () => {
-  test("DSTORE_3: stores double into locals", () => {
+describe('Dstore3', () => {
+  test('DSTORE_3: stores double into locals', () => {
     thread.pushStack64(0.5);
     code.setUint8(0, OPCODE.DSTORE_3);
 
@@ -447,7 +447,7 @@ describe("Dstore3", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DSTORE_3: undergoes value set conversion", () => {
+  test('DSTORE_3: undergoes value set conversion', () => {
     thread.pushStack64(0.29999995231628423);
     code.setUint8(0, OPCODE.DSTORE_3);
 
@@ -460,8 +460,8 @@ describe("Dstore3", () => {
     expect(thread.getPC()).toBe(1);
   });
 });
-describe("Astore", () => {
-  test("ASTORE: stores object into locals", () => {
+describe('Astore', () => {
+  test('ASTORE: stores object into locals', () => {
     const v1 = new JvmObject(testClass);
     thread.pushStack(v1);
     code.setUint8(0, OPCODE.ASTORE);
@@ -477,8 +477,8 @@ describe("Astore", () => {
   });
 });
 
-describe("Astore0", () => {
-  test("ASTORE_0: stores int into locals", () => {
+describe('Astore0', () => {
+  test('ASTORE_0: stores int into locals', () => {
     const v1 = new JvmObject(threadClass);
     thread.pushStack(v1);
     code.setUint8(0, OPCODE.ASTORE_0);
@@ -492,8 +492,8 @@ describe("Astore0", () => {
     expect(thread.getPC()).toBe(1);
   });
 });
-describe("Astore1", () => {
-  test("ASTORE_1: stores int into locals", () => {
+describe('Astore1', () => {
+  test('ASTORE_1: stores int into locals', () => {
     const v1 = new JvmObject(threadClass);
     thread.pushStack(v1);
     code.setUint8(0, OPCODE.ASTORE_1);
@@ -508,8 +508,8 @@ describe("Astore1", () => {
   });
 });
 
-describe("Astore2", () => {
-  test("ASTORE_2: stores int into locals", () => {
+describe('Astore2', () => {
+  test('ASTORE_2: stores int into locals', () => {
     const v1 = new JvmObject(threadClass);
     thread.pushStack(v1);
     code.setUint8(0, OPCODE.ASTORE_2);
@@ -524,8 +524,8 @@ describe("Astore2", () => {
   });
 });
 
-describe("Astore3", () => {
-  test("ASTORE_3: stores int into locals", () => {
+describe('Astore3', () => {
+  test('ASTORE_3: stores int into locals', () => {
     const v1 = new JvmObject(threadClass);
     thread.pushStack(v1);
     code.setUint8(0, OPCODE.ASTORE_3);
@@ -540,9 +540,9 @@ describe("Astore3", () => {
   });
 });
 
-describe("Iastore", () => {
-  test("IASTORE: stores int into array", () => {
-    const arrCls = (loader.getClass("[I") as SuccessResult<ClassData>).result;
+describe('Iastore', () => {
+  test('IASTORE: stores int into array', () => {
+    const arrCls = (loader.getClass('[I') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
 
@@ -560,7 +560,7 @@ describe("Iastore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IASTORE: throws NullPointerException", () => {
+  test('IASTORE: throws NullPointerException', () => {
     thread.pushStack(null);
     thread.pushStack(0);
     thread.pushStack(5);
@@ -569,13 +569,13 @@ describe("Iastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("IASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[I") as SuccessResult<ClassData>).result;
+  test('IASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[I') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -586,13 +586,13 @@ describe("Iastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("IASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[I") as SuccessResult<ClassData>).result;
+  test('IASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[I') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -603,15 +603,15 @@ describe("Iastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("Lastore", () => {
-  test("LASTORE: stores long into array", () => {
-    const arrCls = (loader.getClass("[J") as SuccessResult<ClassData>).result;
+describe('Lastore', () => {
+  test('LASTORE: stores long into array', () => {
+    const arrCls = (loader.getClass('[J') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -628,7 +628,7 @@ describe("Lastore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LASTORE: throws NullPointerException", () => {
+  test('LASTORE: throws NullPointerException', () => {
     thread.pushStack(null);
     thread.pushStack(0);
     thread.pushStack64(BigInt(5));
@@ -637,13 +637,13 @@ describe("Lastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("LASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[J") as SuccessResult<ClassData>).result;
+  test('LASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[J') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -654,13 +654,13 @@ describe("Lastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("LASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[J") as SuccessResult<ClassData>).result;
+  test('LASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[J') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -671,15 +671,15 @@ describe("Lastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("Fastore", () => {
-  test("FASTORE: stores float into array", () => {
-    const arrCls = (loader.getClass("[F") as SuccessResult<ClassData>).result;
+describe('Fastore', () => {
+  test('FASTORE: stores float into array', () => {
+    const arrCls = (loader.getClass('[F') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -696,7 +696,7 @@ describe("Fastore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FASTORE: throws NullPointerException", () => {
+  test('FASTORE: throws NullPointerException', () => {
     thread.pushStack(null);
     thread.pushStack(0);
     thread.pushStack(0.5);
@@ -705,13 +705,13 @@ describe("Fastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("FASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[F") as SuccessResult<ClassData>).result;
+  test('FASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[F') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -722,13 +722,13 @@ describe("Fastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("FASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[F") as SuccessResult<ClassData>).result;
+  test('FASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[F') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -739,15 +739,15 @@ describe("Fastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("Dastore", () => {
-  test("DASTORE: stores double into array", () => {
-    const arrCls = (loader.getClass("[D") as SuccessResult<ClassData>).result;
+describe('Dastore', () => {
+  test('DASTORE: stores double into array', () => {
+    const arrCls = (loader.getClass('[D') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -764,7 +764,7 @@ describe("Dastore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DASTORE: throws NullPointerException", () => {
+  test('DASTORE: throws NullPointerException', () => {
     thread.pushStack(null);
     thread.pushStack(0);
     thread.pushStack64(0.5);
@@ -773,13 +773,13 @@ describe("Dastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("DASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[D") as SuccessResult<ClassData>).result;
+  test('DASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[D') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -790,13 +790,13 @@ describe("Dastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("DASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[D") as SuccessResult<ClassData>).result;
+  test('DASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[D') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -807,16 +807,16 @@ describe("Dastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("Aastore", () => {
-  test("AASTORE: stores reference into array", () => {
+describe('Aastore', () => {
+  test('AASTORE: stores reference into array', () => {
     const arrCls = (
-      loader.getClass("[Ljava/lang/Thread;") as SuccessResult<ClassData>
+      loader.getClass('[Ljava/lang/Thread;') as SuccessResult<ClassData>
     ).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
@@ -835,7 +835,7 @@ describe("Aastore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("AASTORE: throws NullPointerException", () => {
+  test('AASTORE: throws NullPointerException', () => {
     thread.pushStack(null);
     thread.pushStack(0);
     thread.pushStack(null);
@@ -844,14 +844,14 @@ describe("Aastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("AASTORE: throws ArrayIndexOutOfBoundsException", () => {
+  test('AASTORE: throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      loader.getClass("[Ljava/lang/Thread;") as SuccessResult<ClassData>
+      loader.getClass('[Ljava/lang/Thread;') as SuccessResult<ClassData>
     ).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
@@ -864,14 +864,14 @@ describe("Aastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("AASTORE: throws ArrayIndexOutOfBoundsException", () => {
+  test('AASTORE: throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      loader.getClass("[Ljava/lang/Thread;") as SuccessResult<ClassData>
+      loader.getClass('[Ljava/lang/Thread;') as SuccessResult<ClassData>
     ).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
@@ -884,15 +884,15 @@ describe("Aastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("Bastore", () => {
-  test("BASTORE: stores byte into array", () => {
-    const arrCls = (loader.getClass("[B") as SuccessResult<ClassData>).result;
+describe('Bastore', () => {
+  test('BASTORE: stores byte into array', () => {
+    const arrCls = (loader.getClass('[B') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -909,8 +909,8 @@ describe("Bastore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("BASTORE: truncates int to byte", () => {
-    const arrCls = (loader.getClass("[B") as SuccessResult<ClassData>).result;
+  test('BASTORE: truncates int to byte', () => {
+    const arrCls = (loader.getClass('[B') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -927,7 +927,7 @@ describe("Bastore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("BASTORE: throws NullPointerException", () => {
+  test('BASTORE: throws NullPointerException', () => {
     thread.pushStack(null);
     thread.pushStack(0);
     thread.pushStack(5);
@@ -936,13 +936,13 @@ describe("Bastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("BASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[B") as SuccessResult<ClassData>).result;
+  test('BASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[B') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -953,13 +953,13 @@ describe("Bastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("BASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[B") as SuccessResult<ClassData>).result;
+  test('BASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[B') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -970,15 +970,15 @@ describe("Bastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("Castore", () => {
-  test("CASTORE: stores char into array", () => {
-    const arrCls = (loader.getClass("[C") as SuccessResult<ClassData>).result;
+describe('Castore', () => {
+  test('CASTORE: stores char into array', () => {
+    const arrCls = (loader.getClass('[C') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -995,8 +995,8 @@ describe("Castore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("CASTORE: truncates int to char", () => {
-    const arrCls = (loader.getClass("[C") as SuccessResult<ClassData>).result;
+  test('CASTORE: truncates int to char', () => {
+    const arrCls = (loader.getClass('[C') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -1013,7 +1013,7 @@ describe("Castore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("CASTORE: throws NullPointerException", () => {
+  test('CASTORE: throws NullPointerException', () => {
     thread.pushStack(null);
     thread.pushStack(0);
     thread.pushStack(5);
@@ -1022,13 +1022,13 @@ describe("Castore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("CASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[C") as SuccessResult<ClassData>).result;
+  test('CASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[C') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -1039,13 +1039,13 @@ describe("Castore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("CASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[C") as SuccessResult<ClassData>).result;
+  test('CASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[C') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -1056,15 +1056,15 @@ describe("Castore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("Sastore", () => {
-  test("SASTORE: stores short into array", () => {
-    const arrCls = (loader.getClass("[S") as SuccessResult<ClassData>).result;
+describe('Sastore', () => {
+  test('SASTORE: stores short into array', () => {
+    const arrCls = (loader.getClass('[S') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -1081,8 +1081,8 @@ describe("Sastore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("SASTORE: truncates int to short", () => {
-    const arrCls = (loader.getClass("[S") as SuccessResult<ClassData>).result;
+  test('SASTORE: truncates int to short', () => {
+    const arrCls = (loader.getClass('[S') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -1099,7 +1099,7 @@ describe("Sastore", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("SASTORE: throws NullPointerException", () => {
+  test('SASTORE: throws NullPointerException', () => {
     thread.pushStack(null);
     thread.pushStack(0);
     thread.pushStack(5);
@@ -1108,13 +1108,13 @@ describe("Sastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("SASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[S") as SuccessResult<ClassData>).result;
+  test('SASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[S') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -1125,13 +1125,13 @@ describe("Sastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("SASTORE: throws ArrayIndexOutOfBoundsException", () => {
-    const arrCls = (loader.getClass("[S") as SuccessResult<ClassData>).result;
+  test('SASTORE: throws ArrayIndexOutOfBoundsException', () => {
+    const arrCls = (loader.getClass('[S') as SuccessResult<ClassData>).result;
     const arrayref = arrCls.instantiate() as JvmArray;
     arrayref.initialize(thread, 1);
     thread.pushStack(arrayref);
@@ -1142,8 +1142,8 @@ describe("Sastore", () => {
       thread.runFor(1);
     } catch (e) {}
     const exceptionObj = thread.loadLocal(1) as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });

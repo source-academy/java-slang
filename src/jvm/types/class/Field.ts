@@ -2,8 +2,8 @@ import { FieldInfo, FIELD_FLAGS } from "../../../ClassFile/types/fields";
 import { ConstantPool } from "../../constant-pool";
 import Thread from "../../thread";
 import { attrInfo2Interface, parseFieldDescriptor } from "../../utils";
-import { ImmediateResult, Result, ResultType } from "../Result";
 import { JvmObject, JavaType } from "../reference/Object";
+import { ResultType, ImmediateResult, Result } from "../Result";
 import { IAttribute, ConstantValue, NestHost } from "./Attributes";
 import { ClassData, ReferenceClassData } from "./ClassData";
 import { ConstantUtf8 } from "./Constants";
@@ -53,9 +53,9 @@ export class Field {
         break;
     }
 
-    if (this.checkStatic() && this.attributes["ConstantValue"]) {
+    if (this.checkStatic() && this.attributes['ConstantValue']) {
       const constantValue = (
-        this.attributes["ConstantValue"] as ConstantValue
+        this.attributes['ConstantValue'] as ConstantValue
       ).constantvalue.resolve(null as any, cls.getLoader()); // String resolution does not need thread
       if (constantValue.status !== ResultType.SUCCESS) {
         return;
@@ -108,7 +108,7 @@ export class Field {
       const fRes = thread
         .getClass()
         .getLoader()
-        .getClass("java/lang/reflect/Field");
+        .getClass('java/lang/reflect/Field');
       if (fRes.status === ResultType.ERROR) {
         return fRes;
       }
@@ -134,51 +134,51 @@ export class Field {
     this.javaObject.initialize(thread);
 
     this.javaObject._putField(
-      "clazz",
-      "Ljava/lang/Class;",
-      "java/lang/reflect/Field",
+      'clazz',
+      'Ljava/lang/Class;',
+      'java/lang/reflect/Field',
       this.cls.getJavaObject()
     );
     this.javaObject._putField(
-      "name",
-      "Ljava/lang/String;",
-      "java/lang/reflect/Field",
+      'name',
+      'Ljava/lang/String;',
+      'java/lang/reflect/Field',
       thread.getJVM().getInternedString(this.fieldName)
     );
     this.javaObject._putField(
-      "type",
-      "Ljava/lang/Class;",
-      "java/lang/reflect/Field",
+      'type',
+      'Ljava/lang/Class;',
+      'java/lang/reflect/Field',
       fieldType
     );
     this.javaObject._putField(
-      "modifiers",
-      "I",
-      "java/lang/reflect/Field",
+      'modifiers',
+      'I',
+      'java/lang/reflect/Field',
       this.accessFlags
     );
     this.javaObject._putField(
-      "slot",
-      "I",
-      "java/lang/reflect/Field",
+      'slot',
+      'I',
+      'java/lang/reflect/Field',
       this.slot
     );
 
-    console.warn("getReflectedObject: not using signature, annotations");
+    // TODO: use actual signature and annotations
     this.javaObject._putField(
-      "signature",
-      "Ljava/lang/String;",
-      "java/lang/reflect/Field",
+      'signature',
+      'Ljava/lang/String;',
+      'java/lang/reflect/Field',
       null
     );
     this.javaObject._putField(
-      "annotations",
-      "[B",
-      "java/lang/reflect/Field",
+      'annotations',
+      '[B',
+      'java/lang/reflect/Field',
       null
     );
 
-    this.javaObject.putNativeField("fieldRef", this);
+    this.javaObject.putNativeField('fieldRef', this);
 
     return { status: ResultType.SUCCESS, result: this.javaObject };
   }
@@ -201,7 +201,7 @@ export class Field {
 
   putValue(value: any) {
     if (value === undefined) {
-      throw new Error("putValue: value is undefined");
+      throw new Error('putValue: value is undefined');
     }
     this.value = value;
   }
@@ -276,19 +276,21 @@ export class Field {
     if (isStaticAccess !== this.checkStatic()) {
       return {
         status: ResultType.ERROR,
-        exceptionCls: "java/lang/IncompatibleClassChangeError",
-        msg: "",
+        exceptionCls: 'java/lang/IncompatibleClassChangeError',
+        msg: '',
       };
     }
 
     const invokerClass = thread.getClass();
     const fieldClass = this.getClass();
     if (this.checkPrivate() && invokerClass !== fieldClass) {
-      // nest mate test (se11)
-      // There is currently a bug with lambdas invoking the private bytecode directly.
-      // We add nest information so the invocation succeeds.
-      // https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-5.html#jvms-5.4.4
-      const nestHostAttrD = fieldClass.getAttribute("NestHost") as NestHost;
+      /**
+       * nest mate test (se11)
+       * There is currently a bug with lambdas invoking the private bytecode directly.
+       * We add nest information so the invocation succeeds.
+       * {@link https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-5.html#jvms-5.4.4}
+       */
+      const nestHostAttrD = fieldClass.getAttribute('NestHost') as NestHost;
       let nestHostD;
       if (!nestHostAttrD) {
         nestHostD = fieldClass;
@@ -299,7 +301,7 @@ export class Field {
         }
         nestHostD = resolutionResult.result;
       }
-      const nestHostArrC = invokerClass.getAttribute("NestHost") as NestHost;
+      const nestHostArrC = invokerClass.getAttribute('NestHost') as NestHost;
       let nestHostC;
       if (!nestHostArrC) {
         nestHostC = invokerClass;
@@ -314,8 +316,8 @@ export class Field {
       if (nestHostC !== nestHostD) {
         return {
           status: ResultType.ERROR,
-          exceptionCls: "java/lang/IllegalAccessError",
-          msg: "",
+          exceptionCls: 'java/lang/IllegalAccessError',
+          msg: '',
         };
       }
     }
@@ -327,8 +329,8 @@ export class Field {
     ) {
       return {
         status: ResultType.ERROR,
-        exceptionCls: "java/lang/IllegalAccessError",
-        msg: "",
+        exceptionCls: 'java/lang/IllegalAccessError',
+        msg: '',
       };
     }
 
@@ -337,12 +339,12 @@ export class Field {
       isPut &&
       this.checkFinal() &&
       (fieldClass !== invokerClass ||
-        invokerMethod.getName() !== (isStaticAccess ? "<clinit>" : "<init>"))
+        invokerMethod.getName() !== (isStaticAccess ? '<clinit>' : '<init>'))
     ) {
       return {
         status: ResultType.ERROR,
-        exceptionCls: "java/lang/IllegalAccessError",
-        msg: "",
+        exceptionCls: 'java/lang/IllegalAccessError',
+        msg: '',
       };
     }
 

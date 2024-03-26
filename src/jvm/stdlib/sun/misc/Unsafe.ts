@@ -6,8 +6,7 @@ import AbstractClassLoader from "../../../ClassLoader/AbstractClassLoader";
 import Thread from "../../../thread";
 import {
   ErrorResult,
-  checkSuccess,
-  checkError,
+  ResultType,
   SuccessResult,
 } from "../../../types/Result";
 import { NestHost } from "../../../types/class/Attributes";
@@ -20,7 +19,7 @@ import { ConstantClass, ConstantUtf8 } from "../../../types/class/Constants";
 import { Field } from "../../../types/class/Field";
 import { JvmArray } from "../../../types/reference/Array";
 import { JvmObject } from "../../../types/reference/Object";
-import { typeIndexScale } from "../../../utils";
+import { logger, typeIndexScale } from "../../../utils";
 import parseBin from "../../../utils/disassembler";
 
 function getFieldInfo(
@@ -29,20 +28,18 @@ function getFieldInfo(
   obj: JvmObject,
   offset: bigint
 ): any {
-  // const fieldName: string;
-  // const objBase: any;
-
   // obj is a class obj
   const objCls = obj.getClass();
 
-  if (objCls.getClassname() === "java/lang/Object") {
-    const objBase = obj.getNativeField("staticFieldBase") as ReferenceClassData;
+  if (objCls.getName() === 'java/lang/Object') {
+    const objBase = obj.getNativeField('staticFieldBase') as ReferenceClassData;
     return [objBase, objBase.getFieldFromVmIndex(Number(offset))];
   } else if (objCls.checkArray()) {
     // obj is an array. offset represents index * unit space
     const compCls = objCls.getComponentClass();
     const stride = typeIndexScale(compCls);
     const objBase = (obj as JvmArray).getJsArray();
+
     return [objBase, Math.floor(Number(offset) / stride)];
   } else {
     // normal class
@@ -60,7 +57,7 @@ const setFromVMIndex = (thread: Thread, locals: any[]) => {
   const fi = getFieldInfo(thread, unsafe, obj, offset);
   const objBase = fi[0];
   const ref = fi[1];
-  if (typeof ref === "number") {
+  if (typeof ref === 'number') {
     // array type
     objBase[ref] = locals[3];
     thread.returnStackFrame();
@@ -78,7 +75,7 @@ const getFromVMIndex = (thread: Thread, locals: any[]) => {
   const fi = getFieldInfo(thread, unsafe, obj, offset);
   const objBase = fi[0];
   const ref = fi[1];
-  if (typeof ref === "number") {
+  if (typeof ref === 'number') {
     // array type
     thread.returnStackFrame(objBase[ref]);
     return;
@@ -114,7 +111,7 @@ function unsafeCompareAndSwap(
   const fi = getFieldInfo(thread, unsafe, obj, offset);
   const objBase = fi[0];
   const ref = fi[1];
-  if (typeof ref === "number") {
+  if (typeof ref === 'number') {
     // array type
     const actual = objBase[ref];
     if (actual === expected) {
@@ -135,27 +132,31 @@ function unsafeCompareAndSwap(
 }
 
 const functions = {
-  "registerNatives()V": (thread: Thread, locals: any[]) => {
+  'registerNatives()V': (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
 
-  "arrayBaseOffset(Ljava/lang/Class;)I": (thread: Thread, locals: any[]) => {
+  'arrayBaseOffset(Ljava/lang/Class;)I': (thread: Thread, locals: any[]) => {
     thread.returnStackFrame(0);
   },
-
-  "objectFieldOffset(Ljava/lang/reflect/Field;)J": (
+  'objectFieldOffset(Ljava/lang/reflect/Field;)J': (
     thread: Thread,
     locals: any[]
   ) => {
     const field = locals[1] as JvmObject;
-    const slot = field._getField("slot", "I", "java/lang/reflect/Field");
+    const slot = field._getField('slot', 'I', 'java/lang/reflect/Field');
+
+    logger.warn(
+      'objectFieldOffset: not checking if slot is used to access fields not declared in this class'
+    );
+
     thread.returnStackFrame64(BigInt(slot as number));
   },
 
   // Used for bitwise operations
-  "arrayIndexScale(Ljava/lang/Class;)I": (thread: Thread, locals: any[]) => {
+  'arrayIndexScale(Ljava/lang/Class;)I': (thread: Thread, locals: any[]) => {
     const clsObj = locals[1] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ReferenceClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ReferenceClassData;
 
     // Should be array. return -1 for invalid class
     if (!clsRef.checkArray()) {
@@ -168,12 +169,10 @@ const functions = {
     );
     thread.returnStackFrame(scale);
   },
-
-  "addressSize()I": (thread: Thread, locals: any[]) => {
+  'addressSize()I': (thread: Thread, locals: any[]) => {
     thread.returnStackFrame(4);
   },
-
-  "compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z":
+  'compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z':
     (thread: Thread, locals: any[]) => {
       const unsafe = locals[0] as JvmObject;
       const obj1 = locals[1] as JvmObject;
@@ -189,8 +188,7 @@ const functions = {
         unsafeCompareAndSwap(thread, unsafe, obj1, offset, expected, newValue)
       );
     },
-
-  "compareAndSwapInt(Ljava/lang/Object;JII)Z": (
+  'compareAndSwapInt(Ljava/lang/Object;JII)Z': (
     thread: Thread,
     locals: any[]
   ) => {
@@ -204,8 +202,7 @@ const functions = {
       unsafeCompareAndSwap(thread, unsafe, obj1, offset, expected, newValue)
     );
   },
-
-  "compareAndSwapLong(Ljava/lang/Object;JJJ)Z": (
+  'compareAndSwapLong(Ljava/lang/Object;JJJ)Z': (
     thread: Thread,
     locals: any[]
   ) => {
@@ -219,21 +216,19 @@ const functions = {
       unsafeCompareAndSwap(thread, unsafe, obj1, offset, expected, newValue)
     );
   },
+  'getIntVolatile(Ljava/lang/Object;J)I': getFromVMIndex,
 
-  "getIntVolatile(Ljava/lang/Object;J)I": getFromVMIndex,
+  'getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;': getFromVMIndex,
 
-  "getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;": getFromVMIndex,
+  'putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V': setFromVMIndex,
 
-  "putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V": setFromVMIndex,
-
-  "allocateMemory(J)J": (thread: Thread, locals: any[]) => {
+  'allocateMemory(J)J': (thread: Thread, locals: any[]) => {
     const size = locals[1] as bigint;
     const heap = thread.getJVM().getUnsafeHeap();
     const addr = heap.allocate(size);
     thread.returnStackFrame64(addr);
   },
-
-  "putLong(JJ)V": (thread: Thread, locals: any[]) => {
+  'putLong(JJ)V': (thread: Thread, locals: any[]) => {
     const address = locals[1] as bigint;
     const value = locals[2] as bigint;
     const heap = thread.getJVM().getUnsafeHeap();
@@ -241,22 +236,19 @@ const functions = {
     view.setBigInt64(0, value);
     thread.returnStackFrame();
   },
-
-  "getByte(J)B": (thread: Thread, locals: any[]) => {
+  'getByte(J)B': (thread: Thread, locals: any[]) => {
     const address = locals[1] as bigint;
     const heap = thread.getJVM().getUnsafeHeap();
     const view = heap.get(address);
     thread.returnStackFrame(view.getInt8(0));
   },
-
-  "freeMemory(J)V": (thread: Thread, locals: any[]) => {
+  'freeMemory(J)V': (thread: Thread, locals: any[]) => {
     const address = locals[1] as bigint;
     const heap = thread.getJVM().getUnsafeHeap();
     heap.free(address);
     thread.returnStackFrame();
   },
-  
-  "defineAnonymousClass(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;":
+  'defineAnonymousClass(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;':
     (thread: Thread, locals: any[]) => {
       const hostClassObj = locals[1] as JvmObject;
       const byteArray = locals[2] as JvmArray;
@@ -275,14 +267,14 @@ const functions = {
         clsInfo.nameIndex
       ] as ConstantUtf8Info;
       const lambdaName = clsName.value;
-      const hostClass = hostClassObj.getNativeField("classRef") as ClassData;
+      const hostClass = hostClassObj.getNativeField('classRef') as ClassData;
 
       let error: ErrorResult | null = null;
       const newClass = new ReferenceClassData(
         classfile,
         hostClass.getLoader(),
         lambdaName,
-        (e) => (error = e),
+        e => (error = e),
         cpPatches
       );
 
@@ -295,15 +287,15 @@ const functions = {
       }
 
       // add nest information
-      if (!hostClass.getAttribute("NestHost")) {
+      if (!hostClass.getAttribute('NestHost')) {
         const classConstant = ConstantClass.asResolved(
           hostClass,
-          new ConstantUtf8(hostClass, hostClass.getClassname()),
+          new ConstantUtf8(hostClass, hostClass.getName()),
           hostClass
         );
         const nestHostAttr: NestHost = {
           hostClass: classConstant,
-          name: "NestHost",
+          name: 'NestHost',
         };
         newClass._addAttribute(nestHostAttr);
       }
@@ -312,34 +304,41 @@ const functions = {
       thread.returnStackFrame(clsObj);
     },
 
-  "defineClass(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;":
+  'defineClass(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;':
     (thread: Thread, locals: any[]) => {
       const byteArray = locals[2] as JvmArray;
       const loaderObj = locals[5] as JvmObject;
 
       let loader = loaderObj
-        ? (loaderObj.getNativeField("loader") as AbstractClassLoader)
+        ? (loaderObj.getNativeField('loader') as AbstractClassLoader)
         : thread.getJVM().getBootstrapClassLoader();
 
       const bytecode = new DataView(
         new Uint8Array(byteArray.getJsArray()).buffer
       );
       const classfile = parseBin(bytecode);
-      const clsData = loader.defineClass(classfile);
-      thread.returnStackFrame(clsData.getJavaObject());
+      const loadResult = loader.defineClass(classfile);
+      if (loadResult.status === ResultType.ERROR) {
+        thread.throwNewException(
+          (loadResult as ErrorResult).exceptionCls,
+          (loadResult as ErrorResult).msg
+        );
+        return;
+      }
+      thread.returnStackFrame(loadResult.result.getJavaObject());
     },
 
-  "ensureClassInitialized(Ljava/lang/Class;)V": (
+  'ensureClassInitialized(Ljava/lang/Class;)V': (
     thread: Thread,
     locals: any[]
   ) => {
     const clsObj = locals[1] as JvmObject;
-    const cls = clsObj.getNativeField("classRef") as ClassData;
+    const cls = clsObj.getNativeField('classRef') as ClassData;
     const initRes = cls.initialize(thread);
 
-    if (checkSuccess(initRes)) {
+    if (initRes.status === ResultType.SUCCESS) {
       thread.returnStackFrame();
-    } else if (checkError(initRes)) {
+    } else if (initRes.status === ResultType.ERROR) {
       thread.throwNewException(
         (initRes as ErrorResult).exceptionCls,
         (initRes as ErrorResult).msg
@@ -349,53 +348,53 @@ const functions = {
     return;
   },
 
-  "shouldBeInitialized(Ljava/lang/Class;)Z": (
+  'shouldBeInitialized(Ljava/lang/Class;)Z': (
     thread: Thread,
     locals: any[]
   ) => {
     const clsObj = locals[1] as JvmObject;
-    const cls = clsObj.getNativeField("classRef") as ClassData;
+    const cls = clsObj.getNativeField('classRef') as ClassData;
     thread.returnStackFrame(cls.isInitialized() ? 1 : 0);
   },
 
-  "staticFieldOffset(Ljava/lang/reflect/Field;)J": (
+  'staticFieldOffset(Ljava/lang/reflect/Field;)J': (
     thread: Thread,
     locals: any[]
   ) => {
     const field = locals[1] as JvmObject;
     const slot = field._getField(
-      "slot",
-      "I",
-      "java/lang/reflect/Field"
+      'slot',
+      'I',
+      'java/lang/reflect/Field'
     ) as number;
     const cls = field._getField(
-      "clazz",
-      "Ljava/lang/Class;",
-      "java/lang/reflect/Field"
+      'clazz',
+      'Ljava/lang/Class;',
+      'java/lang/reflect/Field'
     ) as JvmObject;
-    const clsRef = cls.getNativeField("classRef") as ReferenceClassData;
+    const clsRef = cls.getNativeField('classRef') as ReferenceClassData;
     const jsField = clsRef.getFieldFromSlot(slot);
     thread.returnStackFrame64(
       BigInt(jsField ? clsRef.getFieldVmIndex(jsField) : -1)
     );
   },
 
-  "staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;": (
+  'staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;': (
     thread: Thread,
     locals: any[]
   ) => {
     const field = locals[1] as JvmObject;
     const javaClass = field._getField(
-      "clazz",
-      "Ljava/lang/Class;",
-      "java/lang/reflect/Field"
+      'clazz',
+      'Ljava/lang/Class;',
+      'java/lang/reflect/Field'
     ) as JvmObject;
-    const cls = javaClass.getNativeField("classRef") as ReferenceClassData;
+    const cls = javaClass.getNativeField('classRef') as ReferenceClassData;
     const objRes = cls
       .getLoader()
-      .getClass("java/lang/Object") as SuccessResult<ClassData>;
+      .getClass('java/lang/Object') as SuccessResult<ClassData>;
     const jobj = objRes.result.instantiate();
-    jobj.putNativeField("staticFieldBase", cls);
+    jobj.putNativeField('staticFieldBase', cls);
     thread.returnStackFrame(jobj);
   },
 };

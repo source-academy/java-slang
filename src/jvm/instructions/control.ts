@@ -1,26 +1,22 @@
 import Thread from "../thread";
 import { ResultType } from "../types/Result";
 import { JvmObject } from "../types/reference/Object";
+import { ResultType } from "../types/Result";
 import { asFloat, asDouble } from "../utils";
 
 export function runGoto(thread: Thread): void {
-  thread.offsetPc(1);
-  const branchbyte = thread.getCode().getInt16(thread.getPC());
-  thread.offsetPc(branchbyte - 1);
+  const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
+  thread.offsetPc(branchbyte);
 }
 
 export function runJsr(thread: Thread): void {
-  thread.offsetPc(1);
-  const branchbyte = thread.getCode().getInt16(thread.getPC());
-  thread.offsetPc(2);
-  thread.pushStack(thread.getPC());
-  thread.setPc(thread.getPC() + branchbyte - 3);
+  const branchbyte = thread.getCode().getInt16(thread.getPC() + 1);
+  thread.pushStack(thread.getPC() + 3);
+  thread.setPc(thread.getPC() + branchbyte);
 }
 
 export function runRet(thread: Thread): void {
-  thread.offsetPc(1);
-  const index = thread.getCode().getUint8(thread.getPC());
-  thread.offsetPc(1);
+  const index = thread.getCode().getUint8(thread.getPC() + 1);
   const retAddr = thread.loadLocal(index) as number;
   thread.setPc(retAddr);
 }
@@ -87,8 +83,6 @@ export function runLookupswitch(thread: Thread): void {
 }
 
 function _return(thread: Thread, ret?: any, isWide?: boolean): void {
-  thread.offsetPc(1);
-
   const method = thread.getMethod();
   if (method.checkSynchronized()) {
     if (method.checkStatic()) {
@@ -99,8 +93,10 @@ function _return(thread: Thread, ret?: any, isWide?: boolean): void {
   }
 
   if (isWide) {
+    thread.offsetPc(1);
     thread.returnStackFrame64(ret);
   } else {
+    thread.offsetPc(1);
     thread.returnStackFrame(ret);
   }
 }

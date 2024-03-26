@@ -1,37 +1,40 @@
 import {
+  BaseJavaCstVisitorWithDefaults,
+  ClassBodyDeclarationCtx,
+  ClassDeclarationCstNode,
   ClassMemberDeclarationCtx,
   ClassModifierCtx,
-  CstNode,
+  ClassTypeCtx,
   TypeIdentifierCtx,
 } from "java-parser";
 
-import { BaseJavaCstVisitorWithDefaults } from "java-parser";
-import { ClassModifier, Identifier, ClassBodyDeclaration, ClassDeclaration } from "../types/classes";
-import { MethodExtractor } from "./method-extractor";
+import {
+  ClassModifier,
+  Identifier,
+  ClassBodyDeclaration,
+  ClassDeclaration,
+  NormalClassDeclaration
+} from "../types/classes";
+import { ConstructorExtractor } from "./constructor-extractor";
 import { FieldExtractor } from "./field-extractor";
+import { MethodExtractor } from "./method-extractor";
 
 export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
-  private modifier: Array<ClassModifier>;
+  private modifier: Array<ClassModifier> = [];
   private identifier: Identifier;
-  private body: Array<ClassBodyDeclaration>;
+  private body: Array<ClassBodyDeclaration> = [];
+  private sclass: Identifier;
 
-  constructor() {
-    super();
-    this.modifier = [];
-    this.identifier = '';
-    this.body = [];
-  }
-
-  extract(cst: CstNode): ClassDeclaration {
-    this.modifier = [];
-    this.identifier = '';
-    this.body = [];
+  extract(cst: ClassDeclarationCstNode): ClassDeclaration {
     this.visit(cst);
     return {
+      kind: "NormalClassDeclaration",
       classModifier: this.modifier,
       typeIdentifier: this.identifier,
       classBody: this.body,
-    };
+      sclass: this.sclass,
+      location: cst.location,
+    } as NormalClassDeclaration;
   }
 
   classModifier(ctx: ClassModifierCtx) {
@@ -51,6 +54,23 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
 
   typeIdentifier(ctx: TypeIdentifierCtx) {
     this.identifier = ctx.Identifier[0].image;
+  }
+
+  classType(ctx: ClassTypeCtx) {
+      this.sclass = ctx.Identifier[0].image;
+  }
+
+  classBodyDeclaration(ctx: ClassBodyDeclarationCtx) {
+    if (ctx.constructorDeclaration) {
+      ctx.constructorDeclaration.forEach(x => {
+        const constructorExtractor = new ConstructorExtractor();
+        const constructorNode = constructorExtractor.extract(x);
+        this.body.push(constructorNode);
+      })
+    }
+    if (ctx.classMemberDeclaration) {
+      this.visit(ctx.classMemberDeclaration);
+    }
   }
 
   classMemberDeclaration(ctx: ClassMemberDeclarationCtx) {

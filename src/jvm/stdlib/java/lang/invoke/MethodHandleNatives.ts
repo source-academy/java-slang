@@ -3,42 +3,42 @@ import {
   MethodHandleReferenceKind,
 } from "../../../../constants";
 import Thread from "../../../../thread";
-import { checkError } from "../../../../types/Result";
 import { ReferenceClassData } from "../../../../types/class/ClassData";
 import { Method } from "../../../../types/class/Method";
 import { JvmArray } from "../../../../types/reference/Array";
 import { JvmObject } from "../../../../types/reference/Object";
+import { ResultType } from "../../../../types/Result";
 import { j2jsString, js2jString } from "../../../../utils";
 
 const functions = {
-  "init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V": (
+  'init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V': (
     thread: Thread,
     locals: any[]
   ) => {
     const ref = locals[1] as JvmObject;
     const memberName = locals[0] as JvmObject;
-    const refClassname = ref.getClass().getClassname();
+    const refClassname = ref.getClass().getName();
 
-    if (refClassname === "java/lang/reflect/Field") {
-      throw new Error("Not implemented");
-    } else if (refClassname === "java/lang/reflect/Method") {
+    if (refClassname === 'java/lang/reflect/Field') {
+      throw new Error('Not implemented');
+    } else if (refClassname === 'java/lang/reflect/Method') {
       const clazz = ref._getField(
-        "clazz",
-        "Ljava/lang/Class;",
-        "java/lang/reflect/Method"
+        'clazz',
+        'Ljava/lang/Class;',
+        'java/lang/reflect/Method'
       );
       const classData = (clazz as JvmObject).getNativeField(
-        "classRef"
+        'classRef'
       ) as ReferenceClassData;
       const methodSlot = ref._getField(
-        "slot",
-        "I",
-        "java/lang/reflect/Method"
+        'slot',
+        'I',
+        'java/lang/reflect/Method'
       ) as number;
       const method = classData.getMethodFromSlot(methodSlot);
       if (!method) {
         console.error(
-          "init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V: Method not found"
+          'init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V: Method not found'
         );
         thread.returnStackFrame();
         return;
@@ -59,29 +59,30 @@ const functions = {
           MemberNameFlags.MN_REFERENCE_KIND_SHIFT;
       }
 
-      memberName._putField("flags", "I", "java/lang/invoke/MemberName", flags);
+      memberName._putField('flags', 'I', 'java/lang/invoke/MemberName', flags);
       memberName._putField(
-        "clazz",
-        "Ljava/lang/Class;",
-        "java/lang/invoke/MemberName",
+        'clazz',
+        'Ljava/lang/Class;',
+        'java/lang/invoke/MemberName',
         clazz
       );
-      memberName.putNativeField("vmtarget", method.generateBridgeMethod());
+      memberName.putNativeField('vmtarget', method.generateBridgeMethod());
       thread.returnStackFrame();
       return;
-    } else if (refClassname === "java/lang/reflect/Constructor") {
+      // MemberNameFlags
+    } else if (refClassname === 'java/lang/reflect/Constructor') {
       const clazz = ref._getField(
-        "clazz",
-        "Ljava/lang/Class;",
-        "java/lang/reflect/Constructor"
+        'clazz',
+        'Ljava/lang/Class;',
+        'java/lang/reflect/Constructor'
       );
       const classData = (clazz as JvmObject).getNativeField(
-        "classRef"
+        'classRef'
       ) as ReferenceClassData;
       const methodSlot = ref._getField(
-        "slot",
-        "I",
-        "java/lang/reflect/Constructor"
+        'slot',
+        'I',
+        'java/lang/reflect/Constructor'
       ) as number;
       const method = classData.getMethodFromSlot(methodSlot);
       if (!method) {
@@ -93,58 +94,58 @@ const functions = {
         MemberNameFlags.MN_IS_CONSTRUCTOR |
         (MethodHandleReferenceKind.REF_invokeSpecial <<
           MemberNameFlags.MN_REFERENCE_KIND_SHIFT);
-      memberName._putField("flags", "I", "java/lang/invoke/MemberName", flags);
+      memberName._putField('flags', 'I', 'java/lang/invoke/MemberName', flags);
       memberName._putField(
-        "clazz",
-        "Ljava/lang/Class;",
-        "java/lang/invoke/MemberName",
+        'clazz',
+        'Ljava/lang/Class;',
+        'java/lang/invoke/MemberName',
         clazz
       );
-      memberName.putNativeField("vmtarget", method.generateBridgeMethod());
+      memberName.putNativeField('vmtarget', method.generateBridgeMethod());
       thread.returnStackFrame();
       return;
     }
 
     thread.throwNewException(
-      "java/lang/InternalError",
-      "init: Invalid target."
+      'java/lang/InternalError',
+      'init: Invalid target.'
     );
   },
 
-  "resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;":
+  'resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;':
     (thread: Thread, locals: any[]) => {
       const memberName = locals[0] as JvmObject; // MemberName
 
       const type = memberName._getField(
-        "type",
-        "Ljava/lang/Object;",
-        "java/lang/invoke/MemberName"
+        'type',
+        'Ljava/lang/Object;',
+        'java/lang/invoke/MemberName'
       ) as JvmObject;
       const jNameString = memberName._getField(
-        "name",
-        "Ljava/lang/String;",
-        "java/lang/invoke/MemberName"
+        'name',
+        'Ljava/lang/String;',
+        'java/lang/invoke/MemberName'
       ) as JvmObject;
       const clsObj = memberName._getField(
-        "clazz",
-        "Ljava/lang/Class;",
-        "java/lang/invoke/MemberName"
+        'clazz',
+        'Ljava/lang/Class;',
+        'java/lang/invoke/MemberName'
       ) as JvmObject;
       const flags = memberName._getField(
-        "flags",
-        "I",
-        "java/lang/invoke/MemberName"
+        'flags',
+        'I',
+        'java/lang/invoke/MemberName'
       ) as number;
 
       if (clsObj === null || jNameString === null || type === null) {
         thread.throwNewException(
-          "java/lang/IllegalArgumentException",
-          "Invalid MemberName"
+          'java/lang/IllegalArgumentException',
+          'Invalid MemberName'
         );
         return;
       }
 
-      const clsRef = clsObj.getNativeField("classRef") as ReferenceClassData;
+      const clsRef = clsObj.getNativeField('classRef') as ReferenceClassData;
       const name = j2jsString(jNameString);
 
       if (
@@ -154,24 +155,24 @@ const functions = {
         const rtype = (
           (
             type._getField(
-              "rtype",
-              "Ljava/lang/Class;",
-              "java/lang/invoke/MethodType"
+              'rtype',
+              'Ljava/lang/Class;',
+              'java/lang/invoke/MethodType'
             ) as JvmObject
-          ).getNativeField("classRef") as ReferenceClassData
+          ).getNativeField('classRef') as ReferenceClassData
         ).getDescriptor();
         const ptypes = (
           type._getField(
-            "ptypes",
-            "[Ljava/lang/Class;",
-            "java/lang/invoke/MethodType"
+            'ptypes',
+            '[Ljava/lang/Class;',
+            'java/lang/invoke/MethodType'
           ) as JvmArray
         )
           .getJsArray()
           .map((cls: JvmObject) =>
-            cls.getNativeField("classRef").getDescriptor()
+            cls.getNativeField('classRef').getDescriptor()
           );
-        const methodDesc = `(${ptypes.join("")})${rtype}`;
+        const methodDesc = `(${ptypes.join('')})${rtype}`;
 
         // method resolution
         const lookupRes = clsRef.lookupMethod(
@@ -182,9 +183,9 @@ const functions = {
           true,
           true
         );
-        if (checkError(lookupRes)) {
+        if (lookupRes.status === ResultType.ERROR) {
           thread.throwNewException(
-            "java/lang/NoSuchMethodError",
+            'java/lang/NoSuchMethodError',
             `Invalid method ${methodDesc}`
           );
           return;
@@ -193,57 +194,57 @@ const functions = {
 
         const methodFlags = method.getAccessFlags();
         memberName._putField(
-          "flags",
-          "I",
-          "java/lang/invoke/MemberName",
+          'flags',
+          'I',
+          'java/lang/invoke/MemberName',
           methodFlags | flags
         );
 
         const bridge = method.generateBridgeMethod();
-        memberName.putNativeField("vmtarget", bridge);
+        memberName.putNativeField('vmtarget', bridge);
 
         thread.returnStackFrame(memberName);
         return;
       } else if (flags & MemberNameFlags.MN_IS_FIELD) {
         const descriptor = (
-          type.getNativeField("classRef") as ReferenceClassData
+          type.getNativeField('classRef') as ReferenceClassData
         ).getDescriptor();
         const field = clsRef.lookupField(name + descriptor);
         if (field === null) {
           thread.throwNewException(
-            "java/lang/NoSuchFieldError",
+            'java/lang/NoSuchFieldError',
             `Invalid field ${name}`
           );
           return;
         }
         const fieldflags = field.getAccessFlags();
         memberName._putField(
-          "flags",
-          "I",
-          "java/lang/invoke/MemberName",
+          'flags',
+          'I',
+          'java/lang/invoke/MemberName',
           fieldflags | flags
         );
-        memberName.putNativeField("field", field);
+        memberName.putNativeField('field', field);
         thread.returnStackFrame(memberName);
         return;
       } else {
         thread.throwNewException(
-          "java/lang/LinkageError",
+          'java/lang/LinkageError',
           `Could not resolve member name`
         );
         return;
       }
     },
 
-  "registerNatives()V": (thread: Thread, locals: any[]) => {
+  'registerNatives()V': (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
 
-  "getConstant(I)I": (thread: Thread, locals: any[]) => {
+  'getConstant(I)I': (thread: Thread, locals: any[]) => {
     thread.returnStackFrame(0);
   },
 
-  "getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I":
+  'getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I':
     (thread: Thread, locals: any[]) => {
       const defc = locals[0] as JvmObject;
       const matchName: string | null = locals[1]
@@ -257,7 +258,7 @@ const functions = {
       const results = (locals[6] as JvmArray).getJsArray();
       let matched = 0;
 
-      const cls = defc.getNativeField("classRef") as ReferenceClassData;
+      const cls = defc.getNativeField('classRef') as ReferenceClassData;
       const methods = Object.values(cls.getDeclaredMethods());
 
       const addMethod = (method: Method) => {
@@ -279,7 +280,7 @@ const functions = {
           refKind = MethodHandleReferenceKind.REF_invokeInterface;
         } else if (method.checkStatic()) {
           refKind = MethodHandleReferenceKind.REF_invokeStatic;
-        } else if (method.getName() === "<init>") {
+        } else if (method.getName() === '<init>') {
           flags = MemberNameFlags.MN_IS_CONSTRUCTOR;
           refKind = MethodHandleReferenceKind.REF_newInvokeSpecial;
         } else {
@@ -288,40 +289,40 @@ const functions = {
         flags |= refKind << MemberNameFlags.MN_REFERENCE_KIND_SHIFT;
         flags |= method.getAccessFlags();
         memberName._putField(
-          "flags",
-          "I",
-          "java/lang/invoke/MemberName",
+          'flags',
+          'I',
+          'java/lang/invoke/MemberName',
           flags
         );
 
         // set clazz
         memberName._putField(
-          "clazz",
-          "Ljava/lang/Class;",
-          "java/lang/invoke/MemberName",
+          'clazz',
+          'Ljava/lang/Class;',
+          'java/lang/invoke/MemberName',
           method.getClass().getJavaObject()
         );
 
         // set name
         memberName._putField(
-          "name",
-          "Ljava/lang/String;",
-          "java/lang/invoke/MemberName",
+          'name',
+          'Ljava/lang/String;',
+          'java/lang/invoke/MemberName',
           matchName ? locals[1] : js2jString(cls.getLoader(), method.getName())
         );
 
         // set type
         memberName._putField(
-          "type",
-          "Ljava/lang/Object;",
-          "java/lang/invoke/MemberName",
+          'type',
+          'Ljava/lang/Object;',
+          'java/lang/invoke/MemberName',
           matchSig
             ? locals[2]
             : js2jString(cls.getLoader(), method.getDescriptor())
         );
 
         // set vmtarget
-        memberName.putNativeField("vmtarget", method.generateBridgeMethod());
+        memberName.putNativeField('vmtarget', method.generateBridgeMethod());
 
         matched++;
       };
@@ -331,7 +332,7 @@ const functions = {
         for (const method of methods) {
           if (
             (matchName === null ||
-              (matchName === "<init>" && method.getName() === "<init>")) &&
+              (matchName === '<init>' && method.getName() === '<init>')) &&
             (matchSig === null || method.getDescriptor() === matchSig)
           ) {
             addMethod(method);
@@ -343,7 +344,7 @@ const functions = {
       if (matchFlags & MemberNameFlags.MN_IS_METHOD) {
         for (const method of methods) {
           if (
-            method.getName() !== "<init>" &&
+            method.getName() !== '<init>' &&
             (matchName === null || method.getName() === matchName) &&
             (matchSig === null || method.getDescriptor() === matchSig)
           ) {
@@ -377,33 +378,33 @@ const functions = {
           flags |= refKind << MemberNameFlags.MN_REFERENCE_KIND_SHIFT;
           flags |= field.getAccessFlags();
           memberName._putField(
-            "flags",
-            "I",
-            "java/lang/invoke/MemberName",
+            'flags',
+            'I',
+            'java/lang/invoke/MemberName',
             flags
           );
 
           // set clazz
           memberName._putField(
-            "clazz",
-            "Ljava/lang/Class;",
-            "java/lang/invoke/MemberName",
+            'clazz',
+            'Ljava/lang/Class;',
+            'java/lang/invoke/MemberName',
             field.getClass().getJavaObject()
           );
 
           // set name
           memberName._putField(
-            "name",
-            "Ljava/lang/String;",
-            "java/lang/invoke/MemberName",
+            'name',
+            'Ljava/lang/String;',
+            'java/lang/invoke/MemberName',
             matchName ? locals[1] : js2jString(cls.getLoader(), field.getName())
           );
 
           // set type
           memberName._putField(
-            "type",
-            "Ljava/lang/Object;",
-            "java/lang/invoke/MemberName",
+            'type',
+            'Ljava/lang/Object;',
+            'java/lang/invoke/MemberName',
             matchSig
               ? locals[2]
               : js2jString(cls.getLoader(), field.getFieldDesc())
@@ -411,7 +412,7 @@ const functions = {
 
           // set vmindex
           memberName.putNativeField(
-            "vmindex",
+            'vmindex',
             field.getClass().getFieldVmIndex(field)
           );
           matched++;
@@ -421,12 +422,12 @@ const functions = {
       thread.returnStackFrame(matched);
     },
 
-  "objectFieldOffset(Ljava/lang/invoke/MemberName;)J": (
+  'objectFieldOffset(Ljava/lang/invoke/MemberName;)J': (
     thread: Thread,
     locals: any[]
   ) => {
     const memberName = locals[0] as JvmObject;
-    thread.returnStackFrame64(BigInt(memberName.getNativeField("field").slot));
+    thread.returnStackFrame64(BigInt(memberName.getNativeField('field').slot));
   },
 };
 

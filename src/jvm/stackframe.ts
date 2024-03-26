@@ -1,7 +1,6 @@
 import { OPCODE } from "../ClassFile/constants/instructions";
 import { JNI } from "./jni";
 import Thread from "./thread";
-import { ResultType } from "./types/Result";
 import { Code } from "./types/class/Attributes";
 import { ClassData, ReferenceClassData } from "./types/class/ClassData";
 import { Method } from "./types/class/Method";
@@ -19,39 +18,40 @@ import * as reserved from "./instructions/reserved";
 import * as references from "./instructions/references";
 import * as stack from "./instructions/stack";
 import * as stores from "./instructions/stores";
+import { ResultType } from "./types/Result";
 
 const overwrites: {
   [cls: string]: {
     [methodSig: string]: (thread: Thread, locals: any[]) => boolean;
   };
 } = {
-  "java/lang/System": {
-    "loadLibrary(Ljava/lang/String;)V": (thread: Thread, locals: any[]) => {
+  'java/lang/System': {
+    'loadLibrary(Ljava/lang/String;)V': (thread: Thread, locals: any[]) => {
       const lib = j2jsString(locals[0]);
 
       // We have already loaded these libraries (DLLs).
       switch (lib) {
-        case "zip":
-        case "net":
-        case "nio":
-        case "awt":
-        case "fontmanager":
-        case "management":
+        case 'zip':
+        case 'net':
+        case 'nio':
+        case 'awt':
+        case 'fontmanager':
+        case 'management':
           thread.returnStackFrame();
           return true;
         default:
-          throw new Error("loadLibrary not supported");
+          throw new Error('loadLibrary not supported');
       }
     },
   },
-  "java/lang/ref/Reference": {
-    "<clinit>()V": (thread: Thread, locals: any[]) => {
+  'java/lang/ref/Reference': {
+    '<clinit>()V': (thread: Thread, locals: any[]) => {
       thread.returnStackFrame();
       return true;
     },
   },
-  "java/nio/charset/Charset$3": {
-    "run()Ljava/lang/Object;": (thread: Thread, locals: any[]) => {
+  'java/nio/charset/Charset$3': {
+    'run()Ljava/lang/Object;': (thread: Thread, locals: any[]) => {
       thread.returnStackFrame();
       return true;
     },

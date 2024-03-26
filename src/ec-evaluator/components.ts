@@ -1,6 +1,17 @@
+import { ConstructorDeclaration, MethodDeclaration, UnannType } from "../ast/types/classes";
 import { DECLARED_BUT_NOT_YET_ASSIGNED } from "./constants";
 import * as errors from "./errors";
-import { Closure, ControlItem, Name, StashItem, Value, VarValue, Variable } from "./types";
+import {
+  Class,
+  Closure,
+  ControlItem,
+  Name,
+  StashItem,
+  Type,
+  Value,
+  VarValue,
+  Variable,
+} from "./types";
 import { Stack } from "./utils";
 
 /**
@@ -14,7 +25,7 @@ export class Environment {
   private _current: EnvNode;
 
   constructor() {
-    const node = new EnvNode("Test");
+    const node = new EnvNode("global");
     this._global = node;
     this._current = node;
   }
@@ -45,38 +56,44 @@ export class Environment {
     this._current = toEnv;
   }
 
-  declareVariable(name: Name) {
+  declareVariable(name: Name, type: UnannType) {
     const variable: Variable = {
       kind: "Variable",
+      type,
       name,
       value: DECLARED_BUT_NOT_YET_ASSIGNED,
     } as Variable;
     this._current.setVariable(name, variable);
   }
 
-  defineVariable(name: Name, value: VarValue) {
+  defineVariable(name: Name, type: UnannType, value: VarValue) {
     const variable = {
       kind: "Variable",
+      type,
       name,
       value,
     } as Variable;
     this._current.setVariable(name, variable);
   }
 
+  getName(name: Name): Variable | Class {
+    return this._current.getName(name);
+  }
+
   getVariable(name: Name): Variable {
     return this._current.getVariable(name);
   }
 
-  getValue(name: Name): VarValue {
-    return this._current.getValue(name);
+  defineMtdOrCon(name: Name, method: Closure) {
+    this._current.setMtdOrCon(name, method);
   }
 
-  defineMethod(name: Name, value: Closure) {
-    this._current.setMethod(name, value);
+  defineClass(name: Name, c: Class) {
+    this._global.setClass(name, c);
   }
 
-  getMethod(name: Name): Closure {
-    return this._current.getMethod(name);
+  getClass(name: Name): Class {
+    return this._global.getClass(name);
   }
 };
 
@@ -108,28 +125,21 @@ export class EnvNode {
     this._children.push(child);
   }
 
-  setMethod(name: Name, value: Closure) {
-    if (this._frame.has(name)) {
-      throw new errors.MethodRedeclarationError(name);
-    }
-    this._frame.set(name, value);
-  }
-
-  getMethod(name: Name): Closure {
-    if (this._frame.has(name)) {
-      return this._frame.get(name) as Closure;
-    }
-    if (this._parent) {
-      return this._parent.getMethod(name);
-    }
-    throw new errors.UndeclaredMethodError(name);
-  }
-
   setVariable(name: Name, value: Variable) {
     if (this._frame.has(name)) {
       throw new errors.VariableRedeclarationError(name);
     }
     this._frame.set(name, value);
+  }
+
+  getName(name: Name): Variable | Class {
+    if (this._frame.has(name)) {
+      return this._frame.get(name) as Variable | Class;
+    }
+    if (this._parent) {
+      return this._parent.getName(name);
+    }
+    throw new errors.UndeclaredNameError(name);
   }
 
   getVariable(name: Name): Variable {
@@ -142,18 +152,132 @@ export class EnvNode {
     throw new errors.UndeclaredVariableError(name);
   }
 
-  getValue(name: Name): string {
+  setMtdOrCon(name: Name, value: Closure) {
     if (this._frame.has(name)) {
-      // Variables must be definitely assigned prior to access
-      if ((this._frame.get(name) as Variable).value === DECLARED_BUT_NOT_YET_ASSIGNED) {
-        throw new errors.UnassignedVariableError(name);
+      throw new errors.MtdOrConRedeclarationError(name);
+    }
+    this._frame.set(name, value);
+  }
+
+  resOverload(name: string, argTypes: Type[]): Closure {
+    const closures: Closure[] = [];
+    for (const [closureName, closure] of this._frame.entries()) {
+      // Methods contains parantheses and must have return type.
+      if (closureName.includes(name + "(") && closureName[closureName.length - 1] !== ")") {
+        closures.push(closure as Closure);
       }
-      return (this._frame.get(name) as Variable).value;
+    }
+
+    let overloadResolvedClosure: Closure | undefined;
+    for (const closure of closures) {
+      const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+        
+      if (argTypes.length != params.length) continue;
+      
+      let match = true;
+      for (let i = 0; i < argTypes.length; i++) {
+        match &&= (params[i].unannType === argTypes[i].type);
+        if (!match) break; // short circuit
+      }
+      
+      if (match) {
+        overloadResolvedClosure = closure;
+        break;
+      }
+    }
+
+    if (!overloadResolvedClosure) {
+      throw new errors.ResOverloadError(name, argTypes);
+    }
+
+    return overloadResolvedClosure;
+  }
+
+  resOverride(overloadResolvedClosure: Closure): Closure {
+    const overloadResolvedMtd = overloadResolvedClosure.mtdOrCon as MethodDeclaration;
+    const name = overloadResolvedMtd.methodHeader.identifier;
+    const overloadResolvedClosureParams = overloadResolvedMtd.methodHeader.formalParameterList;
+
+    const closures: Closure[] = [];
+    for (const [closureName, closure] of this._frame.entries()) {
+      // Methods contains parantheses and must have return type.
+      if (closureName.includes(name + "(") && closureName[closureName.length - 1] !== ")") {
+        closures.push(closure as Closure);
+      }
+    }
+
+    let overrideResolvedClosure = overloadResolvedClosure;
+    for (const closure of closures) {
+      const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+        
+      if (overloadResolvedClosureParams.length != params.length) continue;
+      
+      let match = true;
+      for (let i = 0; i < overloadResolvedClosureParams.length; i++) {
+        match &&= (params[i].unannType === overloadResolvedClosureParams[i].unannType);
+        if (!match) break; // short circuit
+      }
+      
+      if (match) {
+        overrideResolvedClosure = closure;
+        break;
+      }
+    }
+
+    // TODO is there method overriding resolution failure?
+
+    return overrideResolvedClosure;
+  }
+
+  resConOverload(name: string, argTypes: Type[]): Closure {
+    const closures: Closure[] = [];
+    for (const [closureName, closure] of this._frame.entries()) {
+      // Constructors contains parantheses and do not have return type.
+      if (closureName.includes(name + "(") && closureName[closureName.length - 1] === ")") {
+        closures.push(closure as Closure);
+      }
+    }
+
+    let resolved: Closure | undefined;
+    for (const closure of closures) {
+      const params = (closure.mtdOrCon as ConstructorDeclaration).constructorDeclarator.formalParameterList;
+        
+      if (argTypes.length != params.length) continue;
+      
+      let match = true;
+      for (let i = 0; i < argTypes.length; i++) {
+        match &&= (params[i].unannType === argTypes[i].type);
+        if (!match) break; // short circuit
+      }
+      
+      if (match) {
+        resolved = closure;
+        break;
+      }
+    }
+
+    if (!resolved) {
+      throw new errors.ResConOverloadError(name, argTypes);
+    }
+
+    return resolved;
+  }
+
+  setClass(name: Name, value: Class) {
+    if (this._frame.has(name)) {
+      throw new errors.ClassRedeclarationError(name);
+    }
+    this._frame.set(name, value);
+  }
+
+  getClass(name: Name): Class {
+    if (this._frame.has(name)) {
+      return this._frame.get(name) as Class;
     }
     if (this._parent) {
-      return this._parent.getValue(name);
+      return this._parent.getClass(name);
     }
-    throw new errors.UndeclaredVariableError(name);
+    throw new errors.UndeclaredClassError(name);
   }
 }
 

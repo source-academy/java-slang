@@ -1,6 +1,28 @@
 import { Node } from "../ast/types/ast";
-import { DecimalIntegerLiteral, Literal } from "../ast/types/blocks-and-statements";
+import {
+  BlockStatement,
+  DecimalIntegerLiteral,
+  ExpressionStatement,
+  Literal,
+  ReturnStatement,
+} from "../ast/types/blocks-and-statements";
+import {
+  ConstructorDeclaration,
+  FieldDeclaration,
+  Identifier,
+  MethodDeclaration,
+  NormalClassDeclaration,
+  UnannType,
+} from "../ast/types/classes";
 import * as errors from "./errors";
+import {
+  emptyReturnStmtNode,
+  expConInvNode,
+  expStmtAssmtNode,
+  exprNameNode,
+  nullLitNode,
+  returnThisStmtNode,
+} from "./nodeCreator";
 import { ControlItem, Context, Instr } from "./types";
 
 /**
@@ -34,6 +56,13 @@ export class Stack<T> implements IStack<T> {
       return undefined
     }
     return this.storage[this.size() - 1]
+  }
+
+  public peekN(n: number): T | undefined {
+    if (this.isEmpty()) {
+      return undefined
+    }
+    return this.storage[this.size() - n]
   }
 
   public size(): number {
@@ -142,4 +171,156 @@ export const evaluateBinaryExpression = (operator: string, left: Literal, right:
         } as DecimalIntegerLiteral,
       };
   }
+}
+
+/**
+ * Default values.
+ */
+export const defaultValues = new Map<UnannType, Literal>([
+  ["int", {
+    kind: "Literal",
+    literalType: {
+      kind: "DecimalIntegerLiteral",
+      value: "0",
+    },
+  }],
+]);
+
+/**
+ * Name
+ */
+export const getDescriptor = (mtdOrCon: MethodDeclaration | ConstructorDeclaration): string => {
+  return mtdOrCon.kind === "MethodDeclaration"
+    ? `${mtdOrCon.methodHeader.identifier}(${mtdOrCon.methodHeader.formalParameterList.map(p => p.unannType).join(",")})${mtdOrCon.methodHeader.result}`
+    : `${mtdOrCon.constructorDeclarator.identifier}(${mtdOrCon.constructorDeclarator.formalParameterList.map(p => p.unannType).join(",")})`;
+}
+
+export const isQualified = (name: string) => {
+  return name.includes(".");
+}
+
+/**
+ * Class
+ */
+export const getInstanceFields = (c: NormalClassDeclaration): FieldDeclaration[] => {
+  return c.classBody.filter(m => m.kind === "FieldDeclaration" && !isStatic(m)) as FieldDeclaration[];
+}
+
+export const getInstanceMethods = (c: NormalClassDeclaration): MethodDeclaration[] => {
+  return c.classBody.filter(m => m.kind === "MethodDeclaration" && !isStatic(m)) as MethodDeclaration[];
+}
+
+export const getStaticFields = (c: NormalClassDeclaration): FieldDeclaration[] => {
+  return c.classBody.filter(m => m.kind === "FieldDeclaration" && isStatic(m)) as FieldDeclaration[];
+}
+
+export const getStaticMethods = (c: NormalClassDeclaration): MethodDeclaration[] => {
+  return c.classBody.filter(m => m.kind === "MethodDeclaration" && isStatic(m)) as MethodDeclaration[];
+}
+
+export const getConstructors = (c: NormalClassDeclaration): ConstructorDeclaration[] => {
+  return c.classBody.filter(m => m.kind === "ConstructorDeclaration") as ConstructorDeclaration[];
+}
+
+export const isStatic = (fieldOrMtd: FieldDeclaration | MethodDeclaration): boolean => {
+  return fieldOrMtd.kind === "FieldDeclaration"
+    ? fieldOrMtd.fieldModifier.includes("static")
+    : fieldOrMtd.methodModifier.includes("static");
+}
+
+export const isInstance = (fieldOrMtd: FieldDeclaration | MethodDeclaration): boolean => {
+  return !isStatic(fieldOrMtd);
+}
+
+const convertFieldDeclToExpStmtAssmt = (fd: FieldDeclaration): ExpressionStatement => {
+  const left = `this.${fd.variableDeclaratorList[0].variableDeclaratorId}`;
+  // Fields are always initialized to default value if initializer is absent.
+  const right = fd.variableDeclaratorList[0].variableInitializer ||
+    defaultValues.get(fd.fieldType) ||
+    nullLitNode();
+  return expStmtAssmtNode(left, right);
+};
+
+export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, className: Identifier) => {
+  const qualifier = isStatic(mtd) ? className : "this";
+
+  mtd.methodBody.blockStatements.forEach(blockStatement => {
+    // MethodInvocation as ExpressionStatement
+    blockStatement.kind === "ExpressionStatement" &&
+    blockStatement.stmtExp.kind === "MethodInvocation" &&
+    !isQualified(blockStatement.stmtExp.identifier) &&
+    (blockStatement.stmtExp.identifier = `${qualifier}.${blockStatement.stmtExp.identifier}`);
+
+    // MethodInvocation as RHS of Assignment ExpressionStatement
+    blockStatement.kind === "ExpressionStatement" &&
+    blockStatement.stmtExp.kind === "Assignment" &&
+    blockStatement.stmtExp.right.kind === "MethodInvocation" &&
+    !isQualified(blockStatement.stmtExp.right.identifier) &&
+    (blockStatement.stmtExp.right.identifier = `${qualifier}.${blockStatement.stmtExp.right.identifier}`);
+
+    // MethodInvocation as VariableInitializer of LocalVariableDeclarationStatement
+    blockStatement.kind === "LocalVariableDeclarationStatement" &&
+    blockStatement.variableDeclaratorList[0].variableInitializer &&
+    blockStatement.variableDeclaratorList[0].variableInitializer.kind === "MethodInvocation" &&
+    !isQualified(blockStatement.variableDeclaratorList[0].variableInitializer.identifier) &&
+    (blockStatement.variableDeclaratorList[0].variableInitializer.identifier = `${qualifier}.${blockStatement.variableDeclaratorList[0].variableInitializer.identifier}`);
+  });
+}
+
+export const prependExpConInvIfNeeded = (
+  constructor: ConstructorDeclaration,
+  c: NormalClassDeclaration,
+): void => {
+  const conBodyBlockStmts = constructor.constructorBody.blockStatements;
+  if (c.sclass && !conBodyBlockStmts.some(s => s.kind === "ExplicitConstructorInvocation")) {
+    conBodyBlockStmts.unshift(expConInvNode());
+  }
+}
+
+export const prependInstanceFieldsInit = (
+  constructor: ConstructorDeclaration,
+  instanceFields: FieldDeclaration[],
+): void => {
+  const expStmtAssmts = instanceFields.map(f => convertFieldDeclToExpStmtAssmt(f));
+  constructor.constructorBody.blockStatements.unshift(...expStmtAssmts);
+}
+
+export const appendOrReplaceReturn = (
+  constructor: ConstructorDeclaration,
+): void => {
+  let conBodyBlockStmts: BlockStatement[] = constructor.constructorBody.blockStatements;
+  // TODO deep search
+  let returnStmt = conBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement" && stmt.exp.kind === "Void");
+  if (returnStmt) {
+    // Replace empty ReturnStatement with ReturnStatement with this keyword.
+    (returnStmt as ReturnStatement).exp = exprNameNode("this");
+  } else {
+    // Add ReturnStatement with this keyword.
+    conBodyBlockStmts.push(returnThisStmtNode());
+  }
+}
+
+export const appendEmtpyReturn = (
+  method: MethodDeclaration,
+): void => {
+  const mtdBodyBlockStmts: BlockStatement[] = method.methodBody.blockStatements;
+  // TODO deep search
+  if (!mtdBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement")) {
+    // Add empty ReturnStatement if absent.
+    mtdBodyBlockStmts.push(emptyReturnStmtNode());
+  }
+}
+
+export const searchMainMtdClass = (classes: NormalClassDeclaration[]) => {
+  return classes.find(c =>
+    c.classBody.some(d =>
+      d.kind === "MethodDeclaration"
+      && d.methodModifier.includes("public")
+      && d.methodModifier.includes("static")
+      && d.methodHeader.result === "void"
+      && d.methodHeader.identifier === "main"
+      && d.methodHeader.formalParameterList.length === 1
+      && d.methodHeader.formalParameterList[0].unannType === "String[]"
+      && d.methodHeader.formalParameterList[0].identifier === "args"
+  ))?.typeIdentifier;
 }

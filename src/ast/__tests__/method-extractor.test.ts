@@ -11,8 +11,10 @@ describe("extract MethodModifier correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -27,11 +29,15 @@ describe("extract MethodModifier correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -47,8 +53,10 @@ describe("extract MethodModifier correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
+          kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
           classBody: [
@@ -66,11 +74,107 @@ describe("extract MethodModifier correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+});
+
+describe("extract FormalParameter correctly", () => {
+  it("extract MethodDeclaration without FormalParameter correctly", () => {
+    const programStr = `
+      class Test {
+        void test() {}
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      importDeclarations: [],
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+                kind: "Block",
+                blockStatements: [],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
+            },
+          ],
+          location: expect.anything(),
+        },
+      ],
+      location: expect.anything(),
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract MethodDeclaration with FormalParameter correctly", () => {
+    const programStr = `
+      class Test {
+        void test(int x) {}
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      importDeclarations: [],
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [
+                  {
+                    kind: "FormalParameter",
+                    unannType: "int",
+                    identifier: "x",
+                  },
+                ],
+              },
+              methodBody: {
+                kind: "Block",
+                blockStatements: [],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
+            },
+          ],
+          location: expect.anything(),
+        },
+      ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);

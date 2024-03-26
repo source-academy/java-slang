@@ -3,7 +3,11 @@ import {
   ConstantClassInfo,
   ConstantUtf8Info,
 } from "../../ClassFile/types/constants";
-import { ErrorResult, ImmediateResult, ResultType } from "../types/Result";
+import {
+  ErrorResult,
+  ImmediateResult,
+  ResultType,
+} from "../types/Result";
 import {
   ClassData,
   ReferenceClassData,
@@ -57,7 +61,6 @@ export default abstract class AbstractClassLoader {
     cls: ClassFile,
     protectionDomain?: JvmObject
   ): ImmediateResult<ClassData> {
-    // resolve classname
     const clsInfo = cls.constantPool[cls.thisClass] as ConstantClassInfo;
     const clsName = cls.constantPool[clsInfo.nameIndex] as ConstantUtf8Info;
     const thisClass = clsName.value;
@@ -67,7 +70,7 @@ export default abstract class AbstractClassLoader {
       cls,
       this,
       thisClass,
-      (e) => (hasError = e),
+      e => (hasError = e),
       undefined,
       protectionDomain
     );
@@ -92,7 +95,7 @@ export default abstract class AbstractClassLoader {
     componentCls: ClassData
   ): ImmediateResult<ArrayClassData> {
     if (!this.parentLoader) {
-      throw new Error("ClassLoader has no parent loader");
+      throw new Error('ClassLoader has no parent loader');
     }
 
     return this.parentLoader._loadArrayClass(className, componentCls);
@@ -109,16 +112,16 @@ export default abstract class AbstractClassLoader {
       };
     }
 
-    if (className.startsWith("[")) {
+    if (className.startsWith('[')) {
       const itemClsName = className.slice(1);
       let arrayObjCls;
-      if (itemClsName.startsWith("L")) {
+      if (itemClsName.startsWith('L')) {
         const itemRes = this._getClass(itemClsName.slice(1, -1), initiator);
         if (itemRes.status === ResultType.ERROR) {
           return itemRes;
         }
         arrayObjCls = itemRes.result;
-      } else if (itemClsName.startsWith("[")) {
+      } else if (itemClsName.startsWith('[')) {
         const itemRes = this._getClass(itemClsName, initiator);
         if (itemRes.status === ResultType.ERROR) {
           return itemRes;
@@ -158,7 +161,7 @@ export default abstract class AbstractClassLoader {
    */
   getPrimitiveClass(className: string): PrimitiveClassData {
     if (this.parentLoader === null) {
-      throw new Error("Primitive class not found");
+      throw new Error('Primitive class not found');
     }
     return this.parentLoader.getPrimitiveClass(className);
   }
@@ -170,8 +173,8 @@ export default abstract class AbstractClassLoader {
    */
   protected load(className: string): ImmediateResult<ClassData> {
     const path =
-      (this.classPath ? this.classPath + "/" + className : className) +
-      ".class";
+      (this.classPath ? this.classPath + '/' + className : className) +
+      '.class';
 
     let classFile;
     try {
@@ -179,7 +182,7 @@ export default abstract class AbstractClassLoader {
     } catch (e) {
       return {
         status: ResultType.ERROR,
-        exceptionCls: "java/lang/ClassNotFoundException",
+        exceptionCls: 'java/lang/ClassNotFoundException',
         msg: className,
       };
     }
@@ -195,6 +198,11 @@ export default abstract class AbstractClassLoader {
     };
   }
 
+  /**
+   * Gets the Java object representing the classloader.
+   * Returns null for bootstrap classloader.
+   * @todo Not implemented.
+   */
   getJavaObject(): JvmObject | null {
     return null;
   }
