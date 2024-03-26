@@ -1,5 +1,5 @@
 import { CLASS_FLAGS } from "../constants";
-import { ImmediateResult, ErrorResult } from "../types/Result";
+import { ImmediateResult, ErrorResult, ResultType } from "../types/Result";
 import {
   PrimitiveClassData,
   ClassData,
@@ -27,14 +27,14 @@ export default class BootstrapClassLoader extends AbstractClassLoader {
       className,
       this,
       componentCls,
-      (e) => (error = e)
+      e => (error = e)
     );
     if (error) {
       return error;
     }
 
     this.loadClass(arrayClass);
-    return { result: arrayClass };
+    return { status: ResultType.SUCCESS, result: arrayClass };
   }
 
   getPrimitiveClass(className: string): PrimitiveClassData {

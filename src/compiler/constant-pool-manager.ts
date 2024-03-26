@@ -2,8 +2,11 @@ import { CONSTANT_TAG } from "../ClassFile/constants/constants";
 import { ConstantInfo } from "../ClassFile/types/constants";
 import {
   ConstantClassValue,
+  ConstantDoubleValue,
   ConstantFieldrefValue,
+  ConstantFloatValue,
   ConstantIntegerValue,
+  ConstantLongValue,
   ConstantMethodrefValue,
   ConstantNameAndTypeValue,
   ConstantStringValue,
@@ -33,6 +36,10 @@ export class ConstantPoolManager {
     return this.constantPool;
   }
 
+  getSize() {
+    return this.curIdx;
+  }
+
   indexUtf8Info(value: string) {
     return this.writeIfAbsent(CONSTANT_TAG.Utf8, {
       value: value
@@ -41,6 +48,24 @@ export class ConstantPoolManager {
 
   indexIntegerInfo(value: number) {
     return this.writeIfAbsent(CONSTANT_TAG.Integer, {
+      value: value
+    })
+  }
+
+  indexFloatInfo(value: number) {
+    return this.writeIfAbsent(CONSTANT_TAG.Float, {
+      value: value
+    })
+  }
+
+  indexLongInfo(value: bigint) {
+    return this.writeIfAbsent(CONSTANT_TAG.Long, {
+      value: value
+    })
+  }
+
+  indexDoubleInfo(value: number) {
+    return this.writeIfAbsent(CONSTANT_TAG.Double, {
       value: value
     })
   }
@@ -106,7 +131,9 @@ export class ConstantPoolManager {
       tag: tag,
       value: value,
     };
-    const key = JSON.stringify(task);
+    const key = JSON.stringify(task, (k, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    );
     let pos = this.objectMap.get(key);
     if (pos !== undefined) {
       return pos;
@@ -114,6 +141,10 @@ export class ConstantPoolManager {
 
     pos = this.curIdx++;
     this.objectMap.set(key, pos);
+    // Long and Double const info occupy two entries in the constant pool
+    if (tag === CONSTANT_TAG.Long || tag === CONSTANT_TAG.Double) {
+      this.curIdx++;
+    }
     this.tasks.push(task);
 
     const isFirst = this.tasks.length === 1;
@@ -134,6 +165,15 @@ export class ConstantPoolManager {
         break;
       case CONSTANT_TAG.Integer:
         this.writeIntegerInfo(task.value as ConstantIntegerValue);
+        break;
+      case CONSTANT_TAG.Float:
+        this.writeFloatInfo(task.value as ConstantFloatValue);
+        break;
+      case CONSTANT_TAG.Long:
+        this.writeLongInfo(task.value as ConstantLongValue);
+        break;
+      case CONSTANT_TAG.Double:
+        this.writeDoubleInfo(task.value as ConstantDoubleValue);
         break;
       case CONSTANT_TAG.Class:
         this.writeClassInfo(task.value as ConstantClassValue);
@@ -165,6 +205,27 @@ export class ConstantPoolManager {
   private writeIntegerInfo(val: ConstantIntegerValue) {
     this.constantPool.push({
       tag: CONSTANT_TAG.Integer,
+      value: val.value,
+    });
+  }
+
+  private writeFloatInfo(val: ConstantFloatValue) {
+    this.constantPool.push({
+      tag: CONSTANT_TAG.Float,
+      value: val.value,
+    });
+  }
+
+  private writeLongInfo(val: ConstantLongValue) {
+    this.constantPool.push({
+      tag: CONSTANT_TAG.Long,
+      value: val.value,
+    });
+  }
+
+  private writeDoubleInfo(val: ConstantDoubleValue) {
+    this.constantPool.push({
+      tag: CONSTANT_TAG.Double,
       value: val.value,
     });
   }

@@ -1,9 +1,9 @@
 import { ThreadStatus } from "./constants";
 import Thread from "./thread";
-import { Result } from "./types/Result";
+import { Result, ResultType } from "./types/Result";
 import AbstractSystem from "./utils/AbstractSystem";
 
-type Lib = {
+export type Lib = {
   [className: string]: {
     loader?: (
       onFinish: (lib: {
@@ -27,7 +27,7 @@ export class JNI {
   }
 
   /**
-   * Registers a lambda function as a native method
+   * Registers a lambda function as a native method.
    * @param className
    * @param methodName
    * @param method
@@ -46,7 +46,8 @@ export class JNI {
   }
 
   /**
-   * Gets the lambda function for a native method
+   * Gets the lambda function for a native method.
+   * Sets the thread to WAITING until the method is loaded if it is not already.
    * @param thread
    * @param className
    * @param methodName
@@ -67,25 +68,26 @@ export class JNI {
         this.classes[className].blocking = [thread];
         thread.setStatus(ThreadStatus.WAITING);
         if (this.classes[className].loader) {
-          // @ts-ignore
-          this.classes[className].loader((lib) => {
+          this.classes[className].loader?.(lib => {
             this.classes[className].methods = lib;
-            this.classes[className].blocking?.forEach((thread) => {
+            this.classes[className].blocking?.forEach(thread => {
               thread.setStatus(ThreadStatus.RUNNABLE);
             });
             this.classes[className].blocking = [];
           });
         } else {
           this.system
-            .readFile(this.classPath + "/" + className)
-            .then((lib) => {
+            .readFile(
+              this.classPath ? this.classPath + '/' + className : className
+            )
+            .then(lib => {
               this.classes[className].methods = lib.default;
             })
-            .catch((e) => {
+            .catch(e => {
               this.classes[className].methods = {};
             })
             .finally(() => {
-              this.classes[className].blocking?.forEach((thread) => {
+              this.classes[className].blocking?.forEach(thread => {
                 thread.setStatus(ThreadStatus.RUNNABLE);
               });
               this.classes[className].blocking = [];
@@ -95,17 +97,21 @@ export class JNI {
         this.classes[className].blocking!.push(thread);
         thread.setStatus(ThreadStatus.WAITING);
       }
-      return { isDefer: true };
+      return { status: ResultType.DEFER };
     }
 
     // native method does not exist
     if (!this.classes?.[className]?.methods?.[methodName]) {
       return {
-        exceptionCls: "java/lang/UnsatisfiedLinkError",
+        status: ResultType.ERROR,
+        exceptionCls: 'java/lang/UnsatisfiedLinkError',
         msg: `${className}.${methodName} implementation not found`,
       };
     }
 
-    return { result: (this.classes[className].methods as any)[methodName] };
+    return {
+      status: ResultType.SUCCESS,
+      result: (this.classes[className].methods as any)[methodName],
+    };
   }
 }

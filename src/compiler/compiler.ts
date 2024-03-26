@@ -1,12 +1,13 @@
 import { ClassFile } from "../ClassFile/types";
 import { AST } from "../ast/types/packages-and-modules";
-import { ClassDeclaration, MethodDeclaration } from "../ast/types/classes";
+import { ClassBodyDeclaration, ClassDeclaration, ConstructorDeclaration, FieldDeclaration, MethodDeclaration } from "../ast/types/classes";
 import { AttributeInfo } from "../ClassFile/types/attributes";
 import { FieldInfo } from "../ClassFile/types/fields";
 import { MethodInfo } from "../ClassFile/types/methods";
 import { ConstantPoolManager } from "./constant-pool-manager";
 import {
   generateClassAccessFlags,
+  generateFieldAccessFlags,
   generateMethodAccessFlags,
 } from "./compiler-utils";
 import { SymbolTable } from "./symbol-table";
@@ -40,6 +41,7 @@ export class Compiler {
 
   compile(ast: AST) {
     this.setup();
+    this.symbolTable.handleImports(ast.importDeclarations);
     const classFiles: Array<ClassFile> = [];
     ast.topLevelClassOrInterfaceDeclarations.forEach(x => classFiles.push(this.compileClass(x)));
     return classFiles[0];
@@ -50,20 +52,18 @@ export class Compiler {
     this.className = classNode.typeIdentifier;
     const accessFlags = generateClassAccessFlags(classNode.classModifier);
     this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags });
-    this.constantPoolManager.indexMethodrefInfo(parentClassName, "<init>", "()V");
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(parentClassName);
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className);
     this.constantPoolManager.indexUtf8Info("Code");
-    classNode.classBody.forEach(m => this.recordMethodInfo(m));
-    classNode.classBody.forEach(m => this.compileMethod(m));
+    this.handleClassBody(classNode.classBody);
 
     const constantPool = this.constantPoolManager.getPool();
     return {
       magic: MAGIC,
       minorVersion: MINOR_VERSION,
       majorVersion: MAJOR_VERSION,
-      constantPoolCount: constantPool.length + 1,
+      constantPoolCount: this.constantPoolManager.getSize(),
       constantPool: constantPool,
       accessFlags: accessFlags,
       thisClass: thisClassIndex,
@@ -79,6 +79,81 @@ export class Compiler {
     };
   }
 
+  private handleClassBody(classBody: Array<ClassBodyDeclaration>) {
+    const staticFields: Array<FieldDeclaration> = [];
+    const nonStaticFields: Array<FieldDeclaration> = [];
+    const staticMethods: Array<MethodDeclaration> = [];
+    const nonStaticMethods: Array<MethodDeclaration> = [];
+    const constructors: Array<ConstructorDeclaration> = [];
+
+    classBody.forEach(d => {
+      if (d.kind === "FieldDeclaration") {
+        if (d.fieldModifier.includes("static")) {
+          staticFields.push(d);
+        } else {
+          nonStaticFields.push(d);
+        }
+      } else if (d.kind === "MethodDeclaration") {
+        if (d.methodModifier.includes("static")) {
+          staticMethods.push(d);
+        } else {
+          nonStaticMethods.push(d);
+        }
+      } else if (d.kind === "ConstructorDeclaration") {
+        constructors.push(d);
+      }
+    });
+
+    // insert default constructor
+    if (constructors.length === 0) {
+      constructors.push({
+        kind: "ConstructorDeclaration",
+        constructorModifier: ["public"],
+        constructorDeclarator: {
+          identifier: this.className,
+          formalParameterList: []
+        },
+        constructorBody: {
+          kind: "Block",
+          blockStatements: [],
+        },
+      })
+    }
+
+    constructors.forEach(c => this.recordConstructorInfo(c));
+    staticFields.forEach(f => this.recordFieldInfo(f));
+    staticMethods.forEach(m => this.recordMethodInfo(m));
+
+    nonStaticFields.forEach(f => this.recordFieldInfo(f));
+    nonStaticMethods.forEach(m => this.recordMethodInfo(m));
+    nonStaticMethods.forEach(m => this.compileMethod(m));
+    staticMethods.forEach(m => this.compileMethod(m));
+    constructors.forEach(c => this.compileConstructor(c));
+  }
+
+  private recordFieldInfo(fieldNode: FieldDeclaration) {
+    const accessFlags = generateFieldAccessFlags(fieldNode.fieldModifier);
+    const type = fieldNode.fieldType;
+    fieldNode.variableDeclaratorList.forEach(v => {
+      const fullType = type + v.dims;
+      const typeDescriptor = this.symbolTable.generateFieldDescriptor(fullType);
+      this.fields.push({
+        accessFlags: accessFlags,
+        nameIndex: this.constantPoolManager.indexUtf8Info(v.variableDeclaratorId),
+        descriptorIndex: this.constantPoolManager.indexUtf8Info(typeDescriptor),
+        attributesCount: 0,
+        attributes: []
+      });
+      this.symbolTable.insertFieldInfo({
+        name: v.variableDeclaratorId,
+        accessFlags: accessFlags,
+        parentClassName: this.className,
+        typeName: fullType,
+        typeDescriptor: typeDescriptor,
+      })
+    });
+  }
+
   private recordMethodInfo(methodNode: MethodDeclaration) {
     const header = methodNode.methodHeader;
     const methodName = header.identifier;
@@ -91,6 +166,19 @@ export class Compiler {
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
       parentClassName: this.className,
       typeDescriptor: descriptor
+    });
+  }
+
+  private recordConstructorInfo(constructor: ConstructorDeclaration) {
+    const declarator = constructor.constructorDeclarator;
+    const paramsType = declarator.formalParameterList.map(x => x.unannType);
+    const descriptor = this.symbolTable.generateMethodDescriptor(paramsType, "void");
+
+    this.symbolTable.insertMethodInfo({
+      name: "<init>",
+      accessFlags: generateMethodAccessFlags(constructor.constructorModifier),
+      parentClassName: this.className,
+      typeDescriptor: descriptor,
     });
   }
 
@@ -114,5 +202,21 @@ export class Compiler {
       attributesCount: attributes.length,
       attributes: attributes
     });
+  }
+
+  private compileConstructor(constructor: ConstructorDeclaration) {
+    const methodNode: MethodDeclaration = {
+      kind: "MethodDeclaration",
+      methodModifier: constructor.constructorModifier,
+      methodHeader: {
+        identifier: "<init>",
+        formalParameterList: constructor.constructorDeclarator.formalParameterList,
+        result: "void",
+      },
+      methodBody: constructor.constructorBody,
+      location: { startLine: 0, startOffset: 0 },
+    };
+
+    this.compileMethod(methodNode);
   }
 }

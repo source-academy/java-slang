@@ -28,14 +28,22 @@ it("evaluate LocalVariableDeclarationStatement without variableInitializer corre
   const expectedControlTrace = [
     "CompilationUnit",
 
-    "ExpressionStatement", // main();
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+
+    "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
+    "ConstructorDeclaration", // Test() {...}
 
     "Pop",
-    "MethodInvocation", // main()
+    "MethodInvocation", // Test.main([""])
 
     "Invocation", // ()
-    "MethodName", // main
+    "Literal", // [""]
+    "ResOverride",
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -51,7 +59,11 @@ it("evaluate LocalVariableDeclarationStatement without variableInitializer corre
     "Reset", // skip Env from Invocation
   ];
   const expectedStashTrace = [
-    "main", // MethodName
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    "main", // ResOverride
+    `[""]`, // Literal
     "Void", // Void
   ];
 
@@ -81,14 +93,22 @@ it("evaluate LocalVariableDeclarationStatement with variableInitializer correctl
   const expectedControlTrace = [
     "CompilationUnit",
 
-    "ExpressionStatement", // main();
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+
+    "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
+    "ConstructorDeclaration", // Test() {...}
 
     "Pop",
-    "MethodInvocation", // main()
-
+    "MethodInvocation", // Test.main([""])
+    
     "Invocation", // ()
-    "MethodName", // main
+    "Literal", // [""]
+    "ResOverride",
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -114,7 +134,11 @@ it("evaluate LocalVariableDeclarationStatement with variableInitializer correctl
     "Reset", // skip Env from Invocation
   ];
   const expectedStashTrace = [
-    "main", // MethodName
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    "main", // ResOverride
+    `[""]`, // Literal
     "x", // EvalVariable
     "1", // Literal
     "1", // Assign
@@ -148,14 +172,22 @@ it("evaluate Assignment correctly", () => {
   const expectedControlTrace = [
     "CompilationUnit",
 
-    "ExpressionStatement", // main();
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+    
+    "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
+    "ConstructorDeclaration", // Test() {...}
 
     "Pop",
-    "MethodInvocation", // main()
+    "MethodInvocation", // Test.main([""])
 
     "Invocation", // ()
-    "MethodName", // main
+    "Literal", // [""]
+    "ResOverride",
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -179,7 +211,11 @@ it("evaluate Assignment correctly", () => {
     "Reset", // skip Env from Invocation
   ];
   const expectedStashTrace = [
-    "main", // MethodName
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    "main", // ResOverride
+    `[""]`, // Literal
     "x", // EvalVariable
     "1", // Literal
     "1", // Assign
@@ -213,14 +249,22 @@ it("evaluate LocalVariableDeclarationStatement with local variable as variableIn
   const expectedControlTrace = [
     "CompilationUnit",
 
-    "ExpressionStatement", // main();
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+    
+    "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
+    "ConstructorDeclaration", // Test() {...}
 
     "Pop",
-    "MethodInvocation", // main()
+    "MethodInvocation", // Test.main([""])
 
     "Invocation", // ()
-    "MethodName", // main
+    "Literal", // [""]
+    "ResOverride",
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
 
     "Env", // from Invocation
     "Marker",
@@ -251,18 +295,26 @@ it("evaluate LocalVariableDeclarationStatement with local variable as variableIn
     "ExpressionName", // x
     "EvalVariable", // y
 
+    "Deref",
+    "EvalVariable", // x
+
     "Reset", // return
     "Void",
 
     "Reset", // skip Env from Invocation
   ];
   const expectedStashTrace = [
-    "main", // MethodName
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    "main", // ResOverride
+    `[""]`, // Literal
     "x", // EvalVariable
     "1", // Literal
     "1", // Assign
     "y", // EvalVariable
-    "1", // ExpressionName
+    "x", // EvalVariable
+    "1", // Deref
     "1", // Assign
     "Void", // Void
   ];

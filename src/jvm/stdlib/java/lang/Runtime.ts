@@ -1,7 +1,7 @@
 import Thread from "../../../thread";
 
 const functions = {
-  "availableProcessors()I": (thread: Thread, locals: any[]) => {
+  'availableProcessors()I': (thread: Thread, locals: any[]) => {
     thread.returnStackFrame(1);
   },
 };

@@ -65,6 +65,22 @@ const testCases: testCase[] = [
     expectedLines: ["This is expected", "Correct"],
   },
   {
+    comment: "else follow innermost if",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          int x = 7, y = 1;
+          if (x == 7)
+            if (y > 8)
+              System.out.println("no way");
+            else
+              System.out.println("ok");
+        }
+      }
+    `,
+    expectedLines: ["ok"],
+  },
+  {
     comment: "chain of if elses",
     program: `
       public class Main {

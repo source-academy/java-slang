@@ -1,26 +1,26 @@
 import AbstractClassLoader from "../../../ClassLoader/AbstractClassLoader";
 import Thread from "../../../thread";
-import { checkError } from "../../../types/Result";
 import { JvmObject } from "../../../types/reference/Object";
+import { ResultType } from "../../../types/Result";
 import { j2jsString } from "../../../utils";
 
 const functions = {
-  "registerNatives()V": (thread: Thread, locals: any[]) => {
+  'registerNatives()V': (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
 
-  "findLoadedClass0(Ljava/lang/String;)Ljava/lang/Class;": (
+  'findLoadedClass0(Ljava/lang/String;)Ljava/lang/Class;': (
     thread: Thread,
     locals: any[]
   ) => {
-    const className = j2jsString(locals[1] as JvmObject).replaceAll(".", "/");
+    const className = j2jsString(locals[1] as JvmObject).replaceAll('.', '/');
     const loader: AbstractClassLoader =
-      (locals[0] as JvmObject).getNativeField("$loader") ??
+      (locals[0] as JvmObject).getNativeField('$loader') ??
       thread.getJVM().getBootstrapClassLoader();
 
     const res = loader.getClass(className);
 
-    if (checkError(res)) {
+    if (res.status === ResultType.ERROR) {
       thread.throwNewException(res.exceptionCls, res.msg);
       return;
     }

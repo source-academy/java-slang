@@ -3,15 +3,18 @@ import {
   Assignment,
   Block,
   BlockStatement,
+  ClassInstanceCreationExpression,
+  ExplicitConstructorInvocation,
   Expression,
   ExpressionStatement,
   MethodInvocation,
-  MethodName,
   ReturnStatement,
 } from "./blocks-and-statements";
 import {
+  ConstructorDeclaration,
   FieldDeclaration,
   MethodDeclaration,
+  NormalClassDeclaration,
 } from "./classes";
 
 interface NodeMap {
@@ -25,7 +28,24 @@ interface NodeMap {
   ExpressionStatement: ExpressionStatement;
   MethodInvocation: MethodInvocation;
   ReturnStatement: ReturnStatement;
-  MethodName: MethodName;
+  NormalClassDeclaration: NormalClassDeclaration;
+  ClassInstanceCreationExpression: ClassInstanceCreationExpression;
+  ConstructorDeclaration: ConstructorDeclaration;
+  ExplicitConstructorInvocation: ExplicitConstructorInvocation;
 }
 
 export type Node = NodeMap[keyof NodeMap];
+
+export interface Location {
+  startOffset: number;
+  startLine: number;
+  startColumn?: number;
+  endOffset?: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
+export interface BaseNode {
+  kind: string;
+  location?: Location;
+}

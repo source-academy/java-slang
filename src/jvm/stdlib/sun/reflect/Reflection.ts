@@ -6,6 +6,7 @@ import { JvmObject } from "../../../types/reference/Object";
 /**
  * From Doppio
  */
+// TODO: add jsdoc link
 function getCallerClass(
   thread: Thread,
   framesToSkip: number
@@ -15,8 +16,8 @@ function getCallerClass(
   let frame: StackFrame = caller[idx];
 
   while (
-    frame.method.getClass().getClassname() === "java/lang/reflect/Method" &&
-    frame.method.getName() === "invoke"
+    frame.method.getClass().getName() === 'java/lang/reflect/Method' &&
+    frame.method.getName() === 'invoke'
   ) {
     if (idx === 0) {
       // No more stack to search!
@@ -30,16 +31,16 @@ function getCallerClass(
 }
 
 const functions = {
-  "getCallerClass()Ljava/lang/Class;": (thread: Thread, locals: any[]) => {
+  'getCallerClass()Ljava/lang/Class;': (thread: Thread, locals: any[]) => {
     const callerclass = getCallerClass(thread, 2);
     thread.returnStackFrame(callerclass);
   },
-  "getClassAccessFlags(Ljava/lang/Class;)I": (
+  'getClassAccessFlags(Ljava/lang/Class;)I': (
     thread: Thread,
     locals: any[]
   ) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ReferenceClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ReferenceClassData;
     thread.returnStackFrame(clsRef.getAccessFlags());
   },
 };

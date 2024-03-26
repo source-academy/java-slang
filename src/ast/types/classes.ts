@@ -1,10 +1,13 @@
+import { BaseNode } from "./ast";
 import { Block, VariableDeclarator } from "./blocks-and-statements";
 
 export type ClassDeclaration = NormalClassDeclaration;
 
-export interface NormalClassDeclaration {
+export interface NormalClassDeclaration extends BaseNode {
+  kind: "NormalClassDeclaration";
   classModifier: Array<ClassModifier>;
   typeIdentifier: Identifier;
+  sclass?: Identifier;
   classBody: Array<ClassBodyDeclaration>;
 }
 
@@ -19,10 +22,29 @@ export type ClassModifier =
   | "non-sealed"
   | "strictfp";
 
-export type ClassBodyDeclaration = ClassMemberDeclaration;
+export type ClassBodyDeclaration = ClassMemberDeclaration | ConstructorDeclaration;
 export type ClassMemberDeclaration = MethodDeclaration | FieldDeclaration;
 
-export interface MethodDeclaration {
+export interface ConstructorDeclaration extends BaseNode {
+  kind: "ConstructorDeclaration";
+  constructorModifier: Array<ConstructorModifier>;
+  constructorDeclarator: ConstructorDeclarator;
+  constructorBody: ConstructorBody;
+}
+
+export type ConstructorModifier =
+  | "public"
+  | "protected"
+  | "private";
+
+export interface ConstructorDeclarator {
+  identifier: Identifier;
+  formalParameterList: Array<FormalParameter>;
+}
+
+export type ConstructorBody = Block;
+
+export interface MethodDeclaration extends BaseNode {
   kind: "MethodDeclaration";
   methodModifier: Array<MethodModifier>;
   methodHeader: MethodHeader;
@@ -46,7 +68,7 @@ export interface MethodHeader {
   formalParameterList: Array<FormalParameter>;
 }
 
-export type Result = "void";
+export type Result = "void" | UnannType;
 
 export interface FormalParameter {
   kind: "FormalParameter";
@@ -54,7 +76,7 @@ export interface FormalParameter {
   identifier: Identifier;
 }
 
-export interface FieldDeclaration {
+export interface FieldDeclaration extends BaseNode {
   kind: "FieldDeclaration";
   fieldModifier: Array<FieldModifier>;
   fieldType: UnannType;

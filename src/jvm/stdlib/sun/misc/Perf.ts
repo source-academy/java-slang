@@ -1,11 +1,11 @@
 import { InternalStackFrame } from "../../../stackframe";
 import Thread from "../../../thread";
-import { checkError } from "../../../types/Result";
 import { ReferenceClassData } from "../../../types/class/ClassData";
 import { JvmObject } from "../../../types/reference/Object";
+import { ResultType } from "../../../types/Result";
 
 const functions = {
-  "createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;": (
+  'createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;': (
     thread: Thread,
     locals: any[]
   ) => {
@@ -15,8 +15,8 @@ const functions = {
       .getMethod()
       .getClass()
       .getLoader()
-      .getClass("java/nio/DirectByteBuffer");
-    if (checkError(bbRes)) {
+      .getClass('java/nio/DirectByteBuffer');
+    if (bbRes.status === ResultType.ERROR) {
       thread.throwNewException(bbRes.exceptionCls, bbRes.msg);
       return;
     }
@@ -26,9 +26,9 @@ const functions = {
     const addr = heap.allocate(BigInt(8));
     const buff = bbCls.instantiate();
 
-    const bbInit = bbCls.getMethod("<init>(JI)V");
+    const bbInit = bbCls.getMethod('<init>(JI)V');
     if (!bbInit) {
-      thread.throwNewException("java/lang/NoSuchMethodError", "<init>(JI)V");
+      thread.throwNewException('java/lang/NoSuchMethodError', '<init>(JI)V');
       return;
     }
 
