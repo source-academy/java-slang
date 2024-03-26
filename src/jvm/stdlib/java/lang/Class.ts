@@ -1,6 +1,6 @@
 import AbstractClassLoader from "../../../ClassLoader/AbstractClassLoader";
 import Thread from "../../../thread";
-import { checkError, checkSuccess, ErrorResult } from "../../../types/Result";
+import { ErrorResult, ResultType } from "../../../types/Result";
 import { InnerClasses } from "../../../types/class/Attributes";
 import {
   ClassData,
@@ -8,26 +8,26 @@ import {
   ReferenceClassData,
 } from "../../../types/class/ClassData";
 import { JvmObject } from "../../../types/reference/Object";
-import { j2jsString, primitiveNameToType } from "../../../utils";
+import { j2jsString, logger, primitiveNameToType } from "../../../utils";
 
 const functions = {
-  "desiredAssertionStatus0(Ljava/lang/Class;)Z": (
+  'desiredAssertionStatus0(Ljava/lang/Class;)Z': (
     thread: Thread,
     locals: any[]
   ) => {
-    console.warn("Class.desiredAssertionStatus0: assertions disabled");
+    logger.warn('Class.desiredAssertionStatus0: assertions disabled');
     thread.returnStackFrame(0);
   },
 
-  "getModifiers()I": (thread: Thread, locals: any[]) => {
+  'getModifiers()I': (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ClassData;
     thread.returnStackFrame(clsRef.getAccessFlags());
   },
 
-  "getSuperclass()Ljava/lang/Class;": (thread: Thread, locals: any[]) => {
+  'getSuperclass()Ljava/lang/Class;': (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ClassData;
     const superCls = clsRef.getSuperClass();
     if (!superCls) {
       thread.returnStackFrame(null);
@@ -36,23 +36,23 @@ const functions = {
     thread.returnStackFrame(superCls.getJavaObject());
   },
 
-  "registerNatives()V": (thread: Thread, locals: any[]) => {
+  'registerNatives()V': (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
 
-  "getDeclaredFields0(Z)[Ljava/lang/reflect/Field;": (
+  'getDeclaredFields0(Z)[Ljava/lang/reflect/Field;': (
     thread: Thread,
     locals: any[]
   ) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ClassData;
     const fields = clsRef.getDeclaredFields();
 
     const result = [];
 
     for (const [_, field] of Object.entries(fields)) {
       const refRes = field.getReflectedObject(thread);
-      if (checkError(refRes)) {
+      if (refRes.status === ResultType.ERROR) {
         thread.returnStackFrame();
         thread.throwNewException(refRes.exceptionCls, refRes.msg);
         return;
@@ -63,8 +63,8 @@ const functions = {
     const faClsRes = thread
       .getClass()
       .getLoader()
-      .getClass("[Ljava/lang/reflect/Field;");
-    if (checkError(faClsRes)) {
+      .getClass('[Ljava/lang/reflect/Field;');
+    if (faClsRes.status === ResultType.ERROR) {
       thread.returnStackFrame();
       thread.throwNewException(faClsRes.exceptionCls, faClsRes.msg);
       return;
@@ -76,7 +76,7 @@ const functions = {
     thread.returnStackFrame(faObj);
   },
 
-  "getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;": (
+  'getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;': (
     thread: Thread,
     locals: any[]
   ) => {
@@ -90,8 +90,8 @@ const functions = {
       .getLoader()
       .getPrimitiveClass(primitiveClsName);
     const initRes = cls.initialize(thread);
-    if (!checkSuccess(initRes)) {
-      if (checkError(initRes)) {
+    if (initRes.status !== ResultType.SUCCESS) {
+      if (initRes.status === ResultType.ERROR) {
         thread.throwNewException(initRes.exceptionCls, initRes.msg);
       }
       return;
@@ -99,30 +99,30 @@ const functions = {
     thread.returnStackFrame(cls.getJavaObject());
   },
 
-  "isArray()Z": (thread: Thread, locals: any[]) => {
+  'isArray()Z': (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ReferenceClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ReferenceClassData;
     thread.returnStackFrame(clsRef.checkArray() ? 1 : 0);
   },
 
-  "isPrimitive()Z": (thread: Thread, locals: any[]) => {
+  'isPrimitive()Z': (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ClassData;
     thread.returnStackFrame(clsRef.checkPrimitive() ? 1 : 0);
   },
 
-  "getName0()Ljava/lang/String;": (thread: Thread, locals: any[]) => {
+  'getName0()Ljava/lang/String;': (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ClassData;
     // Replace slashes with ., Class splits by . to get simple name
-    const name = clsRef.getClassname().replaceAll("/", ".");
+    const name = clsRef.getName().replaceAll('/', '.');
     const strRes = thread.getJVM().getInternedString(name);
     thread.returnStackFrame(strRes);
   },
 
-  "getComponentType()Ljava/lang/Class;": (thread: Thread, locals: any[]) => {
+  'getComponentType()Ljava/lang/Class;': (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ClassData;
 
     if (!clsRef.checkArray()) {
       thread.returnStackFrame(null);
@@ -133,25 +133,25 @@ const functions = {
     thread.returnStackFrame(itemCls.getJavaObject());
   },
 
-  "forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;":
+  'forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;':
     (thread: Thread, locals: any[]) => {
       const nameJStr = locals[0] as JvmObject;
       const initialize = (locals[1] as number) === 1;
       const loaderObj = locals[2] as JvmObject;
 
-      const name = j2jsString(nameJStr).replaceAll(".", "/");
+      const name = j2jsString(nameJStr).replaceAll('.', '/');
 
       let loader: AbstractClassLoader;
       if (loaderObj) {
         throw new Error(
-          "forName0 via application class loader object not handled"
+          'forName0 via application class loader object not handled'
         );
       } else {
         loader = thread.getJVM().getBootstrapClassLoader();
       }
 
       const loadRes = loader.getClass(name);
-      if (checkError(loadRes)) {
+      if (loadRes.status === ResultType.ERROR) {
         thread.returnStackFrame();
         thread.throwNewException(loadRes.exceptionCls, loadRes.msg);
         return;
@@ -164,8 +164,8 @@ const functions = {
       }
 
       const initRes = loadedCls.initialize(thread);
-      if (!checkSuccess(initRes)) {
-        if (checkError(initRes)) {
+      if (initRes.status !== ResultType.SUCCESS) {
+        if (initRes.status === ResultType.ERROR) {
           thread.returnStackFrame();
           thread.throwNewException(initRes.exceptionCls, initRes.msg);
           return;
@@ -175,29 +175,29 @@ const functions = {
       thread.returnStackFrame(loadedCls.getJavaObject());
     },
 
-  "isInterface()Z": (thread: Thread, locals: any[]) => {
+  'isInterface()Z': (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ClassData;
     thread.returnStackFrame(clsRef.checkInterface() ? 1 : 0);
   },
 
-  "getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;": (
+  'getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;': (
     thread: Thread,
     locals: any[]
   ) => {
     const clsObj = locals[0] as JvmObject;
     const publicOnly = locals[1] === 1;
 
-    const clsRef = clsObj.getNativeField("classRef") as ClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ClassData;
     const methods: JvmObject[] = [];
     let error: ErrorResult | null = null;
     Object.entries(clsRef.getDeclaredMethods()).forEach(([key, value]) => {
-      if (!key.startsWith("<init>") || (publicOnly && !value.checkPublic())) {
+      if (!key.startsWith('<init>') || (publicOnly && !value.checkPublic())) {
         return;
       }
 
       const refRes = value.getReflectedObject(thread);
-      if (checkError(refRes)) {
+      if (refRes.status === ResultType.ERROR) {
         error = refRes;
         return;
       }
@@ -214,8 +214,8 @@ const functions = {
 
     const caRes = clsRef
       .getLoader()
-      .getClass("[Ljava/lang/reflect/Constructor;");
-    if (checkError(caRes)) {
+      .getClass('[Ljava/lang/reflect/Constructor;');
+    if (caRes.status === ResultType.ERROR) {
       thread.returnStackFrame();
       thread.throwNewException(caRes.exceptionCls, caRes.msg);
       return;
@@ -227,19 +227,19 @@ const functions = {
     thread.returnStackFrame(caObj);
   },
 
-  "getDeclaredMethods0(Z)[Ljava/lang/reflect/Method;": (
+  'getDeclaredMethods0(Z)[Ljava/lang/reflect/Method;': (
     thread: Thread,
     locals: any[]
   ) => {
     const clsObj = locals[0] as JvmObject;
-    const classRef = clsObj.getNativeField("classRef") as ClassData;
+    const classRef = clsObj.getNativeField('classRef') as ClassData;
     const methods = classRef.getDeclaredMethods();
     const publicOnly = locals[1] === 1;
 
     const mArrRes = classRef
       .getLoader()
-      .getClass("[Ljava/lang/reflect/Method;");
-    if (checkError(mArrRes)) {
+      .getClass('[Ljava/lang/reflect/Method;');
+    if (mArrRes.status === ResultType.ERROR) {
       thread.throwNewException(mArrRes.exceptionCls, mArrRes.msg);
       return;
     }
@@ -252,12 +252,12 @@ const functions = {
         continue;
       }
 
-      if (name.startsWith("<init>")) {
+      if (name.startsWith('<init>')) {
         continue;
       }
 
       const refRes = method.getReflectedObject(thread);
-      if (checkError(refRes)) {
+      if (refRes.status === ResultType.ERROR) {
         thread.throwNewException(refRes.exceptionCls, refRes.msg);
         return;
       }
@@ -267,24 +267,24 @@ const functions = {
     thread.returnStackFrame(mArr);
   },
 
-  "getDeclaringClass0()Ljava/lang/Class;": (thread: Thread, locals: any[]) => {
+  'getDeclaringClass0()Ljava/lang/Class;': (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
-    const classRef = clsObj.getNativeField("classRef") as ClassData;
+    const classRef = clsObj.getNativeField('classRef') as ClassData;
 
     if (!classRef.checkReference()) {
       thread.returnStackFrame(null);
       return;
     }
 
-    const innerAttrib = classRef.getAttribute("InnerClasses") as InnerClasses;
+    const innerAttrib = classRef.getAttribute('InnerClasses') as InnerClasses;
     if (innerAttrib) {
       for (const cls of innerAttrib.classes) {
-        if (cls.innerClass.getClassName() === classRef.getClassname()) {
+        if (cls.innerClass.getClassName() === classRef.getName()) {
           if (cls.outerClass === null) {
             thread.returnStackFrame(null);
           } else {
             const outerResolution = cls.outerClass.resolve();
-            if (checkError(outerResolution)) {
+            if (outerResolution.status === ResultType.ERROR) {
               thread.throwNewException(
                 outerResolution.exceptionCls,
                 outerResolution.msg
@@ -301,44 +301,44 @@ const functions = {
     thread.returnStackFrame(null);
   },
 
-  "isAssignableFrom(Ljava/lang/Class;)Z": (thread: Thread, locals: any[]) => {
+  'isAssignableFrom(Ljava/lang/Class;)Z': (thread: Thread, locals: any[]) => {
     const clsObj = locals[0] as JvmObject;
-    const clsRef = clsObj.getNativeField("classRef") as ClassData;
+    const clsRef = clsObj.getNativeField('classRef') as ClassData;
     const clsObj2 = locals[1] as JvmObject;
-    const clsRef2 = clsObj2.getNativeField("classRef") as ClassData;
+    const clsRef2 = clsObj2.getNativeField('classRef') as ClassData;
     thread.returnStackFrame(clsRef2.checkCast(clsRef) ? 1 : 0);
   },
 
-  "getEnclosingMethod0()[Ljava/lang/Object;": (
+  'getEnclosingMethod0()[Ljava/lang/Object;': (
     thread: Thread,
     locals: any[]
   ) => {
     const jThis = locals[0] as JvmObject;
-    const thisCls = jThis.getNativeField("classRef") as ClassData;
+    const thisCls = jThis.getNativeField('classRef') as ClassData;
     if (thisCls.checkPrimitive() || thisCls.checkArray()) {
       thread.returnStackFrame(null);
       return;
     }
 
-    const attrib = thisCls.getAttribute("EnclosingMethod");
+    const attrib = thisCls.getAttribute('EnclosingMethod');
     if (attrib) {
       // TODO: get enclosing method from attribute enclosingmethod
       console.error(
-        "native method missing: Class.getEnclosingMethod0() for reference class"
+        'native method missing: Class.getEnclosingMethod0() for reference class'
       );
     }
     thread.returnStackFrame(null);
   },
 
-  "getDeclaredClasses0()[Ljava/lang/Class;": (
+  'getDeclaredClasses0()[Ljava/lang/Class;': (
     thread: Thread,
     locals: any[]
   ) => {
     const jThis = locals[0] as JvmObject;
-    const thisCls = jThis.getNativeField("classRef") as ClassData;
+    const thisCls = jThis.getNativeField('classRef') as ClassData;
 
-    const clsArrRes = thisCls.getLoader().getClass("[Ljava/lang/Class;");
-    if (checkError(clsArrRes)) {
+    const clsArrRes = thisCls.getLoader().getClass('[Ljava/lang/Class;');
+    if (clsArrRes.status === ResultType.ERROR) {
       thread.throwNewException(clsArrRes.exceptionCls, clsArrRes.msg);
       return;
     }
@@ -353,20 +353,20 @@ const functions = {
     }
 
     const innerclassesAttr = thisCls.getAttribute(
-      "InnerClasses"
+      'InnerClasses'
     ) as InnerClasses;
     if (innerclassesAttr) {
       for (const cls of innerclassesAttr.classes) {
         if (!cls.outerClass) continue;
 
         const outerRes = cls.outerClass.resolve();
-        if (!checkSuccess(outerRes)) {
+        if (outerRes.status !== ResultType.SUCCESS) {
           continue;
         }
         if (outerRes.result !== thisCls) continue;
         const innerRes = cls.innerClass.resolve();
-        if (!checkSuccess(innerRes)) {
-          if (checkError(innerRes)) {
+        if (innerRes.status !== ResultType.SUCCESS) {
+          if (innerRes.status === ResultType.ERROR) {
             thread.throwNewException(innerRes.exceptionCls, innerRes.msg);
           }
           return;
@@ -381,9 +381,9 @@ const functions = {
     thread.returnStackFrame(clsArr);
   },
 
-  "isInstance(Ljava/lang/Object;)Z": (thread: Thread, locals: any[]) => {
+  'isInstance(Ljava/lang/Object;)Z': (thread: Thread, locals: any[]) => {
     const jThis = locals[0] as JvmObject;
-    const thisCls = jThis.getNativeField("classRef") as ClassData;
+    const thisCls = jThis.getNativeField('classRef') as ClassData;
     const obj = locals[1] as JvmObject | null;
     if (obj === null) {
       thread.returnStackFrame(0);
@@ -392,12 +392,12 @@ const functions = {
     thread.returnStackFrame(obj.getClass().checkCast(thisCls) ? 1 : 0);
   },
 
-  "getProtectionDomain0()Ljava/security/ProtectionDomain;": (
+  'getProtectionDomain0()Ljava/security/ProtectionDomain;': (
     thread: Thread,
     locals: any[]
   ) => {
     thread.returnStackFrame(
-      (locals[0] as JvmObject).getNativeField("classRef").getProtectionDomain()
+      (locals[0] as JvmObject).getNativeField('classRef').getProtectionDomain()
     );
   },
 };

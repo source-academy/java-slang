@@ -1,7 +1,6 @@
 import { OPCODE } from "../ClassFile/constants/instructions";
 import { JNI } from "./jni";
 import Thread from "./thread";
-import { checkDefer, checkError } from "./types/Result";
 import { Code } from "./types/class/Attributes";
 import { ClassData, ReferenceClassData } from "./types/class/ClassData";
 import { Method } from "./types/class/Method";
@@ -19,39 +18,40 @@ import * as reserved from "./instructions/reserved";
 import * as references from "./instructions/references";
 import * as stack from "./instructions/stack";
 import * as stores from "./instructions/stores";
+import { ResultType } from "./types/Result";
 
 const overwrites: {
   [cls: string]: {
     [methodSig: string]: (thread: Thread, locals: any[]) => boolean;
   };
 } = {
-  "java/lang/System": {
-    "loadLibrary(Ljava/lang/String;)V": (thread: Thread, locals: any[]) => {
+  'java/lang/System': {
+    'loadLibrary(Ljava/lang/String;)V': (thread: Thread, locals: any[]) => {
       const lib = j2jsString(locals[0]);
 
       // We have already loaded these libraries (DLLs).
       switch (lib) {
-        case "zip":
-        case "net":
-        case "nio":
-        case "awt":
-        case "fontmanager":
-        case "management":
+        case 'zip':
+        case 'net':
+        case 'nio':
+        case 'awt':
+        case 'fontmanager':
+        case 'management':
           thread.returnStackFrame();
           return true;
         default:
-          throw new Error("loadLibrary not supported");
+          throw new Error('loadLibrary not supported');
       }
     },
   },
-  "java/lang/ref/Reference": {
-    "<clinit>()V": (thread: Thread, locals: any[]) => {
+  'java/lang/ref/Reference': {
+    '<clinit>()V': (thread: Thread, locals: any[]) => {
       thread.returnStackFrame();
       return true;
     },
   },
-  "java/nio/charset/Charset$3": {
-    "run()Ljava/lang/Object;": (thread: Thread, locals: any[]) => {
+  'java/nio/charset/Charset$3': {
+    'run()Ljava/lang/Object;': (thread: Thread, locals: any[]) => {
       thread.returnStackFrame();
       return true;
     },
@@ -60,7 +60,7 @@ const overwrites: {
 
 const checkOverwritten = (thread: Thread, method: Method) => {
   const overwritten =
-    overwrites[method.getClass().getClassname()]?.[
+    overwrites[method.getClass().getName()]?.[
       method.getName() + method.getDescriptor()
     ];
   if (overwritten) {
@@ -728,7 +728,10 @@ export abstract class StackFrame {
    */
   public onReturn(thread: Thread, retn: any) {
     if (retn !== undefined) {
-      thread.pushStack(retn);
+      const popResult = thread.pushStack(retn);
+      if (!popResult) {
+        return;
+      }
     }
     thread.offsetPc(this.returnOffset);
   }
@@ -738,7 +741,10 @@ export abstract class StackFrame {
    * Responsible for pushing return value to operand stack of stackframe below it.
    */
   public onReturn64(thread: Thread, retn: any) {
-    thread.pushStack64(retn);
+    const popResult = thread.pushStack64(retn);
+    if (!popResult) {
+      return;
+    }
     thread.offsetPc(this.returnOffset);
   }
 
@@ -814,15 +820,15 @@ export class NativeStackFrame extends StackFrame {
   run(thread: Thread): void {
     const methodRes = this.jni.getNativeMethod(
       thread,
-      this.class.getClassname(),
+      this.class.getName(),
       this.method.getName() + this.method.getDescriptor()
     );
 
-    if (checkDefer(methodRes)) {
+    if (methodRes.status === ResultType.DEFER) {
       return;
     }
 
-    if (checkError(methodRes)) {
+    if (methodRes.status === ResultType.ERROR) {
       thread.throwNewException(methodRes.exceptionCls, methodRes.msg);
       return;
     }

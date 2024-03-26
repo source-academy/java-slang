@@ -24,8 +24,8 @@ beforeEach(() => {
   thread.invokeStackFrame(new JavaStackFrame(testClass, method, 0, []));
 });
 
-describe("ILOAD", () => {
-  test("ILOAD: loads int from local variable array", () => {
+describe('ILOAD', () => {
+  test('ILOAD: loads int from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10;
     code.setUint8(0, OPCODE.ILOAD);
     code.setUint8(1, 0);
@@ -39,8 +39,8 @@ describe("ILOAD", () => {
   });
 });
 
-describe("LLOAD", () => {
-  test("LLOAD: loads long from local variable array", () => {
+describe('LLOAD', () => {
+  test('LLOAD: loads long from local variable array', () => {
     thread.peekStackFrame().locals[0] = BigInt(10);
     code.setUint8(0, OPCODE.LLOAD);
     code.setUint8(1, 0);
@@ -54,8 +54,8 @@ describe("LLOAD", () => {
   });
 });
 
-describe("FLOAD", () => {
-  test("FLOAD: loads float from local variable array", () => {
+describe('FLOAD', () => {
+  test('FLOAD: loads float from local variable array', () => {
     thread.peekStackFrame().locals[0] = 1.3;
     code.setUint8(0, OPCODE.FLOAD);
     code.setUint8(1, 0);
@@ -69,8 +69,8 @@ describe("FLOAD", () => {
   });
 });
 
-describe("DLOAD", () => {
-  test("DLOAD: loads double from local variable array", () => {
+describe('DLOAD', () => {
+  test('DLOAD: loads double from local variable array', () => {
     thread.peekStackFrame().locals[0] = 1.3;
     code.setUint8(0, OPCODE.DLOAD);
     code.setUint8(1, 0);
@@ -84,8 +84,8 @@ describe("DLOAD", () => {
   });
 });
 
-describe("ALOAD", () => {
-  test("ALOAD: loads reference from local variable array", () => {
+describe('ALOAD', () => {
+  test('ALOAD: loads reference from local variable array', () => {
     const obj = new JvmObject(threadClass);
     thread.peekStackFrame().locals[0] = obj;
     code.setUint8(0, OPCODE.ALOAD);
@@ -100,8 +100,8 @@ describe("ALOAD", () => {
   });
 });
 
-describe("ILOAD_0", () => {
-  test("ILOAD_0: loads int from local variable array", () => {
+describe('ILOAD_0', () => {
+  test('ILOAD_0: loads int from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10;
     thread.peekStackFrame().locals[1] = 11;
     thread.peekStackFrame().locals[2] = 12;
@@ -117,8 +117,8 @@ describe("ILOAD_0", () => {
   });
 });
 
-describe("ILOAD_1", () => {
-  test("ILOAD_1: loads int from local variable array", () => {
+describe('ILOAD_1', () => {
+  test('ILOAD_1: loads int from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10;
     thread.peekStackFrame().locals[1] = 11;
     thread.peekStackFrame().locals[2] = 12;
@@ -134,8 +134,8 @@ describe("ILOAD_1", () => {
   });
 });
 
-describe("ILOAD_2", () => {
-  test("ILOAD_2: loads int from local variable array", () => {
+describe('ILOAD_2', () => {
+  test('ILOAD_2: loads int from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10;
     thread.peekStackFrame().locals[1] = 11;
     thread.peekStackFrame().locals[2] = 12;
@@ -150,8 +150,8 @@ describe("ILOAD_2", () => {
   });
 });
 
-describe("ILOAD_3", () => {
-  test("ILOAD_3: loads int from local variable array", () => {
+describe('ILOAD_3', () => {
+  test('ILOAD_3: loads int from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10;
     thread.peekStackFrame().locals[1] = 11;
     thread.peekStackFrame().locals[2] = 12;
@@ -166,8 +166,8 @@ describe("ILOAD_3", () => {
   });
 });
 
-describe("LLOAD_0", () => {
-  test("LLOAD_0: loads long from local variable array", () => {
+describe('LLOAD_0', () => {
+  test('LLOAD_0: loads long from local variable array', () => {
     thread.peekStackFrame().locals[0] = BigInt(10);
     thread.peekStackFrame().locals[1] = BigInt(11);
     thread.peekStackFrame().locals[2] = BigInt(12);
@@ -182,8 +182,8 @@ describe("LLOAD_0", () => {
   });
 });
 
-describe("LLOAD_1", () => {
-  test("LLOAD_1: loads long from local variable array", () => {
+describe('LLOAD_1', () => {
+  test('LLOAD_1: loads long from local variable array', () => {
     thread.peekStackFrame().locals[0] = BigInt(10);
     thread.peekStackFrame().locals[1] = BigInt(11);
     thread.peekStackFrame().locals[2] = BigInt(12);
@@ -198,8 +198,8 @@ describe("LLOAD_1", () => {
   });
 });
 
-describe("LLOAD_2", () => {
-  test("LLOAD_2: loads long from local variable array", () => {
+describe('LLOAD_2', () => {
+  test('LLOAD_2: loads long from local variable array', () => {
     thread.peekStackFrame().locals[0] = BigInt(10);
     thread.peekStackFrame().locals[1] = BigInt(11);
     thread.peekStackFrame().locals[2] = BigInt(12);
@@ -214,8 +214,8 @@ describe("LLOAD_2", () => {
   });
 });
 
-describe("LLOAD_3", () => {
-  test("LLOAD_3: loads long from local variable array", () => {
+describe('LLOAD_3', () => {
+  test('LLOAD_3: loads long from local variable array', () => {
     thread.peekStackFrame().locals[0] = BigInt(10);
     thread.peekStackFrame().locals[1] = BigInt(11);
     thread.peekStackFrame().locals[2] = BigInt(12);
@@ -230,8 +230,8 @@ describe("LLOAD_3", () => {
   });
 });
 
-describe("FLOAD_0", () => {
-  test("FLOAD_0: loads float from local variable array", () => {
+describe('FLOAD_0', () => {
+  test('FLOAD_0: loads float from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10.0;
     thread.peekStackFrame().locals[1] = 11.0;
     thread.peekStackFrame().locals[2] = 12.0;
@@ -246,8 +246,8 @@ describe("FLOAD_0", () => {
   });
 });
 
-describe("FLOAD_1", () => {
-  test("FLOAD_1: loads float from local variable array", () => {
+describe('FLOAD_1', () => {
+  test('FLOAD_1: loads float from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10.0;
     thread.peekStackFrame().locals[1] = 11.0;
     thread.peekStackFrame().locals[2] = 12.0;
@@ -262,8 +262,8 @@ describe("FLOAD_1", () => {
   });
 });
 
-describe("FLOAD_2", () => {
-  test("FLOAD_2: loads float from local variable array", () => {
+describe('FLOAD_2', () => {
+  test('FLOAD_2: loads float from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10.0;
     thread.peekStackFrame().locals[1] = 11.0;
     thread.peekStackFrame().locals[2] = 12.0;
@@ -278,8 +278,8 @@ describe("FLOAD_2", () => {
   });
 });
 
-describe("FLOAD_3", () => {
-  test("FLOAD_3: loads float from local variable array", () => {
+describe('FLOAD_3', () => {
+  test('FLOAD_3: loads float from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10.0;
     thread.peekStackFrame().locals[1] = 11.0;
     thread.peekStackFrame().locals[2] = 12.0;
@@ -294,8 +294,8 @@ describe("FLOAD_3", () => {
   });
 });
 
-describe("DLOAD_0", () => {
-  test("DLOAD_0: loads double from local variable array", () => {
+describe('DLOAD_0', () => {
+  test('DLOAD_0: loads double from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10.0;
     thread.peekStackFrame().locals[1] = 11.0;
     thread.peekStackFrame().locals[2] = 12.0;
@@ -310,8 +310,8 @@ describe("DLOAD_0", () => {
   });
 });
 
-describe("DLOAD_1", () => {
-  test("DLOAD_1: loads double from local variable array", () => {
+describe('DLOAD_1', () => {
+  test('DLOAD_1: loads double from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10.0;
     thread.peekStackFrame().locals[1] = 11.0;
     thread.peekStackFrame().locals[2] = 12.0;
@@ -326,8 +326,8 @@ describe("DLOAD_1", () => {
   });
 });
 
-describe("DLOAD_2", () => {
-  test("DLOAD_2: loads double from local variable array", () => {
+describe('DLOAD_2', () => {
+  test('DLOAD_2: loads double from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10.0;
     thread.peekStackFrame().locals[1] = 11.0;
     thread.peekStackFrame().locals[2] = 12.0;
@@ -342,8 +342,8 @@ describe("DLOAD_2", () => {
   });
 });
 
-describe("DLOAD_3", () => {
-  test("DLOAD_3: loads double from local variable array", () => {
+describe('DLOAD_3', () => {
+  test('DLOAD_3: loads double from local variable array', () => {
     thread.peekStackFrame().locals[0] = 10.0;
     thread.peekStackFrame().locals[1] = 11.0;
     thread.peekStackFrame().locals[2] = 12.0;
@@ -358,8 +358,8 @@ describe("DLOAD_3", () => {
   });
 });
 
-describe("ALOAD_0", () => {
-  test("ALOAD_0: loads reference from local variable array", () => {
+describe('ALOAD_0', () => {
+  test('ALOAD_0: loads reference from local variable array', () => {
     const l0 = new JvmObject(threadClass);
     const l1 = new JvmObject(threadClass);
     const l2 = new JvmObject(threadClass);
@@ -378,8 +378,8 @@ describe("ALOAD_0", () => {
   });
 });
 
-describe("ALOAD_1", () => {
-  test("ALOAD_1: loads reference from local variable array", () => {
+describe('ALOAD_1', () => {
+  test('ALOAD_1: loads reference from local variable array', () => {
     const l0 = new JvmObject(threadClass);
     const l1 = new JvmObject(threadClass);
     const l2 = new JvmObject(threadClass);
@@ -398,8 +398,8 @@ describe("ALOAD_1", () => {
   });
 });
 
-describe("ALOAD_2", () => {
-  test("ALOAD_2: loads reference from local variable array", () => {
+describe('ALOAD_2', () => {
+  test('ALOAD_2: loads reference from local variable array', () => {
     const l0 = new JvmObject(threadClass);
     const l1 = new JvmObject(threadClass);
     const l2 = new JvmObject(threadClass);
@@ -418,8 +418,8 @@ describe("ALOAD_2", () => {
   });
 });
 
-describe("ALOAD_3", () => {
-  test("ALOAD_3: loads reference from local variable array", () => {
+describe('ALOAD_3', () => {
+  test('ALOAD_3: loads reference from local variable array', () => {
     const l0 = new JvmObject(threadClass);
     const l1 = new JvmObject(threadClass);
     const l2 = new JvmObject(threadClass);
@@ -438,10 +438,10 @@ describe("ALOAD_3", () => {
   });
 });
 
-describe("IALOAD", () => {
-  test("IALOAD: loads int from array", () => {
+describe('IALOAD', () => {
+  test('IALOAD: loads int from array', () => {
     const arrCls = (
-      testLoader.getClass("[I") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[I') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -456,7 +456,7 @@ describe("IALOAD", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("IALOAD: null array throws NullPointerException", () => {
+  test('IALOAD: null array throws NullPointerException', () => {
     const arrayRef = null;
     thread.pushStack(arrayRef);
     thread.pushStack(0);
@@ -467,14 +467,14 @@ describe("IALOAD", () => {
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("IALOAD: high index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('IALOAD: high index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[I") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[I') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -485,19 +485,19 @@ describe("IALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("IALOAD: low index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('IALOAD: low index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[I") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[I') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -508,21 +508,21 @@ describe("IALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("LALOAD", () => {
-  test("LALOAD: loads long from array", () => {
+describe('LALOAD', () => {
+  test('LALOAD: loads long from array', () => {
     const arrCls = (
-      testLoader.getClass("[J") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[J') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [BigInt(99)]);
@@ -537,7 +537,7 @@ describe("LALOAD", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("LALOAD: null array throws NullPointerException", () => {
+  test('LALOAD: null array throws NullPointerException', () => {
     const arrayRef = null;
     thread.pushStack(arrayRef);
     thread.pushStack(0);
@@ -548,14 +548,14 @@ describe("LALOAD", () => {
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("LALOAD: high index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('LALOAD: high index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[J") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[J') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [BigInt(99)]);
@@ -566,18 +566,18 @@ describe("LALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("LALOAD: low index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('LALOAD: low index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[J") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[J') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [BigInt(99)]);
@@ -588,20 +588,20 @@ describe("LALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("FALOAD", () => {
-  test("FALOAD: loads float from array", () => {
+describe('FALOAD', () => {
+  test('FALOAD: loads float from array', () => {
     const arrCls = (
-      testLoader.getClass("[F") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[F') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99.0]);
@@ -616,7 +616,7 @@ describe("FALOAD", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("FALOAD: null array throws NullPointerException", () => {
+  test('FALOAD: null array throws NullPointerException', () => {
     const arrayRef = null;
     thread.pushStack(arrayRef);
     thread.pushStack(0);
@@ -627,14 +627,14 @@ describe("FALOAD", () => {
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("FALOAD: high index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('FALOAD: high index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[F") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[F') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99.0]);
@@ -645,18 +645,18 @@ describe("FALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("FALOAD: low index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('FALOAD: low index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[F") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[F') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99.0]);
@@ -667,20 +667,20 @@ describe("FALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("DALOAD", () => {
-  test("DALOAD: loads float from array", () => {
+describe('DALOAD', () => {
+  test('DALOAD: loads float from array', () => {
     const arrCls = (
-      testLoader.getClass("[F") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[F') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99.0]);
@@ -695,7 +695,7 @@ describe("DALOAD", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DALOAD: null array throws NullPointerException", () => {
+  test('DALOAD: null array throws NullPointerException', () => {
     const arrayRef = null;
     thread.pushStack(arrayRef);
     thread.pushStack(0);
@@ -706,14 +706,14 @@ describe("DALOAD", () => {
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("DALOAD: high index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('DALOAD: high index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[F") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[F') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99.0]);
@@ -724,18 +724,18 @@ describe("DALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("DALOAD: low index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('DALOAD: low index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[F") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[F') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99.0]);
@@ -746,21 +746,21 @@ describe("DALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("AALOAD", () => {
-  test("AALOAD: loads ref from array", () => {
+describe('AALOAD', () => {
+  test('AALOAD: loads ref from array', () => {
     const arrCls = (
       testLoader.getClass(
-        "[Ljava/lang/Thread;"
+        '[Ljava/lang/Thread;'
       ) as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
@@ -776,17 +776,17 @@ describe("AALOAD", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("AALOAD: loads arrayref from array", () => {
+  test('AALOAD: loads arrayref from array', () => {
     const iarrCls = (
       testLoader.getClass(
-        "[Ljava/lang/Thread;"
+        '[Ljava/lang/Thread;'
       ) as SuccessResult<ReferenceClassData>
     ).result;
     const iarrayRef = iarrCls.instantiate() as JvmArray;
     iarrayRef.initialize(thread, 1, [null]);
     const arrCls = (
       testLoader.getClass(
-        "[[Ljava/lang/Thread;"
+        '[[Ljava/lang/Thread;'
       ) as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
@@ -802,7 +802,7 @@ describe("AALOAD", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("AALOAD: null array throws NullPointerException", () => {
+  test('AALOAD: null array throws NullPointerException', () => {
     const arrayRef = null;
     thread.pushStack(arrayRef);
     thread.pushStack(0);
@@ -813,15 +813,15 @@ describe("AALOAD", () => {
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("AALOAD: high index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('AALOAD: high index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
       testLoader.getClass(
-        "[Ljava/lang/Thread;"
+        '[Ljava/lang/Thread;'
       ) as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
@@ -833,20 +833,20 @@ describe("AALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("AALOAD: low index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('AALOAD: low index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
       testLoader.getClass(
-        "[Ljava/lang/Thread;"
+        '[Ljava/lang/Thread;'
       ) as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
@@ -858,21 +858,21 @@ describe("AALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("BALOAD", () => {
-  test("BALOAD: loads boolean from array", () => {
+describe('BALOAD', () => {
+  test('BALOAD: loads boolean from array', () => {
     const arrCls = (
-      testLoader.getClass("[Z") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[Z') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -887,7 +887,7 @@ describe("BALOAD", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("BALOAD: null array throws NullPointerException", () => {
+  test('BALOAD: null array throws NullPointerException', () => {
     const arrayRef = null;
     thread.pushStack(arrayRef);
     thread.pushStack(0);
@@ -898,14 +898,14 @@ describe("BALOAD", () => {
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("BALOAD: high index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('BALOAD: high index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[Z") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[Z') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -916,19 +916,19 @@ describe("BALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("BALOAD: low index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('BALOAD: low index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[Z") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[Z') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -939,21 +939,21 @@ describe("BALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("CALOAD", () => {
-  test("CALOAD: loads char from array", () => {
+describe('CALOAD', () => {
+  test('CALOAD: loads char from array', () => {
     const arrCls = (
-      testLoader.getClass("[C") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[C') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -968,7 +968,7 @@ describe("CALOAD", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("CALOAD: null array throws NullPointerException", () => {
+  test('CALOAD: null array throws NullPointerException', () => {
     const arrayRef = null;
     thread.pushStack(arrayRef);
     thread.pushStack(0);
@@ -979,14 +979,14 @@ describe("CALOAD", () => {
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("CALOAD: high index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('CALOAD: high index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[C") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[C') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -997,19 +997,19 @@ describe("CALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("CALOAD: low index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('CALOAD: low index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[C") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[C') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -1020,21 +1020,21 @@ describe("CALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
 
-describe("SALOAD", () => {
-  test("SALOAD: loads short from array", () => {
+describe('SALOAD', () => {
+  test('SALOAD: loads short from array', () => {
     const arrCls = (
-      testLoader.getClass("[S") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[S') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -1049,7 +1049,7 @@ describe("SALOAD", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("SALOAD: null array throws NullPointerException", () => {
+  test('SALOAD: null array throws NullPointerException', () => {
     const arrayRef = null;
     thread.pushStack(arrayRef);
     thread.pushStack(0);
@@ -1060,14 +1060,14 @@ describe("SALOAD", () => {
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/NullPointerException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/NullPointerException'
     );
   });
 
-  test("SALOAD: high index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('SALOAD: high index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[S") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[S') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -1078,19 +1078,19 @@ describe("SALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 
-  test("SALOAD: low index OOB throws ArrayIndexOutOfBoundsException", () => {
+  test('SALOAD: low index OOB throws ArrayIndexOutOfBoundsException', () => {
     const arrCls = (
-      testLoader.getClass("[S") as SuccessResult<ReferenceClassData>
+      testLoader.getClass('[S') as SuccessResult<ReferenceClassData>
     ).result;
     const arrayRef = arrCls.instantiate() as JvmArray;
     arrayRef.initialize(thread, 1, [99]);
@@ -1101,13 +1101,13 @@ describe("SALOAD", () => {
     const lastFrame = thread.peekStackFrame();
     expect(lastFrame.class === threadClass).toBe(true);
     expect(lastFrame.method).toBe(
-      threadClass.getMethod("dispatchUncaughtException(Ljava/lang/Throwable;)V")
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
     );
     expect(thread.getPC()).toBe(0);
 
     const exceptionObj = lastFrame.locals[1] as JvmObject;
-    expect(exceptionObj.getClass().getClassname()).toBe(
-      "java/lang/ArrayIndexOutOfBoundsException"
+    expect(exceptionObj.getClass().getName()).toBe(
+      'java/lang/ArrayIndexOutOfBoundsException'
     );
   });
 });
