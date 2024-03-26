@@ -2,7 +2,6 @@ import { AttributeInfo } from "../../ClassFile/types/attributes";
 import AbstractClassLoader from "../ClassLoader/AbstractClassLoader";
 import { ConstantPool } from "../constant-pool";
 import Thread from "../thread";
-import { SuccessResult, ResultType } from "../types/Result";
 import { IAttribute, info2Attribute } from "../types/class/Attributes";
 import {
   ArrayClassData,
@@ -18,10 +17,10 @@ import { SuccessResult, ResultType } from "../types/Result";
 const _ = {};
 export const INACCESSIBLE = new Proxy(_, {
   get: () => {
-    throw new Error('Inaccessible');
+    throw new Error("Inaccessible");
   },
   set: () => {
-    throw new Error('Inaccessible');
+    throw new Error("Inaccessible");
   },
 });
 
@@ -32,14 +31,14 @@ export const INACCESSIBLE = new Proxy(_, {
 export const j2jsString = (str: JvmObject) => {
   return String.fromCharCode(
     ...(
-      str._getField('value', '[C', 'java/lang/String') as JvmArray
+      str._getField("value", "[C", "java/lang/String") as JvmArray
     ).getJsArray()
   );
 };
 
 function newCharArr(loader: AbstractClassLoader, str: string): JvmArray {
   // Assume char array loaded at init
-  const cArrRes = loader.getClass('[C') as SuccessResult<ArrayClassData>;
+  const cArrRes = loader.getClass("[C") as SuccessResult<ArrayClassData>;
   const cArrCls = cArrRes.result;
   const cArr = cArrCls.instantiate() as JvmArray;
   const jsArr = [];
@@ -59,11 +58,11 @@ export function js2jString(
 ): JvmObject {
   const charArr = newCharArr(loader, str);
   const strRes = loader.getClass(
-    'java/lang/String'
+    "java/lang/String"
   ) as SuccessResult<ReferenceClassData>;
   const strCls = strRes.result;
   const strObj = strCls.instantiate();
-  const fieldRef = strCls.lookupField('value[C') as Field;
+  const fieldRef = strCls.lookupField("value[C") as Field;
   strObj.putField(fieldRef as Field, charArr);
   return strObj;
 }
@@ -80,20 +79,20 @@ export const typeIndexScale = (cls: ClassData) => {
 
   const componentName = cls.getName();
   switch (componentName) {
-    case 'long':
-    case 'double':
+    case "long":
+    case "double":
       return 8;
 
-    case 'int':
-    case 'float':
+    case "int":
+    case "float":
       return 4;
 
-    case 'short':
-    case 'char':
+    case "short":
+    case "char":
       return 2;
 
-    case 'byte':
-    case 'boolean':
+    case "byte":
+    case "boolean":
       return 1;
 
     default:
@@ -128,11 +127,11 @@ export function parseFieldDescriptor(
     case JavaType.array:
       const res = parseFieldDescriptor(descriptor, index + 1);
       const clsName =
-        '[' + (res.referenceCls ? 'L' + res.referenceCls + ';' : res.type);
+        "[" + (res.referenceCls ? "L" + res.referenceCls + ";" : res.type);
       return { type: JavaType.array, referenceCls: clsName, index: res.index };
     case JavaType.reference:
       const sub = descriptor.substring(index);
-      const end = sub.indexOf(';');
+      const end = sub.indexOf(";");
       return {
         type: JavaType.reference,
         referenceCls: sub.substring(1, end),
@@ -146,7 +145,7 @@ export function parseFieldDescriptor(
 }
 
 export function parseMethodDescriptor(desc: string) {
-  let [args, ret] = desc.split(')');
+  let [args, ret] = desc.split(")");
   args = args.substring(1);
   const argTypes = [];
 
@@ -179,9 +178,9 @@ export function getArgs(
   for (let i = methodDesc.args.length - 1; i >= 0; i--) {
     let popResult;
     switch (methodDesc.args[i].type) {
-      case 'V':
+      case "V":
         break; // should not happen
-      case 'D':
+      case "D":
         popResult = thread.popStack64();
         if (popResult.status === ResultType.ERROR) {
           break;
@@ -191,14 +190,14 @@ export function getArgs(
           args.push(asDouble(popResult.result));
         }
         break;
-      case 'F':
+      case "F":
         popResult = thread.popStack();
         if (popResult.status === ResultType.ERROR) {
           break;
         }
         args.push(asFloat(popResult.result));
         break;
-      case 'J':
+      case "J":
         popResult = thread.popStack64();
         if (popResult.status === ResultType.ERROR) {
           break;
@@ -208,12 +207,12 @@ export function getArgs(
           args.push(popResult.result);
         }
         break;
-      case '[':
-      case 'B':
-      case 'C':
-      case 'I':
-      case 'S':
-      case 'Z':
+      case "[":
+      case "B":
+      case "C":
+      case "I":
+      case "S":
+      case "Z":
       default: // also references + arrays
         popResult = thread.popStack();
         if (popResult.status === ResultType.ERROR) {
@@ -242,23 +241,23 @@ export function asFloat(value: number): number {
 export function primitiveTypeToName(type: JavaType) {
   switch (type) {
     case JavaType.byte:
-      return 'byte';
+      return "byte";
     case JavaType.char:
-      return 'char';
+      return "char";
     case JavaType.double:
-      return 'double';
+      return "double";
     case JavaType.float:
-      return 'float';
+      return "float";
     case JavaType.int:
-      return 'int';
+      return "int";
     case JavaType.long:
-      return 'long';
+      return "long";
     case JavaType.short:
-      return 'short';
+      return "short";
     case JavaType.boolean:
-      return 'boolean';
+      return "boolean";
     case JavaType.void:
-      return 'void';
+      return "void";
     default:
       return null;
   }
@@ -266,23 +265,23 @@ export function primitiveTypeToName(type: JavaType) {
 
 export function primitiveNameToType(pName: string) {
   switch (pName) {
-    case 'byte':
+    case "byte":
       return JavaType.byte;
-    case 'char':
+    case "char":
       return JavaType.char;
-    case 'double':
+    case "double":
       return JavaType.double;
-    case 'float':
+    case "float":
       return JavaType.float;
-    case 'int':
+    case "int":
       return JavaType.int;
-    case 'long':
+    case "long":
       return JavaType.long;
-    case 'short':
+    case "short":
       return JavaType.short;
-    case 'boolean':
+    case "boolean":
       return JavaType.boolean;
-    case 'void':
+    case "void":
       return JavaType.void;
     default:
       return null;
@@ -295,7 +294,7 @@ export function attrInfo2Interface(
 ) {
   const attributes: { [attributeName: string]: IAttribute } = {};
   // attributes
-  infoArr.forEach(attr => {
+  infoArr.forEach((attr) => {
     const attrName = (
       constantPool.get(attr.attributeNameIndex) as ConstantUtf8
     ).get();
@@ -305,12 +304,12 @@ export function attrInfo2Interface(
 }
 
 export function autoBox(obj: any) {
-  logger.warn('Auto boxing not implemented');
+  logger.warn("Auto boxing not implemented");
   return obj;
 }
 
 export function autoUnbox(obj: any) {
-  logger.warn('Auto unboxing not implemented');
+  logger.warn("Auto unboxing not implemented");
   return obj;
 }
 

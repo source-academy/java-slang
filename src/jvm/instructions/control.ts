@@ -1,5 +1,4 @@
 import Thread from "../thread";
-import { ResultType } from "../types/Result";
 import { JvmObject } from "../types/reference/Object";
 import { ResultType } from "../types/Result";
 import { asFloat, asDouble } from "../utils";
