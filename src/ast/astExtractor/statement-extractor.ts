@@ -59,7 +59,6 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   statementWithoutTrailingSubstatement(
     ctx: StatementWithoutTrailingSubstatementCtx
   ): Statement {
-    console.log(ctx);
     if (ctx.expressionStatement) {
       this.visit(ctx.expressionStatement);
       return {
