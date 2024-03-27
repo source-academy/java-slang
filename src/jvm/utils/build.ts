@@ -10,7 +10,7 @@ import * as fs from "node:fs";
 
 const CLASSFILE_PATH = process.argv[2] ?? "";
 const OUTDIR = "dist/jvm";
-const include = ["java", "sun/misc"];
+const include = ["java", "sun/misc", "modules"];
 
 function cf2b64(path: string): string {
   const buffer = fs.readFileSync(path, null);
@@ -41,7 +41,7 @@ export default function build() {
   console.log(process.argv);
   _readAll(CLASSFILE_PATH);
   fs.writeFileSync(
-    OUTDIR + "/classfiles.js",
+    OUTDIR + "/classfiles.json",
     `export default ${JSON.stringify(items)}`
   );
   console.log(`Wrote ${Object.keys(items).length} classfiles to ${OUTDIR}`);
