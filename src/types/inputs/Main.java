@@ -1,8 +1,7 @@
 public class Main {
   public static void main(String[] args) {
-    int test = 0;
-    if (1 * "Hello") {
-      test = 1;
-    }
+    int i = 1;
+    for (int i = 0; i < 10; i++) {}
+    int test = i;
   }
 }

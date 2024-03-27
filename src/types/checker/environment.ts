@@ -1,6 +1,6 @@
 import * as NonPrimitives from "../types/nonPrimitives";
 import * as Primitives from "../types/primitives";
-import { CannotFindSymbolError } from "../errors";
+import { CannotFindSymbolError, VariableAlreadyDefinedError } from "../errors";
 import { Type } from "../types/type";
 
 export type Frame = {
@@ -66,6 +66,9 @@ export const setEnvironmentVariable = (
   environmentFrame: Frame,
   typeName: string,
   type: Type
-) => {
+): Error | null => {
+  if (environmentFrame.variables[typeName])
+    return new VariableAlreadyDefinedError();
   environmentFrame.variables[typeName] = type;
+  return null;
 };

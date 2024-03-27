@@ -1,3 +1,7 @@
+import { ExpressionExtractor } from "./expression-extractor";
+import { Identifier, UnannType } from "../types/classes";
+import { StatementExtractor } from "./statement-extractor";
+import { TypeExtractor } from "./type-extractor";
 import {
   BaseJavaCstVisitorWithDefaults,
   BlockStatementCstNode,
@@ -10,10 +14,6 @@ import {
   Expression,
   VariableDeclarator,
 } from "../types/blocks-and-statements";
-import { Identifier, UnannType } from "../types/classes";
-import { ExpressionExtractor } from "./expression-extractor";
-import { StatementExtractor } from "./statement-extractor";
-import { TypeExtractor } from "./type-extractor";
 
 export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   private type: UnannType;

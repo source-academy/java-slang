@@ -235,7 +235,7 @@ describe("Type Checker", () => {
       else expect(result.currentType).toBeInstanceOf(testcase.result.type);
       expect(result.errors.length).toBe(testcase.result.errors.length);
       testcase.result.errors.forEach((error, index) => {
-        expect(result.errors[index].name).toBe(error.name);
+        expect(result.errors[index].message).toBe(error.message);
       });
     });
   });

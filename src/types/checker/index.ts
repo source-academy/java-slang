@@ -32,12 +32,12 @@ export type Result = {
   errors: Error[];
 };
 
-const OK_RESULT: Result = { currentType: null, errors: [] };
-
 const newResult = (
   currentType: Type | null = null,
   errors: Error[] = []
 ): Result => ({ currentType, errors });
+
+const OK_RESULT: Result = newResult(null);
 
 export const check = (
   node: Node,
@@ -57,7 +57,38 @@ export const check = (
         );
       if (!leftType.canBeAssigned(currentType))
         return newResult(null, [new IncompatibleTypesError()]);
-      return newResult(null);
+      return OK_RESULT;
+    }
+    case "BasicForStatement": {
+      if (!environmentFrame.previousFrame)
+        throw new Error("For statement env frame has no parent frame.");
+      const tempEnvironmentFrame = createFrame(
+        environmentFrame.types,
+        environmentFrame.previousFrame
+      );
+      Object.assign(tempEnvironmentFrame.variables, environmentFrame.variables);
+      const errors: Error[] = [];
+      if (Array.isArray(node.forInit)) {
+        node.forInit.forEach((forInit) => {
+          const forInitCheck = check(forInit, tempEnvironmentFrame);
+          errors.push(...forInitCheck.errors);
+        });
+      } else {
+        const forInitCheck = check(node.forInit, tempEnvironmentFrame);
+        errors.push(...forInitCheck.errors);
+      }
+      if (node.condition) {
+        const conditionCheck = check(node.condition!, tempEnvironmentFrame);
+        errors.push(...conditionCheck.errors);
+      }
+      node.forUpdate.forEach((forUpdate) => {
+        const checkResult = check(forUpdate, tempEnvironmentFrame);
+        errors.push(...checkResult.errors);
+      });
+      const forBodyFrame = createFrame({}, tempEnvironmentFrame);
+      const bodyCheck = check(node.body, forBodyFrame);
+      if (bodyCheck.errors) errors.push(...bodyCheck.errors);
+      return newResult(null, errors);
     }
     case "BinaryExpression": {
       const { left, operator, right } = node;
@@ -137,7 +168,7 @@ export const check = (
       return newResult(null, errors);
     }
     case "BreakStatement": {
-      return newResult(null);
+      return OK_RESULT;
     }
     case "CompilationUnit": {
       const { blockStatements } = (
@@ -148,13 +179,13 @@ export const check = (
       const errors = blockStatements.flatMap((blockStatement) => {
         return check(blockStatement, newEnvironmentFrame).errors;
       });
-      return { currentType: null, errors };
+      return newResult(null, errors);
     }
     case "ContinueStatement": {
-      return newResult(null);
+      return OK_RESULT;
     }
     case "EmptyStatement": {
-      return newResult(null);
+      return OK_RESULT;
     }
     case "ExpressionName": {
       const type = getEnvironmentVariable(environmentFrame, node.name);
@@ -248,11 +279,12 @@ export const check = (
           );
         if (!declaredType.canBeAssigned(currentType))
           return newResult(null, [new IncompatibleTypesError()]);
-        setEnvironmentVariable(
+        const error = setEnvironmentVariable(
           environmentFrame,
           variableDeclarator.variableDeclaratorId,
           declaredType
         );
+        if (error) return newResult(null, [error]);
         return OK_RESULT;
       });
       return results.reduce((previousResult, currentResult) => {
@@ -262,6 +294,16 @@ export const check = (
           errors: [...previousResult.errors, ...currentResult.errors],
         };
       }, OK_RESULT);
+    }
+    case "PostfixExpression": {
+      const expressionCheck = check(node.expression, environmentFrame);
+      if (expressionCheck.errors.length > 0) return expressionCheck;
+      const doubleType = new Double();
+      if (!expressionCheck.currentType)
+        throw new Error("Expression check did not return a type.");
+      if (!doubleType.canBeAssigned(expressionCheck.currentType))
+        return newResult(null, [new BadOperandTypesError()]);
+      return expressionCheck;
     }
     case "PrefixExpression": {
       const { operator, expression } = node;
@@ -341,7 +383,7 @@ export const check = (
       const newEnvironmentFrame = createFrame({}, environmentFrame);
       const bodyCheck = check(node.body, newEnvironmentFrame);
       if (bodyCheck.errors.length > 0) return bodyCheck;
-      return newResult(null);
+      return OK_RESULT;
     }
     default:
       throw new Error(

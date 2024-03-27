@@ -57,13 +57,13 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       ctx.expression
     ) {
       const expressionExtractor = new ExpressionExtractor();
+      const condition = this.visit(ctx.binaryExpression);
       return {
         kind: "TernaryExpression",
-        condition: expressionExtractor.binaryExpression(
-          ctx.binaryExpression[0].children
-        ),
+        condition: condition,
         consequent: expressionExtractor.extract(ctx.expression[0]),
         alternate: expressionExtractor.extract(ctx.expression[1]),
+        location: condition.location,
       };
     }
     return this.visit(ctx.binaryExpression);
@@ -182,8 +182,23 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
         expression: node,
         location: this.location,
       };
+    } else if (ctx.UnarySuffixOperator) {
+      const suffixOp = ctx.UnarySuffixOperator[0];
+      return {
+        kind: "PostfixExpression",
+        operator: suffixOp.image,
+        expression: node,
+        location: {
+          startOffset: suffixOp.startOffset,
+          startLine: suffixOp.startLine,
+          startColumn: suffixOp.startColumn,
+          endOffset: suffixOp.endOffset,
+          endLine: suffixOp.endLine,
+          endColumn: suffixOp.endColumn,
+        },
+      };
     }
-    return this.visit(ctx.primary);
+    return node;
   }
 
   primary(ctx: PrimaryCtx) {

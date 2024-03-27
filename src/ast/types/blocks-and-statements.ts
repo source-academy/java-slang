@@ -57,7 +57,7 @@ export type ForStatement = BasicForStatement | EnhancedForStatement;
 export interface BasicForStatement extends BaseNode {
   kind: "BasicForStatement";
   forInit: Array<ExpressionStatement> | LocalVariableDeclarationStatement;
-  condition: Expression;
+  condition: Expression | null;
   forUpdate: Array<ExpressionStatement>;
   body: Statement;
 }

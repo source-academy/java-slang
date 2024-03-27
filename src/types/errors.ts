@@ -1,4 +1,8 @@
-export class BadOperandTypesError extends Error {}
+export class BadOperandTypesError extends Error {
+  constructor() {
+    super("bad operand");
+  }
+}
 
 export class CannotFindSymbolError extends Error {
   constructor() {
@@ -33,5 +37,11 @@ export class IntegerTooLargeError extends Error {
 export class IncompatibleTypesError extends Error {
   constructor() {
     super("incompatible types");
+  }
+}
+
+export class VariableAlreadyDefinedError extends Error {
+  constructor() {
+    super("variable is already defined");
   }
 }
