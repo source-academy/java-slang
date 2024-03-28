@@ -1,0 +1,37 @@
+# Taken from js-slang repo
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Node.js CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Check for package-lock.json
+        run: |
+          if [ -e package-lock.json ]; then
+            echo "package-lock.json found; please do not use NPM! This project uses Yarn!"
+            exit 1
+          fi
+          exit 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+      - run: yarn test-coverage
+        env:
+          CI: true
