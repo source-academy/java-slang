@@ -87,11 +87,9 @@ export default function parseBin(view: DataView) {
       view,
       offset
     );
-
     cls.methods.push(result);
     offset = resultOffset;
   }
-
   const attributesCount = view.getUint16(offset);
   offset += 2;
 
