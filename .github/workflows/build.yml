@@ -31,7 +31,8 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --frozen-lockfile
-      - run: yarn build
+      - name: Build
+        run: yarn build
       - run: yarn test-coverage
         env:
           CI: true
