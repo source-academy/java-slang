@@ -50,8 +50,8 @@ export default class Monitor {
       onExit && onExit();
     } else {
       thread.throwNewException(
-        "java/lang/IllegalMonitorStateException",
-        "Cannot exit a monitor that you do not own."
+        'java/lang/IllegalMonitorStateException',
+        'Cannot exit a monitor that you do not own.'
       );
     }
   }
@@ -63,8 +63,8 @@ export default class Monitor {
   wait(thread: Thread, timeout: number = 0, nanos: number = 0) {
     if (this.owner !== thread) {
       thread.throwNewException(
-        "java.lang.IllegalMonitorStateException",
-        "current thread is not owner"
+        'java.lang.IllegalMonitorStateException',
+        'current thread is not owner'
       );
     }
 
@@ -103,6 +103,10 @@ export default class Monitor {
     }
   }
 
+  /**
+   * Sets all threads waiting on this monitor to runnable and calls the callback if provided.
+   * @param thread
+   */
   notifyAll(thread: Thread) {
     for (const state of this.notifyArray) {
       const thread = state.thread;

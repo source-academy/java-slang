@@ -1,6 +1,6 @@
 import AbstractClassLoader from "../../../ClassLoader/AbstractClassLoader";
 import Thread from "../../../thread";
-import { checkError, checkSuccess, ErrorResult } from "../../../types/Result";
+import { ErrorResult, ResultType } from "../../../types/Result";
 import { InnerClasses } from "../../../types/class/Attributes";
 import {
   ClassData,
@@ -8,14 +8,19 @@ import {
   ReferenceClassData,
 } from "../../../types/class/ClassData";
 import { JvmObject } from "../../../types/reference/Object";
-import { j2jsString, primitiveNameToType } from "../../../utils";
+import { j2jsString, logger, primitiveNameToType } from "../../../utils";
 
 const functions = {
+  /**
+   * @todo Not implemented. Returns 0 (assertions disabled).
+   * @param thread
+   * @param locals
+   */
   "desiredAssertionStatus0(Ljava/lang/Class;)Z": (
     thread: Thread,
     locals: any[]
   ) => {
-    console.warn("Class.desiredAssertionStatus0: assertions disabled");
+    logger.warn("Class.desiredAssertionStatus0: assertions disabled");
     thread.returnStackFrame(0);
   },
 
@@ -36,6 +41,11 @@ const functions = {
     thread.returnStackFrame(superCls.getJavaObject());
   },
 
+  /**
+   * NOP.
+   * @param thread
+   * @param locals
+   */
   "registerNatives()V": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
@@ -52,7 +62,7 @@ const functions = {
 
     for (const [_, field] of Object.entries(fields)) {
       const refRes = field.getReflectedObject(thread);
-      if (checkError(refRes)) {
+      if (refRes.status === ResultType.ERROR) {
         thread.returnStackFrame();
         thread.throwNewException(refRes.exceptionCls, refRes.msg);
         return;
@@ -64,7 +74,7 @@ const functions = {
       .getClass()
       .getLoader()
       .getClass("[Ljava/lang/reflect/Field;");
-    if (checkError(faClsRes)) {
+    if (faClsRes.status === ResultType.ERROR) {
       thread.returnStackFrame();
       thread.throwNewException(faClsRes.exceptionCls, faClsRes.msg);
       return;
@@ -90,8 +100,8 @@ const functions = {
       .getLoader()
       .getPrimitiveClass(primitiveClsName);
     const initRes = cls.initialize(thread);
-    if (!checkSuccess(initRes)) {
-      if (checkError(initRes)) {
+    if (initRes.status !== ResultType.SUCCESS) {
+      if (initRes.status === ResultType.ERROR) {
         thread.throwNewException(initRes.exceptionCls, initRes.msg);
       }
       return;
@@ -115,7 +125,7 @@ const functions = {
     const clsObj = locals[0] as JvmObject;
     const clsRef = clsObj.getNativeField("classRef") as ClassData;
     // Replace slashes with ., Class splits by . to get simple name
-    const name = clsRef.getClassname().replaceAll("/", ".");
+    const name = clsRef.getName().replaceAll("/", ".");
     const strRes = thread.getJVM().getInternedString(name);
     thread.returnStackFrame(strRes);
   },
@@ -133,6 +143,12 @@ const functions = {
     thread.returnStackFrame(itemCls.getJavaObject());
   },
 
+  /**
+   * @todo Partially implemented. Throws an error when called with a non-null classloader.
+   * @param thread
+   * @param locals
+   * @returns
+   */
   "forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;":
     (thread: Thread, locals: any[]) => {
       const nameJStr = locals[0] as JvmObject;
@@ -151,7 +167,7 @@ const functions = {
       }
 
       const loadRes = loader.getClass(name);
-      if (checkError(loadRes)) {
+      if (loadRes.status === ResultType.ERROR) {
         thread.returnStackFrame();
         thread.throwNewException(loadRes.exceptionCls, loadRes.msg);
         return;
@@ -164,8 +180,8 @@ const functions = {
       }
 
       const initRes = loadedCls.initialize(thread);
-      if (!checkSuccess(initRes)) {
-        if (checkError(initRes)) {
+      if (initRes.status !== ResultType.SUCCESS) {
+        if (initRes.status === ResultType.ERROR) {
           thread.returnStackFrame();
           thread.throwNewException(initRes.exceptionCls, initRes.msg);
           return;
@@ -197,7 +213,7 @@ const functions = {
       }
 
       const refRes = value.getReflectedObject(thread);
-      if (checkError(refRes)) {
+      if (refRes.status === ResultType.ERROR) {
         error = refRes;
         return;
       }
@@ -215,7 +231,7 @@ const functions = {
     const caRes = clsRef
       .getLoader()
       .getClass("[Ljava/lang/reflect/Constructor;");
-    if (checkError(caRes)) {
+    if (caRes.status === ResultType.ERROR) {
       thread.returnStackFrame();
       thread.throwNewException(caRes.exceptionCls, caRes.msg);
       return;
@@ -239,7 +255,7 @@ const functions = {
     const mArrRes = classRef
       .getLoader()
       .getClass("[Ljava/lang/reflect/Method;");
-    if (checkError(mArrRes)) {
+    if (mArrRes.status === ResultType.ERROR) {
       thread.throwNewException(mArrRes.exceptionCls, mArrRes.msg);
       return;
     }
@@ -257,7 +273,7 @@ const functions = {
       }
 
       const refRes = method.getReflectedObject(thread);
-      if (checkError(refRes)) {
+      if (refRes.status === ResultType.ERROR) {
         thread.throwNewException(refRes.exceptionCls, refRes.msg);
         return;
       }
@@ -279,12 +295,12 @@ const functions = {
     const innerAttrib = classRef.getAttribute("InnerClasses") as InnerClasses;
     if (innerAttrib) {
       for (const cls of innerAttrib.classes) {
-        if (cls.innerClass.getClassName() === classRef.getClassname()) {
+        if (cls.innerClass.getClassName() === classRef.getName()) {
           if (cls.outerClass === null) {
             thread.returnStackFrame(null);
           } else {
             const outerResolution = cls.outerClass.resolve();
-            if (checkError(outerResolution)) {
+            if (outerResolution.status === ResultType.ERROR) {
               thread.throwNewException(
                 outerResolution.exceptionCls,
                 outerResolution.msg
@@ -309,6 +325,12 @@ const functions = {
     thread.returnStackFrame(clsRef2.checkCast(clsRef) ? 1 : 0);
   },
 
+  /**
+   * @todo Partially implemented. Not implemented for reference classes, get data from enclosingmethod attribute for that.
+   * @param thread
+   * @param locals
+   * @returns
+   */
   "getEnclosingMethod0()[Ljava/lang/Object;": (
     thread: Thread,
     locals: any[]
@@ -322,8 +344,7 @@ const functions = {
 
     const attrib = thisCls.getAttribute("EnclosingMethod");
     if (attrib) {
-      // TODO: get enclosing method from attribute enclosingmethod
-      console.error(
+      logger.warn(
         "native method missing: Class.getEnclosingMethod0() for reference class"
       );
     }
@@ -338,7 +359,7 @@ const functions = {
     const thisCls = jThis.getNativeField("classRef") as ClassData;
 
     const clsArrRes = thisCls.getLoader().getClass("[Ljava/lang/Class;");
-    if (checkError(clsArrRes)) {
+    if (clsArrRes.status === ResultType.ERROR) {
       thread.throwNewException(clsArrRes.exceptionCls, clsArrRes.msg);
       return;
     }
@@ -360,13 +381,13 @@ const functions = {
         if (!cls.outerClass) continue;
 
         const outerRes = cls.outerClass.resolve();
-        if (!checkSuccess(outerRes)) {
+        if (outerRes.status !== ResultType.SUCCESS) {
           continue;
         }
         if (outerRes.result !== thisCls) continue;
         const innerRes = cls.innerClass.resolve();
-        if (!checkSuccess(innerRes)) {
-          if (checkError(innerRes)) {
+        if (innerRes.status !== ResultType.SUCCESS) {
+          if (innerRes.status === ResultType.ERROR) {
             thread.throwNewException(innerRes.exceptionCls, innerRes.msg);
           }
           return;

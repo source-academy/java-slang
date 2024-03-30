@@ -3,8 +3,8 @@ import {
   ReferenceClassData,
   ArrayClassData,
 } from "../../../../types/class/ClassData";
-import { checkError } from "../../../../types/Result";
 import { JvmObject } from "../../../../types/reference/Object";
+import { ResultType } from "../../../../types/Result";
 
 const functions = {
   "newArray(Ljava/lang/Class;I)Ljava/lang/Object;": (
@@ -18,10 +18,7 @@ const functions = {
     let clsName = "[" + clsRef.getDescriptor();
 
     const arrClsRes = clsRef.getLoader().getClass(clsName);
-    if (checkError(arrClsRes)) {
-      console.error(
-        "init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V: Method not found"
-      );
+    if (arrClsRes.status === ResultType.ERROR) {
       thread.throwNewException(
         "java/lang/ClassNotFoundException",
         arrClsRes.msg

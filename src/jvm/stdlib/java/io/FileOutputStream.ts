@@ -1,8 +1,16 @@
 import { JvmArray } from "../../../types/reference/Array";
 import { JvmObject } from "../../../types/reference/Object";
 import Thread from "../../../thread";
+import { logger } from "../../../utils";
 
 const functions = {
+  /**
+   * Writes bytes to the file descriptor. pipes to stdout/stderr if fd is 1/2.
+   * Not implemented for other file descriptors.
+   * @param thread
+   * @param locals
+   * @returns
+   */
   "writeBytes([BIIZ)V": (thread: Thread, locals: any[]) => {
     const stream = locals[0] as JvmObject;
     const bytes = locals[1] as JvmArray;
@@ -33,8 +41,14 @@ const functions = {
 
     throw new Error("Not implemented");
   },
+
+  /**
+   * Not implemented. NOP.
+   * @param thread
+   * @param locals
+   */
   "initIDs()V": (thread: Thread, locals: any[]) => {
-    console.warn("FileOutputStream.initIDs()V not implemented");
+    logger.warn("FileOutputStream.initIDs()V not implemented");
     thread.returnStackFrame();
   },
 };
