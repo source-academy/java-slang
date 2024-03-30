@@ -43,7 +43,6 @@ export default function parseBin(view: DataView) {
 
   const constantPoolCount = view.getUint16(offset)
   offset += 2
-
   ;({ result: cls.constantPool, offset } = readConstants(view, offset, constantPoolCount))
 
   cls.accessFlags = view.getUint16(offset)

@@ -38,6 +38,10 @@ export default class Thread {
     Thread.threadIdCounter += 1
   }
 
+  /**
+   * Initializes the thread.
+   * @param thread
+   */
   initialize(thread: Thread) {
     const init = this.threadClass.getMethod('<init>()V') as Method
     if (!init) {
@@ -49,6 +53,11 @@ export default class Thread {
     )
   }
 
+  /**
+   * Runs the thread for the given quantum.
+   * @param quantum number of opcodes to run.
+   * @returns
+   */
   runFor(quantum: number) {
     if (this.quantumLeft > 0) {
       return
@@ -77,6 +86,11 @@ export default class Thread {
     }
   }
 
+  /**
+   * Terminates the thread.
+   * Exits all monitors, calls Thread::exit() and sets the status to TERMINATED.
+   * @returns
+   */
   _exit() {
     if (this.isShuttingDown) {
       return
