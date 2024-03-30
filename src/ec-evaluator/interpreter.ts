@@ -84,7 +84,6 @@ import {
   isNull,
   makeNonLocalVarNonParamSimpleNameQualified,
 } from "./utils";
-// import { astToString } from "../ast/utils/utils";
 
 type CmdEvaluator = (
   command: ControlItem,
@@ -111,15 +110,11 @@ export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): Sta
     }
 
     control.pop();
-    // console.log(isNode(command) ? astToString(command) : command.instrType)
     if (isNode(command)) {
       cmdEvaluators[command.kind](command, context, control, stash);
     } else {
       cmdEvaluators[command.instrType](command, context, control, stash);
     }
-    // console.log("env", context.environment.current);
-    // console.log("control", control.getStack())
-    // console.log("stash", stash.getStack())
 
     command = control.peek();
     context.totalSteps += 1;
