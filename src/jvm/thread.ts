@@ -141,7 +141,7 @@ export default class Thread {
   }
 
   /**
-   * Gets class of current method
+   * Gets the declaring class of the method at the top of the stack.
    * @returns
    */
   getClass(): ClassData {
