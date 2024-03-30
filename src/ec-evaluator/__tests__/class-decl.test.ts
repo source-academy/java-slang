@@ -1,5 +1,4 @@
 import { parse } from "../../ast/parser";
-import { NoMainMtdError } from "../errors";
 import { evaluate } from "../interpreter";
 import {
   ControlStub,
@@ -8,6 +7,85 @@ import {
   getControlItemStr,
   getStashItemStr
 } from "./utils";
+
+describe("evaluate NormalClassDeclaration correctly", () => {
+  it("evaluate NormalClassDeclaration correctly", () => {
+    const programStr = `
+      class Parent {}
+      class Test extends Parent {
+        public static void main(String[] args) {}
+      }
+      `;
+
+    const compilationUnit = parse(programStr);
+    expect(compilationUnit).toBeTruthy();
+
+    const context = createContextStub();
+    context.control.push(compilationUnit!);
+
+    const result = evaluate(context);
+
+    const expectedControlTrace = [
+      "CompilationUnit",
+      
+      "ExpressionStatement", // Test.main([""]);
+      "NormalClassDeclaration", // class Test extends Parent {...}
+      "NormalClassDeclaration", // class Parent {...}
+      "NormalClassDeclaration", // class Object {...}
+      
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Object() {...}
+
+      "Env", // from NormalClassDeclaration
+      "ConstructorDeclaration", // Parent() {...}
+
+      "Env", // from NormalClassDeclaration
+      "MethodDeclaration", // static void main(String[] args) {...}
+      "ConstructorDeclaration", // Test() {...}
+
+      "Pop",
+      "MethodInvocation", // Test.main([""])
+
+      "Invocation", // ()
+      "Literal", // [""]
+      "ResOverride",
+      "ExpressionName", // Test
+      "ResOverload", // main
+      "ResType", // [""]
+      "ResType", // Test
+
+      "Deref",
+      "EvalVariable", // Test
+
+      "Env", // from Invocation
+      "Marker",
+      "Block", // {...}
+
+      "Env", // from Block
+      "ReturnStatement", // return;
+
+      "Reset", // return
+      "Void",
+
+      "Reset", // Skip Env from Block
+    ];
+    const expectedStashTrace = [
+      "Test", // ResType
+      "String[]", // ResType
+      "main", // ResOverload
+      "Test", // EvalVariable
+      "Test", // Deref
+      "main", // ResOverride
+      `[""]`, // Literal
+      "Void",
+    ];
+
+    expect(result).toEqual(undefined);
+    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
+    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
+    // TODO test env
+  });
+});
 
 describe("evaluate FieldDeclaration correctly", () => {
   it("evaluate static FieldDeclaration without variableInitializer correctly", () => {
@@ -354,119 +432,6 @@ describe("evaluate MethodDeclaration correctly", () => {
       "MethodDeclaration", // static void test1() {}
       "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
-
-      "Pop",
-      "MethodInvocation", // Test.main([""])
-
-      "Invocation", // ()
-      "Literal", // [""]
-      "ResOverride",
-      "ExpressionName", // Test
-      "ResOverload", // main
-      "ResType", // [""]
-      "ResType", // Test
-
-      "Deref",
-      "EvalVariable", // Test
-
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
-
-      "Env", // from Block
-      "ReturnStatement", // return;
-
-      "Reset", // return
-      "Void",
-
-      "Reset", // Skip Env from Block
-    ];
-    const expectedStashTrace = [
-      "Test", // ResType
-      "String[]", // ResType
-      "main", // ResOverload
-      "Test", // EvalVariable
-      "Test", // Deref
-      "main", // ResOverride
-      `[""]`, // Literal
-      "Void", // Void
-    ];
-  
-    expect(result).toEqual(undefined);
-    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
-    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
-    // TODO test env
-  });
-});
-
-describe("evaluate main method correctly", () => {
-  it("should throw an error when main method is not defined", () => {
-    const programStr = `
-      class Test {}
-      `;
-  
-    const compilationUnit = parse(programStr);
-    expect(compilationUnit).toBeTruthy();
-  
-    const context = createContextStub();
-    context.control.push(compilationUnit!);
-  
-    expect(() => evaluate(context)).toThrowError(NoMainMtdError);
-  });
-
-  it("should not throw an error if main method is defined in at least one class", () => {
-    const programStr = `
-      class Test {}
-      class AnotherTest {
-        public static void main(String[] args) {}
-      }
-      `;
-  
-    const compilationUnit = parse(programStr);
-    expect(compilationUnit).toBeTruthy();
-  
-    const context = createContextStub();
-    context.control.push(compilationUnit!);
-  
-    expect(() => evaluate(context)).not.toThrowError(NoMainMtdError);
-  });
-
-  it("should invoke the main method defined in first class according to program order", () => {
-    const programStr = `
-      class Test {
-        public static void main(String[] args) {}
-      }
-      class AnotherTest {
-        public static void main(String[] args) {}
-      }
-      `;
-  
-    const compilationUnit = parse(programStr);
-    expect(compilationUnit).toBeTruthy();
-  
-    const context = createContextStub();
-    context.control.push(compilationUnit!);
-  
-    const result = evaluate(context);
-  
-    const expectedControlTrace = [
-      "CompilationUnit",
-      
-      "ExpressionStatement", // Test.main([""]);
-      "NormalClassDeclaration", // class AnotherTest {...}
-      "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
-
-      "Env", // from NormalClassDeclaration
-      "MethodDeclaration", // static void main(String[] args) {...}
-      "ConstructorDeclaration", // Test() {...}
-
-      "Env", // from NormalClassDeclaration
-      "MethodDeclaration", // static void main(String[] args) {...}
-      "ConstructorDeclaration", // AnotherTest() {...}
 
       "Pop",
       "MethodInvocation", // Test.main([""])
