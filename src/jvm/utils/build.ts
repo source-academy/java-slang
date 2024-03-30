@@ -1,4 +1,4 @@
-import * as fs from "node:fs";
+import * as fs from 'node:fs'
 
 /**
  * Build script to convert all classfiles in a directory to base64 and write them to a file.
@@ -8,43 +8,39 @@ import * as fs from "node:fs";
  * writes to $OUTDIR/classfiles.js. OUTDIR can be changed by setting the OUTDIR variable below.
  */
 
-const CLASSFILE_PATH = process.argv[2] ?? "";
-const OUTDIR = "dist/jvm";
-const include = ["java", "sun/misc", "modules"];
+const CLASSFILE_PATH = process.argv[2] ?? ''
+const OUTDIR = 'dist/jvm'
+const include = ['java', 'sun/misc', 'modules']
 
 function cf2b64(path: string): string {
-  const buffer = fs.readFileSync(path, null);
-  return buffer.toString("base64");
+  const buffer = fs.readFileSync(path, null)
+  return buffer.toString('base64')
 }
 
-let items: { [file: string]: string } = {};
+const items: { [file: string]: string } = {}
 
 function _readAll(currentPath: string) {
-  fs.readdirSync(currentPath).forEach((file) => {
-    const filepath = currentPath + "/" + file;
+  fs.readdirSync(currentPath).forEach(file => {
+    const filepath = currentPath + '/' + file
     if (fs.statSync(filepath).isDirectory()) {
-      _readAll(filepath);
+      _readAll(filepath)
     }
 
-    if (file.endsWith(".class")) {
-      const pkg = currentPath.slice(CLASSFILE_PATH.length + 1);
+    if (file.endsWith('.class')) {
+      const pkg = currentPath.slice(CLASSFILE_PATH.length + 1)
       include.reduce(
-        (accumulator, currentValue) =>
-          accumulator || pkg.startsWith(currentValue),
+        (accumulator, currentValue) => accumulator || pkg.startsWith(currentValue),
         false
-      ) && (items[`${pkg.length ? pkg + "/" : ""}${file}`] = cf2b64(filepath));
+      ) && (items[`${pkg.length ? pkg + '/' : ''}${file}`] = cf2b64(filepath))
     }
-  });
+  })
 }
 
 export default function build() {
-  console.log(process.argv);
-  _readAll(CLASSFILE_PATH);
-  fs.writeFileSync(
-    OUTDIR + "/classfiles.json",
-    `export default ${JSON.stringify(items)}`
-  );
-  console.log(`Wrote ${Object.keys(items).length} classfiles to ${OUTDIR}`);
+  console.log(process.argv)
+  _readAll(CLASSFILE_PATH)
+  fs.writeFileSync(OUTDIR + '/classfiles.json', `export default ${JSON.stringify(items)}`)
+  console.log(`Wrote ${Object.keys(items).length} classfiles to ${OUTDIR}`)
 }
 
-build();
+build()

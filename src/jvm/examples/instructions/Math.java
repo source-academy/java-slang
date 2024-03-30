@@ -1,5 +1,3 @@
-package tests;
-
 public class Math {
     public static void Main(String[] args) {
         int i1 = 2147483647 + 2147483647;
