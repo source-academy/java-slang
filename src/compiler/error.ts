@@ -16,14 +16,26 @@ export class SymbolRedeclarationError extends CompileError {
   }
 }
 
-export class ConstructNotSupportedError extends CompileError {
-  constructor(name: string) {
-    super("\"" + name + "\"" + " is currently not supported by the compiler");
+export class SymbolCannotBeResolvedError extends CompileError {
+  constructor(token: string, fullName: string) {
+    super("cannot resolve symbol " + "\"" + token + "\"" + " in" + "\"" + fullName + "\"");
   }
 }
 
 export class InvalidMethodCallError extends CompileError {
   constructor(name: string) {
     super("\"" + name + "\"" + " is not a valid method");
+  }
+}
+
+export class ConstructNotSupportedError extends CompileError {
+  constructor(name: string) {
+    super("\"" + name + "\"" + " is currently not supported by the compiler");
+  }
+}
+
+export class MissingReturnStatementError extends CompileError {
+  constructor(name: string) {
+    super("missing return statement in method" + "\"" + name + "\"");
   }
 }

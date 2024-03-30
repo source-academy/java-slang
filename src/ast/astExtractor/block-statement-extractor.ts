@@ -30,6 +30,7 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
             variableInitializer: this.value,
           },
         ],
+        location: cst.location,
       };
     } else /* if (cst.children.statement) */ {
       const statementExtractor = new StatementExtractor();

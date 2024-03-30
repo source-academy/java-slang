@@ -3,21 +3,28 @@ import {
   MethodHandleReferenceKind,
 } from "../../../../constants";
 import Thread from "../../../../thread";
-import { checkError } from "../../../../types/Result";
 import { ReferenceClassData } from "../../../../types/class/ClassData";
 import { Method } from "../../../../types/class/Method";
 import { JvmArray } from "../../../../types/reference/Array";
 import { JvmObject } from "../../../../types/reference/Object";
-import { j2jsString, js2jString } from "../../../../utils";
+import { ResultType } from "../../../../types/Result";
+import { j2jsString, js2jString, logger } from "../../../../utils";
 
 const functions = {
+  /**
+   * Follows doppio's implementation {@link https://github.com/plasma-umass/doppio/blob/master/src/natives/java_lang.ts#L1519}, which in turn follows
+   * JAMVM's implementation of this method {@link http://sourceforge.net/p/jamvm/code/ci/master/tree/src/classlib/openjdk/mh.c#l388}
+   * @param thread
+   * @param locals
+   * @returns
+   */
   "init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V": (
     thread: Thread,
     locals: any[]
   ) => {
     const ref = locals[1] as JvmObject;
     const memberName = locals[0] as JvmObject;
-    const refClassname = ref.getClass().getClassname();
+    const refClassname = ref.getClass().getName();
 
     if (refClassname === "java/lang/reflect/Field") {
       throw new Error("Not implemented");
@@ -37,7 +44,7 @@ const functions = {
       ) as number;
       const method = classData.getMethodFromSlot(methodSlot);
       if (!method) {
-        console.error(
+        logger.warn(
           "init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V: Method not found"
         );
         thread.returnStackFrame();
@@ -58,8 +65,6 @@ const functions = {
           MethodHandleReferenceKind.REF_invokeVirtual <<
           MemberNameFlags.MN_REFERENCE_KIND_SHIFT;
       }
-      // constructor should be handled separately
-      // check and |= callersensitive here in the future
 
       memberName._putField("flags", "I", "java/lang/invoke/MemberName", flags);
       memberName._putField(
@@ -114,6 +119,12 @@ const functions = {
     );
   },
 
+  /**
+   * Follows doppio's implementation {@link https://github.com/plasma-umass/doppio/blob/master/src/natives/java_lang.ts#L1519}.
+   * @param thread
+   * @param locals
+   * @returns
+   */
   "resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;":
     (thread: Thread, locals: any[]) => {
       const memberName = locals[0] as JvmObject; // MemberName
@@ -185,7 +196,7 @@ const functions = {
           true,
           true
         );
-        if (checkError(lookupRes)) {
+        if (lookupRes.status === ResultType.ERROR) {
           thread.throwNewException(
             "java/lang/NoSuchMethodError",
             `Invalid method ${methodDesc}`
@@ -238,14 +249,30 @@ const functions = {
       }
     },
 
+  /**
+   * NOP.
+   * @param thread
+   * @param locals
+   */
   "registerNatives()V": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
 
+  /**
+   * @todo Not implemented. Returns 0.
+   * @param thread
+   * @param locals
+   */
   "getConstant(I)I": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame(0);
   },
 
+  /**
+   * Follows doppio's implementation {@link https://github.com/plasma-umass/doppio/blob/master/src/natives/java_lang.ts#L1680}.
+   * @param thread
+   * @param locals
+   * @returns
+   */
   "getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I":
     (thread: Thread, locals: any[]) => {
       const defc = locals[0] as JvmObject;

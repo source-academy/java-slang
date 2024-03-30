@@ -6,6 +6,18 @@ export interface ConstantIntegerValue {
   value: number;
 }
 
+export interface ConstantFloatValue {
+  value: number;
+}
+
+export interface ConstantLongValue {
+  value: bigint;
+}
+
+export interface ConstantDoubleValue {
+  value: number;
+}
+
 export interface ConstantClassValue {
   name: ConstantUtf8Value;
 }
@@ -32,6 +44,9 @@ export interface ConstantNameAndTypeValue {
 export type ConstantTypeValue =
   | ConstantUtf8Value
   | ConstantIntegerValue
+  | ConstantFloatValue
+  | ConstantLongValue
+  | ConstantDoubleValue
   | ConstantClassValue
   | ConstantStringValue
   | ConstantFieldrefValue

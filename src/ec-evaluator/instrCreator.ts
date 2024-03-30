@@ -16,6 +16,7 @@ import {
   ResConOverloadInstr,
   ResInstr,
   ResOverloadInstr,
+  ResOverrideInstr,
   ResTypeInstr,
 } from "./types";
 
@@ -128,13 +129,18 @@ export const resOverloadInstr = (
   arity,
 });
 
+export const resOverrideInstr = (
+  srcNode: Node,
+): ResOverrideInstr => ({
+  instrType: InstrType.RES_OVERRIDE,
+  srcNode,
+});
+
 export const resConOverloadInstr = (
-  name: string,
   arity: number,
   srcNode: Node,
 ): ResConOverloadInstr => ({
   instrType: InstrType.RES_CON_OVERLOAD,
   srcNode,
-  name,
   arity,
 });

@@ -1,11 +1,6 @@
 import { NativeStackFrame, JavaStackFrame } from "../stackframe";
 import Thread from "../thread";
-import {
-  checkSuccess,
-  checkError,
-  Result,
-  ImmediateResult,
-} from "../types/Result";
+import { Result, ImmediateResult, ResultType } from "../types/Result";
 import { ReferenceClassData } from "../types/class/ClassData";
 import {
   ConstantFieldref,
@@ -27,8 +22,8 @@ export function runGetstatic(thread: Thread): void {
     .getConstant(indexbyte) as ConstantFieldref;
   const fieldRes = constantField.resolve();
 
-  if (!checkSuccess(fieldRes)) {
-    if (checkError(fieldRes)) {
+  if (fieldRes.status !== ResultType.SUCCESS) {
+    if (fieldRes.status === ResultType.ERROR) {
       thread.throwNewException(fieldRes.exceptionCls, fieldRes.msg);
       return;
     }
@@ -37,15 +32,15 @@ export function runGetstatic(thread: Thread): void {
   const field = fieldRes.result;
 
   const accessCheck = field.checkAccess(thread, true, false);
-  if (checkError(accessCheck)) {
+  if (accessCheck.status === ResultType.ERROR) {
     thread.throwNewException(accessCheck.exceptionCls, accessCheck.msg);
     return;
   }
 
   const fieldClass = field.getClass();
   const initRes = fieldClass.initialize(thread);
-  if (!checkSuccess(initRes)) {
-    if (checkError(initRes)) {
+  if (initRes.status !== ResultType.SUCCESS) {
+    if (initRes.status === ResultType.ERROR) {
       thread.throwNewException(initRes.exceptionCls, initRes.msg);
       return;
     }
@@ -68,8 +63,8 @@ export function runPutstatic(thread: Thread): void {
     .getConstant(indexbyte) as ConstantFieldref;
   const fieldRes = constantField.resolve();
 
-  if (!checkSuccess(fieldRes)) {
-    if (checkError(fieldRes)) {
+  if (fieldRes.status !== ResultType.SUCCESS) {
+    if (fieldRes.status === ResultType.ERROR) {
       thread.throwNewException(fieldRes.exceptionCls, fieldRes.msg);
       return;
     }
@@ -78,15 +73,15 @@ export function runPutstatic(thread: Thread): void {
   const field = fieldRes.result;
 
   const accessCheck = field.checkAccess(thread, true, true);
-  if (checkError(accessCheck)) {
+  if (accessCheck.status === ResultType.ERROR) {
     thread.throwNewException(accessCheck.exceptionCls, accessCheck.msg);
     return;
   }
 
   const fieldClass = field.getClass();
   const initRes = fieldClass.initialize(thread);
-  if (!checkSuccess(initRes)) {
-    if (checkError(initRes)) {
+  if (initRes.status !== ResultType.SUCCESS) {
+    if (initRes.status === ResultType.ERROR) {
       thread.throwNewException(initRes.exceptionCls, initRes.msg);
       return;
     }
@@ -94,44 +89,48 @@ export function runPutstatic(thread: Thread): void {
   }
 
   const desc = field.getFieldDesc();
-  thread.offsetPc(3);
   let popResult;
   switch (desc) {
     case JavaType.long:
       popResult = thread.popStack64();
-      if (checkError(popResult)) {
+      if (popResult.status === ResultType.ERROR) {
         return;
       }
       field.putValue(popResult.result);
+      thread.offsetPc(3);
       return;
     case JavaType.double:
       popResult = thread.popStack64();
-      if (checkError(popResult)) {
+      if (popResult.status === ResultType.ERROR) {
         return;
       }
       field.putValue(asDouble(popResult.result));
+      thread.offsetPc(3);
       return;
     case JavaType.float:
       popResult = thread.popStack();
-      if (checkError(popResult)) {
+      if (popResult.status === ResultType.ERROR) {
         return;
       }
       field.putValue(asFloat(popResult.result));
+      thread.offsetPc(3);
       return;
     case JavaType.boolean:
       popResult = thread.popStack();
-      if (checkError(popResult)) {
+      if (popResult.status === ResultType.ERROR) {
         return;
       }
       field.putValue(popResult.result & 1);
+      thread.offsetPc(3);
       return;
     case JavaType.int:
     default:
       popResult = thread.popStack();
-      if (checkError(popResult)) {
+      if (popResult.status === ResultType.ERROR) {
         return;
       }
       field.putValue(popResult.result);
+      thread.offsetPc(3);
       return;
   }
 }
@@ -144,8 +143,8 @@ export function runGetfield(thread: Thread): void {
     .getConstant(indexbyte) as ConstantFieldref;
   const fieldRes = constantField.resolve();
 
-  if (!checkSuccess(fieldRes)) {
-    if (checkError(fieldRes)) {
+  if (fieldRes.status !== ResultType.SUCCESS) {
+    if (fieldRes.status === ResultType.ERROR) {
       thread.throwNewException(fieldRes.exceptionCls, fieldRes.msg);
       return;
     }
@@ -154,13 +153,13 @@ export function runGetfield(thread: Thread): void {
   const field = fieldRes.result;
 
   const accessCheck = field.checkAccess(thread, false, false);
-  if (checkError(accessCheck)) {
+  if (accessCheck.status === ResultType.ERROR) {
     thread.throwNewException(accessCheck.exceptionCls, accessCheck.msg);
     return;
   }
 
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const objRef = popResult.result as JvmObject;
@@ -185,8 +184,8 @@ export function runPutfield(thread: Thread): void {
     .getConstant(indexbyte) as ConstantFieldref;
   const fieldRes = constantField.resolve();
 
-  if (!checkSuccess(fieldRes)) {
-    if (checkError(fieldRes)) {
+  if (fieldRes.status !== ResultType.SUCCESS) {
+    if (fieldRes.status === ResultType.ERROR) {
       thread.throwNewException(fieldRes.exceptionCls, fieldRes.msg);
       return;
     }
@@ -195,7 +194,7 @@ export function runPutfield(thread: Thread): void {
   const field = fieldRes.result;
 
   const accessCheck = field.checkAccess(thread, false, false);
-  if (checkError(accessCheck)) {
+  if (accessCheck.status === ResultType.ERROR) {
     thread.throwNewException(accessCheck.exceptionCls, accessCheck.msg);
     return;
   }
@@ -208,7 +207,10 @@ export function runPutfield(thread: Thread): void {
   }
 
   const popResult = thread.popStack();
-  if (checkError(vpopResult) || checkError(popResult)) {
+  if (
+    vpopResult.status === ResultType.ERROR ||
+    popResult.status === ResultType.ERROR
+  ) {
     return;
   }
   const objRef = popResult.result as JvmObject;
@@ -220,19 +222,22 @@ export function runPutfield(thread: Thread): void {
   thread.offsetPc(3);
 }
 
+/**
+ * Helper function for code reuse
+ */
 function invokeInit(
   thread: Thread,
   constant: ConstantMethodref | ConstantInterfaceMethodref
 ): Result<{ methodRef: Method; args: any[]; polyMethod?: Method }> {
   const methodRes = constant.resolve(thread);
-  if (!checkSuccess(methodRes)) {
+  if (methodRes.status !== ResultType.SUCCESS) {
     return methodRes;
   }
   const methodRef = methodRes.result;
 
   const classRef = methodRef.getClass();
   const initRes = classRef.initialize(thread);
-  if (!checkSuccess(initRes)) {
+  if (initRes.status !== ResultType.SUCCESS) {
     return initRes;
   }
 
@@ -249,19 +254,27 @@ function invokeInit(
         target = methodRef;
         args = getArgs(thread, originalDescriptor, target.checkNative());
         popResult = thread.popStack();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           return popResult;
         }
         mh = popResult.result as JvmObject;
         if (mh === null) {
-          return { exceptionCls: "java/lang/NullPointerException", msg: "" };
+          return {
+            status: ResultType.ERROR,
+            exceptionCls: "java/lang/NullPointerException",
+            msg: "",
+          };
         }
         args = [mh, ...args];
         break;
       case "invoke":
       case "invokeExact":
         if (!memberName) {
-          return { exceptionCls: "java/lang/NullPointerException", msg: "" };
+          return {
+            status: ResultType.ERROR,
+            exceptionCls: "java/lang/NullPointerException",
+            msg: "",
+          };
         }
         target = memberName.getNativeField("vmtarget") as Method;
         args = getArgs(thread, originalDescriptor, target.checkNative());
@@ -269,12 +282,16 @@ function invokeInit(
           args.push(appendix);
         }
         popResult = thread.popStack();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           return popResult;
         }
         mh = popResult.result as JvmObject;
         if (mh === null) {
-          return { exceptionCls: "java/lang/NullPointerException", msg: "" };
+          return {
+            status: ResultType.ERROR,
+            exceptionCls: "java/lang/NullPointerException",
+            msg: "",
+          };
         }
         args = [mh, ...args];
         break;
@@ -283,7 +300,7 @@ function invokeInit(
       case "linkToSpecial":
       case "linkToStatic":
         popResult = thread.popStack();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           return popResult;
         }
         mn = popResult.result as JvmObject;
@@ -292,24 +309,35 @@ function invokeInit(
         args = getArgs(thread, originalDescriptor, target.checkNative());
         args.pop();
         if (mn === null) {
-          return { exceptionCls: "java/lang/NullPointerException", msg: "" };
+          return {
+            status: ResultType.ERROR,
+            exceptionCls: "java/lang/NullPointerException",
+            msg: "",
+          };
         }
         break;
       default:
-        return { exceptionCls: "java/lang/LinkageError", msg: "" };
+        return {
+          status: ResultType.ERROR,
+          exceptionCls: "java/lang/LinkageError",
+          msg: "",
+        };
     }
 
     return {
+      status: ResultType.SUCCESS,
       result: { methodRef: target, args, polyMethod: methodRef },
     };
   } else {
     const args = methodRef.getArgs(thread);
-    return { result: { methodRef, args } };
+    return { status: ResultType.SUCCESS, result: { methodRef, args } };
   }
 }
 
-// looks up method for invokevirtual/invokeinterface.
-// checks interface for invokeinterface, otherwise checks override
+/**
+ * looks up method for invokevirtual/invokeinterface.
+ * checks interface for invokeinterface, otherwise checks override
+ */
 function lookupMethod(
   thread: Thread,
   methodRef: Method,
@@ -317,16 +345,24 @@ function lookupMethod(
   checkCastTo?: ReferenceClassData
 ): ImmediateResult<{ toInvoke: Method; objRef: JvmObject }> {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return popResult;
   }
   const objRef = popResult.result as JvmObject;
   if (objRef === null) {
-    return { exceptionCls: "java/lang/NullPointerException", msg: "" };
+    return {
+      status: ResultType.ERROR,
+      exceptionCls: "java/lang/NullPointerException",
+      msg: "",
+    };
   }
 
   if (checkCastTo && !objRef.getClass().checkCast(checkCastTo)) {
-    return { exceptionCls: "java/lang/IncompatibleClassChangeError", msg: "" };
+    return {
+      status: ResultType.ERROR,
+      exceptionCls: "java/lang/IncompatibleClassChangeError",
+      msg: "",
+    };
   }
 
   const runtimeClassRef = objRef.getClass();
@@ -337,17 +373,25 @@ function lookupMethod(
     !checkInterface,
     checkInterface
   );
-  if (checkError(lookupResult)) {
+  if (lookupResult.status === ResultType.ERROR) {
     return lookupResult;
   }
   const toInvoke = lookupResult.result;
   if (toInvoke.checkAbstract()) {
-    return { exceptionCls: "java/lang/NoSuchMethodError", msg: "" };
+    return {
+      status: ResultType.ERROR,
+      exceptionCls: "java/lang/NoSuchMethodError",
+      msg: "",
+    };
   }
 
-  return { result: { toInvoke, objRef } };
+  return { status: ResultType.SUCCESS, result: { toInvoke, objRef } };
 }
 
+/**
+ * Adapted from Doppio {@link https://github.com/plasma-umass/doppio/blob/master/src/opcodes.ts#L1482}
+ * Used for signature polymorphic methods.
+ */
 function invokePoly(
   thread: Thread,
   polyMethod: Method,
@@ -391,8 +435,8 @@ function invokeVirtual(
   returnOffset: number
 ): void {
   const resolutionRes = invokeInit(thread, constant);
-  if (!checkSuccess(resolutionRes)) {
-    if (checkError(resolutionRes)) {
+  if (resolutionRes.status !== ResultType.SUCCESS) {
+    if (resolutionRes.status === ResultType.ERROR) {
       thread.throwNewException(resolutionRes.exceptionCls, resolutionRes.msg);
       return;
     }
@@ -407,7 +451,7 @@ function invokeVirtual(
 
   // method lookup
   const toInvokeRes = lookupMethod(thread, methodRef, false);
-  if (checkError(toInvokeRes)) {
+  if (toInvokeRes.status === ResultType.ERROR) {
     thread.throwNewException(toInvokeRes.exceptionCls, toInvokeRes.msg);
     return;
   }
@@ -437,6 +481,10 @@ function invokeVirtual(
   }
 }
 
+/**
+ * Relies on several Java methods (e.g. linkMethodHandleConstant) for signature polymorphic methods.
+ * Native implementations for its requried methods may not be fully implemented.
+ */
 export function runInvokevirtual(thread: Thread): void {
   const indexbyte = thread.getCode().getUint16(thread.getPC() + 1);
   const constant = thread
@@ -452,8 +500,8 @@ export function runInvokespecial(thread: Thread): void {
     | ConstantMethodref
     | ConstantInterfaceMethodref;
   const resolutionRes = invokeInit(thread, constant);
-  if (!checkSuccess(resolutionRes)) {
-    if (checkError(resolutionRes)) {
+  if (resolutionRes.status !== ResultType.SUCCESS) {
+    if (resolutionRes.status === ResultType.ERROR) {
       thread.throwNewException(resolutionRes.exceptionCls, resolutionRes.msg);
       return;
     }
@@ -462,7 +510,7 @@ export function runInvokespecial(thread: Thread): void {
   const { methodRef, args } = resolutionRes.result;
 
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const objRef = popResult.result as JvmObject;
@@ -507,8 +555,8 @@ export function runInvokestatic(thread: Thread): void {
     | ConstantInterfaceMethodref;
 
   const resolutionRes = invokeInit(thread, constant);
-  if (!checkSuccess(resolutionRes)) {
-    if (checkError(resolutionRes)) {
+  if (resolutionRes.status !== ResultType.SUCCESS) {
+    if (resolutionRes.status === ResultType.ERROR) {
       thread.throwNewException(resolutionRes.exceptionCls, resolutionRes.msg);
       return;
     }
@@ -546,8 +594,8 @@ export function runInvokeinterface(thread: Thread): void {
     .getClass()
     .getConstant(indexbyte) as ConstantInterfaceMethodref;
   const resolutionRes = invokeInit(thread, constant);
-  if (!checkSuccess(resolutionRes)) {
-    if (checkError(resolutionRes)) {
+  if (resolutionRes.status !== ResultType.SUCCESS) {
+    if (resolutionRes.status === ResultType.ERROR) {
       thread.throwNewException(resolutionRes.exceptionCls, resolutionRes.msg);
       return;
     }
@@ -556,7 +604,7 @@ export function runInvokeinterface(thread: Thread): void {
   const { methodRef, args } = resolutionRes.result;
 
   const toInvokeRes = lookupMethod(thread, methodRef, true);
-  if (checkError(toInvokeRes)) {
+  if (toInvokeRes.status === ResultType.ERROR) {
     thread.throwNewException(toInvokeRes.exceptionCls, toInvokeRes.msg);
     return;
   }
@@ -580,6 +628,12 @@ export function runInvokeinterface(thread: Thread): void {
   }
 }
 
+/**
+ * Adapted from Doppio {@link https://github.com/plasma-umass/doppio/blob/master/src/opcodes.ts#L1482}
+ * Relies on several Java methods (e.g. linkMethodHandleConstant) for signature polymorphic methods.
+ * Native implementations for its requried methods may not be fully implemented.
+ * @todo linkCallSite seems to method in the bootstrap method instead of the vmtarget.
+ */
 export function runInvokedynamic(thread: Thread): void {
   const index = thread.getCode().getUint16(thread.getPC() + 1);
 
@@ -587,8 +641,8 @@ export function runInvokedynamic(thread: Thread): void {
   const callsiteConstant = invoker.getConstant(index) as ConstantInvokeDynamic;
 
   const cssRes = callsiteConstant.resolve(thread);
-  if (!checkSuccess(cssRes)) {
-    if (checkError(cssRes)) {
+  if (cssRes.status !== ResultType.SUCCESS) {
+    if (cssRes.status === ResultType.ERROR) {
       thread.throwNewException(cssRes.exceptionCls, cssRes.msg);
       return;
     }
@@ -613,8 +667,8 @@ export function runNew(thread: Thread): void {
   const indexbyte = thread.getCode().getUint16(thread.getPC() + 1);
   const invoker = thread.getClass();
   const res = (invoker.getConstant(indexbyte) as ConstantClass).resolve();
-  if (!checkSuccess(res)) {
-    if (checkError(res)) {
+  if (res.status !== ResultType.SUCCESS) {
+    if (res.status === ResultType.ERROR) {
       thread.throwNewException(res.exceptionCls, res.msg);
       return;
     }
@@ -629,8 +683,8 @@ export function runNew(thread: Thread): void {
 
   // Load + initialize if needed
   const initRes = objCls.initialize(thread);
-  if (!checkSuccess(initRes)) {
-    if (checkError(initRes)) {
+  if (initRes.status !== ResultType.SUCCESS) {
+    if (initRes.status === ResultType.ERROR) {
       thread.throwNewException(initRes.exceptionCls, initRes.msg);
       return;
     }
@@ -646,7 +700,7 @@ export function runNewarray(thread: Thread): void {
   thread.offsetPc(2);
 
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const count = popResult.result;
@@ -688,7 +742,7 @@ export function runNewarray(thread: Thread): void {
     .getClass()
     .getLoader()
     .getClass(className);
-  if (checkError(classResolutionResult)) {
+  if (classResolutionResult.status === ResultType.ERROR) {
     throw new Error("Failed to load primitive array class");
   }
 
@@ -702,7 +756,7 @@ export function runAnewarray(thread: Thread): void {
   const indexbyte = thread.getCode().getUint16(thread.getPC() + 1);
   const invoker = thread.getClass();
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const count = popResult.result;
@@ -714,7 +768,7 @@ export function runAnewarray(thread: Thread): void {
   }
 
   const res = (invoker.getConstant(indexbyte) as ConstantClass).resolve();
-  if (checkError(res)) {
+  if (res.status === ResultType.ERROR) {
     thread.throwNewException(res.exceptionCls, res.msg);
     return;
   }
@@ -722,8 +776,8 @@ export function runAnewarray(thread: Thread): void {
 
   const arrayClassRes = invoker
     .getLoader()
-    .getClass("[L" + objCls.getClassname() + ";");
-  if (checkError(arrayClassRes)) {
+    .getClass("[L" + objCls.getName() + ";");
+  if (arrayClassRes.status === ResultType.ERROR) {
     throw new Error("Failed to load array class");
   }
   const arrayCls = arrayClassRes.result;
@@ -735,7 +789,7 @@ export function runAnewarray(thread: Thread): void {
 
 export function runArraylength(thread: Thread): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const arrayref = popResult.result as JvmArray;
@@ -749,7 +803,7 @@ export function runArraylength(thread: Thread): void {
 
 export function runAthrow(thread: Thread): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const exception = popResult.result;
@@ -770,7 +824,7 @@ function _checkCast(
   isCC: boolean = true
 ): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const objectref = popResult.result as JvmObject;
@@ -782,8 +836,8 @@ function _checkCast(
 
   const clsConstant = thread.getClass().getConstant(indexbyte);
   const resolutionResult = clsConstant.resolve();
-  if (!checkSuccess(resolutionResult)) {
-    if (checkError(resolutionResult)) {
+  if (resolutionResult.status !== ResultType.SUCCESS) {
+    if (resolutionResult.status === ResultType.ERROR) {
       thread.throwNewException(
         resolutionResult.exceptionCls,
         resolutionResult.msg
@@ -825,7 +879,7 @@ export function runInstanceof(thread: Thread): void {
 
 export function runMonitorenter(thread: Thread): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const obj = popResult.result as JvmObject | null;
@@ -839,7 +893,7 @@ export function runMonitorenter(thread: Thread): void {
 
 export function runMonitorexit(thread: Thread): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const obj = popResult.result as JvmObject | null;

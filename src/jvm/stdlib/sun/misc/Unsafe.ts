@@ -4,12 +4,7 @@ import {
 } from "../../../../ClassFile/types/constants";
 import AbstractClassLoader from "../../../ClassLoader/AbstractClassLoader";
 import Thread from "../../../thread";
-import {
-  ErrorResult,
-  checkSuccess,
-  checkError,
-  SuccessResult,
-} from "../../../types/Result";
+import { ErrorResult, ResultType, SuccessResult } from "../../../types/Result";
 import { NestHost } from "../../../types/class/Attributes";
 import {
   ReferenceClassData,
@@ -20,7 +15,7 @@ import { ConstantClass, ConstantUtf8 } from "../../../types/class/Constants";
 import { Field } from "../../../types/class/Field";
 import { JvmArray } from "../../../types/reference/Array";
 import { JvmObject } from "../../../types/reference/Object";
-import { typeIndexScale } from "../../../utils";
+import { logger, typeIndexScale } from "../../../utils";
 import parseBin from "../../../utils/disassembler";
 
 function getFieldInfo(
@@ -29,13 +24,10 @@ function getFieldInfo(
   obj: JvmObject,
   offset: bigint
 ): any {
-  // const fieldName: string;
-  // const objBase: any;
-
   // obj is a class obj
   const objCls = obj.getClass();
 
-  if (objCls.getClassname() === "java/lang/Object") {
+  if (objCls.getName() === "java/lang/Object") {
     const objBase = obj.getNativeField("staticFieldBase") as ReferenceClassData;
     return [objBase, objBase.getFieldFromVmIndex(Number(offset))];
   } else if (objCls.checkArray()) {
@@ -43,6 +35,7 @@ function getFieldInfo(
     const compCls = objCls.getComponentClass();
     const stride = typeIndexScale(compCls);
     const objBase = (obj as JvmArray).getJsArray();
+
     return [objBase, Math.floor(Number(offset) / stride)];
   } else {
     // normal class
@@ -135,6 +128,11 @@ function unsafeCompareAndSwap(
 }
 
 const functions = {
+  /**
+   * NOP.
+   * @param thread
+   * @param locals
+   */
   "registerNatives()V": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
@@ -142,14 +140,23 @@ const functions = {
   "arrayBaseOffset(Ljava/lang/Class;)I": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame(0);
   },
+
+  /**
+   * @todo Not implemented. Returns field slot, we should get the native field and return the vmindex of the field in its declaring class.
+   * @param thread
+   * @param locals
+   */
   "objectFieldOffset(Ljava/lang/reflect/Field;)J": (
     thread: Thread,
     locals: any[]
   ) => {
     const field = locals[1] as JvmObject;
     const slot = field._getField("slot", "I", "java/lang/reflect/Field");
+    logger.warn("objectFieldOffset: returning slot instead of vmindex");
+
     thread.returnStackFrame64(BigInt(slot as number));
   },
+
   // Used for bitwise operations
   "arrayIndexScale(Ljava/lang/Class;)I": (thread: Thread, locals: any[]) => {
     const clsObj = locals[1] as JvmObject;
@@ -166,9 +173,11 @@ const functions = {
     );
     thread.returnStackFrame(scale);
   },
+
   "addressSize()I": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame(4);
   },
+
   "compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z":
     (thread: Thread, locals: any[]) => {
       const unsafe = locals[0] as JvmObject;
@@ -185,6 +194,7 @@ const functions = {
         unsafeCompareAndSwap(thread, unsafe, obj1, offset, expected, newValue)
       );
     },
+
   "compareAndSwapInt(Ljava/lang/Object;JII)Z": (
     thread: Thread,
     locals: any[]
@@ -219,12 +229,24 @@ const functions = {
 
   "putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V": setFromVMIndex,
 
+  /**
+   * Uses UnsafeHeap. Used during JVM initialization to determine endianness.
+   * Avoid using, UnsafeHeap has been set to a very low capacity. GC has not been implemented.
+   * @param thread
+   * @param locals
+   */
   "allocateMemory(J)J": (thread: Thread, locals: any[]) => {
     const size = locals[1] as bigint;
     const heap = thread.getJVM().getUnsafeHeap();
     const addr = heap.allocate(size);
     thread.returnStackFrame64(addr);
   },
+  /**
+   * Uses UnsafeHeap. Used during JVM initialization to determine endianness.
+   * Avoid using, UnsafeHeap has been set to a very low capacity. GC has not been implemented.
+   * @param thread
+   * @param locals
+   */
   "putLong(JJ)V": (thread: Thread, locals: any[]) => {
     const address = locals[1] as bigint;
     const value = locals[2] as bigint;
@@ -233,18 +255,37 @@ const functions = {
     view.setBigInt64(0, value);
     thread.returnStackFrame();
   },
+  /**
+   * Uses UnsafeHeap. Used during JVM initialization to determine endianness.
+   * Avoid using, UnsafeHeap has been set to a very low capacity. GC has not been implemented.
+   * @param thread
+   * @param locals
+   */
   "getByte(J)B": (thread: Thread, locals: any[]) => {
     const address = locals[1] as bigint;
     const heap = thread.getJVM().getUnsafeHeap();
     const view = heap.get(address);
     thread.returnStackFrame(view.getInt8(0));
   },
+  /**
+   * Uses UnsafeHeap. Used during JVM initialization to determine endianness.
+   * Avoid using, UnsafeHeap has been set to a very low capacity. GC has not been implemented.
+   * @param thread
+   * @param locals
+   */
   "freeMemory(J)V": (thread: Thread, locals: any[]) => {
     const address = locals[1] as bigint;
     const heap = thread.getJVM().getUnsafeHeap();
     heap.free(address);
     thread.returnStackFrame();
   },
+
+  /**
+   * @todo Extra NestHost attribute added to the class so we pass access control. Should not be necessary but there is a bug in lambda creation process.
+   * @param thread
+   * @param locals
+   * @returns
+   */
   "defineAnonymousClass(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;":
     (thread: Thread, locals: any[]) => {
       const hostClassObj = locals[1] as JvmObject;
@@ -287,7 +328,7 @@ const functions = {
       if (!hostClass.getAttribute("NestHost")) {
         const classConstant = ConstantClass.asResolved(
           hostClass,
-          new ConstantUtf8(hostClass, hostClass.getClassname()),
+          new ConstantUtf8(hostClass, hostClass.getName()),
           hostClass
         );
         const nestHostAttr: NestHost = {
@@ -314,8 +355,15 @@ const functions = {
         new Uint8Array(byteArray.getJsArray()).buffer
       );
       const classfile = parseBin(bytecode);
-      const clsData = loader.defineClass(classfile);
-      thread.returnStackFrame(clsData.getJavaObject());
+      const loadResult = loader.defineClass(classfile);
+      if (loadResult.status === ResultType.ERROR) {
+        thread.throwNewException(
+          (loadResult as ErrorResult).exceptionCls,
+          (loadResult as ErrorResult).msg
+        );
+        return;
+      }
+      thread.returnStackFrame(loadResult.result.getJavaObject());
     },
 
   "ensureClassInitialized(Ljava/lang/Class;)V": (
@@ -326,9 +374,9 @@ const functions = {
     const cls = clsObj.getNativeField("classRef") as ClassData;
     const initRes = cls.initialize(thread);
 
-    if (checkSuccess(initRes)) {
+    if (initRes.status === ResultType.SUCCESS) {
       thread.returnStackFrame();
-    } else if (checkError(initRes)) {
+    } else if (initRes.status === ResultType.ERROR) {
       thread.throwNewException(
         (initRes as ErrorResult).exceptionCls,
         (initRes as ErrorResult).msg

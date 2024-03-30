@@ -12,7 +12,17 @@ import { ConstantUtf8 } from "../types/class/Constants";
 import { Field } from "../types/class/Field";
 import { JvmArray } from "../types/reference/Array";
 import { JvmObject, JavaType } from "../types/reference/Object";
-import { SuccessResult, checkError } from "./Result";
+import { SuccessResult, ResultType } from "../types/Result";
+
+const _ = {};
+export const INACCESSIBLE = new Proxy(_, {
+  get: () => {
+    throw new Error("Inaccessible");
+  },
+  set: () => {
+    throw new Error("Inaccessible");
+  },
+});
 
 /**
  * Converts a Java String to a JS string
@@ -67,7 +77,7 @@ export const typeIndexScale = (cls: ClassData) => {
     return 4;
   }
 
-  const componentName = cls.getClassname();
+  const componentName = cls.getName();
   switch (componentName) {
     case "long":
     case "double":
@@ -172,7 +182,7 @@ export function getArgs(
         break; // should not happen
       case "D":
         popResult = thread.popStack64();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           break;
         }
         args.push(asDouble(popResult.result));
@@ -182,14 +192,14 @@ export function getArgs(
         break;
       case "F":
         popResult = thread.popStack();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           break;
         }
         args.push(asFloat(popResult.result));
         break;
       case "J":
         popResult = thread.popStack64();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           break;
         }
         args.push(popResult.result);
@@ -205,7 +215,7 @@ export function getArgs(
       case "Z":
       default: // also references + arrays
         popResult = thread.popStack();
-        if (checkError(popResult)) {
+        if (popResult.status === ResultType.ERROR) {
           break;
         }
         args.push(popResult.result);
@@ -294,12 +304,12 @@ export function attrInfo2Interface(
 }
 
 export function autoBox(obj: any) {
-  console.warn("Auto boxing not implemented");
+  logger.warn("Auto boxing not implemented");
   return obj;
 }
 
 export function autoUnbox(obj: any) {
-  console.warn("Auto unboxing not implemented");
+  logger.warn("Auto unboxing not implemented");
   return obj;
 }
 
@@ -315,3 +325,11 @@ export function string2arraybuffer(str: string) {
   }
   return buf;
 }
+
+export const logger: {
+  warnings: string[];
+  warn: (msg: string) => void;
+} = {
+  warnings: [],
+  warn: (msg: string) => logger.warnings.push(msg),
+};

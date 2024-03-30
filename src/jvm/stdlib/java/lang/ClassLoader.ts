@@ -1,10 +1,13 @@
 import AbstractClassLoader from "../../../ClassLoader/AbstractClassLoader";
 import Thread from "../../../thread";
-import { checkError } from "../../../types/Result";
 import { JvmObject } from "../../../types/reference/Object";
+import { ResultType } from "../../../types/Result";
 import { j2jsString } from "../../../utils";
 
 const functions = {
+  /**
+   * NOP.
+   */
   "registerNatives()V": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
@@ -20,7 +23,7 @@ const functions = {
 
     const res = loader.getClass(className);
 
-    if (checkError(res)) {
+    if (res.status === ResultType.ERROR) {
       thread.throwNewException(res.exceptionCls, res.msg);
       return;
     }

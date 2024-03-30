@@ -1,7 +1,7 @@
 import { ACCESS_FLAGS } from "../ClassFile/types";
 import { FIELD_FLAGS } from "../ClassFile/types/fields";
 import { METHOD_FLAGS } from "../ClassFile/types/methods";
-import { ClassModifier, MethodModifier } from "../ast/types/classes";
+import { ClassModifier, FieldModifier, MethodModifier } from "../ast/types/classes";
 
 const classAccessFlagMap = new Map([
   ["public", ACCESS_FLAGS.ACC_PUBLIC],
@@ -30,7 +30,7 @@ const fieldAccessFlagMap = new Map([
   ["volatile", FIELD_FLAGS.ACC_VOLATILE],
 ]);
 
-export function generateFieldAccessFlags(modifiers: Array<MethodModifier>) {
+export function generateFieldAccessFlags(modifiers: Array<FieldModifier>) {
   let flag = 0;
 
   modifiers.forEach(m => {

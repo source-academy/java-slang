@@ -24,6 +24,7 @@ import {
   UnqualifiedClassInstanceCreationExpressionCtx,
 } from "java-parser";
 
+import { Location } from "../types/ast";
 import {
   Assignment,
   BinaryExpression,
@@ -34,7 +35,10 @@ import {
 } from "../types/blocks-and-statements";
 
 export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
+  private location: Location;
+
   extract(cst: ExpressionCstNode): Expression {
+    this.location = cst.location;
     return this.visit(cst);
   }
 
@@ -58,6 +62,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
         left: this.visit(ctx.unaryExpression[0]),
         operator: "=",
         right: expressionExtractor.extract(ctx.expression[0]),
+        location: this.location,
       } as Assignment;
     } else {
       return this.visit(ctx.unaryExpression[0]);
@@ -82,6 +87,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       operator: processedOperators[0],
       left: processedOperands[0],
       right: processedOperands[1],
+      location: this.location,
     };
 
     for (let i = 1; i < processedOperators.length; i++) {
@@ -90,6 +96,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
         operator: processedOperators[i],
         left: res,
         right: processedOperands[i + 1],
+        location: this.location,
       };
     }
 
@@ -115,6 +122,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
             operator: operators[i].image,
             left: accMulRes,
             right: this.visit(operands[i + 1]),
+            location: this.location,
           };
         } else {
           accMulRes = {
@@ -122,6 +130,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
             operator: operators[i].image,
             left: this.visit(operands[i]),
             right: this.visit(operands[i + 1]),
+            location: this.location,
           };
         }
       } else {
@@ -151,6 +160,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
         kind: "PrefixExpression",
         operator: ctx.UnaryPrefixOperator[0].image,
         expression: node,
+        location: this.location,
       };
     }
     return this.visit(ctx.primary);
@@ -169,6 +179,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
           kind: "MethodInvocation",
           identifier: primary,
           argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
+          location: this.location,
         } as MethodInvocation;
       }
     }
@@ -177,6 +188,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       return {
         kind: "ExpressionName",
         name: primary,
+        location: this.location,
       } as ExpressionName;
     }
 
@@ -220,6 +232,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       kind: "ClassInstanceCreationExpression",
       identifier: this.visit(ctx.classOrInterfaceTypeToInstantiate),
       argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : [],
+      location: this.location,
     } as ClassInstanceCreationExpression;
   }
 
@@ -264,12 +277,17 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
           kind: "StringLiteral",
           value: ctx.StringLiteral[0].image,
         },
+        location: this.location,
       };
     }
   }
 
   integerLiteral(ctx: IntegerLiteralCtx) {
-    const literal = { kind: "Literal", literalType: {} };
+    const literal = {
+      kind: "Literal",
+      literalType: {},
+      location: this.location,
+    };
     if (ctx.DecimalLiteral) {
       literal.literalType = {
         kind: "DecimalIntegerLiteral",

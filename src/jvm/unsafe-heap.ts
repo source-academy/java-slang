@@ -7,8 +7,10 @@ export class UnsafeHeap {
   } = {};
   private size: number = 0;
   private key: number = 0;
-  // private maxSize: number = -1;
 
+  /**
+   * Allocates memory of a given size on the heap. returns the offset.
+   */
   allocate(size: bigint): bigint {
     const ret = this.key;
     const sizeInt = Number(size);

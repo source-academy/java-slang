@@ -1,11 +1,18 @@
 import { InternalStackFrame } from "../../../stackframe";
 import Thread from "../../../thread";
-import { checkSuccess, checkError } from "../../../types/Result";
 import { ReferenceClassData } from "../../../types/class/ClassData";
 import { JvmArray } from "../../../types/reference/Array";
 import { JvmObject } from "../../../types/reference/Object";
+import { ResultType } from "../../../types/Result";
+import { logger } from "../../../utils";
 
 const functions = {
+  /**
+   * @todo Partially implemented. argument unboxing not implemented.
+   * @param thread
+   * @param locals
+   * @returns
+   */
   "newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;":
     (thread: Thread, locals: any[]) => {
       const constructor = locals[0] as JvmObject;
@@ -27,17 +34,16 @@ const functions = {
       }
 
       const initRes = clsRef.initialize(thread);
-      if (!checkSuccess(initRes)) {
-        if (checkError(initRes)) {
+      if (initRes.status !== ResultType.SUCCESS) {
+        if (initRes.status === ResultType.ERROR) {
           thread.throwNewException(initRes.exceptionCls, initRes.msg);
         }
         return;
       }
 
       const retObj = clsRef.instantiate();
-      // FIXME: unbox args if required
       if (paramArr) {
-        console.error("newInstance0: Auto unboxing not implemented");
+        logger.warn("newInstance0: Auto unboxing not implemented");
       }
       const params = [retObj, ...(paramArr ? paramArr.getJsArray() : [])];
       thread.invokeStackFrame(

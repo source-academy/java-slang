@@ -43,7 +43,9 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
       methodBody: {
         kind: "Block",
         blockStatements:this.body,
+        location: cst.location,
       },
+      location: cst.location,
     };
   }
 

@@ -5,6 +5,11 @@ import { readConstants } from "./utils/readConstants";
 import { readField } from "./utils/readField";
 import { readMethod } from "./utils/readMethod";
 
+/**
+ * Parses a binary class file into a ClassFile object.
+ * @param view Dataview of the classfile arraybuffer.
+ * @returns ClassFile object.
+ */
 export default function parseBin(view: DataView) {
   let offset = 0;
 
@@ -87,11 +92,9 @@ export default function parseBin(view: DataView) {
       view,
       offset
     );
-
     cls.methods.push(result);
     offset = resultOffset;
   }
-
   const attributesCount = view.getUint16(offset);
   offset += 2;
 

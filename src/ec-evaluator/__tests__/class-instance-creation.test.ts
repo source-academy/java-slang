@@ -13,7 +13,7 @@ describe("evaluate default constructor", () => {
     const programStr = `
       class Test {
         int x;
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
         }
       }
@@ -34,7 +34,7 @@ describe("evaluate default constructor", () => {
       "NormalClassDeclaration", // class Test {...}
   
       "Env", // from NormalClassDeclaration
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
   
       "Pop",
@@ -42,6 +42,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -104,6 +105,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -129,7 +131,7 @@ describe("evaluate default constructor", () => {
     const programStr = `
       class Test {
         int x = 1;
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
         }
       }
@@ -150,7 +152,7 @@ describe("evaluate default constructor", () => {
       "NormalClassDeclaration", // class Test {...}
   
       "Env", // from NormalClassDeclaration
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
   
       "Pop",
@@ -158,6 +160,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -220,6 +223,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -248,7 +252,7 @@ describe("evaluate default constructor", () => {
         Test() {
           x = 2;
         }
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
         }
       }
@@ -269,7 +273,7 @@ describe("evaluate default constructor", () => {
       "NormalClassDeclaration", // class Test {...}
   
       "Env", // from NormalClassDeclaration
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
   
       "Pop",
@@ -277,6 +281,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -347,6 +352,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -378,7 +384,7 @@ describe("evaluate default constructor", () => {
         Test() {
           x = 2;
         }
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
         }
       }
@@ -399,7 +405,7 @@ describe("evaluate default constructor", () => {
       "NormalClassDeclaration", // class Test {...}
   
       "Env", // from NormalClassDeclaration
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
   
       "Pop",
@@ -407,6 +413,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -477,6 +484,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -508,7 +516,7 @@ describe("evaluate default constructor", () => {
         Test() {
           return;
         }
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test();
         }
       }
@@ -529,7 +537,7 @@ describe("evaluate default constructor", () => {
       "NormalClassDeclaration", // class Test {...}
   
       "Env", // from NormalClassDeclaration
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
   
       "Pop",
@@ -537,6 +545,7 @@ describe("evaluate default constructor", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -599,6 +608,7 @@ describe("evaluate default constructor", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -629,7 +639,7 @@ describe("evaluate constructor overloading resolution", () => {
         Test(int x) {
           this.x = x;
         }
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test(1);
         }
       }
@@ -650,7 +660,7 @@ describe("evaluate constructor overloading resolution", () => {
       "NormalClassDeclaration", // class Test {...}
   
       "Env", // from NormalClassDeclaration
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
       "ConstructorDeclaration", // Test(int x) {...}
   
@@ -659,6 +669,7 @@ describe("evaluate constructor overloading resolution", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -737,6 +748,7 @@ describe("evaluate constructor overloading resolution", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType
@@ -772,7 +784,7 @@ describe("evaluate constructor overloading resolution", () => {
         Test(int x) {
           this.x = x;
         }
-        static void main(String[] args) {
+        public static void main(String[] args) {
           Test test = new Test(1);
         }
         Test Test(int x) {
@@ -797,7 +809,7 @@ describe("evaluate constructor overloading resolution", () => {
   
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // Test Test(int x) {...}
-      "MethodDeclaration", // static void main(String[] args) {...}
+      "MethodDeclaration", // public static void main(String[] args) {...}
       "ConstructorDeclaration", // Test() {...}
       "ConstructorDeclaration", // Test(int x) {...}
   
@@ -806,6 +818,7 @@ describe("evaluate constructor overloading resolution", () => {
   
       "Invocation", // ()
       "Literal", // [""]
+      "ResOverride",
       "ResOverload", // main
       "ResType", // [""]
       "ResType", // Test
@@ -884,6 +897,7 @@ describe("evaluate constructor overloading resolution", () => {
       "Test", // ResType
       "String[]", // ResType
       "main", // ResOverload
+      "main", // ResOverride
       `[""]`, // Literal
       "test", // EvalVariable
       "Test", // ResType

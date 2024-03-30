@@ -21,8 +21,8 @@ beforeEach(() => {
   thread.invokeStackFrame(new JavaStackFrame(testClass, method, 0, []));
 });
 
-describe("Pop", () => {
-  test("POP: pop stack", () => {
+describe('Pop', () => {
+  test('POP: pop stack', () => {
     thread.pushStack(1);
     code.setUint8(0, OPCODE.POP);
     thread.runFor(1);
@@ -33,8 +33,8 @@ describe("Pop", () => {
   });
 });
 
-describe("Pop2", () => {
-  test("POP2: pop stack 2 ints", () => {
+describe('Pop2', () => {
+  test('POP2: pop stack 2 ints', () => {
     thread.pushStack(1);
     thread.pushStack(1);
     code.setUint8(0, OPCODE.POP2);
@@ -45,7 +45,7 @@ describe("Pop2", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("POP2: pop stack 1 double", () => {
+  test('POP2: pop stack 1 double', () => {
     thread.pushStack64(1.0);
     code.setUint8(0, OPCODE.POP2);
     thread.runFor(1);
@@ -56,8 +56,8 @@ describe("Pop2", () => {
   });
 });
 
-describe("Dup", () => {
-  test("DUP: duplicates reference", () => {
+describe('Dup', () => {
+  test('DUP: duplicates reference', () => {
     const ref = testClass.instantiate();
     thread.pushStack(ref);
     code.setUint8(0, OPCODE.DUP);
@@ -71,8 +71,8 @@ describe("Dup", () => {
   });
 });
 
-describe("DupX1", () => {
-  test("DUPX1: duplicates reference", () => {
+describe('DupX1', () => {
+  test('DUPX1: duplicates reference', () => {
     const v1 = new JvmObject(threadClass);
     const v2 = new JvmObject(threadClass);
     thread.pushStack(v2);
@@ -89,8 +89,8 @@ describe("DupX1", () => {
   });
 });
 
-describe("DupX2", () => {
-  test("DUPX2: duplicates reference", () => {
+describe('DupX2', () => {
+  test('DUPX2: duplicates reference', () => {
     const v1 = new JvmObject(threadClass);
     const v2 = new JvmObject(threadClass);
     const v3 = new JvmObject(threadClass);
@@ -108,7 +108,7 @@ describe("DupX2", () => {
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
-  test("DUPX2: duplicates double", () => {
+  test('DUPX2: duplicates double', () => {
     const v1 = new JvmObject(threadClass);
     thread.pushStack64(5.0);
     thread.pushStack(v1);
@@ -124,8 +124,8 @@ describe("DupX2", () => {
   });
 });
 
-describe("Dup2", () => {
-  test("DUP2: duplicates 2 category 1", () => {
+describe('Dup2', () => {
+  test('DUP2: duplicates 2 category 1', () => {
     const v1 = new JvmObject(threadClass);
     const v2 = new JvmObject(threadClass);
     thread.pushStack(v2);
@@ -141,7 +141,7 @@ describe("Dup2", () => {
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
-  test("DUP2: duplicates category 2", () => {
+  test('DUP2: duplicates category 2', () => {
     thread.pushStack64(5.0);
     code.setUint8(0, OPCODE.DUP2);
     thread.runFor(1);
@@ -154,8 +154,8 @@ describe("Dup2", () => {
   });
 });
 
-describe("Dup2X1", () => {
-  test("DUP2X1: duplicates 3 category 1", () => {
+describe('Dup2X1', () => {
+  test('DUP2X1: duplicates 3 category 1', () => {
     const v1 = new JvmObject(threadClass);
     const v2 = new JvmObject(threadClass);
     const v3 = new JvmObject(threadClass);
@@ -174,7 +174,7 @@ describe("Dup2X1", () => {
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
-  test("DUP2X1: duplicates category 2 category 1", () => {
+  test('DUP2X1: duplicates category 2 category 1', () => {
     const v1 = new JvmObject(threadClass);
     thread.pushStack64(5.0);
     thread.pushStack(v1);
@@ -190,8 +190,8 @@ describe("Dup2X1", () => {
   });
 });
 
-describe("Dup2X2", () => {
-  test("DUP2X2: duplicates 4 category 1", () => {
+describe('Dup2X2', () => {
+  test('DUP2X2: duplicates 4 category 1', () => {
     const v1 = new JvmObject(threadClass);
     const v2 = new JvmObject(threadClass);
     const v3 = new JvmObject(threadClass);
@@ -214,7 +214,7 @@ describe("Dup2X2", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DUP2X2: duplicates category 1,1,2", () => {
+  test('DUP2X2: duplicates category 1,1,2', () => {
     const v1 = new JvmObject(threadClass);
     const v2 = new JvmObject(threadClass);
     thread.pushStack(v2);
@@ -232,7 +232,7 @@ describe("Dup2X2", () => {
     expect(thread.getPC()).toBe(1);
   });
 
-  test("DUP2X2: duplicates category 2,1,1", () => {
+  test('DUP2X2: duplicates category 2,1,1', () => {
     const v1 = new JvmObject(threadClass);
     const v2 = new JvmObject(threadClass);
     thread.pushStack64(5.0);
@@ -250,7 +250,7 @@ describe("Dup2X2", () => {
     expect(lastFrame.locals.length).toBe(0);
     expect(thread.getPC()).toBe(1);
   });
-  test("DUP2X2: duplicates category 2,2", () => {
+  test('DUP2X2: duplicates category 2,2', () => {
     thread.pushStack64(5.0);
     thread.pushStack64(6.0);
     code.setUint8(0, OPCODE.DUP2_X2);
@@ -265,8 +265,8 @@ describe("Dup2X2", () => {
   });
 });
 
-describe("Swap", () => {
-  test("SWAP: swap stack operands", () => {
+describe('Swap', () => {
+  test('SWAP: swap stack operands', () => {
     const v1 = new JvmObject(threadClass);
     const v2 = new JvmObject(threadClass);
     thread.pushStack(v1);

@@ -11,6 +11,7 @@ describe("extract MethodModifier correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -28,11 +29,15 @@ describe("extract MethodModifier correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -48,6 +53,7 @@ describe("extract MethodModifier correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -68,11 +74,15 @@ describe("extract MethodModifier correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -90,6 +100,7 @@ describe("extract FormalParameter correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -107,11 +118,15 @@ describe("extract FormalParameter correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);
@@ -127,6 +142,7 @@ describe("extract FormalParameter correctly", () => {
 
     const expectedAst: AST = {
       kind: "CompilationUnit",
+      importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: [
         {
           kind: "NormalClassDeclaration",
@@ -150,11 +166,15 @@ describe("extract FormalParameter correctly", () => {
               methodBody: {
                 kind: "Block",
                 blockStatements: [],
+                location: expect.anything(),
               },
+              location: expect.anything(),
             },
           ],
+          location: expect.anything(),
         },
       ],
+      location: expect.anything(),
     };
 
     const ast = parse(programStr);

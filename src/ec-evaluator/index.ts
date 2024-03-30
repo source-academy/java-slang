@@ -12,15 +12,18 @@ export const runECEvaluator = (
 ): Promise<Result> => {
   try {
     const code = files[entrypointFilePath];
+    // parse() may throw SyntaxError.
     const compilationUnit = parse(code!);
 
     context.control.push(compilationUnit!);
+    // evaluate() may throw RuntimeError
     const value = evaluate(context, targetStep);
 
     return new Promise((resolve, _) => {
       resolve({ status: 'finished', context, value } as Finished);
     });
-  } catch {
+  } catch (e) {
+    context.errors.push(e);
     return new Promise((resolve, _) => {
       resolve({ status: 'error' } as Error);
     });
