@@ -43,17 +43,17 @@ export const info2Attribute = (
   ).get();
 
   switch (name) {
-    case 'ConstantValue':
+    case "ConstantValue":
       return {
         name,
         constantvalue: constantPool.get(
           (info as ConstantValueAttribute).constantvalueIndex
         ) as Constant,
       } as ConstantValue;
-    case 'Code':
+    case "Code":
       const code = info as CodeAttribute;
       const attr: { [attributeName: string]: IAttribute } = {};
-      const exceptionTable = code.exceptionTable.map(handler => {
+      const exceptionTable = code.exceptionTable.map((handler) => {
         return {
           startPc: handler.startPc,
           endPc: handler.endPc,
@@ -64,7 +64,7 @@ export const info2Attribute = (
               : (constantPool.get(handler.catchType) as ConstantClass),
         };
       });
-      code.attributes.forEach(element => {
+      code.attributes.forEach((element) => {
         attr[
           (constantPool.get(element.attributeNameIndex) as ConstantUtf8).get()
         ] = info2Attribute(element, constantPool);
@@ -79,23 +79,23 @@ export const info2Attribute = (
         exceptionTable: exceptionTable,
         attributes: attr,
       } as Code;
-    case 'Exceptions':
+    case "Exceptions":
       const exceptions: ConstantClass[] = [];
-      (info as ExceptionsAttribute).exceptionIndexTable.forEach(index => {
+      (info as ExceptionsAttribute).exceptionIndexTable.forEach((index) => {
         exceptions.push(constantPool.get(index) as ConstantClass);
       });
       return {
         name,
         exceptionTable: exceptions,
       } as Exceptions;
-    case 'InnerClasses':
+    case "InnerClasses":
       const innerclasses: {
         innerClass: ConstantClass;
         outerClass: ConstantClass | null;
         innerName: string | null;
         innerClassAccessFlags: number;
       }[] = [];
-      (info as InnerClassesAttribute).classes.forEach(element => {
+      (info as InnerClassesAttribute).classes.forEach((element) => {
         innerclasses.push({
           innerClass: constantPool.get(
             element.innerClassInfoIndex
@@ -119,11 +119,7 @@ export const info2Attribute = (
         name,
         classes: innerclasses,
       } as InnerClasses;
-    case 'EnclosingMethod':
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
+    case "EnclosingMethod":
       const cls = constantPool.get(
         (info as EnclosingMethodAttribute).classIndex
       ) as ConstantClass;
@@ -135,7 +131,7 @@ export const info2Attribute = (
         class: cls,
         method: method,
       } as EnclosingMethod;
-    case 'Signature':
+    case "Signature":
       const signature = (
         constantPool.get(
           (info as SignatureAttribute).signatureIndex
@@ -145,25 +141,17 @@ export const info2Attribute = (
         name,
         signature,
       } as Signature;
-    case 'SourceDebugExtension':
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
+    case "SourceDebugExtension":
       return {
         name,
         debugExtension: (info as SourceDebugExtensionAttribute).debugExtension,
       } as SourceDebugExtension;
-    case 'LineNumberTable':
+    case "LineNumberTable":
       return {
         name,
         lineNumberTable: (info as LineNumberTableAttribute).lineNumberTable,
       } as LineNumberTable;
-    case 'LocalVariableTable':
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
+    case "LocalVariableTable":
       const localVarTable: Array<{
         startPc: number;
         length: number;
@@ -172,7 +160,7 @@ export const info2Attribute = (
         index: number;
       }> = [];
       (info as LocalVariableTableAttribute).localVariableTable.forEach(
-        element => {
+        (element) => {
           localVarTable.push({
             startPc: element.startPc,
             length: element.length,
@@ -188,11 +176,7 @@ export const info2Attribute = (
         name,
         localVariableTable: localVarTable,
       } as LocalVariableTable;
-    case 'LocalVariableTypeTable':
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
+    case "LocalVariableTypeTable":
       const localVarTypeTable: Array<{
         startPc: number;
         length: number;
@@ -201,7 +185,7 @@ export const info2Attribute = (
         index: number;
       }> = [];
       (info as LocalVariableTypeTableAttribute).localVariableTypeTable.forEach(
-        element => {
+        (element) => {
           localVarTypeTable.push({
             startPc: element.startPc,
             length: element.length,
@@ -218,50 +202,52 @@ export const info2Attribute = (
         name,
         localVariableTypeTable: localVarTypeTable,
       } as LocalVariableTypeTable;
-    case 'Deprecated':
+    case "Deprecated":
       return {
         name,
       };
-    case 'BootstrapMethods':
+    case "BootstrapMethods":
       const bootstrapMethods: Array<BootstrapMethod> = [];
-      (info as BootstrapMethodsAttribute).bootstrapMethods.forEach(element => {
-        const bootstrapArguments: Array<
-          | ConstantString
-          | ConstantClass
-          | ConstantInteger
-          | ConstantLong
-          | ConstantFloat
-          | ConstantDouble
-          | ConstantMethodHandle
-          | ConstantMethodType
-        > = [];
-        element.bootstrapArguments.forEach(arg => {
-          bootstrapArguments.push(constantPool.get(arg) as any);
-        });
-        bootstrapMethods.push({
-          bootstrapMethodRef: constantPool.get(
-            element.bootstrapMethodRef
-          ) as ConstantMethodHandle,
-          bootstrapArguments,
-        });
-      });
+      (info as BootstrapMethodsAttribute).bootstrapMethods.forEach(
+        (element) => {
+          const bootstrapArguments: Array<
+            | ConstantString
+            | ConstantClass
+            | ConstantInteger
+            | ConstantLong
+            | ConstantFloat
+            | ConstantDouble
+            | ConstantMethodHandle
+            | ConstantMethodType
+          > = [];
+          element.bootstrapArguments.forEach((arg) => {
+            bootstrapArguments.push(constantPool.get(arg) as any);
+          });
+          bootstrapMethods.push({
+            bootstrapMethodRef: constantPool.get(
+              element.bootstrapMethodRef
+            ) as ConstantMethodHandle,
+            bootstrapArguments,
+          });
+        }
+      );
       return {
         name,
         bootstrapMethods,
       } as BootstrapMethods;
-    case 'StackMapTable':
+    case "StackMapTable":
       return {
         name,
         entries: (info as StackMapTableAttribute).entries,
       } as StackMapTable;
-    case 'SourceFile':
+    case "SourceFile":
       return {
         name,
         sourceFile: constantPool.get(
           (info as SourceFileAttribute).sourcefileIndex
         ) as ConstantUtf8,
       } as SourceFile;
-    case 'Synthetic':
+    case "Synthetic":
       return {
         name,
       } as Synthetic;
