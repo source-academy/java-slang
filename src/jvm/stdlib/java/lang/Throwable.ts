@@ -2,18 +2,28 @@ import Thread from "../../../thread";
 import { logger } from "../../../utils";
 
 const functions = {
-  'fillInStackTrace(I)Ljava/lang/Throwable;': (
+  /**
+   * @todo Not implemented. Returns this.
+   * @param thread
+   * @param locals
+   */
+  "fillInStackTrace(I)Ljava/lang/Throwable;": (
     thread: Thread,
     locals: any[]
   ) => {
     logger.warn(
-      'Throwable.fillInStackTrace(I)Ljava/lang/Throwable; not implemented'
+      "Throwable.fillInStackTrace(I)Ljava/lang/Throwable; not implemented"
     );
     thread.returnStackFrame(locals[0]);
   },
 
-  'getStackTraceDepth()I': (thread: Thread, locals: any[]) => {
-    logger.warn('Throwable.getStackTraceDepth()I not implemented');
+  /**
+   * @todo Not implemented. Returns 0.
+   * @param thread
+   * @param locals
+   */
+  "getStackTraceDepth()I": (thread: Thread, locals: any[]) => {
+    logger.warn("Throwable.getStackTraceDepth()I not implemented");
     thread.returnStackFrame(0);
   },
 };

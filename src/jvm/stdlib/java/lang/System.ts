@@ -7,10 +7,15 @@ import { JvmObject } from "../../../types/reference/Object";
 import { logger } from "../../../utils";
 
 const functions = {
-  'registerNatives()V': (thread: Thread, locals: any[]) => {
+  /**
+   * NOP.
+   * @param thread
+   * @param locals
+   */
+  "registerNatives()V": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
-  'arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V': (
+  "arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V": (
     thread: Thread,
     locals: any[]
   ) => {
@@ -23,19 +28,19 @@ const functions = {
 
     if (src === null || dest === null) {
       thread.throwNewException(
-        'java/lang/NullPointerException',
-        'Cannot copy to/from a null array.'
+        "java/lang/NullPointerException",
+        "Cannot copy to/from a null array."
       );
       return;
     }
 
     if (
-      src.getClass().getName()[0] !== '[' ||
-      dest.getClass().getName()[0] !== '['
+      src.getClass().getName()[0] !== "[" ||
+      dest.getClass().getName()[0] !== "["
     ) {
       thread.throwNewException(
-        'java/lang/ArrayStoreException',
-        'src and dest arguments must be of array type.'
+        "java/lang/ArrayStoreException",
+        "src and dest arguments must be of array type."
       );
       return;
     }
@@ -48,8 +53,8 @@ const functions = {
       length < 0
     ) {
       thread.throwNewException(
-        'java/lang/ArrayIndexOutOfBoundsException',
-        'Tried to write to an illegal index in an array.'
+        "java/lang/ArrayIndexOutOfBoundsException",
+        "Tried to write to an illegal index in an array."
       );
       return;
     }
@@ -73,49 +78,35 @@ const functions = {
 
     thread.returnStackFrame();
   },
-  'initProperties(Ljava/util/Properties;)Ljava/util/Properties;': (
+  /**
+   * @todo Partially implemented. Sets hardcoded values as system properties, we should try to get the details from the environment.
+   * @param thread
+   * @param locals
+   * @returns
+   */
+  "initProperties(Ljava/util/Properties;)Ljava/util/Properties;": (
     thread: Thread,
     locals: any[]
   ) => {
     const props = locals[0] as JvmObject;
-    // FIXME: use actual values
     const systemProperties = {
-      'java.class.path': 'example',
-      'java.home': 'natives',
-      'java.ext.dirs': 'natives/lib/ext',
-      'java.io.tmpdir': 'temp',
-      'sun.boot.class.path': 'natives',
-      'file.encoding': 'UTF-8',
-      'java.vendor': 'Source Academy',
-      'java.version': '1.0',
-      'java.vendor.url': 'https://github.com/source-academy/java-slang',
-      'java.class.version': '52.0',
-      'java.specification.version': '1.8',
-      'line.separator': '\n',
-      'file.separator': '/',
-      'path.separator': ':',
-      'user.dir': 'example',
-      'user.home': '.',
-      'user.name': 'SourceAcademy',
-      'os.name': 'source',
-      'os.arch': 'js',
-      'os.version': '0',
-      'java.vm.name': 'Source Academy JVM',
-      'java.vm.version': '0.1',
-      'java.vm.vendor': 'Source Academy',
-      'jline.terminal': 'jline.UnsupportedTerminal',
-      'sun.arch.data.model': '32',
-      'sun.jnu.encoding': 'UTF-8',
+      "file.encoding": "UTF-8",
+      "line.separator": "\n",
+      "file.separator": "/",
+      "path.separator": ":",
+      "user.home": ".",
+      "sun.arch.data.model": "32",
+      "sun.jnu.encoding": "UTF-8",
     };
 
     const propClass = props.getClass();
     const method = propClass.getMethod(
-      'setProperty(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;'
+      "setProperty(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;"
     );
     if (!method) {
       thread.throwNewException(
-        'java/lang/NoSuchMethodException',
-        'setProperty(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;'
+        "java/lang/NoSuchMethodException",
+        "setProperty(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;"
       );
       return;
     }
@@ -137,59 +128,64 @@ const functions = {
       );
     });
   },
-  'setIn0(Ljava/io/InputStream;)V': (thread: Thread, locals: any[]) => {
+  "setIn0(Ljava/io/InputStream;)V": (thread: Thread, locals: any[]) => {
     const stream = locals[0] as JvmObject;
     const sysCls = (
       thread
         .getJVM()
         .getBootstrapClassLoader()
-        .getClass('java/lang/System') as SuccessResult<ReferenceClassData>
+        .getClass("java/lang/System") as SuccessResult<ReferenceClassData>
     ).result;
 
-    const fr = sysCls.lookupField('inLjava/io/InputStream;');
+    const fr = sysCls.lookupField("inLjava/io/InputStream;");
     if (fr) {
       fr.putValue(stream);
     }
     thread.returnStackFrame();
   },
-  'setOut0(Ljava/io/PrintStream;)V': (thread: Thread, locals: any[]) => {
+  "setOut0(Ljava/io/PrintStream;)V": (thread: Thread, locals: any[]) => {
     const stream = locals[0] as JvmObject;
     const sysCls = (
       thread
         .getJVM()
         .getBootstrapClassLoader()
-        .getClass('java/lang/System') as SuccessResult<ReferenceClassData>
+        .getClass("java/lang/System") as SuccessResult<ReferenceClassData>
     ).result;
 
-    const fr = sysCls.lookupField('outLjava/io/PrintStream;');
+    const fr = sysCls.lookupField("outLjava/io/PrintStream;");
     if (fr) {
       fr.putValue(stream);
     }
     thread.returnStackFrame();
   },
-  'setErr0(Ljava/io/PrintStream;)V': (thread: Thread, locals: any[]) => {
+  "setErr0(Ljava/io/PrintStream;)V": (thread: Thread, locals: any[]) => {
     const stream = locals[0] as JvmObject;
     const sysCls = (
       thread
         .getJVM()
         .getBootstrapClassLoader()
-        .getClass('java/lang/System') as SuccessResult<ReferenceClassData>
+        .getClass("java/lang/System") as SuccessResult<ReferenceClassData>
     ).result;
 
-    const fr = sysCls.lookupField('errLjava/io/PrintStream;');
+    const fr = sysCls.lookupField("errLjava/io/PrintStream;");
     if (fr) {
       fr.putValue(stream);
     }
     thread.returnStackFrame();
   },
 
-  'currentTimeMillis()J': (thread: Thread, locals: any[]) => {
+  "currentTimeMillis()J": (thread: Thread, locals: any[]) => {
     const time = BigInt(Date.now());
     thread.returnStackFrame64(time);
   },
 
-  'identityHashCode(Ljava/lang/Object;)I': (thread: Thread, locals: any[]) => {
-    logger.warn('System.identityHashCode(Ljava/lang/Object;)I not implemented');
+  /**
+   * @todo Not implemented. Returns 0.
+   * @param thread
+   * @param locals
+   */
+  "identityHashCode(Ljava/lang/Object;)I": (thread: Thread, locals: any[]) => {
+    logger.warn("System.identityHashCode(Ljava/lang/Object;)I not implemented");
     thread.returnStackFrame(0);
   },
 };

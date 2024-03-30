@@ -607,7 +607,7 @@ export abstract class ClassData {
 
   /**
    * Inserts a constant into the constant pool and returns the index.
-   * @todo used by vmtargetbridge; do we really need it since we use nestmate test to bypass private access?
+   * @todo currently used by vmtargetbridge, remove if not needed.
    */
   insertConstant(con: Constant): number {
     return this.constantPool.insert(con);

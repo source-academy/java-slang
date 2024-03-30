@@ -123,9 +123,6 @@ export async function createModuleProxy(
       }
 
       if (typeof returnValue === "object") {
-        console.log(
-          `modules/${module}/${returnValue.constructor.name.slice(1)}`
-        );
         let jRune: JvmObject;
         if (thread.peekStackFrame().operandStack.length) {
           const popResult = thread.popStack();

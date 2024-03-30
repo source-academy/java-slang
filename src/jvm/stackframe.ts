@@ -20,6 +20,7 @@ import * as stack from "./instructions/stack";
 import * as stores from "./instructions/stores";
 import { ResultType } from "./types/Result";
 
+// Skips execution of methods/ use custom logic
 const overwrites: {
   [cls: string]: {
     [methodSig: string]: (thread: Thread, locals: any[]) => boolean;

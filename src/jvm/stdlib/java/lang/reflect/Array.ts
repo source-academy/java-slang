@@ -7,23 +7,20 @@ import { JvmObject } from "../../../../types/reference/Object";
 import { ResultType } from "../../../../types/Result";
 
 const functions = {
-  'newArray(Ljava/lang/Class;I)Ljava/lang/Object;': (
+  "newArray(Ljava/lang/Class;I)Ljava/lang/Object;": (
     thread: Thread,
     locals: any[]
   ) => {
     const clsRef = (locals[0] as JvmObject).getNativeField(
-      'classRef'
+      "classRef"
     ) as ReferenceClassData;
     const length = locals[1] as number;
-    let clsName = '[' + clsRef.getDescriptor();
+    let clsName = "[" + clsRef.getDescriptor();
 
     const arrClsRes = clsRef.getLoader().getClass(clsName);
     if (arrClsRes.status === ResultType.ERROR) {
-      console.error(
-        'init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V: Method not found'
-      );
       thread.throwNewException(
-        'java/lang/ClassNotFoundException',
+        "java/lang/ClassNotFoundException",
         arrClsRes.msg
       );
       return;

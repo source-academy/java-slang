@@ -1,10 +1,6 @@
 import { NativeStackFrame, JavaStackFrame } from "../stackframe";
 import Thread from "../thread";
-import {
-  Result,
-  ImmediateResult,
-  ResultType,
-} from "../types/Result";
+import { Result, ImmediateResult, ResultType } from "../types/Result";
 import { ReferenceClassData } from "../types/class/ClassData";
 import {
   ConstantFieldref,
@@ -51,7 +47,7 @@ export function runGetstatic(thread: Thread): void {
     return;
   }
 
-  if (field.getFieldDesc() === 'J' || field.getFieldDesc() === 'D') {
+  if (field.getFieldDesc() === "J" || field.getFieldDesc() === "D") {
     thread.pushStack64(field.getValue());
   } else {
     thread.pushStack(field.getValue());
@@ -168,12 +164,12 @@ export function runGetfield(thread: Thread): void {
   }
   const objRef = popResult.result as JvmObject;
   if (objRef === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
 
   const value = objRef.getField(field);
-  if (field.getFieldDesc() === 'J' || field.getFieldDesc() === 'D') {
+  if (field.getFieldDesc() === "J" || field.getFieldDesc() === "D") {
     thread.pushStack64(value as number | bigint);
   } else {
     thread.pushStack(value);
@@ -204,7 +200,7 @@ export function runPutfield(thread: Thread): void {
   }
 
   let vpopResult;
-  if (field.getFieldDesc() === 'J' || field.getFieldDesc() === 'D') {
+  if (field.getFieldDesc() === "J" || field.getFieldDesc() === "D") {
     vpopResult = thread.popStack64();
   } else {
     vpopResult = thread.popStack();
@@ -219,7 +215,7 @@ export function runPutfield(thread: Thread): void {
   }
   const objRef = popResult.result as JvmObject;
   if (objRef === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   objRef.putField(field, vpopResult.result);
@@ -254,7 +250,7 @@ function invokeInit(
     const name = methodRef.getName();
     let mh, mn, popResult;
     switch (name) {
-      case 'invokeBasic':
+      case "invokeBasic":
         target = methodRef;
         args = getArgs(thread, originalDescriptor, target.checkNative());
         popResult = thread.popStack();
@@ -265,22 +261,22 @@ function invokeInit(
         if (mh === null) {
           return {
             status: ResultType.ERROR,
-            exceptionCls: 'java/lang/NullPointerException',
-            msg: '',
+            exceptionCls: "java/lang/NullPointerException",
+            msg: "",
           };
         }
         args = [mh, ...args];
         break;
-      case 'invoke':
-      case 'invokeExact':
+      case "invoke":
+      case "invokeExact":
         if (!memberName) {
           return {
             status: ResultType.ERROR,
-            exceptionCls: 'java/lang/NullPointerException',
-            msg: '',
+            exceptionCls: "java/lang/NullPointerException",
+            msg: "",
           };
         }
-        target = memberName.getNativeField('vmtarget') as Method;
+        target = memberName.getNativeField("vmtarget") as Method;
         args = getArgs(thread, originalDescriptor, target.checkNative());
         if (appendix !== null) {
           args.push(appendix);
@@ -293,38 +289,38 @@ function invokeInit(
         if (mh === null) {
           return {
             status: ResultType.ERROR,
-            exceptionCls: 'java/lang/NullPointerException',
-            msg: '',
+            exceptionCls: "java/lang/NullPointerException",
+            msg: "",
           };
         }
         args = [mh, ...args];
         break;
-      case 'linkToVirtual':
-      case 'linkToInterface':
-      case 'linkToSpecial':
-      case 'linkToStatic':
+      case "linkToVirtual":
+      case "linkToInterface":
+      case "linkToSpecial":
+      case "linkToStatic":
         popResult = thread.popStack();
         if (popResult.status === ResultType.ERROR) {
           return popResult;
         }
         mn = popResult.result as JvmObject;
-        target = mn.getNativeField('vmtarget') as Method;
+        target = mn.getNativeField("vmtarget") as Method;
         thread.pushStack(mn);
         args = getArgs(thread, originalDescriptor, target.checkNative());
         args.pop();
         if (mn === null) {
           return {
             status: ResultType.ERROR,
-            exceptionCls: 'java/lang/NullPointerException',
-            msg: '',
+            exceptionCls: "java/lang/NullPointerException",
+            msg: "",
           };
         }
         break;
       default:
         return {
           status: ResultType.ERROR,
-          exceptionCls: 'java/lang/LinkageError',
-          msg: '',
+          exceptionCls: "java/lang/LinkageError",
+          msg: "",
         };
     }
 
@@ -356,16 +352,16 @@ function lookupMethod(
   if (objRef === null) {
     return {
       status: ResultType.ERROR,
-      exceptionCls: 'java/lang/NullPointerException',
-      msg: '',
+      exceptionCls: "java/lang/NullPointerException",
+      msg: "",
     };
   }
 
   if (checkCastTo && !objRef.getClass().checkCast(checkCastTo)) {
     return {
       status: ResultType.ERROR,
-      exceptionCls: 'java/lang/IncompatibleClassChangeError',
-      msg: '',
+      exceptionCls: "java/lang/IncompatibleClassChangeError",
+      msg: "",
     };
   }
 
@@ -384,8 +380,8 @@ function lookupMethod(
   if (toInvoke.checkAbstract()) {
     return {
       status: ResultType.ERROR,
-      exceptionCls: 'java/lang/NoSuchMethodError',
-      msg: '',
+      exceptionCls: "java/lang/NoSuchMethodError",
+      msg: "",
     };
   }
 
@@ -404,19 +400,19 @@ function invokePoly(
   returnOffset: number
 ): void {
   let toInvoke = vmtarget;
-  if (polyMethod.getName() === 'invokeBasic') {
+  if (polyMethod.getName() === "invokeBasic") {
     const mh = args[0] as JvmObject;
     const lambdaForm = mh._getField(
-      'form',
-      'Ljava/lang/invoke/LambdaForm;',
-      'java/lang/invoke/MethodHandle'
+      "form",
+      "Ljava/lang/invoke/LambdaForm;",
+      "java/lang/invoke/MethodHandle"
     ) as JvmObject;
     const memberName = lambdaForm._getField(
-      'vmentry',
-      'Ljava/lang/invoke/MemberName;',
-      'java/lang/invoke/LambdaForm'
+      "vmentry",
+      "Ljava/lang/invoke/MemberName;",
+      "java/lang/invoke/LambdaForm"
     ) as JvmObject;
-    toInvoke = memberName.getNativeField('vmtarget') as Method;
+    toInvoke = memberName.getNativeField("vmtarget") as Method;
   }
 
   thread.invokeStackFrame(
@@ -485,6 +481,10 @@ function invokeVirtual(
   }
 }
 
+/**
+ * Relies on several Java methods (e.g. linkMethodHandleConstant) for signature polymorphic methods.
+ * Native implementations for its requried methods may not be fully implemented.
+ */
 export function runInvokevirtual(thread: Thread): void {
   const indexbyte = thread.getCode().getUint16(thread.getPC() + 1);
   const constant = thread
@@ -515,12 +515,12 @@ export function runInvokespecial(thread: Thread): void {
   }
   const objRef = popResult.result as JvmObject;
   if (objRef === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
 
   if (methodRef.checkAbstract()) {
-    thread.throwNewException('java/lang/AbstractMethodError', '');
+    thread.throwNewException("java/lang/AbstractMethodError", "");
     return;
   }
 
@@ -565,7 +565,7 @@ export function runInvokestatic(thread: Thread): void {
   const { methodRef, args } = resolutionRes.result;
 
   if (!methodRef.checkStatic()) {
-    thread.throwNewException('java/lang/IncompatibleClassChangeError', '');
+    thread.throwNewException("java/lang/IncompatibleClassChangeError", "");
     return;
   }
 
@@ -630,7 +630,9 @@ export function runInvokeinterface(thread: Thread): void {
 
 /**
  * Adapted from Doppio {@link https://github.com/plasma-umass/doppio/blob/master/src/opcodes.ts#L1482}
- * JVM docs seems vague on exactly what to do.
+ * Relies on several Java methods (e.g. linkMethodHandleConstant) for signature polymorphic methods.
+ * Native implementations for its requried methods may not be fully implemented.
+ * @todo linkCallSite seems to method in the bootstrap method instead of the vmtarget.
  */
 export function runInvokedynamic(thread: Thread): void {
   const index = thread.getCode().getUint16(thread.getPC() + 1);
@@ -647,7 +649,7 @@ export function runInvokedynamic(thread: Thread): void {
     return;
   }
   const [callsite, appendix] = cssRes.result;
-  const toInvoke = callsite.getNativeField('vmtarget') as Method;
+  const toInvoke = callsite.getNativeField("vmtarget") as Method;
   const args = getArgs(
     thread,
     callsiteConstant.getNameAndType().get().descriptor,
@@ -675,7 +677,7 @@ export function runNew(thread: Thread): void {
 
   const objCls = res.result;
   if (objCls.checkAbstract() || objCls.checkInterface()) {
-    thread.throwNewException('java/lang/InstantiationError', '');
+    thread.throwNewException("java/lang/InstantiationError", "");
     return;
   }
 
@@ -703,45 +705,45 @@ export function runNewarray(thread: Thread): void {
   }
   const count = popResult.result;
   if (count < 0) {
-    thread.throwNewException('java/lang/NegativeArraySizeException', '');
+    thread.throwNewException("java/lang/NegativeArraySizeException", "");
     return;
   }
 
-  let className = '';
+  let className = "";
   switch (atype) {
     case ArrayPrimitiveType.boolean:
-      className = '[' + JavaType.boolean;
+      className = "[" + JavaType.boolean;
       break;
     case ArrayPrimitiveType.char:
-      className = '[' + JavaType.char;
+      className = "[" + JavaType.char;
       break;
     case ArrayPrimitiveType.float:
-      className = '[' + JavaType.float;
+      className = "[" + JavaType.float;
       break;
     case ArrayPrimitiveType.double:
-      className = '[' + JavaType.double;
+      className = "[" + JavaType.double;
       break;
     case ArrayPrimitiveType.byte:
-      className = '[' + JavaType.byte;
+      className = "[" + JavaType.byte;
       break;
     case ArrayPrimitiveType.short:
-      className = '[' + JavaType.short;
+      className = "[" + JavaType.short;
       break;
     case ArrayPrimitiveType.int:
-      className = '[' + JavaType.int;
+      className = "[" + JavaType.int;
       break;
     case ArrayPrimitiveType.long:
-      className = '[' + JavaType.long;
+      className = "[" + JavaType.long;
       break;
     default:
-      throw new Error('Invalid atype, reference types should use anewarray');
+      throw new Error("Invalid atype, reference types should use anewarray");
   }
   const classResolutionResult = thread
     .getClass()
     .getLoader()
     .getClass(className);
   if (classResolutionResult.status === ResultType.ERROR) {
-    throw new Error('Failed to load primitive array class');
+    throw new Error("Failed to load primitive array class");
   }
 
   const arrayCls = classResolutionResult.result;
@@ -761,7 +763,7 @@ export function runAnewarray(thread: Thread): void {
   thread.offsetPc(3);
 
   if (count < 0) {
-    thread.throwNewException('java/lang/NegativeArraySizeException', '');
+    thread.throwNewException("java/lang/NegativeArraySizeException", "");
     return;
   }
 
@@ -774,9 +776,9 @@ export function runAnewarray(thread: Thread): void {
 
   const arrayClassRes = invoker
     .getLoader()
-    .getClass('[L' + objCls.getName() + ';');
+    .getClass("[L" + objCls.getName() + ";");
   if (arrayClassRes.status === ResultType.ERROR) {
-    throw new Error('Failed to load array class');
+    throw new Error("Failed to load array class");
   }
   const arrayCls = arrayClassRes.result;
 
@@ -792,7 +794,7 @@ export function runArraylength(thread: Thread): void {
   }
   const arrayref = popResult.result as JvmArray;
   if (arrayref === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
   thread.offsetPc(1);
@@ -808,7 +810,7 @@ export function runAthrow(thread: Thread): void {
 
   if (exception === null) {
     thread.pushStack(exception);
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
 
@@ -858,7 +860,7 @@ function _checkCast(
   } else {
     value === 1
       ? thread.pushStack(objectref)
-      : thread.throwNewException('java/lang/ClassCastException', '');
+      : thread.throwNewException("java/lang/ClassCastException", "");
   }
   return;
 }
@@ -882,7 +884,7 @@ export function runMonitorenter(thread: Thread): void {
   }
   const obj = popResult.result as JvmObject | null;
   if (obj === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
 
@@ -896,7 +898,7 @@ export function runMonitorexit(thread: Thread): void {
   }
   const obj = popResult.result as JvmObject | null;
   if (obj === null) {
-    thread.throwNewException('java/lang/NullPointerException', '');
+    thread.throwNewException("java/lang/NullPointerException", "");
     return;
   }
 

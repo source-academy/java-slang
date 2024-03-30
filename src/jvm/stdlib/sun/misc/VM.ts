@@ -1,7 +1,12 @@
 import Thread from "../../../thread";
 
 const functions = {
-  'initialize()V': (thread: Thread, locals: any[]) => {
+  /**
+   * @todo Not implemented. Assumes JVM is already initialized.
+   * @param thread
+   * @param locals
+   */
+  "initialize()V": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
 };

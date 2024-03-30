@@ -5,17 +5,20 @@ import { ResultType } from "../../../types/Result";
 import { j2jsString } from "../../../utils";
 
 const functions = {
-  'registerNatives()V': (thread: Thread, locals: any[]) => {
+  /**
+   * NOP.
+   */
+  "registerNatives()V": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },
 
-  'findLoadedClass0(Ljava/lang/String;)Ljava/lang/Class;': (
+  "findLoadedClass0(Ljava/lang/String;)Ljava/lang/Class;": (
     thread: Thread,
     locals: any[]
   ) => {
-    const className = j2jsString(locals[1] as JvmObject).replaceAll('.', '/');
+    const className = j2jsString(locals[1] as JvmObject).replaceAll(".", "/");
     const loader: AbstractClassLoader =
-      (locals[0] as JvmObject).getNativeField('$loader') ??
+      (locals[0] as JvmObject).getNativeField("$loader") ??
       thread.getJVM().getBootstrapClassLoader();
 
     const res = loader.getClass(className);
