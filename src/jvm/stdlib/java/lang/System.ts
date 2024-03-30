@@ -15,7 +15,7 @@ const functions = {
   'registerNatives()V': (thread: Thread) => {
     thread.returnStackFrame()
   },
-  'arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V': (thread: Thread) => {
+  'arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V': (thread: Thread, locals: any[]) => {
     // is static.
     const src = locals[0] as JvmArray
     const srcPos = locals[1]
