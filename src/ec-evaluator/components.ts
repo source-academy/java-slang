@@ -39,6 +39,10 @@ export class Environment {
     return this._current;
   }
 
+  get objects() {
+    return this._objects;
+  }
+
   set current(node: EnvNode) {
     this._current = node;
   }
