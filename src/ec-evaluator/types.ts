@@ -126,37 +126,49 @@ export type StashItem = Primitive | Reference | Value | Void | Type;
 export type Name = string;
 export type Value = Variable | Closure | Class;
 
-export interface Variable {
-  kind: "Variable";
-  type: UnannType;
-  name: Name;
-  value: VarValue;
-}
-
 export type VarValue = Primitive | Reference | Symbol | Variable;
 
 export type Primitive = Literal;
 export type Reference = Object;
 
+/**
+ * Structs
+ */
+export enum StructType {
+  VARIABLE = "Variable",
+  SYMBOL = "Symbol",
+  OBJECT = "Object",
+  CLOSURE = "Closure",
+  CLASS = "Class",
+  TYPE = "Type",
+}
+
+export interface Variable {
+  kind: StructType.VARIABLE;
+  type: UnannType;
+  name: Name;
+  value: VarValue;
+}
+
 export interface Symbol {
-  kind: "Symbol";
+  kind: StructType.SYMBOL;
   value: string;
 }
 
 export interface Object {
-  kind: "Object";
+  kind: StructType.OBJECT;
   frame: EnvNode;
   class: Class;
 }
 
 export interface Closure {
-  kind: "Closure";
+  kind: StructType.CLOSURE;
   mtdOrCon: MethodDeclaration | ConstructorDeclaration;
   env: EnvNode;
 }
 
 export interface Class {
-  kind: "Class";
+  kind: StructType.CLASS;
   frame: EnvNode;
   classDecl: NormalClassDeclaration;
   constructors: ConstructorDeclaration[];
@@ -168,7 +180,7 @@ export interface Class {
 }
 
 export interface Type {
-  kind: "Type";
+  kind: StructType.TYPE;
   type: UnannType;
 }
 

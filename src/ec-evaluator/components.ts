@@ -1,6 +1,7 @@
 import { UnannType } from "../ast/types/classes";
 import { DECLARED_BUT_NOT_YET_ASSIGNED, GLOBAL_FRAME, OBJECT_FRAME } from "./constants";
 import * as errors from "./errors";
+import * as struct from "./structCreator";
 import {
   Class,
   Closure,
@@ -62,11 +63,7 @@ export class Environment {
     const node = new EnvNode(OBJECT_FRAME);
 
     // Create new object.
-    const obj = {
-      kind: "Object",
-      frame: node,
-      class: c,
-    } as Object;
+    const obj = struct.objStruct(node, c);
 
     // Add to objects arr.
     this._objects.push(obj);
@@ -82,22 +79,12 @@ export class Environment {
   }
 
   declareVariable(name: Name, type: UnannType) {
-    const variable: Variable = {
-      kind: "Variable",
-      type,
-      name,
-      value: DECLARED_BUT_NOT_YET_ASSIGNED,
-    } as Variable;
+    const variable = struct.varStruct(type, name, DECLARED_BUT_NOT_YET_ASSIGNED);
     this._current.setVariable(name, variable);
   }
 
   defineVariable(name: Name, type: UnannType, value: VarValue) {
-    const variable = {
-      kind: "Variable",
-      type,
-      name,
-      value,
-    } as Variable;
+    const variable = struct.varStruct(type, name, value);
     this._current.setVariable(name, variable);
   }
 

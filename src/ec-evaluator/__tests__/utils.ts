@@ -1,6 +1,6 @@
 import { Environment } from "../components";
 import { STEP_LIMIT } from "../constants";
-import { ControlItem, Context, StashItem } from "../types";
+import { ControlItem, Context, StashItem, StructType } from "../types";
 import { Stack, isNode } from "../utils";
 
 export class StackStub<T> extends Stack<T> {
@@ -37,15 +37,15 @@ export const getControlItemStr = (i: ControlItem): string => {
 export const getStashItemStr = (i: StashItem): string => {
   return i.kind === "Literal" 
     ? i.literalType.value 
-    : i.kind === "Closure"
+    : i.kind === StructType.CLOSURE
     ? i.mtdOrCon.kind === "MethodDeclaration"
       ? i.mtdOrCon.methodHeader.identifier
       : i.mtdOrCon.constructorDeclarator.identifier
-    : i.kind === "Variable"
+    : i.kind === StructType.VARIABLE
     ? i.name
-    : i.kind === "Class"
+    : i.kind === StructType.CLASS
     ? i.frame.name
-    : i.kind === "Type"
+    : i.kind === StructType.TYPE
     ? i.type
     : i.kind;
 };

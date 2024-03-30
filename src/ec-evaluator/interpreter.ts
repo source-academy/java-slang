@@ -32,6 +32,7 @@ import { BLOCK_FRAME, GLOBAL_FRAME, NO_FRAME_NAME, OBJECT_CLASS, STEP_LIMIT, SUP
 import * as errors from "./errors";
 import * as instr from './instrCreator';
 import * as node from './nodeCreator';
+import * as struct from './structCreator';
 import {
   ControlItem,
   AssmtInstr,
@@ -57,6 +58,7 @@ import {
   ResConOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
+  StructType,
 } from "./types";
 import { 
   defaultValues,
@@ -190,17 +192,10 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const fromEnv = superclass ? superclass.frame : context.environment.global;
     context.environment.extendEnv(fromEnv, className);
 
-    const c = {
-      kind: "Class",
-      frame: context.environment.current,
-      classDecl: command,
-      constructors: constructors,
-      instanceFields,
-      instanceMethods,
-      staticFields,
-      staticMethods,
-      superclass,
-    } as Class;
+    const c = struct.classStruct(
+      context.environment.current, command, constructors,
+      instanceFields, instanceMethods, staticFields, staticMethods, superclass
+    );
     context.environment.defineClass(className, c);
 
     control.push(...handleSequence(instanceMethods));
@@ -230,11 +225,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ) => {
     // Use constructor descriptor as key.
     const conDescriptor: string = getDescriptor(command);
-    const conClosure = {
-      kind: "Closure",
-      mtdOrCon: command,
-      env: context.environment.current,
-    } as Closure;
+    const conClosure = struct.closureStruct(command, context.environment.current);
     context.environment.defineMtdOrCon(conDescriptor, conClosure);
   },
 
@@ -246,11 +237,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ) => {
     // Use method descriptor as key.
     const mtdDescriptor: string = getDescriptor(command);
-    const mtdClosure = {
-      kind: "Closure",
-      mtdOrCon: command,
-      env: context.environment.current,
-    } as Closure;
+    const mtdClosure = struct.closureStruct(command, context.environment.current);
     context.environment.defineMtdOrCon(mtdDescriptor, mtdClosure);
   },
 
@@ -444,7 +431,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const value = stash.pop()! as Literal | Object;
     const variable = stash.pop()! as Variable;
     // Variable can store variable now.
-    variable.value.kind === "Variable" ? variable.value.value = value : variable.value = value;
+    variable.value.kind === StructType.VARIABLE ? variable.value.value = value : variable.value = value;
     stash.push(value);
   },
 
@@ -572,7 +559,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     
     // Name resolution is based on the target type, not target obj.
     let variable;
-    if (varOrClass.kind === "Variable") {
+    if (varOrClass.kind === StructType.VARIABLE) {
       // TODO refactor? logic abit confusing
       // Check recursively if static field.
       let c = context.environment.getClass(varOrClass.type);
@@ -604,7 +591,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       } else {
         throw new errors.UndeclaredVariableError(command.name)
       }
-    } else /*if (varOrClass.kind === "Class")*/ {
+    } else /*if (varOrClass.kind === StructType.CLASS)*/ {
       variable = varOrClass.frame.getVariable(command.name);
     }
 
@@ -618,10 +605,10 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash: Stash,
   ) => {
     const varOrClass = stash.pop()! as Variable | Class;
-    const value = varOrClass.kind === "Class"
+    const value = varOrClass.kind === StructType.CLASS
       ? varOrClass
       // Variable can store variable now.
-      : varOrClass.value.kind === "Variable"
+      : varOrClass.value.kind === StructType.VARIABLE
       ? varOrClass.value.value as Literal | Object
       : varOrClass.value as Literal | Object;
     stash.push(value);
@@ -704,15 +691,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         return;
       }
       const v = context.environment.getName(value.name);
-      type = v.kind === "Variable" ? v.type : v.frame.name;
-    } else if (value.kind === "Class") {
+      type = v.kind === StructType.VARIABLE ? v.type : v.frame.name;
+    } else if (value.kind === StructType.CLASS) {
       type = value.frame.name;
     }
     
-    stash.push({
-      kind: "Type",
-      type: type!,
-    } as Type);
+    stash.push(struct.typeStruct(type!));
   },
 
   [InstrType.RES_TYPE_CONT]: (
@@ -752,10 +736,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       throw new errors.UndeclaredVariableError(command.name);
     }
     
-    stash.push({
-      kind: "Type",
-      type,
-    } as Type);
+    stash.push(struct.typeStruct(type));
   },
 
   [InstrType.RES_OVERLOAD]: (
