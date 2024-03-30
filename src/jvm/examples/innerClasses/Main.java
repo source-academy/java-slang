@@ -1,5 +1,3 @@
-
-
 public class Main {
     private static class InnerClass {
         private static String value = "INNER";

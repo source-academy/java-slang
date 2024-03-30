@@ -10,7 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "jsdoc": "typedoc"
+    "jsdoc": "typedoc --plugin typedoc-plugin-rename-defaults"
   },
   "devDependencies": {
     "@types/jest": "^29.5.4",
@@ -19,6 +19,7 @@
     "ts-jest": "^29.1.1",
     "typedoc": "^0.25.12",
     "typedoc-plugin-markdown": "^3.17.1",
+    "typedoc-plugin-rename-defaults": "^0.7.0",
     "typescript": "^5.2.2"
   },
   "dependencies": {
