@@ -20,6 +20,7 @@ import {
   ConstructorDeclarator,
   UnannType,
 } from "../ast/types/classes";
+import { OBJECT_CLASS, SUPER_KEYWORD, THIS_KEYWORD } from "./constants";
 
 export const localVarDeclNoInitNode = (
   localVariableType: UnannType,
@@ -87,7 +88,7 @@ export const returnThisStmtNode = (srcNode: Node): ReturnStatement => ({
   kind: "ReturnStatement",
   exp: {
     kind: "ExpressionName",
-    name: "this",
+    name: THIS_KEYWORD,
     location: srcNode.location,
   } as ExpressionName,
   location: srcNode.location,
@@ -128,7 +129,7 @@ export const exprNameNode = (name: string, srcNode: Node): ExpressionName => ({
 
 export const expConInvNode = (srcNode: Node): ExplicitConstructorInvocation => ({
   kind: "ExplicitConstructorInvocation",
-  thisOrSuper: "super",
+  thisOrSuper: SUPER_KEYWORD,
   argumentList: [],
   location: srcNode.location,
 });
@@ -136,6 +137,6 @@ export const expConInvNode = (srcNode: Node): ExplicitConstructorInvocation => (
 export const objClassDeclNode = (): ClassDeclaration => ({
   kind: "NormalClassDeclaration",
   classModifier: [],
-  typeIdentifier: "Object",
+  typeIdentifier: OBJECT_CLASS,
   classBody: [],
 });

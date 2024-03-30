@@ -20,6 +20,7 @@ import {
   UnannType,
 } from "../ast/types/classes";
 import { EnvNode } from "./components";
+import { THIS_KEYWORD } from "./constants";
 import * as errors from "./errors";
 import {
   emptyReturnStmtNode,
@@ -340,7 +341,7 @@ export const prependInstanceFieldsInitIfNeeded = (
   instanceFields: FieldDeclaration[],
 ): void => {
   const conBodyBlockStmts = constructor.constructorBody.blockStatements;
-  const isAltConInvAbsent = !conBodyBlockStmts.find(s => s.kind === "ExplicitConstructorInvocation" && s.thisOrSuper === "this");
+  const isAltConInvAbsent = !conBodyBlockStmts.find(s => s.kind === "ExplicitConstructorInvocation" && s.thisOrSuper === THIS_KEYWORD);
   if (isAltConInvAbsent) {
     const expStmtAssmts = instanceFields.map(f => convertFieldDeclToExpStmtAssmt(f));
     conBodyBlockStmts.unshift(...expStmtAssmts);
@@ -355,7 +356,7 @@ export const appendOrReplaceReturn = (
   let returnStmt = conBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement" && stmt.exp.kind === "Void");
   if (returnStmt) {
     // Replace empty ReturnStatement with ReturnStatement with this keyword.
-    (returnStmt as ReturnStatement).exp = exprNameNode("this", constructor);
+    (returnStmt as ReturnStatement).exp = exprNameNode(THIS_KEYWORD, constructor);
   } else {
     // Add ReturnStatement with this keyword.
     conBodyBlockStmts.push(returnThisStmtNode(constructor));

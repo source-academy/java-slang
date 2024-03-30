@@ -28,7 +28,7 @@ import {
 } from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
 import { Control, EnvNode, Stash } from "./components";
-import { STEP_LIMIT } from "./constants";
+import { BLOCK_FRAME, GLOBAL_FRAME, NO_FRAME_NAME, OBJECT_CLASS, STEP_LIMIT, SUPER_KEYWORD, THIS_KEYWORD } from "./constants";
 import * as errors from "./errors";
 import * as instr from './instrCreator';
 import * as node from './nodeCreator';
@@ -152,9 +152,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const instanceFields = getInstanceFields(command);
     const instanceMethods = getInstanceMethods(command);
     // Make MethodInvocation simple Identifier qualified to facilitate MethodInvocation evaluation.
-    instanceMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, "this"));
+    instanceMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, THIS_KEYWORD));
     // Make non local var simple name qualified.
-    instanceMethods.forEach(m => makeNonLocalVarNonParamSimpleNameQualified(m, "this"));
+    instanceMethods.forEach(m => makeNonLocalVarNonParamSimpleNameQualified(m, THIS_KEYWORD));
     instanceMethods.forEach(m => appendEmtpyReturn(m));
 
     const staticFields = getStaticFields(command);
@@ -166,7 +166,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     staticMethods.forEach(m => appendEmtpyReturn(m));
 
     // Class that doesn't explicitly inherit another class implicitly inherits Object, except Object.
-    className !== "Object" && !command.sclass && (command.sclass = "Object");
+    className !== OBJECT_CLASS && !command.sclass && (command.sclass = OBJECT_CLASS);
 
     const constructors = getConstructors(command);
     // Insert default constructor if not overriden.
@@ -177,7 +177,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Prepend instance fields initialization if needed at start of constructor body.
     constructors.forEach(c => prependInstanceFieldsInitIfNeeded(c, instanceFields));
     // Make non local var simple name qualified.
-    constructors.forEach(c => makeNonLocalVarNonParamSimpleNameQualified(c, "this"));
+    constructors.forEach(c => makeNonLocalVarNonParamSimpleNameQualified(c, THIS_KEYWORD));
     // Prepend super() if needed before instance fields initialization.
     constructors.forEach(c => prependExpConInvIfNeeded(c, command));
     // Append ReturnStatement with this keyword at end of constructor body.
@@ -218,7 +218,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(instr.envInstr(context.environment.current, command));
     control.push(...handleSequence(command.blockStatements));
 
-    context.environment.extendEnv(context.environment.current, "block");
+    context.environment.extendEnv(context.environment.current, BLOCK_FRAME);
   },
 
   ConstructorDeclaration: (
@@ -489,12 +489,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const isInstanceMtdOrCon = args.length == params.length + 1;
     if (isInstanceMtdOrCon) {
       // Append implicit FormalParameter and arg super if needed.
-      if (closure.env.parent.name !== "global") {
+      if (closure.env.parent.name !== GLOBAL_FRAME) {
         params.unshift(
           {
             kind: "FormalParameter",
             unannType: closure.env.parent.name,
-            identifier: "super",
+            identifier: SUPER_KEYWORD,
           },
         );
         args.unshift(args[0]);
@@ -505,7 +505,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         {
           kind: "FormalParameter",
           unannType: closure.env.name,
-          identifier: "this",
+          identifier: THIS_KEYWORD,
         },
       );
     }
@@ -648,7 +648,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     let obj: Object;
     classHierachy.forEach((c, i) => {
       // Only 1 object is created.
-      i === 0 ? (obj = context.environment.createObj(objClass)) : context.environment.extendEnv(context.environment.current, "object");
+      i === 0 ? (obj = context.environment.createObj(objClass)) : context.environment.extendEnv(context.environment.current, NO_FRAME_NAME);
 
       // Declare instance fields.
       c.instanceFields.forEach(i => {

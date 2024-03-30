@@ -1,5 +1,5 @@
 import { UnannType } from "../ast/types/classes";
-import { DECLARED_BUT_NOT_YET_ASSIGNED } from "./constants";
+import { DECLARED_BUT_NOT_YET_ASSIGNED, GLOBAL_FRAME, OBJECT_FRAME } from "./constants";
 import * as errors from "./errors";
 import {
   Class,
@@ -26,7 +26,7 @@ export class Environment {
   private _objects: Object[] = [];
 
   constructor() {
-    const node = new EnvNode("global");
+    const node = new EnvNode(GLOBAL_FRAME);
     this._global = node;
     this._current = node;
   }
@@ -43,7 +43,7 @@ export class Environment {
     this._current = node;
   }
 
-  extendEnv(fromEnv: EnvNode, name: string = "object") {
+  extendEnv(fromEnv: EnvNode, name: string) {
     // Create new environemnt.
     const node = new EnvNode(name);
     node.parent = fromEnv;
@@ -55,7 +55,7 @@ export class Environment {
 
   createObj(c: Class): Object {
     // Create new environment.
-    const node = new EnvNode("object");
+    const node = new EnvNode(OBJECT_FRAME);
 
     // Create new object.
     const obj = {
