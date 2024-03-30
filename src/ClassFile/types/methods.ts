@@ -1,11 +1,11 @@
-import { AttributeInfo } from './attributes';
+import { AttributeInfo } from './attributes'
 
 export interface MethodInfo {
-  accessFlags: number;
-  nameIndex: number;
-  descriptorIndex: number;
-  attributesCount: number;
-  attributes: Array<AttributeInfo>;
+  accessFlags: number
+  nameIndex: number
+  descriptorIndex: number
+  attributesCount: number
+  attributes: Array<AttributeInfo>
 }
 
 export enum METHOD_FLAGS {
@@ -20,5 +20,5 @@ export enum METHOD_FLAGS {
   ACC_NATIVE = 0x0100,
   ACC_ABSTRACT = 0x0400,
   ACC_STRICT = 0x0800,
-  ACC_SYNTHETIC = 0x1000,
+  ACC_SYNTHETIC = 0x1000
 }

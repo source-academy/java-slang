@@ -1,4 +1,4 @@
-import Thread from "../../../thread";
+import Thread from '../../../thread'
 
 const functions = {
   /**
@@ -6,8 +6,8 @@ const functions = {
    * @param thread
    * @param locals
    */
-  "availableProcessors()I": (thread: Thread, locals: any[]) => {
-    thread.returnStackFrame(1);
-  },
-};
-export default functions;
+  'availableProcessors()I': (thread: Thread) => {
+    thread.returnStackFrame(1)
+  }
+}
+export default functions

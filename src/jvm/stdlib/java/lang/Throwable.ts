@@ -1,5 +1,5 @@
-import Thread from "../../../thread";
-import { logger } from "../../../utils";
+import Thread from '../../../thread'
+import { logger } from '../../../utils'
 
 const functions = {
   /**
@@ -7,14 +7,9 @@ const functions = {
    * @param thread
    * @param locals
    */
-  "fillInStackTrace(I)Ljava/lang/Throwable;": (
-    thread: Thread,
-    locals: any[]
-  ) => {
-    logger.warn(
-      "Throwable.fillInStackTrace(I)Ljava/lang/Throwable; not implemented"
-    );
-    thread.returnStackFrame(locals[0]);
+  'fillInStackTrace(I)Ljava/lang/Throwable;': (thread: Thread, locals: any[]) => {
+    logger.warn('Throwable.fillInStackTrace(I)Ljava/lang/Throwable; not implemented')
+    thread.returnStackFrame(locals[0])
   },
 
   /**
@@ -22,10 +17,10 @@ const functions = {
    * @param thread
    * @param locals
    */
-  "getStackTraceDepth()I": (thread: Thread, locals: any[]) => {
-    logger.warn("Throwable.getStackTraceDepth()I not implemented");
-    thread.returnStackFrame(0);
-  },
-};
+  'getStackTraceDepth()I': (thread: Thread) => {
+    logger.warn('Throwable.getStackTraceDepth()I not implemented')
+    thread.returnStackFrame(0)
+  }
+}
 
-export default functions;
+export default functions

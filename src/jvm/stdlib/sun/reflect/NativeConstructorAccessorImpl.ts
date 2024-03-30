@@ -1,10 +1,10 @@
-import { InternalStackFrame } from "../../../stackframe";
-import Thread from "../../../thread";
-import { ReferenceClassData } from "../../../types/class/ClassData";
-import { JvmArray } from "../../../types/reference/Array";
-import { JvmObject } from "../../../types/reference/Object";
-import { ResultType } from "../../../types/Result";
-import { logger } from "../../../utils";
+import { InternalStackFrame } from '../../../stackframe'
+import Thread from '../../../thread'
+import { ReferenceClassData } from '../../../types/class/ClassData'
+import { JvmArray } from '../../../types/reference/Array'
+import { JvmObject } from '../../../types/reference/Object'
+import { ResultType } from '../../../types/Result'
+import { logger } from '../../../utils'
 
 const functions = {
   /**
@@ -13,46 +13,44 @@ const functions = {
    * @param locals
    * @returns
    */
-  "newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;":
-    (thread: Thread, locals: any[]) => {
-      const constructor = locals[0] as JvmObject;
-      const paramArr = locals[1] as JvmArray;
-      const clsObj = constructor._getField(
-        "clazz",
-        "Ljava/lang/Class;",
-        "java/lang/reflect/Constructor"
-      ) as JvmObject;
-      const methodSlot = constructor._getField(
-        "slot",
-        "I",
-        "java/lang/reflect/Constructor"
-      ) as number;
-      const clsRef = clsObj.getNativeField("classRef") as ReferenceClassData;
-      const methodRef = clsRef.getMethodFromSlot(methodSlot);
-      if (!methodRef) {
-        throw new Error("Invalid slot?");
-      }
+  'newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;': (
+    thread: Thread,
+    locals: any[]
+  ) => {
+    const constructor = locals[0] as JvmObject
+    const paramArr = locals[1] as JvmArray
+    const clsObj = constructor._getField(
+      'clazz',
+      'Ljava/lang/Class;',
+      'java/lang/reflect/Constructor'
+    ) as JvmObject
+    const methodSlot = constructor._getField('slot', 'I', 'java/lang/reflect/Constructor') as number
+    const clsRef = clsObj.getNativeField('classRef') as ReferenceClassData
+    const methodRef = clsRef.getMethodFromSlot(methodSlot)
+    if (!methodRef) {
+      throw new Error('Invalid slot?')
+    }
 
-      const initRes = clsRef.initialize(thread);
-      if (initRes.status !== ResultType.SUCCESS) {
-        if (initRes.status === ResultType.ERROR) {
-          thread.throwNewException(initRes.exceptionCls, initRes.msg);
-        }
-        return;
+    const initRes = clsRef.initialize(thread)
+    if (initRes.status !== ResultType.SUCCESS) {
+      if (initRes.status === ResultType.ERROR) {
+        thread.throwNewException(initRes.exceptionCls, initRes.msg)
       }
+      return
+    }
 
-      const retObj = clsRef.instantiate();
-      if (paramArr) {
-        logger.warn("newInstance0: Auto unboxing not implemented");
-      }
-      const params = [retObj, ...(paramArr ? paramArr.getJsArray() : [])];
-      thread.invokeStackFrame(
-        new InternalStackFrame(clsRef, methodRef, 0, params, () => {
-          thread.returnStackFrame();
-          thread.returnStackFrame(retObj);
-        })
-      );
-    },
-};
+    const retObj = clsRef.instantiate()
+    if (paramArr) {
+      logger.warn('newInstance0: Auto unboxing not implemented')
+    }
+    const params = [retObj, ...(paramArr ? paramArr.getJsArray() : [])]
+    thread.invokeStackFrame(
+      new InternalStackFrame(clsRef, methodRef, 0, params, () => {
+        thread.returnStackFrame()
+        thread.returnStackFrame(retObj)
+      })
+    )
+  }
+}
 
-export default functions;
+export default functions

@@ -1,29 +1,24 @@
-import { ThreadStatus } from "./constants";
-import Thread from "./thread";
-import { Result, ResultType } from "./types/Result";
-import AbstractSystem from "./utils/AbstractSystem";
+import { ThreadStatus } from './constants'
+import Thread from './thread'
+import { Result, ResultType } from './types/Result'
+import AbstractSystem from './utils/AbstractSystem'
 
 export type Lib = {
   [className: string]: {
-    loader?: (
-      onFinish: (lib: {
-        [key: string]: (thread: Thread, locals: any[]) => void;
-      }) => void
-    ) => void;
-    methods?: { [key: string]: (thread: Thread, locals: any[]) => void };
-    blocking?: Thread[];
-  };
-};
+    methods?: { [key: string]: (thread: Thread, locals: any[]) => void }
+    blocking?: Thread[]
+  }
+}
 
 export class JNI {
-  private classes: Lib;
-  private classPath: string;
-  private system: AbstractSystem;
+  private classes: Lib
+  private classPath: string
+  private system: AbstractSystem
 
   constructor(classPath: string, system: AbstractSystem, stdlib?: Lib) {
-    this.classes = stdlib ?? {};
-    this.classPath = classPath;
-    this.system = system;
+    this.classes = stdlib ?? {}
+    this.classPath = classPath
+    this.system = system
   }
 
   /**
@@ -37,12 +32,13 @@ export class JNI {
     methodName: string,
     method: (thread: Thread, locals: any[]) => void
   ) {
+    // TODO: should we try to load the class?
     if (!this.classes[className]) {
       this.classes[className] = {
-        methods: {},
-      };
+        methods: {}
+      }
     }
-    this.classes[className].methods![methodName] = method;
+    this.classes[className].methods![methodName] = method
   }
 
   /**
@@ -60,44 +56,33 @@ export class JNI {
   ): Result<(thread: Thread, locals: any[]) => void> {
     // classname not found
     if (!this.classes?.[className]) {
-      this.classes[className] = {};
+      this.classes[className] = {}
     }
 
     if (!this.classes?.[className]?.methods) {
+      // Methods not yet loaded
       if (!this.classes[className].blocking) {
-        this.classes[className].blocking = [thread];
-        thread.setStatus(ThreadStatus.WAITING);
-        if (this.classes[className].loader) {
-          this.classes[className].loader?.(lib => {
-            this.classes[className].methods = lib;
+        this.classes[className].blocking = [thread]
+        thread.setStatus(ThreadStatus.WAITING)
+        this.system
+          .readFile(this.classPath ? this.classPath + '/' + className : className)
+          .then(lib => {
+            this.classes[className].methods = lib.default
+          })
+          .catch(_ => {
+            this.classes[className].methods = {}
+          })
+          .finally(() => {
             this.classes[className].blocking?.forEach(thread => {
-              thread.setStatus(ThreadStatus.RUNNABLE);
-            });
-            this.classes[className].blocking = [];
-          });
-        } else {
-          this.system
-            .readFile(
-              this.classPath ? this.classPath + '/' + className : className
-            )
-            .then(lib => {
-              this.classes[className].methods = lib.default;
+              thread.setStatus(ThreadStatus.RUNNABLE)
             })
-            .catch(e => {
-              this.classes[className].methods = {};
-            })
-            .finally(() => {
-              this.classes[className].blocking?.forEach(thread => {
-                thread.setStatus(ThreadStatus.RUNNABLE);
-              });
-              this.classes[className].blocking = [];
-            });
-        }
+            this.classes[className].blocking = []
+          })
       } else {
-        this.classes[className].blocking!.push(thread);
-        thread.setStatus(ThreadStatus.WAITING);
+        this.classes[className].blocking!.push(thread)
+        thread.setStatus(ThreadStatus.WAITING)
       }
-      return { status: ResultType.DEFER };
+      return { status: ResultType.DEFER }
     }
 
     // native method does not exist
@@ -105,13 +90,13 @@ export class JNI {
       return {
         status: ResultType.ERROR,
         exceptionCls: 'java/lang/UnsatisfiedLinkError',
-        msg: `${className}.${methodName} implementation not found`,
-      };
+        msg: `${className}.${methodName} implementation not found`
+      }
     }
 
     return {
       status: ResultType.SUCCESS,
-      result: (this.classes[className].methods as any)[methodName],
-    };
+      result: (this.classes[className].methods as any)[methodName]
+    }
   }
 }

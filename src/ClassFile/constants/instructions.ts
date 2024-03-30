@@ -203,5 +203,5 @@ export enum OPCODE {
   JSR_W,
   BREAKPOINT,
   IMPDEP1 = 254,
-  IMPDEP2 = 255,
+  IMPDEP2 = 255
 }
