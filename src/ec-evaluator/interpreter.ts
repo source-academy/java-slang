@@ -193,6 +193,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const c = {
       kind: "Class",
       frame: context.environment.current,
+      classDecl: command,
       constructors: constructors,
       instanceFields,
       instanceMethods,

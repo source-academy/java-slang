@@ -4,6 +4,7 @@ import {
   ConstructorDeclaration,
   FieldDeclaration,
   MethodDeclaration,
+  NormalClassDeclaration,
   UnannType,
 } from "../ast/types/classes";
 import { Control, EnvNode, Environment, Stash } from "./components";
@@ -157,6 +158,7 @@ export interface Closure {
 export interface Class {
   kind: "Class";
   frame: EnvNode;
+  classDecl: NormalClassDeclaration;
   constructors: ConstructorDeclaration[];
   instanceFields: FieldDeclaration[];
   instanceMethods: MethodDeclaration[];
