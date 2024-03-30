@@ -189,6 +189,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(instr.envInstr(context.environment.current, command));
     
     const superclass: Class | undefined = command.sclass ? context.environment.getClass(command.sclass) : undefined;
+    // TODO Object should not extend global?
     const fromEnv = superclass ? superclass.frame : context.environment.global;
     context.environment.extendEnv(fromEnv, className);
 
@@ -326,7 +327,6 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     stash: Stash,
   ) => {
-    // TODO can only handle MethodInvocation Identifier with two parts
     const nameParts = command.identifier.split(".");
     const target = nameParts.splice(0, nameParts.length - 1).join(".");
     const identifier = nameParts[nameParts.length - 1];
