@@ -694,7 +694,10 @@ ExplicitConstructorInvocation
   Productions from §10 (Arrays)
 */
 ArrayInitializer
-  = lcurly @VariableInitializerList? comma? rcurly
+  = lcurly rcurly {
+    return [];
+  }
+  / lcurly @VariableInitializerList? comma? rcurly
 
 VariableInitializerList
   = vi:VariableInitializer vis:(comma @VariableInitializer)* {

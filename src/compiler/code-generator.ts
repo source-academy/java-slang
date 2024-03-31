@@ -494,6 +494,21 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   ExpressionName: (node: Node, cg: CodeGenerator) => {
     const { name: name } = node as ExpressionName;
+    if (name.endsWith(".length")) {
+      // check if getting array length
+      const arrayName = name.slice(0, name.lastIndexOf(".length"));
+      const info = cg.symbolTable.queryVariable(arrayName);
+      if ((Array.isArray(info) && (info[info.length - 1] as FieldInfo).typeDescriptor.includes('['))
+        || (info as VariableInfo).typeDescriptor.includes('[')) {
+        compile({
+          kind: "ExpressionName",
+          name: arrayName,
+        }, cg);
+        cg.code.push(OPCODE.ARRAYLENGTH);
+        return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('int') };
+      }
+    }
+
     const info = cg.symbolTable.queryVariable(name);
     if (Array.isArray(info)) {
       const fieldInfos = info;
