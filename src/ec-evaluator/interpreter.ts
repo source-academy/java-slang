@@ -27,7 +27,7 @@ import {
   UnannType,
 } from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
-import { Control, EnvNode, Stash } from "./components";
+import { Control, EnvNode, Environment, Stash } from "./components";
 import { BLOCK_FRAME, GLOBAL_FRAME, NO_FRAME_NAME, OBJECT_CLASS, STEP_LIMIT, SUPER_KEYWORD, THIS_KEYWORD } from "./constants";
 import * as errors from "./errors";
 import * as instr from './instrCreator';
@@ -89,7 +89,7 @@ import {
 
 type CmdEvaluator = (
   command: ControlItem,
-  context: Context,
+  environment: Environment,
   control: Control,
   stash: Stash,
 ) => void
@@ -99,6 +99,7 @@ type CmdEvaluator = (
  * @throws {errors.RuntimeError} Throw error if program is semantically invalid.
  */
 export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): StashItem | undefined => {
+  const environment = context.environment;
   const control = context.control;
   const stash = context.stash;
 
@@ -113,9 +114,9 @@ export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): Sta
 
     control.pop();
     if (isNode(command)) {
-      cmdEvaluators[command.kind](command, context, control, stash);
+      cmdEvaluators[command.kind](command, environment, control, stash);
     } else {
-      cmdEvaluators[command.instrType](command, context, control, stash);
+      cmdEvaluators[command.instrType](command, environment, control, stash);
     }
 
     command = control.peek();
@@ -128,7 +129,7 @@ export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): Sta
 const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   CompilationUnit: (
     command: CompilationUnit,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -145,7 +146,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   
   NormalClassDeclaration: (
     command: NormalClassDeclaration,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -186,18 +187,18 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     constructors.forEach(c => appendOrReplaceReturn(c));
 
     // To restore current (global) env for next NormalClassDeclarations evaluation.
-    control.push(instr.envInstr(context.environment.current, command));
+    control.push(instr.envInstr(environment.current, command));
     
-    const superclass: Class | undefined = command.sclass ? context.environment.getClass(command.sclass) : undefined;
+    const superclass: Class | undefined = command.sclass ? environment.getClass(command.sclass) : undefined;
     // TODO Object should not extend global?
-    const fromEnv = superclass ? superclass.frame : context.environment.global;
-    context.environment.extendEnv(fromEnv, className);
+    const fromEnv = superclass ? superclass.frame : environment.global;
+    environment.extendEnv(fromEnv, className);
 
     const c = struct.classStruct(
-      context.environment.current, command, constructors,
+      environment.current, command, constructors,
       instanceFields, instanceMethods, staticFields, staticMethods, superclass
     );
-    context.environment.defineClass(className, c);
+    environment.defineClass(className, c);
 
     control.push(...handleSequence(instanceMethods));
     control.push(...handleSequence(staticMethods));
@@ -207,44 +208,44 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Block: (
     command: Block,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     // Save current environment before extending.
-    control.push(instr.envInstr(context.environment.current, command));
+    control.push(instr.envInstr(environment.current, command));
     control.push(...handleSequence(command.blockStatements));
 
-    context.environment.extendEnv(context.environment.current, BLOCK_FRAME);
+    environment.extendEnv(environment.current, BLOCK_FRAME);
   },
 
   ConstructorDeclaration: (
     command: ConstructorDeclaration,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     // Use constructor descriptor as key.
     const conDescriptor: string = getDescriptor(command);
-    const conClosure = struct.closureStruct(command, context.environment.current);
-    context.environment.defineMtdOrCon(conDescriptor, conClosure);
+    const conClosure = struct.closureStruct(command, environment.current);
+    environment.defineMtdOrCon(conDescriptor, conClosure);
   },
 
   MethodDeclaration: (
     command: MethodDeclaration,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     // Use method descriptor as key.
     const mtdDescriptor: string = getDescriptor(command);
-    const mtdClosure = struct.closureStruct(command, context.environment.current);
-    context.environment.defineMtdOrCon(mtdDescriptor, mtdClosure);
+    const mtdClosure = struct.closureStruct(command, environment.current);
+    environment.defineMtdOrCon(mtdDescriptor, mtdClosure);
   },
 
   FieldDeclaration: (
     command: FieldDeclaration,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -259,7 +260,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       defaultValues.get(type) ||
       node.nullLitNode(command)) as Expression;
     
-    context.environment.declareVariable(id, type);
+    environment.declareVariable(id, type);
 
     control.push(instr.popInstr(command));
     control.push(instr.assmtInstr(command));
@@ -269,7 +270,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   LocalVariableDeclarationStatement: (
     command: LocalVariableDeclarationStatement,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -287,12 +288,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     }
 
     // Evaluating LocalVariableDeclarationStatement just declares the variable.
-    context.environment.declareVariable(id, type);
+    environment.declareVariable(id, type);
   },
 
   ExpressionStatement: (
     command: ExpressionStatement,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -302,7 +303,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ReturnStatement: (
     command: ReturnStatement,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -312,7 +313,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Assignment: (
     command: Assignment,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -323,7 +324,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   
   MethodInvocation: (
     command: MethodInvocation,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -344,11 +345,11 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ClassInstanceCreationExpression: (
     command: ClassInstanceCreationExpression,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
-    const c: Class = context.environment.getClass(command.identifier);
+    const c: Class = environment.getClass(command.identifier);
 
     control.push(instr.invInstr(command.argumentList.length + 1, command));
     control.push(...handleSequence(command.argumentList));
@@ -360,7 +361,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ExplicitConstructorInvocation: (
     command: ExplicitConstructorInvocation,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -375,7 +376,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Literal: (
     command: Literal,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -384,7 +385,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Void: (
     command: Void,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -393,7 +394,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ExpressionName: (
     command: ExpressionName,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -403,7 +404,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   BinaryExpression: (
     command: BinaryExpression,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash
   ) => {
@@ -414,7 +415,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.POP]: (
     command: Instr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -423,7 +424,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   
   [InstrType.ASSIGNMENT]: (
     command: AssmtInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -437,7 +438,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.BINARY_OP]: (
     command: BinOpInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -448,12 +449,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.INVOCATION]: (
     command: InvInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
     ) => {
     // Save current environment to be restored after method returns.
-    control.push(instr.envInstr(context.environment.current, command.srcNode));
+    control.push(instr.envInstr(environment.current, command.srcNode));
 
     // Mark end of method in case method returns halfway.
     control.push(instr.markerInstr(command.srcNode));
@@ -472,7 +473,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // Extend env from global frame.
     const mtdOrConDescriptor = getDescriptor(closure.mtdOrCon);
-    context.environment.extendEnv(context.environment.global, mtdOrConDescriptor);
+    environment.extendEnv(environment.global, mtdOrConDescriptor);
 
     const isInstanceMtdOrCon = args.length == params.length + 1;
     if (isInstanceMtdOrCon) {
@@ -500,7 +501,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // Bind arguments to corresponding FormalParameters.
     for (let i = 0; i < args.length; i++) {
-      context.environment.defineVariable(params[i].identifier, params[i].unannType, args[i]);
+      environment.defineVariable(params[i].identifier, params[i].unannType, args[i]);
     }
 
     // Push method/constructor body.
@@ -512,16 +513,16 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.ENV]: (
     command: EnvInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash, 
   ) => {
-    context.environment.restoreEnv(command.env);
+    environment.restoreEnv(command.env);
   },
 
   [InstrType.RESET]: (
     command: ResetInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash, 
   ) => {
@@ -534,7 +535,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.EVAL_VAR]: (
     command: EvalVarInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -546,12 +547,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       control.push(instr.evalVarInstr(name, command.srcNode));
       return;
     }
-    stash.push(context.environment.getVariable(command.symbol));
+    stash.push(environment.getVariable(command.symbol));
   },
 
   [InstrType.RES]: (
     command: ResInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -562,7 +563,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     if (varOrClass.kind === StructType.VARIABLE) {
       // TODO refactor? logic abit confusing
       // Check recursively if static field.
-      let c = context.environment.getClass(varOrClass.type);
+      let c = environment.getClass(varOrClass.type);
       while (!c.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name) 
         && !c.instanceFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name)
         && c.superclass) {
@@ -600,7 +601,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.DEREF]: (
     command: DerefInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -616,12 +617,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.NEW]: (
     command: NewInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     // To be restore after extending curr env to declare instance fields in obj frame.
-    const currEnv = context.environment.current;
+    const currEnv = environment.current;
 
     // Get class hierarchy.
     const objClass = command.c;
@@ -636,13 +637,13 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     let obj: Object;
     classHierachy.forEach((c, i) => {
       // Only 1 object is created.
-      i === 0 ? (obj = context.environment.createObj(objClass)) : context.environment.extendEnv(context.environment.current, NO_FRAME_NAME);
+      i === 0 ? (obj = environment.createObj(objClass)) : environment.extendEnv(environment.current, NO_FRAME_NAME);
 
       // Declare instance fields.
       c.instanceFields.forEach(i => {
         const id = i.variableDeclaratorList[0].variableDeclaratorId;
         const type = i.fieldType;
-        context.environment.declareVariable(id, type);
+        environment.declareVariable(id, type);
       });
       
       // Set alias to static fields.
@@ -650,22 +651,22 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         const id = i.variableDeclaratorList[0].variableDeclaratorId;
         const type = i.fieldType;
         const variable = c.frame.getVariable(id);
-        context.environment.defineVariable(id, type, variable);
+        environment.defineVariable(id, type, variable);
       });
     });
 
     // Set obj to correct frame.
-    obj!.frame = context.environment.current;
+    obj!.frame = environment.current;
     // Push obj on stash.
     stash.push(obj!);
 
     // Restore env.
-    context.environment.restoreEnv(currEnv);
+    environment.restoreEnv(currEnv);
   },
 
   [InstrType.RES_TYPE]: (
     command: ResTypeInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -690,7 +691,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         control.push(instr.resTypeInstr(node.exprNameNode(nameParts[0], command.srcNode), command.srcNode));
         return;
       }
-      const v = context.environment.getName(value.name);
+      const v = environment.getName(value.name);
       type = v.kind === StructType.VARIABLE ? v.type : v.frame.name;
     } else if (value.kind === StructType.CLASS) {
       type = value.frame.name;
@@ -701,13 +702,13 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.RES_TYPE_CONT]: (
     command: ResTypeContInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     const typeToSearchIn = stash.pop()! as Type;
 
-    let classToSearchIn: Class | undefined = context.environment.getClass(typeToSearchIn.type);
+    let classToSearchIn: Class | undefined = environment.getClass(typeToSearchIn.type);
     let type;
     do {
       // Check if instance field.
@@ -741,7 +742,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.RES_OVERLOAD]: (
     command: ResOverloadInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -754,10 +755,10 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // Retrieve target type for method overloading resolution.
     const targetType: Type = stash.pop()! as Type;
-    const classToSearchIn: Class = context.environment.getClass(targetType.type);
+    const classToSearchIn: Class = environment.getClass(targetType.type);
 
     // Method overloading resolution.
-    const classStore: EnvNode = context.environment.global;
+    const classStore: EnvNode = environment.global;
     const closure: Closure = resOverload(classToSearchIn, command.name, argTypes, classStore);
     stash.push(closure);
 
@@ -774,7 +775,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.RES_OVERRIDE]: (
     command: ResOverrideInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -794,7 +795,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     }
 
     // Retrieve class to search in for method overriding resolution.
-    const classToSearchIn: Class = context.environment.getClass((target as Object).class.frame.name);
+    const classToSearchIn: Class = environment.getClass((target as Object).class.frame.name);
 
     // Method overriding resolution.
     const overrideResolvedClosure: Closure = resOverride(classToSearchIn, overloadResolvedClosure);
@@ -806,7 +807,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.RES_CON_OVERLOAD]: (
     command: ResConOverloadInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -819,7 +820,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // Retrieve class to search in for method resolution.
     const className: Identifier = (stash.pop()! as Type).type;
-    const classToSearchIn: Class = context.environment.getClass(className);
+    const classToSearchIn: Class = environment.getClass(className);
 
     // Constructor overloading resolution.
     const closure: Closure = resConOverload(classToSearchIn, className, argTypes);
