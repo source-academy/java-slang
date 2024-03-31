@@ -9,7 +9,6 @@
     "build": "tsc --build --force",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
     "jsdoc": "typedoc --plugin typedoc-plugin-rename-defaults",
     "eslint": "eslint --ext \".ts\" src",
     "format": "prettier --write src/**/*.ts",
