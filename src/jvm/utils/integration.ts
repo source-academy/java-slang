@@ -123,30 +123,30 @@ export function createModuleProxy(
       }
 
       if (typeof returnValue === 'object') {
-        let jRune: JvmObject
+        let javaObject: JvmObject
         if (thread.peekStackFrame().operandStack.length) {
           const popResult = thread.popStack()
           if (popResult.status === ResultType.SUCCESS) {
-            jRune = popResult.result
+            javaObject = popResult.result
           } else {
             // exception already thrown
             return
           }
         } else {
-          const jRuneClass = thread
+          const javaClass = thread
             .getClass()
             .getLoader()
             .getClass(`modules/${module}/${returnValue.constructor.name.slice(1)}`)
-          if (jRuneClass.status === ResultType.ERROR) {
-            thread.throwNewException(jRuneClass.exceptionCls, jRuneClass.msg)
+          if (javaClass.status === ResultType.ERROR) {
+            thread.throwNewException(javaClass.exceptionCls, javaClass.msg)
             return
           }
-          jRune = jRuneClass.result.instantiate()
+          javaObject = javaClass.result.instantiate()
         }
 
-        thread.pushStack(jRune)
+        thread.pushStack(javaObject)
         thread.pushStack(returnValue)
-        const initStatus = jRune.initialize(thread)
+        const initStatus = javaObject.initialize(thread)
         switch (initStatus.status) {
           case ResultType.DEFER:
             return
@@ -154,14 +154,14 @@ export function createModuleProxy(
             throw new Error('Error initializing Object')
         }
         try {
-          jRune.putNativeField('$value', returnValue)
-          thread.returnStackFrame(jRune)
+          javaObject.putNativeField('$value', returnValue)
+          thread.returnStackFrame(javaObject)
         } catch (e) {
           throw e
         }
       } else if (typeof returnValue === 'string') {
-        const jRune = js2jString(thread.getJVM().getBootstrapClassLoader(), returnValue)
-        thread.returnStackFrame(jRune)
+        const javaString = js2jString(thread.getJVM().getBootstrapClassLoader(), returnValue)
+        thread.returnStackFrame(javaString)
       } else if (returnValue === undefined) {
         thread.returnStackFrame()
       } else {
@@ -177,9 +177,9 @@ export function createModuleProxy(
       throw new Error(`Null param`)
     }
 
-    const rune: JvmObject = locals[0]
+    const javaObject: JvmObject = locals[0]
     const name = j2jsString(locals[1])
-    rune.putNativeField('$value', moduleFuncs[name])
+    javaObject.putNativeField('$value', moduleFuncs[name])
     thread.returnStackFrame()
   }
 

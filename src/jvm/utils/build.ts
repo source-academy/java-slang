@@ -9,7 +9,7 @@ import * as fs from 'node:fs'
  */
 
 const CLASSFILE_PATH = process.argv[2] ?? ''
-const OUTDIR = 'dist/jvm'
+const OUTDIR = 'dist/jvm/utils'
 const include = ['java', 'sun/misc', 'modules']
 
 function cf2b64(path: string): string {
@@ -39,7 +39,16 @@ function _readAll(currentPath: string) {
 export default function build() {
   console.log(process.argv)
   _readAll(CLASSFILE_PATH)
-  fs.writeFileSync(OUTDIR + '/classfiles.json', `export default ${JSON.stringify(items)}`)
+  fs.writeFileSync(
+    OUTDIR + '/classfiles.js',
+    `"use strict";
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.default = ${JSON.stringify(items)};`
+  )
+  fs.writeFileSync(
+    OUTDIR + '/classfiles.d.ts',
+    `declare const _default: {[key: string]: string;}; export default _default;`
+  )
   console.log(`Wrote ${Object.keys(items).length} classfiles to ${OUTDIR}`)
 }
 
