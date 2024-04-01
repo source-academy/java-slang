@@ -63,6 +63,61 @@ const reverseLogicalOp: { [type: string]: OPCODE } = {
   ">=": OPCODE.IF_ICMPLT,
 };
 
+const returnOp: { [type: string]: OPCODE } = {
+  'B': OPCODE.IRETURN,
+  'C': OPCODE.IRETURN,
+  'D': OPCODE.DRETURN,
+  'F': OPCODE.FRETURN,
+  'I': OPCODE.IRETURN,
+  'J': OPCODE.LRETURN,
+  'S': OPCODE.IRETURN,
+  'Z': OPCODE.IRETURN,
+};
+
+const arrayLoadOp: { [type: string]: OPCODE } = {
+  'B': OPCODE.BALOAD,
+  'C': OPCODE.CALOAD,
+  'D': OPCODE.DALOAD,
+  'F': OPCODE.FALOAD,
+  'I': OPCODE.IALOAD,
+  'J': OPCODE.LALOAD,
+  'S': OPCODE.SALOAD,
+  'Z': OPCODE.BALOAD,
+};
+
+const arrayStoreOp: { [type: string]: OPCODE } = {
+  'B': OPCODE.BASTORE,
+  'C': OPCODE.CASTORE,
+  'D': OPCODE.DASTORE,
+  'F': OPCODE.FASTORE,
+  'I': OPCODE.IASTORE,
+  'J': OPCODE.LASTORE,
+  'S': OPCODE.SASTORE,
+  'Z': OPCODE.BASTORE,
+};
+
+const normalLoadOp: { [type: string]: OPCODE } = {
+  'B': OPCODE.ILOAD,
+  'C': OPCODE.ILOAD,
+  'D': OPCODE.DLOAD,
+  'F': OPCODE.FLOAD,
+  'I': OPCODE.ILOAD,
+  'J': OPCODE.LLOAD,
+  'S': OPCODE.ILOAD,
+  'Z': OPCODE.ILOAD,
+};
+
+const normalStoreOp: { [type: string]: OPCODE } = {
+  'B': OPCODE.ISTORE,
+  'C': OPCODE.ISTORE,
+  'D': OPCODE.DSTORE,
+  'F': OPCODE.FSTORE,
+  'I': OPCODE.ISTORE,
+  'J': OPCODE.LSTORE,
+  'S': OPCODE.ISTORE,
+  'Z': OPCODE.ISTORE,
+};
+
 type CompileResult = {
   stackSize: number,
   resultType: string
@@ -117,17 +172,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       if (Array.isArray(vi)) {
         maxStack = compile(createIntLiteralNode(vi.length), cg).stackSize;
         cg.code.push(OPCODE.NEWARRAY, 10);
+        const arrayElemType = variableInfo.typeDescriptor.slice(1);
         vi.forEach((val, i) => {
           cg.code.push(OPCODE.DUP);
           const size1 = compile(createIntLiteralNode(i), cg).stackSize;
           const size2 = compile(val as Expression, cg).stackSize;
-          cg.code.push(OPCODE.IASTORE);
+          cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE);
           maxStack = Math.max(maxStack, 1 + size1 + size2);
         });
         cg.code.push(OPCODE.ASTORE, curIdx);
       } else {
         maxStack = Math.max(maxStack, compile(vi, cg).stackSize);
-        cg.code.push(variableInfo.typeDescriptor === "I" ? OPCODE.ISTORE : OPCODE.ASTORE, curIdx);
+        cg.code.push(variableInfo.typeDescriptor in normalStoreOp ? normalStoreOp[variableInfo.typeDescriptor] : OPCODE.ASTORE, curIdx);
       }
     });
     return { stackSize: maxStack, resultType: EMPTY_TYPE };
@@ -137,7 +193,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { exp: expr } = node as ReturnStatement;
     if (expr) {
       const { stackSize: stackSize, resultType: resultType } = compile(expr, cg);
-      cg.code.push(OPCODE.IRETURN);
+      cg.code.push(resultType in returnOp ? returnOp[resultType] : OPCODE.ARETURN);
       return { stackSize, resultType };
     }
 
@@ -339,11 +395,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   ArrayAccess: (node: Node, cg: CodeGenerator) => {
     const n = node as ArrayAccess;
-    const { stackSize: size1, resultType: type } = compile(n.primary, cg);
+    const { stackSize: size1, resultType: arrayType } = compile(n.primary, cg);
+    const arrayElemType = arrayType.slice(1);
     const size2 = compile(n.expression, cg).stackSize;
-    cg.code.push(OPCODE.IALOAD);
+    cg.code.push(arrayElemType in arrayLoadOp ? arrayLoadOp[arrayElemType] : OPCODE.AALOAD);
 
-    return { stackSize: size1 + size2, resultType: type.slice(1) };
+    return { stackSize: size1 + size2, resultType: arrayElemType };
   },
 
   MethodInvocation: (node: Node, cg: CodeGenerator) => {
@@ -410,14 +467,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let lhs: Node = left;
 
     if (lhs.kind === "ArrayAccess") {
-      const size1 = compile(lhs.primary, cg).stackSize;
+      const { stackSize: size1, resultType: arrayType } = compile(lhs.primary, cg);
       const size2 = compile(lhs.expression, cg).stackSize;
       maxStack = size1 + size2 + compile(right, cg).stackSize;
-      cg.code.push(OPCODE.IASTORE);
+      const arrayElemType = arrayType.slice(1);
+      cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE);
     } else if (lhs.kind === "ExpressionName" && !Array.isArray(cg.symbolTable.queryVariable(lhs.name))) {
       const info = cg.symbolTable.queryVariable(lhs.name) as VariableInfo;
       maxStack = 1 + compile(right, cg).stackSize;
-      cg.code.push(info.typeDescriptor === "I" ? OPCODE.ISTORE : OPCODE.ASTORE, info.index);
+      cg.code.push(info.typeDescriptor in normalStoreOp ? normalStoreOp[info.typeDescriptor] : OPCODE.ASTORE, info.index);
     } else {
       const infos = cg.symbolTable.queryVariable(lhs.name) as Array<SymbolInfo>;
       const fieldInfo = infos[infos.length - 1] as FieldInfo;
@@ -426,8 +484,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const varIndex = (infos[0] as VariableInfo).index;
       if (varIndex !== undefined) {
         cg.code.push(OPCODE.ALOAD, varIndex);
-      } else if (fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) {
-        cg.code.push(OPCODE.GETSTATIC, 0, field);
       } else {
         cg.code.push(OPCODE.ALOAD, 0);
       }
@@ -523,25 +579,35 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         const fieldInfo = fieldInfos[i] as FieldInfo;
         const field = cg.constantPoolManager.indexFieldrefInfo(fieldInfo.parentClassName, fieldInfo.name, fieldInfo.typeDescriptor);
         if (i === 0 && !(fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+          // load "this"
           cg.code.push(OPCODE.ALOAD, 0);
         }
         cg.code.push((fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC) ? OPCODE.GETSTATIC : OPCODE.GETFIELD, 0, field);
       }
       return { stackSize: 1, resultType: (fieldInfos[fieldInfos.length - 1] as FieldInfo).typeDescriptor };
     } else {
-      cg.code.push(info.typeDescriptor.includes('[') ? OPCODE.ALOAD : OPCODE.ILOAD, info.index);
-      return { stackSize: 1, resultType: info.typeDescriptor };
+      cg.code.push(info.typeDescriptor in normalLoadOp ? normalLoadOp[info.typeDescriptor] : OPCODE.ALOAD, info.index);
+      if (info.typeDescriptor === 'D' || info.typeDescriptor === 'J') {
+        return { stackSize: 2, resultType: info.typeDescriptor };
+      } else {
+        return { stackSize: 1, resultType: info.typeDescriptor };
+      }
     }
   },
 
   Literal: (node: Node, cg: CodeGenerator) => {
     const { kind, value } = (node as Literal).literalType;
     switch (kind) {
+      case "CharacterLiteral": {
+        cg.code.push(OPCODE.BIPUSH, value.charCodeAt(0));
+        return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("char") };
+      }
       case "StringLiteral": {
         const strIdx = cg.constantPoolManager.indexStringInfo(value);
         cg.code.push(OPCODE.LDC, strIdx);
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("String") };
       }
+      case "HexIntegerLiteral":
       case "DecimalIntegerLiteral": {
         if (value.endsWith('l') || value.endsWith('L')) {
           const n = BigInt(value.slice(0, -1));
@@ -570,6 +636,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         const idx = cg.constantPoolManager.indexDoubleInfo(d);
         cg.code.push(OPCODE.LDC2_W, 0, idx);
         return { stackSize: 2, resultType: cg.symbolTable.generateFieldDescriptor("double") };
+      }
+      case "BooleanLiteral": {
+        cg.code.push(value === "true" ? OPCODE.ICONST_1 : OPCODE.ICONST_0);
+        return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("boolean") };
       }
     }
 

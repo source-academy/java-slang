@@ -118,7 +118,13 @@ BooleanLiteral
     }
   }
 
-CharacterLiteral = ['] (EscapeSequence / !['\\] .) [']
+CharacterLiteral 
+  = ['] char:(@EscapeSequence / !['\\] @.) ['] {
+    return {
+      kind: "CharacterLiteral",
+      value: char,
+    }
+  }
 
 StringLiteral 
   = '\"' chars:(@EscapeSequence / !["\\\r\n] @.)* '\"' {
