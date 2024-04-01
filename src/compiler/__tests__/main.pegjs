@@ -130,7 +130,7 @@ StringLiteral
   = '\"' chars:(@EscapeSequence / !["\\\r\n] @.)* '\"' {
     return {
       kind: "StringLiteral",
-      value: chars.join("")
+      value: '\"' + chars.join("") + '\"',
     }
   }
 
@@ -1001,8 +1001,8 @@ ConditionalExpression
         return test;
       }
       return {
-        kind: "ConditionalExpression",
-        test: test,
+        kind: "TernaryExpression",
+        condition: test,
         ... tail,
       }
     }

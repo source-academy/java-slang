@@ -22,6 +22,7 @@ import {
   BinaryOperator,
   DoStatement,
   ClassInstanceCreationExpression,
+  ExpressionStatement,
 } from "../ast/types/blocks-and-statements";
 import { MethodDeclaration, UnannType } from "../ast/types/classes";
 import { ConstantPoolManager } from "./constant-pool-manager";
@@ -33,7 +34,7 @@ type Label = {
   pointedBy: number[];
 };
 
-const opToOpcode: { [type: string]: OPCODE } = {
+const intBinaryOp: { [type: string]: OPCODE } = {
   "+": OPCODE.IADD,
   "-": OPCODE.ISUB,
   "*": OPCODE.IMUL,
@@ -45,7 +46,39 @@ const opToOpcode: { [type: string]: OPCODE } = {
   "<<": OPCODE.ISHL,
   ">>": OPCODE.ISHR,
   ">>>": OPCODE.IUSHR,
+};
 
+const longBinaryOp: { [type: string]: OPCODE } = {
+  "+": OPCODE.LADD,
+  "-": OPCODE.LSUB,
+  "*": OPCODE.LMUL,
+  "/": OPCODE.LDIV,
+  "%": OPCODE.LREM,
+  "|": OPCODE.LOR,
+  "&": OPCODE.LAND,
+  "^": OPCODE.LXOR,
+  "<<": OPCODE.LSHL,
+  ">>": OPCODE.LSHR,
+  ">>>": OPCODE.LUSHR,
+};
+
+const floatBinaryOp: { [type: string]: OPCODE } = {
+  "+": OPCODE.FADD,
+  "-": OPCODE.FSUB,
+  "*": OPCODE.FMUL,
+  "/": OPCODE.FDIV,
+  "%": OPCODE.FREM,
+};
+
+const doubleBinaryOp: { [type: string]: OPCODE } = {
+  "+": OPCODE.DADD,
+  "-": OPCODE.DSUB,
+  "*": OPCODE.DMUL,
+  "/": OPCODE.DDIV,
+  "%": OPCODE.DREM,
+};
+
+const logicalOp: { [type: string]: OPCODE } = {
   "==": OPCODE.IF_ICMPEQ,
   "!=": OPCODE.IF_ICMPNE,
   "<": OPCODE.IF_ICMPLT,
@@ -157,15 +190,20 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { variableDeclaratorList: lst, localVariableType: type } = node as LocalVariableDeclarationStatement;
     lst.forEach(v => {
       const { variableDeclaratorId: identifier, variableInitializer: vi } = v;
-      const curIdx = cg.maxLocals++;
+      const curIdx = cg.maxLocals;
       const variableInfo = {
         name: identifier,
         accessFlags: 0,
         index: curIdx,
-        typeName: type + v.dims,
-        typeDescriptor: cg.symbolTable.generateFieldDescriptor(type + v.dims),
+        typeName: type + (v.dims ?? ""),
+        typeDescriptor: cg.symbolTable.generateFieldDescriptor(type + (v.dims ?? "")),
       };
       cg.symbolTable.insertVariableInfo(variableInfo);
+      if (['D', 'J'].includes(variableInfo.typeDescriptor)) {
+        cg.maxLocals += 2;
+      } else {
+        cg.maxLocals++;
+      }
       if (!vi) {
         return;
       }
@@ -354,7 +392,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         } else if (op in reverseLogicalOp) {
           l = f(left, targetLabel, onTrue);
           r = f(right, targetLabel, onTrue);
-          cg.addBranchInstr(onTrue ? opToOpcode[op] : reverseLogicalOp[op], targetLabel);
+          cg.addBranchInstr(onTrue ? logicalOp[op] : reverseLogicalOp[op], targetLabel);
           return { stackSize: Math.max(l.stackSize, 1 + r.stackSize), resultType: l.resultType };
         }
       }
@@ -401,6 +439,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     cg.code.push(arrayElemType in arrayLoadOp ? arrayLoadOp[arrayElemType] : OPCODE.AALOAD);
 
     return { stackSize: size1 + size2, resultType: arrayElemType };
+  },
+
+  ExpressionStatement: (node: Node, cg: CodeGenerator) => {
+    const n = node as ExpressionStatement;
+    return compile(n.stmtExp, cg);
   },
 
   MethodInvocation: (node: Node, cg: CodeGenerator) => {
@@ -496,10 +539,19 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   BinaryExpression: (node: Node, cg: CodeGenerator) => {
     const { left: left, right: right, operator: op } = node as BinaryExpression;
-    const l = compile(left, cg);
-    const r = compile(right, cg);
-    cg.code.push(opToOpcode[op]);
-    return { stackSize: Math.max(l.stackSize, 1 + r.stackSize), resultType: l.resultType };
+    const { stackSize: size1, resultType: type } = compile(left, cg);
+    const { stackSize: size2 } = compile(right, cg);
+
+    switch (type) {
+      case 'B': cg.code.push(intBinaryOp[op], OPCODE.I2B); break;
+      case 'D': cg.code.push(doubleBinaryOp[op]); break;
+      case 'F': cg.code.push(floatBinaryOp[op]); break;
+      case 'I': cg.code.push(intBinaryOp[op]); break;
+      case 'J': cg.code.push(longBinaryOp[op]); break;
+      case 'S': cg.code.push(intBinaryOp[op], OPCODE.I2S); break;
+    }
+
+    return { stackSize: Math.max(size1, 1 + (['D', 'J'].includes(type) ? 1 : 0) + size2), resultType: type };
   },
 
   PrefixExpression: (node: Node, cg: CodeGenerator) => {
@@ -603,7 +655,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("char") };
       }
       case "StringLiteral": {
-        const strIdx = cg.constantPoolManager.indexStringInfo(value);
+        const strIdx = cg.constantPoolManager.indexStringInfo(value.slice(1, value.length - 1));
         cg.code.push(OPCODE.LDC, strIdx);
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor("String") };
       }
@@ -727,7 +779,7 @@ class CodeGenerator {
     return {
       attributeNameIndex: this.constantPoolManager.indexUtf8Info("Code"),
       attributeLength: attributeLength,
-      maxStack: Math.max(this.maxLocals, this.stackSize),
+      maxStack: this.stackSize,
       maxLocals: this.maxLocals,
       codeLength: this.code.length,
       code: dataView,
