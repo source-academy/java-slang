@@ -558,44 +558,56 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ) => {
     const varOrClass = stash.pop()! as Variable | Class;
     
-    // Name resolution is based on the target type, not target obj.
-    let variable;
+    // E.g., test.x when test is a variable.
     if (varOrClass.kind === StructType.VARIABLE) {
-      // TODO refactor? logic abit confusing
-      // Check recursively if static field.
-      let c = environment.getClass(varOrClass.type);
-      while (!c.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name) 
-        && !c.instanceFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name)
-        && c.superclass) {
-        c = c.superclass;
+      // Name resolution is based on the target type, not target obj.
+      let classOfField = environment.getClass(varOrClass.type);
+
+      // Check recursively if static/instance field.
+      let staticField = classOfField.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name);
+      let instanceField = classOfField.instanceFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name);
+      while (!staticField && !instanceField && classOfField.superclass) {
+        classOfField = classOfField.superclass;
+        staticField = classOfField.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name);
+        instanceField = classOfField.instanceFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name);
       }
 
-      // If static field.
-      if (c.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name)) {
-        variable = c.frame.getVariable(command.name);
-      // If instance field.
-      } else if (c.instanceFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name)) {
+      // E.g., test.x where x is a static field.
+      if (staticField) {
+        const variable = classOfField.frame.getVariable(command.name);
+        stash.push(variable);
+        return;
+      }
+
+      // E.g., test.x where x is an instance field.
+      if (instanceField) {
         // Throw NullPointerException if instance field but target is null.
         if (isNull(varOrClass.value as Literal | Object)) {
           throw new errors.NullPointerException();
         }
 
-        // Only declared or inherited fields of var type can be accessed.
         const obj = varOrClass.value as Object;
         let objFrameClass = obj.class;
         let objFrame = obj.frame
-        while (objFrameClass.frame.name !== varOrClass.type && objFrameClass.superclass) {
+        // Name resolution is based on the target type, not target obj.
+        while (objFrameClass.frame.name !== classOfField.frame.name && objFrameClass.superclass) {
+          // Object constitutes chain of class/superclass frames,
+          // but each frame does not hv its corresponding class,
+          // so lookup needs to be done from its class wrt class hierarchy.
+          // TODO maybe encode class in frame name?
           objFrameClass = objFrameClass.superclass;
           objFrame = objFrame.parent;
         }
-        variable = objFrame.getVariable(command.name)
-      } else {
-        throw new errors.UndeclaredVariableError(command.name)
+        const variable = objFrame.getVariable(command.name)
+        stash.push(variable);
+        return;
       }
-    } else /*if (varOrClass.kind === StructType.CLASS)*/ {
-      variable = varOrClass.frame.getVariable(command.name);
+
+      throw new errors.UndeclaredVariableError(command.name)
     }
 
+    // E.g., Test.x where Test is a class.
+    const variable = varOrClass.frame.getVariable(command.name);
     stash.push(variable);
   },
 
@@ -634,10 +646,11 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     };
     
     // Create obj with both declared and inherited fields.
-    let obj: Object;
+    let obj: Object = environment.createObj(objClass);
     classHierachy.forEach((c, i) => {
-      // Only 1 object is created.
-      i === 0 ? (obj = environment.createObj(objClass)) : environment.extendEnv(environment.current, NO_FRAME_NAME);
+      // A frame is alr created in createObj() and does not extend from any env, 
+      // only subsequent frames need to extend from prev frame.
+      if (i > 0) environment.extendEnv(environment.current, NO_FRAME_NAME);
 
       // Declare instance fields.
       c.instanceFields.forEach(i => {
