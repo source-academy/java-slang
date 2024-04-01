@@ -1,5 +1,8 @@
 % !TEX root = ./jvm.tex
 \input source_header.tex
+\usepackage{titlesec}
+
+\setcounter{secnumdepth}{4}
 
 \newcommand{\Rule}[2]{\genfrac{}{}{0.7pt}{}{{\setlength{\fboxrule}{0pt}\setlength{\fboxsep}{3mm}\fbox{$#1$}}}{{\setlength{\fboxrule}{0pt}\setlength{\fboxsep}{3mm}\fbox{$#2$}}}}
 
@@ -42,99 +45,47 @@
 
 This JVM follows the Java SE8 Edition \href{https://docs.oracle.com/javase/specs/jvms/se8/html/index.html}{JVM Specification}.
 
-This documentation contains limitations or differences not covered in the official specifcations above, and is sectioned
+This documentation contains limitations not covered in the official specifcations above, and is sectioned
 in a way that mirrors the official specification document. For general documentation of the JVM, refer to the official specification.
+
+\stepcounter{section}
 
 \section{Structure of the JVM}
 
-\subsection{Primitive Types and Values}
-
-Unlike Java, JavaScript numbers are all 64 bit doubles. This JVM stores each type as follows:
-
-\begin{itemize}
-	\item \texttt{byte}: \texttt{number}
-	\item \texttt{short}: \texttt{number}
-	\item \texttt{int}: \texttt{number}
-	\item \texttt{long}: \texttt{bigint}
-	\item \texttt{char}: \texttt{number}
-	\item \texttt{float}: \texttt{number}
-	\item \texttt{double}: \texttt{number}
-\end{itemize}
-
-Extra bits are truncated using a bitmask, with the exception 
-of \texttt{float}, which is truncated using \texttt{Math.fround}.
-
-\subsection{Reference Types and Values}
-
-2 classes have been implemented to represent reference types:
-
-\begin{itemize}
-\item Normal reference types: \texttt{JvmObject}.
-\item Array types: \texttt{JvmArray}, stores a JavaScript array internally.
-\end{itemize}
-
-
-\subsection{Java Virtual Machine Stacks}
-
-Each JVM thread has a stack. Stacks contain stackframes. 
-JVM stacks are implemented with JavaScript arrays.
-
-There are 3 kinds of stack frames:
-
-\begin{enumerate}
-\item \texttt{BytecodeStackFrame}: A normal stackframe.
-\item \texttt{InternalStackFrame}: A stackframe that functions the same way as \texttt{BytecodeStackFrame}, except when the method returns the return value is passed to a callback instead of being pushed onto the stackframe below.
-\item \texttt{NativeStackFrame}: A stackframe for native methods. Executes the function supplied by the Java Native Interface instead of running bytecode like the previous stackframes.
-\end{enumerate}
-
-
-Even though longs can fit into a single index of a JavaScript array, they nonetheless occupy 2 indexes in the stack.
-The wide value is first pushed onto the stack, then a special \texttt{INACCESSIBLE} object, which throws an error if we attempt to access it or its properties.
-
-\subsection{Heap}
-
-This JVM does not manage its own memory. Since Java objects are represented as JavaScript objects, the JavaScript Garbage Collector
-will free up memory as necessary.
-
-There is, however, a \texttt{UnsafeHeap} implemented. This is implemented specifically for \texttt{Unsafe} operations, and is required since during JVM initialization,
-memory is allocated then read to determine the endianness of the operating system.
-
-\subsection{Local Variables}
-
-Similar to the stack implementation, local variable arrays are stored as JavaScript arrays in the JVM. Wide values like doubles and longs also occupy 2 indexes.
-
-An exception to this rule is in \texttt{NativeStackFrame}, where wide values only occupy 1 index, so its behaviour can be more in line with the JavaScript functions that it calls.
-
-\subsection{Floating-Point Modes}
+\addtocounter{subsection}{7}
+\subsection{Floating-Point Arithmetic}
+\stepcounter{subsubsection}
+\subsubsection{Floating-Point Modes}
 
 The \texttt{ACC\_STRICT} flag is not implemented.
+
+\addtocounter{subsection}{3}
 
 \subsection{Class Libraries}
 
 The JVM is expected to support implementation of class libraries.
 
-Since the standard library is largely left unimplemented, the full scope of what the JVM needs to support is not yet understood.
+Since the standard library is largely left unimplemented, the full scope of what the JVM needs to support is not known.
 
-Some features are not yet supported.
-
-\begin{enumerate}
-\item Security related classes and packages
-\item Weak references, such as in the package java.lang.ref
-\end{enumerate}
-
+\stepcounter{section}
 \section{The class file format}
-
-This chapter describes differences in the class file representation used in this JVM compared to the official specification.
-For information related to the class file format refer to the official \href{https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html}{JVM specification}.
 
 \subsection{ClassFile Structure}
 
+The following values are not verified:
+
 \begin{enumerate}
-\item \texttt{magic}: we do not verify this value.
-\item \texttt{minor\_version}, \texttt{major\_version}: we do not verify this value.
-\item \texttt{constant\_pool\_count}, \texttt{interfaces\_count}, \texttt{fields\_count}, \texttt{methods\_count}, \texttt{attributes\_count}: we do not verify this value.
+\item \texttt{magic}
+\item \texttt{minor\_version}
+\item \texttt{major\_version}
+\item \texttt{constant\_pool\_count}
+\item \texttt{interfaces\_count}
+\item \texttt{fields\_count}
+\item \texttt{methods\_count}
+\item \texttt{attributes\_count}
 \end{enumerate}
 
+\addtocounter{subsection}{2}
 \subsection{Constant Pool}
 
 The below constants may not be fully implemented.
@@ -145,6 +96,11 @@ The below constants may not be fully implemented.
 \item \texttt{CONSTANT\_InvokeDynamic\_info}: Relies on \texttt{MethodHandleNatives::linkCallSite} for resolution, some native methods invoked by \texttt{linkCallSite} may not be implemented.
 \end{enumerate}
 
+There is currently a bug when resolving \texttt{InvokeDynamic} Constants, where the resolved callsite invokes the original private method instead of the JVM provided bridge method.
+
+An additional \texttt{NestHost} Attribute is added to the lambda class so it passes the access control check.
+
+\addtocounter{subsection}{2}
 \subsection{Attributes}
 
 The below attributes are not supported, and will be present in the class data as an \texttt{UnhandledAttribute}.
@@ -160,12 +116,14 @@ The below attributes are not supported, and will be present in the class data as
 	\item \texttt{MethodParameters}
 \end{enumerate}
 
+\addtocounter{subsection}{2}
 \subsection{Verification of class Files}
 
 Verification is skipped entirely.
 
 \section{Loading, Linking, and Initializing}
 
+\stepcounter{subsection}
 \subsection{Java Virtual Machine Startup}
 
 The JVM startup process is as follows:
@@ -178,12 +136,11 @@ The JVM startup process is as follows:
 	\item The main class is loaded with the system class loader. the \texttt{main} method is run.
 \end{enumerate}
 
-\subsection{Creating Array Classes}
+Initialization will fail if the above classes and its dependencies cannot be found.
 
-All array classes are loaded by the bootstrap class loader. 
-The component class of the array may be loaded by other class loaders.
-
-\subsection{Loading Constraints}
+\subsection{Creation and Loading}
+\addtocounter{subsubsection}{3}
+\subsubsection{Loading Constraints}
 
 The JVM does not ensure loading constraints are checked. The same class, loaded by 2 different class loaders, are treated as different classes.
 
@@ -191,19 +148,27 @@ The JVM does not ensure loading constraints are checked. The same class, loaded 
 
 Symbolic references are implemented as lazy resolution.
 
-\subsection{Verification}
+\subsubsection{Verification}
 
 This is skipped.
 
-\subsection{Resolution}
+\addtocounter{subsubsection}{1}
+\subsubsection{Resolution}
 
-\subsubsection{Method Type and Method Handle Resolution}
+\addtocounter{paragraph}{4}
+\paragraph{Method Type and Method Handle Resolution}
 
-Method types are resolved by calling \texttt{MethodHandleNatives::findMethodHandleType}. The native implementations of methods used by this method may not be fully implemented/tested.
+Method Type and Method Handles are resolved using Java methods. These methods may rely on native methods whose implementations are not fully implemented/tested.
+\begin{itemize}
+	\item Method types are resolved by calling \texttt{MethodHandleNatives::findMethodHandleType}.
+	\item Method handles are resolved by calling \texttt{MethodHandleNatives::linkMethodHandleConstant}.
+\end{itemize}
 
-Method handles are resolved by calling \texttt{MethodHandleNatives::linkMethodHandleConstant}. The native implementations of methods used by this method may not be fully implemented/tested.
+\paragraph{Call Site Specifier Resolution}
 
-Call Site Specifiers are resolved by calling \texttt{MethodHandleNatives::linkCallSite}. The native implementations of methods used by this method may not be fully implemented/tested.
+Call Site Specifiers are resolved by calling \texttt{MethodHandleNatives::linkCallSite}.
+
+\texttt{linkCallSite} may invoke native methods whose implementations are not fully implemented/tested.
 
 \subsubsection{Access Control}
 
