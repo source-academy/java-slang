@@ -1,19 +1,26 @@
 import { Node } from "../ast/types/ast";
 import {
+  Assignment,
+  BinaryExpression,
   BlockStatement,
   DecimalIntegerLiteral,
+  Expression,
+  ExpressionName,
   ExpressionStatement,
   Literal,
+  LocalVariableDeclarationStatement,
+  MethodInvocation,
   ReturnStatement,
 } from "../ast/types/blocks-and-statements";
 import {
   ConstructorDeclaration,
   FieldDeclaration,
-  Identifier,
   MethodDeclaration,
   NormalClassDeclaration,
   UnannType,
 } from "../ast/types/classes";
+import { EnvNode } from "./components";
+import { THIS_KEYWORD } from "./constants";
 import * as errors from "./errors";
 import {
   emptyReturnStmtNode,
@@ -23,7 +30,7 @@ import {
   nullLitNode,
   returnThisStmtNode,
 } from "./nodeCreator";
-import { ControlItem, Context, Instr } from "./types";
+import { ControlItem, Context, Instr, Class, Type, Closure, StashItem } from "./types";
 
 /**
  * Stack is implemented for agenda and stash registers.
@@ -199,15 +206,19 @@ export const isQualified = (name: string) => {
   return name.includes(".");
 }
 
+export const isSimple = (name: string) => {
+  return !isQualified(name);
+}
+
 /**
  * Class
  */
 export const getInstanceFields = (c: NormalClassDeclaration): FieldDeclaration[] => {
-  return c.classBody.filter(m => m.kind === "FieldDeclaration" && !isStatic(m)) as FieldDeclaration[];
+  return c.classBody.filter(m => m.kind === "FieldDeclaration" && isInstance(m)) as FieldDeclaration[];
 }
 
 export const getInstanceMethods = (c: NormalClassDeclaration): MethodDeclaration[] => {
-  return c.classBody.filter(m => m.kind === "MethodDeclaration" && !isStatic(m)) as MethodDeclaration[];
+  return c.classBody.filter(m => m.kind === "MethodDeclaration" && isInstance(m)) as MethodDeclaration[];
 }
 
 export const getStaticFields = (c: NormalClassDeclaration): FieldDeclaration[] => {
@@ -235,35 +246,83 @@ export const isInstance = (fieldOrMtd: FieldDeclaration | MethodDeclaration): bo
 const convertFieldDeclToExpStmtAssmt = (fd: FieldDeclaration): ExpressionStatement => {
   const left = `this.${fd.variableDeclaratorList[0].variableDeclaratorId}`;
   // Fields are always initialized to default value if initializer is absent.
-  const right = fd.variableDeclaratorList[0].variableInitializer ||
+  const right = (fd.variableDeclaratorList[0].variableInitializer ||
     defaultValues.get(fd.fieldType) ||
-    nullLitNode();
-  return expStmtAssmtNode(left, right);
+    nullLitNode(fd)) as Expression;
+  return expStmtAssmtNode(left, right, fd);
 };
 
-export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, className: Identifier) => {
-  const qualifier = isStatic(mtd) ? className : "this";
-
+export const makeMtdInvSimpleIdentifierQualified = (mtd: MethodDeclaration, qualifier: string) => {
   mtd.methodBody.blockStatements.forEach(blockStatement => {
     // MethodInvocation as ExpressionStatement
     blockStatement.kind === "ExpressionStatement" &&
     blockStatement.stmtExp.kind === "MethodInvocation" &&
-    !isQualified(blockStatement.stmtExp.identifier) &&
+    isSimple(blockStatement.stmtExp.identifier) &&
     (blockStatement.stmtExp.identifier = `${qualifier}.${blockStatement.stmtExp.identifier}`);
 
     // MethodInvocation as RHS of Assignment ExpressionStatement
     blockStatement.kind === "ExpressionStatement" &&
     blockStatement.stmtExp.kind === "Assignment" &&
     blockStatement.stmtExp.right.kind === "MethodInvocation" &&
-    !isQualified(blockStatement.stmtExp.right.identifier) &&
+    isSimple(blockStatement.stmtExp.right.identifier) &&
     (blockStatement.stmtExp.right.identifier = `${qualifier}.${blockStatement.stmtExp.right.identifier}`);
 
     // MethodInvocation as VariableInitializer of LocalVariableDeclarationStatement
     blockStatement.kind === "LocalVariableDeclarationStatement" &&
     blockStatement.variableDeclaratorList[0].variableInitializer &&
-    blockStatement.variableDeclaratorList[0].variableInitializer.kind === "MethodInvocation" &&
-    !isQualified(blockStatement.variableDeclaratorList[0].variableInitializer.identifier) &&
-    (blockStatement.variableDeclaratorList[0].variableInitializer.identifier = `${qualifier}.${blockStatement.variableDeclaratorList[0].variableInitializer.identifier}`);
+    (blockStatement.variableDeclaratorList[0].variableInitializer as Expression).kind === "MethodInvocation" &&
+    isSimple((blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier) &&
+    ((blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier = `${qualifier}.${(blockStatement.variableDeclaratorList[0].variableInitializer as MethodInvocation).identifier}`);
+  });
+}
+
+export const makeNonLocalVarNonParamSimpleNameQualified = (
+  mtdOrCon: MethodDeclaration | ConstructorDeclaration,
+  qualifier: string
+) => {
+  const headerOrDeclarator = mtdOrCon.kind === "MethodDeclaration"
+    ? mtdOrCon.methodHeader
+    : mtdOrCon.constructorDeclarator;
+  const params = headerOrDeclarator.formalParameterList.map(p => p.identifier);
+  const localVars = new Set<string>(params);
+
+  const makeSimpleNameQualifiedHelper = (exprOrBlkStmt: Expression | BlockStatement) => {
+    switch(exprOrBlkStmt.kind) {
+      case "ExpressionName":
+        const exprName = exprOrBlkStmt as ExpressionName;
+        isSimple(exprName.name) && !localVars.has(exprName.name) && (exprName.name = `${qualifier}.${exprName.name}`);
+        break;
+      case "Assignment":
+        const asgn = exprOrBlkStmt as Assignment;
+        makeSimpleNameQualifiedHelper(asgn.left);
+        makeSimpleNameQualifiedHelper(asgn.right);
+        break;
+      case "BinaryExpression":
+        const binExpr = exprOrBlkStmt as BinaryExpression;
+        makeSimpleNameQualifiedHelper(binExpr.left);
+        makeSimpleNameQualifiedHelper(binExpr.right);
+        break;
+      case "LocalVariableDeclarationStatement":
+        const localVarDecl = exprOrBlkStmt as LocalVariableDeclarationStatement;
+        localVarDecl.variableDeclaratorList[0].variableInitializer 
+          && makeSimpleNameQualifiedHelper(localVarDecl.variableDeclaratorList[0].variableInitializer as Expression)
+        break;
+      case "ExpressionStatement":
+        const exprStmt = exprOrBlkStmt as ExpressionStatement;
+        exprStmt.stmtExp.kind === "Assignment" && makeSimpleNameQualifiedHelper(exprStmt.stmtExp)
+      default:
+    }
+  }
+
+  const body = mtdOrCon.kind === "MethodDeclaration"
+    ? mtdOrCon.methodBody
+    : mtdOrCon.constructorBody;
+  body.blockStatements.forEach(blockStatement => {
+    // Local var should be added incrementally to ensure correct scoping.
+    blockStatement.kind === "LocalVariableDeclarationStatement" &&
+    localVars.add(blockStatement.variableDeclaratorList[0].variableDeclaratorId);
+
+    makeSimpleNameQualifiedHelper(blockStatement);
   });
 }
 
@@ -273,16 +332,20 @@ export const prependExpConInvIfNeeded = (
 ): void => {
   const conBodyBlockStmts = constructor.constructorBody.blockStatements;
   if (c.sclass && !conBodyBlockStmts.some(s => s.kind === "ExplicitConstructorInvocation")) {
-    conBodyBlockStmts.unshift(expConInvNode());
+    conBodyBlockStmts.unshift(expConInvNode(constructor));
   }
 }
 
-export const prependInstanceFieldsInit = (
+export const prependInstanceFieldsInitIfNeeded = (
   constructor: ConstructorDeclaration,
   instanceFields: FieldDeclaration[],
 ): void => {
-  const expStmtAssmts = instanceFields.map(f => convertFieldDeclToExpStmtAssmt(f));
-  constructor.constructorBody.blockStatements.unshift(...expStmtAssmts);
+  const conBodyBlockStmts = constructor.constructorBody.blockStatements;
+  const isAltConInvAbsent = !conBodyBlockStmts.find(s => s.kind === "ExplicitConstructorInvocation" && s.thisOrSuper === THIS_KEYWORD);
+  if (isAltConInvAbsent) {
+    const expStmtAssmts = instanceFields.map(f => convertFieldDeclToExpStmtAssmt(f));
+    conBodyBlockStmts.unshift(...expStmtAssmts);
+  }
 }
 
 export const appendOrReplaceReturn = (
@@ -293,10 +356,10 @@ export const appendOrReplaceReturn = (
   let returnStmt = conBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement" && stmt.exp.kind === "Void");
   if (returnStmt) {
     // Replace empty ReturnStatement with ReturnStatement with this keyword.
-    (returnStmt as ReturnStatement).exp = exprNameNode("this");
+    (returnStmt as ReturnStatement).exp = exprNameNode(THIS_KEYWORD, constructor);
   } else {
     // Add ReturnStatement with this keyword.
-    conBodyBlockStmts.push(returnThisStmtNode());
+    conBodyBlockStmts.push(returnThisStmtNode(constructor));
   }
 }
 
@@ -307,7 +370,7 @@ export const appendEmtpyReturn = (
   // TODO deep search
   if (!mtdBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement")) {
     // Add empty ReturnStatement if absent.
-    mtdBodyBlockStmts.push(emptyReturnStmtNode());
+    mtdBodyBlockStmts.push(emptyReturnStmtNode(method));
   }
 }
 
@@ -323,4 +386,166 @@ export const searchMainMtdClass = (classes: NormalClassDeclaration[]) => {
       && d.methodHeader.formalParameterList[0].unannType === "String[]"
       && d.methodHeader.formalParameterList[0].identifier === "args"
   ))?.typeIdentifier;
+}
+
+/**
+ * Method overloading and overriding resolution.
+ */
+const isSubtype = (
+  subtype: UnannType,
+  supertype: UnannType,
+  classStore: EnvNode,
+): boolean => {
+  // TODO handle primitive subtyping relation
+  if (subtype === "String[]" || subtype === "int") return true;
+
+  let isSubtype = false;
+  
+  let subclassSuperclass: Class | undefined = classStore.getClass(subtype).superclass;
+  const superclass = classStore.getClass(supertype);
+  while (subclassSuperclass) {
+    if (subclassSuperclass === superclass) {
+      isSubtype = true;
+      break;
+    }
+    subclassSuperclass = subclassSuperclass.superclass;
+  }
+  
+  return isSubtype;
+}
+
+export const resOverload = (
+  classToSearchIn: Class,
+  mtdName: string,
+  argTypes: Type[],
+  classStore: EnvNode,
+): Closure => {
+  // Identify potentially applicable methods.
+  const appClosures: Closure[] = [];
+  for (const [closureName, closure] of classToSearchIn.frame.frame.entries()) {
+    // Methods contains parantheses and must have return type.
+    if (closureName.includes(mtdName + "(") && closureName[closureName.length - 1] !== ")") {
+      const params = ((closure as Closure).mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+      
+      if (argTypes.length != params.length) continue;
+      
+      let match = true;
+      for (let i = 0; i < argTypes.length; i++) {
+        match &&= (argTypes[i].type === params[i].unannType
+          || isSubtype(argTypes[i].type, params[i].unannType, classStore));
+        if (!match) break; // short circuit
+      }
+      
+      match && appClosures.push(closure as Closure);
+    }
+  }
+  
+  if (appClosures.length === 0) {
+    throw new errors.ResOverloadError(mtdName, argTypes);
+  }
+  
+  if (appClosures.length === 1) {
+    return appClosures[0];
+  }
+  
+  // Choose most specific method.
+  const mostSpecClosuresByParam = new Set<Closure>();
+  for (let i = 0; i < argTypes.length; i++) {
+    let mostSpecClosureByParam = appClosures[0];
+    for (const appClosure of appClosures) {
+      const mostSpecParams = (mostSpecClosureByParam.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+      const params = (appClosure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+      if (isSubtype(params[i].unannType, mostSpecParams[i].unannType, classStore)) {
+        mostSpecClosureByParam = appClosure;
+      }
+    }
+    mostSpecClosuresByParam.add(mostSpecClosureByParam);
+  }
+  const isAmbiguous = mostSpecClosuresByParam.size > 1;
+  if (isAmbiguous) {
+    throw new errors.ResOverloadAmbiguousError(mtdName, argTypes);
+  }
+
+  return mostSpecClosuresByParam.values().next().value;
+};
+
+export const resOverride = (
+  classToSearchIn: Class,
+  overloadResolvedClosure: Closure,
+): Closure => {
+  const overloadResolvedMtd = overloadResolvedClosure.mtdOrCon as MethodDeclaration;
+  const name = overloadResolvedMtd.methodHeader.identifier;
+  const overloadResolvedClosureParams = overloadResolvedMtd.methodHeader.formalParameterList;
+
+  const closures: Closure[] = [];
+  for (const [closureName, closure] of classToSearchIn.frame.frame.entries()) {
+    // Methods contains parantheses and must have return type.
+    if (closureName.includes(name + "(") && closureName[closureName.length - 1] !== ")") {
+      closures.push(closure as Closure);
+    }
+  }
+
+  let overrideResolvedClosure = overloadResolvedClosure;
+  for (const closure of closures) {
+    const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+      
+    if (overloadResolvedClosureParams.length != params.length) continue;
+    
+    let match = true;
+    for (let i = 0; i < overloadResolvedClosureParams.length; i++) {
+      match &&= (params[i].unannType === overloadResolvedClosureParams[i].unannType);
+      if (!match) break; // short circuit
+    }
+    
+    if (match) {
+      overrideResolvedClosure = closure;
+      break;
+    }
+  }
+
+  // TODO is there method overriding resolution failure?
+
+  return overrideResolvedClosure;
+};
+
+export const resConOverload = (
+  classToSearchIn: Class,
+  conName: string,
+  argTypes: Type[]
+): Closure => {
+  const closures: Closure[] = [];
+  for (const [closureName, closure] of classToSearchIn.frame.frame.entries()) {
+    // Constructors contains parantheses and do not have return type.
+    if (closureName.includes(conName + "(") && closureName[closureName.length - 1] === ")") {
+      closures.push(closure as Closure);
+    }
+  }
+
+  let resolved: Closure | undefined;
+  for (const closure of closures) {
+    const params = (closure.mtdOrCon as ConstructorDeclaration).constructorDeclarator.formalParameterList;
+      
+    if (argTypes.length != params.length) continue;
+    
+    let match = true;
+    for (let i = 0; i < argTypes.length; i++) {
+      match &&= (params[i].unannType === argTypes[i].type);
+      if (!match) break; // short circuit
+    }
+    
+    if (match) {
+      resolved = closure;
+      break;
+    }
+  }
+
+  if (!resolved) {
+    throw new errors.ResConOverloadError(conName, argTypes);
+  }
+
+  return resolved;
+};
+
+export const isNull = (stashItem: StashItem) => {
+  return stashItem.kind === "Literal" && stashItem.literalType.kind === "NullLiteral";
 }

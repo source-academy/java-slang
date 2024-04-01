@@ -279,6 +279,15 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
         },
         location: this.location,
       };
+    } else if (ctx.Null) {
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "NullLiteral",
+          value: ctx.Null[0].image,
+        },
+        location: this.location,
+      };
     }
   }
 

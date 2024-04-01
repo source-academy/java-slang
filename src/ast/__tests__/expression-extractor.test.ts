@@ -48,6 +48,53 @@ describe("extract Literal correctly", () => {
     const ast = parse(programStr);
     expect(ast).toEqual(expectedAst);
   });
+
+  it("extract FieldDeclaration NullLiteral correctly", () => {
+    const programStr = `
+      class Test {
+        Test x = null;
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      importDeclarations: [],
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "FieldDeclaration",
+              fieldModifier: [],
+              fieldType: "Test",
+              variableDeclaratorList: [
+                {
+                  kind: "VariableDeclarator",
+                  variableDeclaratorId: "x",
+                  variableInitializer: {
+                    kind: "Literal",
+                    literalType: {
+                      kind: "NullLiteral",
+                      value: "null",
+                    },
+                    location: expect.anything(),
+                  },
+                },
+              ],
+              location: expect.anything(),
+            },
+          ],
+          location: expect.anything(),
+        },
+      ],
+      location: expect.anything(),
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
 });
 
 describe("extract BinaryExpression correctly", () => {
