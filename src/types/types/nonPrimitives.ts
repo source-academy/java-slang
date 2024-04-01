@@ -114,3 +114,13 @@ export class String extends Class {
     return new String();
   }
 }
+
+export class Void extends Type {
+  constructor() {
+    super("void");
+  }
+
+  public canBeAssigned(type: Type): boolean {
+    return type instanceof Void;
+  }
+}

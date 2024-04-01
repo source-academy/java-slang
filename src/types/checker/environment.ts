@@ -1,6 +1,6 @@
 import * as NonPrimitives from "../types/nonPrimitives";
 import * as Primitives from "../types/primitives";
-import { Type } from "../types/type";
+import { Method, Type } from "../types/type";
 
 export class FrameError extends Error {}
 
@@ -25,6 +25,7 @@ const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   int: new Primitives.Int(),
   long: new Primitives.Long(),
   short: new Primitives.Short(),
+  void: new NonPrimitives.Void(),
   Boolean: new NonPrimitives.Boolean(),
   Byte: new NonPrimitives.Byte(),
   Character: new NonPrimitives.Character(),
@@ -37,7 +38,7 @@ const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
 };
 
 export class Frame {
-  // private _methods = new Map<string, Type>();
+  private _methods = new Map<string, Method>();
   private _types = new Map<string, Type>();
   private _variables = new Map<string, Type>();
 
@@ -45,6 +46,16 @@ export class Frame {
   private _childrenFrames: Frame[] = [];
 
   private constructor() {}
+
+  public getMethod(name: string): Method | FrameError {
+    let frame: Frame | null = this;
+    while (frame) {
+      const method = frame._methods.get(name);
+      if (method) return method;
+      frame = frame._parentFrame;
+    }
+    return new CannotFindSymbolError();
+  }
 
   public getVariable(name: string): Type | FrameError {
     let frame: Frame | null = this;
@@ -77,6 +88,13 @@ export class Frame {
     return childFrame;
   }
 
+  public setMethod(name: string, method: Method): null | FrameError {
+    const existingMethod = this._methods.get(name);
+    if (existingMethod) return new VariableAlreadyDefinedError();
+    this._methods.set(name, method);
+    return null;
+  }
+
   public setType(name: string, type: Type): null | FrameError {
     const existingType = this._types.get(name);
     if (existingType) return new VariableAlreadyDefinedError();
@@ -85,19 +103,18 @@ export class Frame {
   }
 
   public setVariable(name: string, type: Type): null | FrameError {
-    const existingType = this._types.get(name);
-    if (existingType) return new VariableAlreadyDefinedError();
+    const existingVariable = this._types.get(name);
+    if (existingVariable) return new VariableAlreadyDefinedError();
     this._variables.set(name, type);
     return null;
   }
 
-  public toString(): string {
+  public toObject(): object {
+    const methods = [...this._methods.entries()];
     const types = [...this._types.entries()];
     const variables = [...this._variables.entries()];
-    const parentFrame = this._parentFrame
-      ? JSON.parse(this._parentFrame.toString())
-      : null;
-    return JSON.stringify({ types, variables, parentFrame }, null, 2);
+    const parentFrame = this._parentFrame?.toObject() ?? null;
+    return { methods, types, variables, parentFrame };
   }
 
   public static globalFrame(): Frame {

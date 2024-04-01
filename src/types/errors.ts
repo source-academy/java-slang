@@ -40,6 +40,12 @@ export class IncompatibleTypesError extends Error {
   }
 }
 
+export class MethodCannotBeAppliedError extends Error {
+  constructor() {
+    super("method cannot be applied");
+  }
+}
+
 export class VariableAlreadyDefinedError extends Error {
   constructor() {
     super("variable is already defined");
