@@ -1,17 +1,10 @@
 import { check } from "..";
 import { parse } from "../../../ast/parser";
-import {
-  CannotFindSymbolError,
-  IncompatibleTypesError,
-  VariableAlreadyDefinedError,
-} from "../../errors";
 import { Type } from "../../types/type";
 
-const createProgram = (statement: string) => `
+const createProgram = (methods: string) => `
   public class Main {
-    public static void main(String args[]) {
-      ${statement}
-    }
+    ${methods}
   }
 `;
 
@@ -21,49 +14,11 @@ const testcases: {
   only?: boolean;
 }[] = [
   {
-    input: `for (int i = 0; i < 10; i++) {}`,
-    result: { type: null, errors: [] },
-  },
-  {
-    input: `for (double i = 0; i < 10; i++) {}`,
-    result: { type: null, errors: [] },
-  },
-  {
-    input: `for (int i = 0; i < 10; i = i + "1") {}`,
-    result: { type: null, errors: [new IncompatibleTypesError()] },
-  },
-  {
     input: `
-      for (int i = 0; i < 10; i++) {}
-      int test = i;
-    `,
-    result: { type: null, errors: [new CannotFindSymbolError()] },
-  },
-  {
-    input: `
-      for (int i = 0; i < 10; i++) {
-        for (int i = 0; i < 5; i++) {}
-      }
+      public static void main(String[] args) { printMessage("Hello, World!"); }
+      public static void printMessage(String message) {}
     `,
     result: { type: null, errors: [] },
-  },
-  {
-    input: `for (int i = 0, j = 10; i < j; i++, j--) {}`,
-    result: { type: null, errors: [] },
-  },
-  {
-    input: `
-      int i = 1;
-      for (i = 0; i < 10; i++) {}
-    `,
-    result: { type: null, errors: [] },
-  },
-  {
-    input: `
-      int i = 1;
-      for (int i = 0; i < 10; i++) {}
-    `,
-    result: { type: null, errors: [new VariableAlreadyDefinedError()] },
   },
 ];
 
@@ -71,7 +26,7 @@ describe("Type Checker", () => {
   testcases.map((testcase) => {
     let it = test;
     if (testcase.only) it = test.only;
-    it(`Checking for statements for '${testcase.input}'`, () => {
+    it(`Checking method invocation for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");

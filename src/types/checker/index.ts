@@ -1,20 +1,13 @@
 import { BadOperandTypesError, IncompatibleTypesError } from "../errors";
-import {
-  Expression,
-  ExpressionName,
-} from "../../ast/types/blocks-and-statements";
+import { Frame, VariableAlreadyDefinedError } from "./environment";
 import { MethodDeclaration } from "../../ast/types/classes";
 import { Node } from "../../ast/types/ast";
 import { String } from "../types/nonPrimitives";
 import { Type } from "../types/type";
 import {
-  Frame,
-  GLOBAL_ENVIRONMENT,
-  createFrame,
-  getEnvironmentType,
-  getEnvironmentVariable,
-  setEnvironmentVariable,
-} from "./environment";
+  Expression,
+  ExpressionName,
+} from "../../ast/types/blocks-and-statements";
 import {
   Boolean,
   Char,
@@ -41,15 +34,15 @@ const OK_RESULT: Result = newResult(null);
 
 export const check = (
   node: Node,
-  environmentFrame: Frame = GLOBAL_ENVIRONMENT
+  frame: Frame = Frame.globalFrame()
 ): Result => {
   switch (node.kind) {
     case "Assignment": {
       const left = node.left as ExpressionName;
       const right = node.right;
-      const leftType = getEnvironmentVariable(environmentFrame, left.name);
+      const leftType = frame.getVariable(left.name);
       if (leftType instanceof Error) return newResult(null, [leftType]);
-      const { currentType, errors } = check(right, environmentFrame);
+      const { currentType, errors } = check(right, frame);
       if (errors.length > 0) return newResult(null, errors);
       if (!currentType)
         throw new Error(
@@ -60,47 +53,51 @@ export const check = (
       return OK_RESULT;
     }
     case "BasicForStatement": {
-      if (!environmentFrame.previousFrame)
-        throw new Error("For statement env frame has no parent frame.");
-      const tempEnvironmentFrame = createFrame(
-        environmentFrame.types,
-        environmentFrame.previousFrame
-      );
-      Object.assign(tempEnvironmentFrame.variables, environmentFrame.variables);
       const errors: Error[] = [];
+      let forConditionFrame: Frame;
       if (Array.isArray(node.forInit)) {
+        forConditionFrame = frame;
         node.forInit.forEach((forInit) => {
-          const forInitCheck = check(forInit, tempEnvironmentFrame);
+          const forInitCheck = check(forInit, forConditionFrame);
           errors.push(...forInitCheck.errors);
         });
       } else {
-        const forInitCheck = check(node.forInit, tempEnvironmentFrame);
-        errors.push(...forInitCheck.errors);
+        forConditionFrame = frame.newChildFrame();
+        const preCheckErrors = node.forInit.variableDeclaratorList.reduce(
+          (errors, { variableDeclaratorId }) =>
+            frame.isVariableInFrame(variableDeclaratorId)
+              ? [...errors, new VariableAlreadyDefinedError()]
+              : errors,
+          []
+        );
+        if (preCheckErrors.length > 0) {
+          errors.push(...preCheckErrors);
+        } else {
+          const forInitCheck = check(node.forInit, forConditionFrame);
+          errors.push(...forInitCheck.errors);
+        }
       }
       if (node.condition) {
-        const conditionCheck = check(node.condition!, tempEnvironmentFrame);
+        const conditionCheck = check(node.condition!, forConditionFrame);
         errors.push(...conditionCheck.errors);
       }
       node.forUpdate.forEach((forUpdate) => {
-        const checkResult = check(forUpdate, tempEnvironmentFrame);
+        const checkResult = check(forUpdate, forConditionFrame);
         errors.push(...checkResult.errors);
       });
-      const forBodyFrame = createFrame({}, tempEnvironmentFrame);
+      const forBodyFrame = forConditionFrame.newChildFrame();
       const bodyCheck = check(node.body, forBodyFrame);
       if (bodyCheck.errors) errors.push(...bodyCheck.errors);
       return newResult(null, errors);
     }
     case "BinaryExpression": {
       const { left, operator, right } = node;
-      const { currentType: leftType, errors: leftErrors } = check(
-        left,
-        environmentFrame
-      );
+      const { currentType: leftType, errors: leftErrors } = check(left, frame);
       if (leftErrors.length > 0)
         return { currentType: null, errors: leftErrors };
       const { currentType: rightType, errors: rightErrors } = check(
         right,
-        environmentFrame
+        frame
       );
       if (rightErrors.length > 0)
         return { currentType: null, errors: rightErrors };
@@ -160,9 +157,9 @@ export const check = (
     }
     case "Block": {
       const errors: Error[] = [];
-      const newEnvironmentFrame = createFrame({}, environmentFrame);
+      const newFrame = frame.newChildFrame();
       node.blockStatements.forEach((statement) => {
-        const result = check(statement, newEnvironmentFrame);
+        const result = check(statement, newFrame);
         if (result.errors) errors.push(...result.errors);
       });
       return newResult(null, errors);
@@ -171,13 +168,14 @@ export const check = (
       return OK_RESULT;
     }
     case "CompilationUnit": {
+      // console.log(node.topLevelClassOrInterfaceDeclarations[0].classBody);
       const { blockStatements } = (
         node.topLevelClassOrInterfaceDeclarations[0]
           .classBody[0] as MethodDeclaration
       ).methodBody;
-      const newEnvironmentFrame = createFrame({}, environmentFrame);
+      const newFrame = frame.newChildFrame();
       const errors = blockStatements.flatMap((blockStatement) => {
-        return check(blockStatement, newEnvironmentFrame).errors;
+        return check(blockStatement, newFrame).errors;
       });
       return newResult(null, errors);
     }
@@ -188,16 +186,16 @@ export const check = (
       return OK_RESULT;
     }
     case "ExpressionName": {
-      const type = getEnvironmentVariable(environmentFrame, node.name);
+      const type = frame.getVariable(node.name);
       if (type instanceof Error) return newResult(null, [type]);
       return newResult(type);
     }
     case "ExpressionStatement": {
-      return check(node.stmtExp, environmentFrame);
+      return check(node.stmtExp, frame);
     }
     case "IfStatement": {
       const errors: Error[] = [];
-      const conditionResult = check(node.condition, environmentFrame);
+      const conditionResult = check(node.condition, frame);
       if (conditionResult.errors) errors.push(...conditionResult.errors);
       const booleanType = new Boolean();
       if (
@@ -205,8 +203,8 @@ export const check = (
         !booleanType.canBeAssigned(conditionResult.currentType)
       )
         errors.push(new IncompatibleTypesError());
-      const newEnvironmentFrame = createFrame({}, environmentFrame);
-      const consequentResult = check(node.consequent, newEnvironmentFrame);
+      const newFrame = frame.newChildFrame();
+      const consequentResult = check(node.consequent, newFrame);
       if (consequentResult.errors) errors.push(...consequentResult.errors);
       return newResult(null, errors);
     }
@@ -259,10 +257,7 @@ export const check = (
       if (!node.variableDeclaratorList)
         throw new Error("Variable declarator list is undefined.");
       const results = node.variableDeclaratorList.map((variableDeclarator) => {
-        const declaredType = getEnvironmentType(
-          environmentFrame,
-          node.localVariableType
-        );
+        const declaredType = frame.getType(node.localVariableType);
         if (declaredType instanceof Error)
           return newResult(null, [declaredType]);
         const { variableInitializer } = variableDeclarator;
@@ -270,7 +265,7 @@ export const check = (
           throw new Error("Variable initializer is undefined.");
         const { currentType, errors } = check(
           variableInitializer as Expression,
-          environmentFrame
+          frame
         );
         if (errors.length > 0) return { currentType: null, errors };
         if (currentType == null)
@@ -279,8 +274,7 @@ export const check = (
           );
         if (!declaredType.canBeAssigned(currentType))
           return newResult(null, [new IncompatibleTypesError()]);
-        const error = setEnvironmentVariable(
-          environmentFrame,
+        const error = frame.setVariable(
           variableDeclarator.variableDeclaratorId,
           declaredType
         );
@@ -296,7 +290,7 @@ export const check = (
       }, OK_RESULT);
     }
     case "PostfixExpression": {
-      const expressionCheck = check(node.expression, environmentFrame);
+      const expressionCheck = check(node.expression, frame);
       if (expressionCheck.errors.length > 0) return expressionCheck;
       const doubleType = new Double();
       if (!expressionCheck.currentType)
@@ -319,7 +313,7 @@ export const check = (
               case "HexadecimalFloatingPointLiteral": {
                 expression.literalType.value =
                   "-" + expression.literalType.value;
-                return check(expression, environmentFrame);
+                return check(expression, frame);
               }
               case "BooleanLiteral":
               case "CharacterLiteral":
@@ -330,9 +324,9 @@ export const check = (
           }
         }
         case "+":
-          return check(expression, environmentFrame);
+          return check(expression, frame);
         case "!":
-          const expressionCheck = check(expression, environmentFrame);
+          const expressionCheck = check(expression, frame);
           if (expressionCheck.errors.length > 0) return expressionCheck;
           if (!expressionCheck.currentType)
             throw new Error("Type missing in ! prefix expression.");
@@ -347,20 +341,20 @@ export const check = (
       }
     }
     case "TernaryExpression": {
-      const conditionCheck = check(node.condition, environmentFrame);
+      const conditionCheck = check(node.condition, frame);
       if (conditionCheck.errors.length > 0) return conditionCheck;
       if (!conditionCheck.currentType)
         throw new Error("Type missing in ternary expresion condition.");
       const booleanType = new Boolean();
       if (!booleanType.canBeAssigned(conditionCheck.currentType))
         return newResult(null, [new BadOperandTypesError()]);
-      const consequentCheck = check(node.consequent, environmentFrame);
+      const consequentCheck = check(node.consequent, frame);
       if (consequentCheck.errors.length > 0) return conditionCheck;
       if (!consequentCheck.currentType)
         throw new Error(
           "Type missing in ternary expresion consequent expression."
         );
-      const alternateCheck = check(node.alternate, environmentFrame);
+      const alternateCheck = check(node.alternate, frame);
       if (alternateCheck.errors.length > 0) return conditionCheck;
       if (!alternateCheck.currentType)
         throw new Error(
@@ -373,19 +367,20 @@ export const check = (
       return newResult(null, [new BadOperandTypesError()]);
     }
     case "WhileStatement": {
-      const conditionCheck = check(node.condition, environmentFrame);
+      const conditionCheck = check(node.condition, frame);
       if (conditionCheck.errors.length > 0) return conditionCheck;
       if (!conditionCheck.currentType)
         throw new Error("Type missing in ternary expresion condition.");
       const booleanType = new Boolean();
       if (!booleanType.canBeAssigned(conditionCheck.currentType))
         return newResult(null, [new BadOperandTypesError()]);
-      const newEnvironmentFrame = createFrame({}, environmentFrame);
-      const bodyCheck = check(node.body, newEnvironmentFrame);
+      const newFrame = frame.newChildFrame();
+      const bodyCheck = check(node.body, newFrame);
       if (bodyCheck.errors.length > 0) return bodyCheck;
       return OK_RESULT;
     }
     default:
+      console.log(node);
       throw new Error(
         `Check is not implemented for this type of node ${node.kind}.`
       );
