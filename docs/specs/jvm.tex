@@ -1,0 +1,223 @@
+% !TEX root = ./jvm.tex
+\input source_header.tex
+
+\newcommand{\Rule}[2]{\genfrac{}{}{0.7pt}{}{{\setlength{\fboxrule}{0pt}\setlength{\fboxsep}{3mm}\fbox{$#1$}}}{{\setlength{\fboxrule}{0pt}\setlength{\fboxsep}{3mm}\fbox{$#2$}}}}
+
+\newcommand{\TruE}{\textbf{\texttt{true}}}
+\newcommand{\FalsE}{\textbf{\texttt{false}}}
+\newcommand{\AndOp}{\texttt{\&\&}}
+\newcommand{\OrOp}{\texttt{||}}
+\newcommand{\ThenOp}{\texttt{?}}
+\newcommand{\ElseOp}{\texttt{:}}
+\newcommand{\Rc}{\texttt{\}}}
+\newcommand{\Lc}{\texttt{\{}}
+\newcommand{\Rp}{\texttt{)}}
+\newcommand{\Lp}{\texttt{(}}
+\newcommand{\Fun}{\textbf{\texttt{function}}}
+\newcommand{\Let}{\textbf{\texttt{let}}}
+\newcommand{\Return}{\textbf{\texttt{return}}}
+\newcommand{\Const}{\textbf{\texttt{const}}}
+\newcommand{\If}{\textbf{\texttt{if}}}
+\newcommand{\Else}{\textbf{\texttt{else}}}
+\newcommand{\Bool}{\texttt{boolean}}
+\newcommand{\Number}{\texttt{number}}
+\newcommand{\String}{\texttt{string}}
+\newcommand{\Undefined}{\texttt{undefined}}
+\newcommand{\Null}{\texttt{null}}
+\newcommand{\Any}{\texttt{any}}
+\newcommand{\Void}{\texttt{void}}
+\newcommand{\Pred}{\textit{Pred}}
+\newcommand{\type}{\textit{type}}
+\newcommand{\polytype}{\textit{polytype}}
+\newcommand{\predtype}{\textit{predtype}}
+\newcommand{\ExtractPos}{\ensuremath{\textit{Extract}^+}}
+\newcommand{\ExtractNeg}{\ensuremath{\textit{Extract}^-}}
+
+\begin{document}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\docheader{Java}{Source}{}{Martin Henz, Yap Hock Chuan Roland, Chuan Hao Chang}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input source_intro.tex
+
+This JVM follows the Java SE8 Edition \href{https://docs.oracle.com/javase/specs/jvms/se8/html/index.html}{JVM Specification}.
+
+This documentation contains limitations or differences not covered in the official specifcations above, and is sectioned
+in a way that mirrors the official specification document. For general documentation of the JVM, refer to the official specification.
+
+\section{Structure of the JVM}
+
+\subsection{Primitive Types and Values}
+
+Unlike Java, JavaScript numbers are all 64 bit doubles. This JVM stores each type as follows:
+
+\begin{itemize}
+	\item \texttt{byte}: \texttt{number}
+	\item \texttt{short}: \texttt{number}
+	\item \texttt{int}: \texttt{number}
+	\item \texttt{long}: \texttt{bigint}
+	\item \texttt{char}: \texttt{number}
+	\item \texttt{float}: \texttt{number}
+	\item \texttt{double}: \texttt{number}
+\end{itemize}
+
+Extra bits are truncated using a bitmask, with the exception 
+of \texttt{float}, which is truncated using \texttt{Math.fround}.
+
+\subsection{Reference Types and Values}
+
+2 classes have been implemented to represent reference types:
+
+\begin{itemize}
+\item Normal reference types: \texttt{JvmObject}.
+\item Array types: \texttt{JvmArray}, stores a JavaScript array internally.
+\end{itemize}
+
+
+\subsection{Java Virtual Machine Stacks}
+
+Each JVM thread has a stack. Stacks contain stackframes. 
+JVM stacks are implemented with JavaScript arrays.
+
+There are 3 kinds of stack frames:
+
+\begin{enumerate}
+\item \texttt{BytecodeStackFrame}: A normal stackframe.
+\item \texttt{InternalStackFrame}: A stackframe that functions the same way as \texttt{BytecodeStackFrame}, except when the method returns the return value is passed to a callback instead of being pushed onto the stackframe below.
+\item \texttt{NativeStackFrame}: A stackframe for native methods. Executes the function supplied by the Java Native Interface instead of running bytecode like the previous stackframes.
+\end{enumerate}
+
+
+Even though longs can fit into a single index of a JavaScript array, they nonetheless occupy 2 indexes in the stack.
+The wide value is first pushed onto the stack, then a special \texttt{INACCESSIBLE} object, which throws an error if we attempt to access it or its properties.
+
+\subsection{Heap}
+
+This JVM does not manage its own memory. Since Java objects are represented as JavaScript objects, the JavaScript Garbage Collector
+will free up memory as necessary.
+
+There is, however, a \texttt{UnsafeHeap} implemented. This is implemented specifically for \texttt{Unsafe} operations, and is required since during JVM initialization,
+memory is allocated then read to determine the endianness of the operating system.
+
+\subsection{Local Variables}
+
+Similar to the stack implementation, local variable arrays are stored as JavaScript arrays in the JVM. Wide values like doubles and longs also occupy 2 indexes.
+
+An exception to this rule is in \texttt{NativeStackFrame}, where wide values only occupy 1 index, so its behaviour can be more in line with the JavaScript functions that it calls.
+
+\subsection{Floating-Point Modes}
+
+The \texttt{ACC\_STRICT} flag is not implemented.
+
+\subsection{Class Libraries}
+
+The JVM is expected to support implementation of class libraries.
+
+Since the standard library is largely left unimplemented, the full scope of what the JVM needs to support is not yet understood.
+
+Some features are not yet supported.
+
+\begin{enumerate}
+\item Security related classes and packages
+\item Weak references, such as in the package java.lang.ref
+\end{enumerate}
+
+\section{The class file format}
+
+This chapter describes differences in the class file representation used in this JVM compared to the official specification.
+For information related to the class file format refer to the official \href{https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html}{JVM specification}.
+
+\subsection{ClassFile Structure}
+
+\begin{enumerate}
+\item \texttt{magic}: we do not verify this value.
+\item \texttt{minor\_version}, \texttt{major\_version}: we do not verify this value.
+\item \texttt{constant\_pool\_count}, \texttt{interfaces\_count}, \texttt{fields\_count}, \texttt{methods\_count}, \texttt{attributes\_count}: we do not verify this value.
+\end{enumerate}
+
+\subsection{Constant Pool}
+
+The below constants may not be fully implemented.
+
+\begin{enumerate}
+\item \texttt{CONSTANT\_MethodHandle\_info}: Relies on \texttt{MethodHandleNatives::linkMethodHandleConstant} for resolution, some native methods invoked by \texttt{linkMethodHandleConstant} may not be implemented.
+\item \texttt{CONSTANT\_MethodType\_info}: Relies on \texttt{MethodHandleNatives::findMethodHandleType} for resolution, some native methods invoked by \texttt{findMethodHandleType} may not be implemented.
+\item \texttt{CONSTANT\_InvokeDynamic\_info}: Relies on \texttt{MethodHandleNatives::linkCallSite} for resolution, some native methods invoked by \texttt{linkCallSite} may not be implemented.
+\end{enumerate}
+
+\subsection{Attributes}
+
+The below attributes are not supported, and will be present in the class data as an \texttt{UnhandledAttribute}.
+
+\begin{enumerate}
+	\item \texttt{RuntimeVisibleAnnotations}
+	\item \texttt{RuntimeInvisibleAnnotations}
+	\item \texttt{RuntimeVisibleParameterAnnotations}
+	\item \texttt{RuntimeInvisibleParameterAnnotations}
+	\item \texttt{RuntimeVisibleTypeAnnotations}
+	\item \texttt{RuntimeInvisibleTypeAnnotations}
+	\item \texttt{AnnotationDefault}
+	\item \texttt{MethodParameters}
+\end{enumerate}
+
+\subsection{Verification of class Files}
+
+Verification is skipped entirely.
+
+\section{Loading, Linking, and Initializing}
+
+\subsection{Java Virtual Machine Startup}
+
+The JVM startup process is as follows:
+
+\begin{enumerate}
+	\item Essential classes are loaded (\texttt{Object},\texttt{Thread},\texttt{System},\texttt{Class},\texttt{ClassLoader},\texttt{ThreadGroup},\texttt{Unsafe})
+	\item \texttt{ThreadGroup} and \texttt{Thread} classes are initialized, then the initial thread is instantiated.
+	\item \texttt{System} is initialized by calling \texttt{System::initializeSystemClass}.
+	\item The system class loader is initialized by calling \texttt{ClassLoader::getSystemClassLoader}.
+	\item The main class is loaded with the system class loader. the \texttt{main} method is run.
+\end{enumerate}
+
+\subsection{Creating Array Classes}
+
+All array classes are loaded by the bootstrap class loader. 
+The component class of the array may be loaded by other class loaders.
+
+\subsection{Loading Constraints}
+
+The JVM does not ensure loading constraints are checked. The same class, loaded by 2 different class loaders, are treated as different classes.
+
+\subsection{Linking}
+
+Symbolic references are implemented as lazy resolution.
+
+\subsection{Verification}
+
+This is skipped.
+
+\subsection{Resolution}
+
+\subsubsection{Method Type and Method Handle Resolution}
+
+Method types are resolved by calling \texttt{MethodHandleNatives::findMethodHandleType}. The native implementations of methods used by this method may not be fully implemented/tested.
+
+Method handles are resolved by calling \texttt{MethodHandleNatives::linkMethodHandleConstant}. The native implementations of methods used by this method may not be fully implemented/tested.
+
+Call Site Specifiers are resolved by calling \texttt{MethodHandleNatives::linkCallSite}. The native implementations of methods used by this method may not be fully implemented/tested.
+
+\subsubsection{Access Control}
+
+Access control also implements the nest mate test from the \href{https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-5.html#jvms-5.4.4}{SE11 edition JVM specifications}. 
+There is a bug where the anonymous inner classes from lambda creation are invoking private methods of the original class directly instead of the synthetic bridge methods we generate.
+To work around this, we add a \texttt{NestHost} attribute to the created class, and implement the nest mate access control logic as a hacky solution.
+
+\section{The Java Virtual Machine Instruction Set}
+
+\begin{itemize}
+\item \texttt{BREAKPOINT}: Not implemented. Throws an error.
+\item \texttt{IMPDEP1}: Not implemented. Throws an error.
+\item \texttt{IMPDEP2}: Not implemented. Throws an error.
+\end{itemize}
+
+
+\end{document}
