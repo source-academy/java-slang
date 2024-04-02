@@ -76,10 +76,20 @@ const testcases: {
   {
     input: `
       int[] numbers = {1, 2, 3, 4, 5};
-      int length = numbers.length; // Accessing array length    
+      int length = numbers.length; // Accessing array length
     `,
     result: { type: null, errors: [] },
   },
+
+  {
+    input: `
+      int i = numbers.length; // Accessing array length
+      int j = numbers.hashCode(length).test(); // Checking difference
+    `,
+    result: { type: null, errors: [] },
+    only: true,
+  },
+
   {
     input: `
       char[] chars = new char[5];
