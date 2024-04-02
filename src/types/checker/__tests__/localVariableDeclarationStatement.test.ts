@@ -1,7 +1,7 @@
 import { check } from "..";
 import { IncompatibleTypesError } from "../../errors";
 import { parse } from "../../../ast/parser";
-import { Type } from "../../types";
+import { Type } from "../../types/type";
 
 const createProgram = (statement: string) => `
   public class Main {
@@ -14,6 +14,7 @@ const createProgram = (statement: string) => `
 const testcases: {
   input: string;
   result: { type: Type | null; errors: Error[] };
+  only?: boolean;
 }[] = [
   {
     input: "int test = 0;",
@@ -31,11 +32,28 @@ const testcases: {
     input: 'String test = "A";',
     result: { type: null, errors: [] },
   },
+  {
+    input: "int test1 = 0, test2 = 0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: 'int test1 = 0, test2 = 0, test3 = "string";',
+    result: { type: null, errors: [new IncompatibleTypesError()] },
+  },
+  {
+    input: 'int test1 = "string", test2 = 0, test3 = "string";',
+    result: {
+      type: null,
+      errors: [new IncompatibleTypesError(), new IncompatibleTypesError()],
+    },
+  },
 ];
 
 describe("Type Checker", () => {
   testcases.map((testcase) => {
-    test(`Checking local variable declaration for ${testcase.input}`, () => {
+    let it = test;
+    if (testcase.only) it = test.only;
+    it(`Checking local variable declaration for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");
@@ -45,7 +63,7 @@ describe("Type Checker", () => {
       else expect(result.currentType).toBeInstanceOf(testcase.result.type);
       expect(result.errors.length).toBe(testcase.result.errors.length);
       testcase.result.errors.forEach((error, index) => {
-        expect(result.errors[index].name).toBe(error.name);
+        expect(result.errors[index].message).toBe(error.message);
       });
     });
   });

@@ -1,8 +1,9 @@
 import { InternalStackFrame } from "../../../stackframe";
 import Thread from "../../../thread";
-import { checkSuccess, checkError } from "../../../types/Result";
 import { Method } from "../../../types/class/Method";
 import { JvmObject } from "../../../types/reference/Object";
+import { ResultType } from "../../../types/Result";
+import { logger } from "../../../utils";
 
 const doPrivileged = (thread: Thread, locals: any[]) => {
   const action = locals[0] as JvmObject;
@@ -13,7 +14,7 @@ const doPrivileged = (thread: Thread, locals: any[]) => {
     thread.getClass()
   );
 
-  if (!checkSuccess(methodRes)) {
+  if (methodRes.status !== ResultType.SUCCESS) {
     thread.throwNewException(methodRes.exceptionCls, methodRes.msg);
     return;
   }
@@ -31,7 +32,6 @@ const doPrivileged = (thread: Thread, locals: any[]) => {
     )
   );
 };
-
 const functions = {
   "doPrivileged(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;":
     doPrivileged,
@@ -49,21 +49,21 @@ const functions = {
     const action = locals[0] as JvmObject;
     const loader = thread.getClass().getLoader();
     const acRes = loader.getClass("java/security/AccessController");
-    if (checkError(acRes)) {
+    if (acRes.status === ResultType.ERROR) {
       thread.throwNewException(acRes.exceptionCls, acRes.msg);
       return;
     }
     const acCls = acRes.result;
 
     const paRes = loader.getClass("java/security/PrivilegedAction");
-    if (checkError(paRes)) {
+    if (paRes.status === ResultType.ERROR) {
       thread.throwNewException(paRes.exceptionCls, paRes.msg);
       return;
     }
 
     const paCls = paRes.result;
     const mRes = paCls.resolveMethod("run()", "Ljava/lang/Object;", acCls);
-    if (checkError(mRes)) {
+    if (mRes.status === ResultType.ERROR) {
       thread.throwNewException(mRes.exceptionCls, mRes.msg);
       return;
     }
@@ -71,7 +71,7 @@ const functions = {
 
     const runtimeCls = action.getClass();
     const lRes = runtimeCls.lookupMethod("run()Ljava/lang/Object;", mRef);
-    if (checkError(lRes)) {
+    if (lRes.status === ResultType.ERROR) {
       thread.throwNewException(lRes.exceptionCls, lRes.msg);
       return;
     }
@@ -91,11 +91,16 @@ const functions = {
     );
   },
 
+  /**
+   * @todo Not implemented. Returns null.
+   * @param thread
+   * @param locals
+   */
   "getStackAccessControlContext()Ljava/security/AccessControlContext;": (
     thread: Thread,
     locals: any[]
   ) => {
-    console.warn(
+    logger.warn(
       "getStackAccessControlContext()Ljava/security/AccessControlContext; not implemented"
     );
     thread.returnStackFrame(null);

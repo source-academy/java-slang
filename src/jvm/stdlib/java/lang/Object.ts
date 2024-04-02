@@ -2,6 +2,11 @@ import Thread from "../../../thread";
 import { JvmObject } from "../../../types/reference/Object";
 
 const functions = {
+  /**
+   * NOP.
+   * @param thread
+   * @param locals
+   */
   "registerNatives()V": (thread: Thread, locals: any[]) => {
     thread.returnStackFrame();
   },

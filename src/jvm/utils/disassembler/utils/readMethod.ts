@@ -49,8 +49,8 @@ export function getMethodName(
   method: MethodInfo,
   constPool: Array<ConstantInfo>
 ): string {
-  const name = (constPool[method.nameIndex] as ConstantUtf8Info).value;
-  const descriptor = (constPool[method.descriptorIndex] as ConstantUtf8Info)
-    .value;
-  return name + descriptor;
+  return (
+    (constPool[method.nameIndex] as ConstantUtf8Info).value +
+    (constPool[method.descriptorIndex] as ConstantUtf8Info).value
+  );
 }

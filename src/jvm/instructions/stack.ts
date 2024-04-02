@@ -1,18 +1,19 @@
 import Thread from "../thread";
-import { checkSuccess, checkError } from "../types/Result";
+import { ResultType } from "../types/Result";
 
 export function runPop(thread: Thread): void {
-  checkSuccess(thread.popStack()) && thread.offsetPc(1);
+  thread.popStack().status === ResultType.SUCCESS && thread.offsetPc(1);
 }
 
 export function runPop2(thread: Thread): void {
-  thread.popStack();
-  checkSuccess(thread.popStack()) && thread.offsetPc(1);
+  thread.popStack().status === ResultType.SUCCESS &&
+    thread.popStack().status === ResultType.SUCCESS &&
+    thread.offsetPc(1);
 }
 
 export function runDup(thread: Thread): void {
   const popResult = thread.popStack();
-  if (checkError(popResult)) {
+  if (popResult.status === ResultType.ERROR) {
     return;
   }
   const value = popResult.result;
@@ -24,7 +25,10 @@ export function runDupX1(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value1 = popResult.result;
@@ -40,9 +44,9 @@ export function runDupX2(thread: Thread): void {
   const popResult2 = thread.popStack();
   const popResult3 = thread.popStack();
   if (
-    checkError(popResult) ||
-    checkError(popResult2) ||
-    checkError(popResult3)
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR ||
+    popResult3.status === ResultType.ERROR
   ) {
     return;
   }
@@ -59,7 +63,10 @@ export function runDup2(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value1 = popResult.result;
@@ -76,9 +83,9 @@ export function runDup2X1(thread: Thread): void {
   const popResult2 = thread.popStack();
   const popResult3 = thread.popStack();
   if (
-    checkError(popResult) ||
-    checkError(popResult2) ||
-    checkError(popResult3)
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR ||
+    popResult3.status === ResultType.ERROR
   ) {
     return;
   }
@@ -99,10 +106,10 @@ export function runDup2X2(thread: Thread): void {
   const popResult3 = thread.popStack();
   const popResult4 = thread.popStack();
   if (
-    checkError(popResult) ||
-    checkError(popResult2) ||
-    checkError(popResult3) ||
-    checkError(popResult4)
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR ||
+    popResult3.status === ResultType.ERROR ||
+    popResult4.status === ResultType.ERROR
   ) {
     return;
   }
@@ -122,7 +129,10 @@ export function runSwap(thread: Thread): void {
   thread.offsetPc(1);
   const popResult = thread.popStack();
   const popResult2 = thread.popStack();
-  if (checkError(popResult) || checkError(popResult2)) {
+  if (
+    popResult.status === ResultType.ERROR ||
+    popResult2.status === ResultType.ERROR
+  ) {
     return;
   }
   const value1 = popResult.result;

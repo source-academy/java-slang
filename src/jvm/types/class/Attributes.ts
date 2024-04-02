@@ -80,10 +80,6 @@ export const info2Attribute = (
         attributes: attr,
       } as Code;
     case "Exceptions":
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
       const exceptions: ConstantClass[] = [];
       (info as ExceptionsAttribute).exceptionIndexTable.forEach((index) => {
         exceptions.push(constantPool.get(index) as ConstantClass);
@@ -93,10 +89,6 @@ export const info2Attribute = (
         exceptionTable: exceptions,
       } as Exceptions;
     case "InnerClasses":
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
       const innerclasses: {
         innerClass: ConstantClass;
         outerClass: ConstantClass | null;
@@ -123,16 +115,11 @@ export const info2Attribute = (
           innerClassAccessFlags: element.innerClassAccessFlags,
         });
       });
-
       return {
         name,
         classes: innerclasses,
       } as InnerClasses;
     case "EnclosingMethod":
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
       const cls = constantPool.get(
         (info as EnclosingMethodAttribute).classIndex
       ) as ConstantClass;
@@ -157,10 +144,6 @@ export const info2Attribute = (
     case "SourceDebugExtension":
       return {
         name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
-      return {
-        name,
         debugExtension: (info as SourceDebugExtensionAttribute).debugExtension,
       } as SourceDebugExtension;
     case "LineNumberTable":
@@ -169,10 +152,6 @@ export const info2Attribute = (
         lineNumberTable: (info as LineNumberTableAttribute).lineNumberTable,
       } as LineNumberTable;
     case "LocalVariableTable":
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
       const localVarTable: Array<{
         startPc: number;
         length: number;
@@ -198,10 +177,6 @@ export const info2Attribute = (
         localVariableTable: localVarTable,
       } as LocalVariableTable;
     case "LocalVariableTypeTable":
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
       const localVarTypeTable: Array<{
         startPc: number;
         length: number;
@@ -256,7 +231,6 @@ export const info2Attribute = (
           });
         }
       );
-
       return {
         name,
         bootstrapMethods,
@@ -264,17 +238,9 @@ export const info2Attribute = (
     case "StackMapTable":
       return {
         name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
-      return {
-        name,
         entries: (info as StackMapTableAttribute).entries,
       } as StackMapTable;
     case "SourceFile":
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
       return {
         name,
         sourceFile: constantPool.get(
@@ -284,19 +250,7 @@ export const info2Attribute = (
     case "Synthetic":
       return {
         name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
-      return {
-        name,
       } as Synthetic;
-    case "Deprecated":
-      return {
-        name,
-        attributeInfo: info,
-      } as UnhandledAttribute;
-      return {
-        name,
-      } as Deprecated;
     default:
       return {
         name,

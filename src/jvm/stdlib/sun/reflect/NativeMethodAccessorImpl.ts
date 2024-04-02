@@ -6,6 +6,11 @@ import { JvmObject } from "../../../types/reference/Object";
 import { autoUnbox, autoBox } from "../../../utils";
 
 const functions = {
+  /**
+   * @todo Partially implemented. Exception wrapping not implemented.
+   * @param thread
+   * @param locals
+   */
   "invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;":
     (thread: Thread, locals: any[]) => {
       const methodObj = locals[0] as JvmObject; // reflected method
@@ -35,7 +40,6 @@ const functions = {
       thread.invokeStackFrame(
         new InternalStackFrame(methodCls, method, 0, params, (ret, err) => {
           if (err) {
-            // FIXME: wrap exception instead
             thread.throwNewException(
               "java/lang/reflect/InvocationTargetException",
               err.exceptionCls + ": " + err.msg

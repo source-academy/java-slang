@@ -122,7 +122,7 @@ function readConstantInteger(
   offset: number,
   tag: CONSTANT_TAG
 ): { result: ConstantIntegerInfo; offset: number } {
-  const value = view.getUint32(offset);
+  const value = view.getInt32(offset);
   offset += 4;
 
   return {
@@ -156,7 +156,7 @@ function readConstantLong(
   offset: number,
   tag: CONSTANT_TAG
 ): { result: ConstantLongInfo; offset: number } {
-  const value = view.getBigUint64(offset);
+  const value = view.getBigInt64(offset);
   offset += 8;
 
   return {

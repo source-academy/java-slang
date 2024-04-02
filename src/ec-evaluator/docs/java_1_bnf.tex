@@ -1,0 +1,43 @@
+\begin{alignat*}{9}
+&& \textit{compilation-unit}                     && \quad ::= & \quad && \textit{class-declaration} ... && \\[2mm]
+&& \textit{class-declaration}                    && \quad ::= & \quad && \textbf{\texttt{class}} \ \textit{identifier} \ [ \ \textbf{\texttt{extends}} \ \textit{identifier} \ ] \ \textit{class-body} && \\[1mm]
+&& \textit{class-body}                           && \quad ::= & \quad && \textbf{\texttt{\{}} \textit{class-body-declaration} ... \textbf{\texttt{\}}} && \\[1mm]
+&& \textit{class-body-declaration}               && \quad ::= & \quad && \textit{field-declaration} && \\
+&&                                               &&         | & \quad && \textit{constructor-declaration} && \\
+&&                                               &&         | & \quad && \textit{method-declaration} && \\[2mm]
+&& \textit{field-declaration}                    && \quad ::= & \quad && \textit{field-modifier} ... \ \textit{type} \ \textit{identifier} \ [ \ \textbf{\texttt{=}} \ \textit{expression} \ ] \ \textbf{\texttt{;}} && \\[1mm]
+&& \textit{field-modifier}                       && \quad ::= & \quad && \textbf{\texttt{static}} && \\[1mm]
+&& \textit{method-declaration}                   && \quad ::= & \quad && \textit{method-modifier} ... \ \textit{method-header} \ \textit{block} && \\[1mm]
+&& \textit{method-modifier}                      && \quad ::= & \quad && \textbf{\texttt{static}} && \\[1mm]
+&& \textit{method-header}                        && \quad ::= & \quad && \textit{result-type} \ \textit{method-declarator} && \\[1mm]
+&& \textit{result-type}                          && \quad ::= & \quad && \textit{type} \ | \ \textbf{\texttt{void}} && \\[1mm]
+&& \textit{method-declarator}                    && \quad ::= & \quad && \textit{identifier} \ \textbf{\texttt{(}} \textit{formal-parameter} ... \textbf{\texttt{)}} && \\[1mm]
+&& \textit{formal-parameter}                     && \quad ::= & \quad && \textit{type} \ \textit{identifer} && \\[2mm]
+&& \textit{constructor-declaration}              && \quad ::= & \quad && \textit{identifier} \ \textbf{\texttt{(}} \textit{formal-parameter} ... \textbf{\texttt{)}} \ \textit{block} && \\[2mm]
+&& \textit{type}                                 && \quad ::= & \quad && \textit{primitive-type} \ | \ \textit{reference-type} && \\[1mm]
+&& \textit{primitive-type}                       && \quad ::= & \quad && \textbf{\texttt{int}} && \\[1mm]
+&& \textit{reference-type}                       && \quad ::= & \quad && \textit{identifer} && \\[2mm]
+&& \textit{block}                                && \quad ::= & \quad && \textbf{\texttt{\{}} \textit{block-statement} ... \textbf{\texttt{\}}} && \\[1mm]
+&& \textit{block-statement}                      && \quad ::= & \quad && \textit{local-variable-declaration-statement} && \\
+&&                                               &&         | & \quad && \textit{expression-statement} && \\
+&&                                               &&         | & \quad && \textit{return-statement} && \\
+&&                                               &&         | & \quad && \textit{explicit-constructor-invocation} && \\[2mm]
+&& \textit{local-variable-declaration-statement} && \quad ::= & \quad && \textit{type} \ \textit{identifier} \ [ \ \textbf{\texttt{=}} \ \textit{expression} \ ] \ \textbf{\texttt{;}} && \\[2mm]
+&& \textit{expression-statement}                 && \quad ::= & \quad && \textit{statement-expression} \ \textbf{\texttt{;}} && \\[1mm]
+&& \textit{statement-expression}                 && \quad ::= & \quad && \textit{assignment} \ | \ \textit{method-invocation} && \\[2mm]
+&& \textit{return-statement}                     && \quad ::= & \quad && \textbf{\texttt{return}} \ [ \ \textit{expression} \ ] \ \textbf{\texttt{;}} && \\[2mm]
+&& \textit{explicit-constructor-invocation}      && \quad ::= & \quad && \textit{primary} \ \textbf{\texttt{(}} \textit{expression} ... \textbf{\texttt{)}} \ \textbf{\texttt{;}} && \\[2mm]
+&& \textit{assignment}                           && \quad ::= & \quad && \textit{left-hand-side} \ \textbf{\texttt{=}} \ \textit{expression} && \\[1mm]
+&& \textit{left-hand-side}                       && \quad ::= & \quad && \textit{expression-name} \ | \ \textit{field-access} && \\[2mm]
+&& \textit{expression}                           && \quad ::= & \quad && \textit{binary-expression} && \\
+&&                                               &&         | & \quad && \textit{assignment} && \\
+&&                                               &&         | & \quad && \textit{expression-name} && \\
+&&                                               &&         | & \quad && \textit{literal} && \\
+&&                                               &&         | & \quad && \textit{primary} && \\
+&&                                               &&         | & \quad && \textit{class-instance-creation-expression} && \\
+&&                                               &&         | & \quad && \textit{field-access} && \\
+&&                                               &&         | & \quad && \textit{method-invocation} && \\[2mm]
+&& \textit{binary-expression}                    && \quad ::= & \quad && \textit{expression} \ \textit{binary-operator} \ \textit{expression} && \\[1mm]
+&& \textit{binary-operator}                      && \quad ::= & \quad && \textbf{\texttt{+}} \ | \ \textbf{\texttt{-}} \ | \ \textbf{\texttt{*}} \ | \ \textbf{\texttt{/}} \ | \ \textbf{\texttt{\%}} && \\[1mm]
+&& \textit{primary}                              && \quad ::= & \quad && \textbf{\texttt{this}} \ | \ \textbf{\texttt{super}} && \\[1mm]
+\end{alignat*}

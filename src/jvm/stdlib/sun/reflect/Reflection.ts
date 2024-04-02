@@ -4,7 +4,7 @@ import { ReferenceClassData } from "../../../types/class/ClassData";
 import { JvmObject } from "../../../types/reference/Object";
 
 /**
- * From Doppio
+ * Taken from Doppio {@link https://github.com/plasma-umass/doppio/blob/master/src/natives/sun_reflect.ts#L197}
  */
 function getCallerClass(
   thread: Thread,
@@ -15,12 +15,10 @@ function getCallerClass(
   let frame: StackFrame = caller[idx];
 
   while (
-    frame.method.getClass().getClassname() === "java/lang/reflect/Method" &&
+    frame.method.getClass().getName() === "java/lang/reflect/Method" &&
     frame.method.getName() === "invoke"
   ) {
     if (idx === 0) {
-      // No more stack to search!
-      // XXX: What does the JDK do here, throw an exception?
       return null;
     }
     frame = caller[--idx];
