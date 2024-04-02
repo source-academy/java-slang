@@ -34,6 +34,7 @@
   "dependencies": {
     "@types/lodash": "^4.14.198",
     "java-parser": "^2.0.5",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "peggy": "^4.0.2"
   }
 }

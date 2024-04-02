@@ -25,8 +25,8 @@
     "node_modules",
     "src/**/__tests__/**",
     "src/**/__mocks__/**",
-    "src/compiler/**",
     "src/types/**",
+    "src/compiler/**",
     "src/ast/**",
     "src/ec-evaluator/**"
   ]

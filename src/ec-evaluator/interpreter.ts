@@ -27,11 +27,12 @@ import {
   UnannType,
 } from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
-import { Control, Stash } from "./components";
-import { STEP_LIMIT } from "./constants";
+import { Control, EnvNode, Environment, Stash } from "./components";
+import { BLOCK_FRAME, GLOBAL_FRAME, NO_FRAME_NAME, OBJECT_CLASS, STEP_LIMIT, SUPER_KEYWORD, THIS_KEYWORD } from "./constants";
 import * as errors from "./errors";
 import * as instr from './instrCreator';
 import * as node from './nodeCreator';
+import * as struct from './structCreator';
 import {
   ControlItem,
   AssmtInstr,
@@ -56,6 +57,8 @@ import {
   Type,
   ResConOverloadInstr,
   ResOverrideInstr,
+  ResTypeContInstr,
+  StructType,
 } from "./types";
 import { 
   defaultValues,
@@ -67,7 +70,7 @@ import {
   getStaticFields,
   getStaticMethods,
   handleSequence,
-  prependInstanceFieldsInit,
+  prependInstanceFieldsInitIfNeeded,
   isNode,
   isQualified,
   makeMtdInvSimpleIdentifierQualified,
@@ -76,11 +79,17 @@ import {
   appendEmtpyReturn,
   searchMainMtdClass,
   prependExpConInvIfNeeded,
+  isStatic,
+  resOverload,
+  resOverride,
+  resConOverload,
+  isNull,
+  makeNonLocalVarNonParamSimpleNameQualified,
 } from "./utils";
 
 type CmdEvaluator = (
   command: ControlItem,
-  context: Context,
+  environment: Environment,
   control: Control,
   stash: Stash,
 ) => void
@@ -90,37 +99,37 @@ type CmdEvaluator = (
  * @throws {errors.RuntimeError} Throw error if program is semantically invalid.
  */
 export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): StashItem | undefined => {
+  const environment = context.environment;
   const control = context.control;
   const stash = context.stash;
 
-  let step = 1;
+  context.totalSteps = 1;
 
   let command = control.peek();
   
   while (command) {
-    if (step === targetStep) {
+    if (context.totalSteps === targetStep) {
       return stash.peek();
     }
 
     control.pop();
     if (isNode(command)) {
-      cmdEvaluators[command.kind](command, context, control, stash);
+      cmdEvaluators[command.kind](command, environment, control, stash);
     } else {
-      cmdEvaluators[command.instrType](command, context, control, stash);
+      cmdEvaluators[command.instrType](command, environment, control, stash);
     }
 
     command = control.peek();
-    step += 1;
+    context.totalSteps += 1;
   }
 
-  context.totalSteps = step;
   return stash.peek();
 }
 
 const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   CompilationUnit: (
     command: CompilationUnit,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -132,12 +141,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     control.push(node.mainMtdInvExpStmtNode(className));
     control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations));
-    // TODO add obj class
+    control.push(node.objClassDeclNode());
   },
   
   NormalClassDeclaration: (
     command: NormalClassDeclaration,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -146,50 +155,50 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const instanceFields = getInstanceFields(command);
     const instanceMethods = getInstanceMethods(command);
     // Make MethodInvocation simple Identifier qualified to facilitate MethodInvocation evaluation.
-    instanceMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, className));
+    instanceMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, THIS_KEYWORD));
+    // Make non local var simple name qualified.
+    instanceMethods.forEach(m => makeNonLocalVarNonParamSimpleNameQualified(m, THIS_KEYWORD));
     instanceMethods.forEach(m => appendEmtpyReturn(m));
 
     const staticFields = getStaticFields(command);
     const staticMethods = getStaticMethods(command);
     // Make MethodInvocation simple Identifier qualified to facilitate MethodInvocation evaluation.
     staticMethods.forEach(m => makeMtdInvSimpleIdentifierQualified(m, className));
+    // Make non local var simple name qualified.
+    staticMethods.forEach(m => makeNonLocalVarNonParamSimpleNameQualified(m, className));
     staticMethods.forEach(m => appendEmtpyReturn(m));
+
+    // Class that doesn't explicitly inherit another class implicitly inherits Object, except Object.
+    className !== OBJECT_CLASS && !command.sclass && (command.sclass = OBJECT_CLASS);
 
     const constructors = getConstructors(command);
     // Insert default constructor if not overriden.
     if (!constructors.find(c => c.constructorDeclarator.formalParameterList.length === 0)) {
-      const defaultConstructor = node.defaultConstructorDeclNode(className);
+      const defaultConstructor = node.defaultConstructorDeclNode(className, command);
       constructors.push(defaultConstructor);
     }
-    // Prepend instance fields initialization at start of constructor body.
-    constructors.forEach(c => prependInstanceFieldsInit(c, instanceFields));
+    // Prepend instance fields initialization if needed at start of constructor body.
+    constructors.forEach(c => prependInstanceFieldsInitIfNeeded(c, instanceFields));
+    // Make non local var simple name qualified.
+    constructors.forEach(c => makeNonLocalVarNonParamSimpleNameQualified(c, THIS_KEYWORD));
     // Prepend super() if needed before instance fields initialization.
     constructors.forEach(c => prependExpConInvIfNeeded(c, command));
     // Append ReturnStatement with this keyword at end of constructor body.
     constructors.forEach(c => appendOrReplaceReturn(c));
 
     // To restore current (global) env for next NormalClassDeclarations evaluation.
-    control.push(instr.envInstr(context.environment.current, command));
+    control.push(instr.envInstr(environment.current, command));
     
-    // TODO no superclass means superclass is Object
-    const superclassName = command.sclass;
-    let superclass: Class | undefined = undefined;
-    superclassName && (superclass = context.environment.getClass(superclassName));
-    // Extend env from superclass env, otherwise global env.
-    const fromEnv = superclass ? superclass.frame : context.environment.global;
-    context.environment.extendEnv(fromEnv, className);
+    const superclass: Class | undefined = command.sclass ? environment.getClass(command.sclass) : undefined;
+    // TODO Object should not extend global?
+    const fromEnv = superclass ? superclass.frame : environment.global;
+    environment.extendEnv(fromEnv, className);
 
-    const c = {
-      kind: "Class",
-      frame: context.environment.current,
-      constructors: constructors,
-      instanceFields,
-      instanceMethods,
-      staticFields,
-      staticMethods,
-      superclass,
-    } as Class;
-    context.environment.defineClass(className, c);
+    const c = struct.classStruct(
+      environment.current, command, constructors,
+      instanceFields, instanceMethods, staticFields, staticMethods, superclass
+    );
+    environment.defineClass(className, c);
 
     control.push(...handleSequence(instanceMethods));
     control.push(...handleSequence(staticMethods));
@@ -199,52 +208,44 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Block: (
     command: Block,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     // Save current environment before extending.
-    control.push(instr.envInstr(context.environment.current, command));
+    control.push(instr.envInstr(environment.current, command));
     control.push(...handleSequence(command.blockStatements));
 
-    context.environment.extendEnv(context.environment.current, "block");
+    environment.extendEnv(environment.current, BLOCK_FRAME);
   },
 
   ConstructorDeclaration: (
     command: ConstructorDeclaration,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     // Use constructor descriptor as key.
     const conDescriptor: string = getDescriptor(command);
-    const conClosure = {
-      kind: "Closure",
-      mtdOrCon: command,
-      env: context.environment.current,
-    } as Closure;
-    context.environment.defineMtdOrCon(conDescriptor, conClosure);
+    const conClosure = struct.closureStruct(command, environment.current);
+    environment.defineMtdOrCon(conDescriptor, conClosure);
   },
 
   MethodDeclaration: (
     command: MethodDeclaration,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     // Use method descriptor as key.
     const mtdDescriptor: string = getDescriptor(command);
-    const mtdClosure = {
-      kind: "Closure",
-      mtdOrCon: command,
-      env: context.environment.current,
-    } as Closure;
-    context.environment.defineMtdOrCon(mtdDescriptor, mtdClosure);
+    const mtdClosure = struct.closureStruct(command, environment.current);
+    environment.defineMtdOrCon(mtdDescriptor, mtdClosure);
   },
 
   FieldDeclaration: (
     command: FieldDeclaration,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -255,11 +256,11 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const declaration: VariableDeclarator = command.variableDeclaratorList[0];
     const id: Identifier = declaration.variableDeclaratorId;
     // Fields are always initialized to default value if initializer is absent.
-    const init: Expression = declaration?.variableInitializer ||
+    const init = (declaration?.variableInitializer ||
       defaultValues.get(type) ||
-      node.nullLitNode();
+      node.nullLitNode(command)) as Expression;
     
-    context.environment.declareVariable(id, type);
+    environment.declareVariable(id, type);
 
     control.push(instr.popInstr(command));
     control.push(instr.assmtInstr(command));
@@ -269,7 +270,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   LocalVariableDeclarationStatement: (
     command: LocalVariableDeclarationStatement,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -279,20 +280,20 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // Break down LocalVariableDeclarationStatement with VariableInitializer into
     // LocalVariableDeclarationStatement without VariableInitializer and Assignment.
-    const init: Expression | undefined = declaration?.variableInitializer;
+    const init: Expression | undefined = declaration?.variableInitializer as Expression;
     if (init) {
-      control.push(node.expStmtAssmtNode(id, init));
-      control.push(node.localVarDeclNoInitNode(type, id));
+      control.push(node.expStmtAssmtNode(id, init, command));
+      control.push(node.localVarDeclNoInitNode(type, id, command));
       return;
     }
 
     // Evaluating LocalVariableDeclarationStatement just declares the variable.
-    context.environment.declareVariable(id, type);
+    environment.declareVariable(id, type);
   },
 
   ExpressionStatement: (
     command: ExpressionStatement,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -302,7 +303,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ReturnStatement: (
     command: ReturnStatement,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -312,45 +313,43 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Assignment: (
     command: Assignment,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     control.push(instr.assmtInstr(command));
     control.push(command.right);
-    control.push(instr.evalVarInstr(command.left.name, command));
+    control.push(instr.evalVarInstr((command.left as ExpressionName).name, command));
   },
   
   MethodInvocation: (
     command: MethodInvocation,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
-    // MethodInvocation Identifier always have two parts.
     const nameParts = command.identifier.split(".");
-    const qualifier = nameParts[0];
-    const identifier = nameParts[1];
+    const target = nameParts.splice(0, nameParts.length - 1).join(".");
+    const identifier = nameParts[nameParts.length - 1];
     
     // Arity may be incremented by 1 if the resolved method to be invoked is an instance method.
     control.push(instr.invInstr(command.argumentList.length, command));
     control.push(...handleSequence(command.argumentList));
-    // Method overriding resolution may push qualifier if resolved method is an instance method.
     control.push(instr.resOverrideInstr(command));
-    // Method overloading resolution may push qualifier if resolved method is an instance method.
+    control.push(node.exprNameNode(target, command));
     control.push(instr.resOverloadInstr(identifier, command.argumentList.length, command));
     // TODO: only Integer and ExpressionName are allowed as args
     control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
-    control.push(instr.resTypeInstr(node.exprNameNode(qualifier), command));
+    control.push(instr.resTypeInstr(node.exprNameNode(target, command), command));
   },
 
   ClassInstanceCreationExpression: (
     command: ClassInstanceCreationExpression,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
-    const c: Class = context.environment.getClass(command.identifier);
+    const c: Class = environment.getClass(command.identifier);
 
     control.push(instr.invInstr(command.argumentList.length + 1, command));
     control.push(...handleSequence(command.argumentList));
@@ -362,22 +361,22 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ExplicitConstructorInvocation: (
     command: ExplicitConstructorInvocation,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     control.push(instr.popInstr(command));
     control.push(instr.invInstr(command.argumentList.length + 1, command));
     control.push(...handleSequence(command.argumentList));
-    control.push(node.exprNameNode(command.thisOrSuper));
+    control.push(node.exprNameNode(command.thisOrSuper, command));
     control.push(instr.resConOverloadInstr(command.argumentList.length, command));
     control.push(...handleSequence(command.argumentList.map(a => instr.resTypeInstr(a, command))));
-    control.push(instr.resTypeInstr(node.exprNameNode(command.thisOrSuper), command));
+    control.push(instr.resTypeInstr(node.exprNameNode(command.thisOrSuper, command), command));
   },
 
   Literal: (
     command: Literal,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -386,7 +385,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Void: (
     command: Void,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -395,7 +394,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ExpressionName: (
     command: ExpressionName,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -405,7 +404,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   BinaryExpression: (
     command: BinaryExpression,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash
   ) => {
@@ -416,7 +415,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.POP]: (
     command: Instr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -425,20 +424,21 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   
   [InstrType.ASSIGNMENT]: (
     command: AssmtInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     // value is popped before variable becuase value is evaluated later than variable.
     const value = stash.pop()! as Literal | Object;
     const variable = stash.pop()! as Variable;
-    variable.value = value;
+    // Variable can store variable now.
+    variable.value.kind === StructType.VARIABLE ? variable.value.value = value : variable.value = value;
     stash.push(value);
   },
 
   [InstrType.BINARY_OP]: (
     command: BinOpInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -449,12 +449,12 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.INVOCATION]: (
     command: InvInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
     ) => {
     // Save current environment to be restored after method returns.
-    control.push(instr.envInstr(context.environment.current, command.srcNode));
+    control.push(instr.envInstr(environment.current, command.srcNode));
 
     // Mark end of method in case method returns halfway.
     control.push(instr.markerInstr(command.srcNode));
@@ -471,26 +471,19 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       ? cloneDeep(closure.mtdOrCon.methodHeader.formalParameterList)
       : cloneDeep(closure.mtdOrCon.constructorDeclarator.formalParameterList);
 
-    // Extend method/constructor's environment.
-    const isInstanceMtdOrCon = args.length == params.length + 1;
+    // Extend env from global frame.
     const mtdOrConDescriptor = getDescriptor(closure.mtdOrCon);
+    environment.extendEnv(environment.global, mtdOrConDescriptor);
+
+    const isInstanceMtdOrCon = args.length == params.length + 1;
     if (isInstanceMtdOrCon) {
-      // Throw NullPointerException if method to be invoked is instance method/constructor
-      // but instance is null.
-      if (args[0].kind === "Literal" && args[0].literalType.kind === "NullLiteral") {
-        throw new errors.NullPointerException();
-      }
-
-      // Extend env from obj frame.
-      context.environment.extendEnv((args[0] as Object).frame, mtdOrConDescriptor);
-
       // Append implicit FormalParameter and arg super if needed.
-      if (closure.env.parent.name !== "global") {
+      if (closure.env.parent.name !== GLOBAL_FRAME) {
         params.unshift(
           {
             kind: "FormalParameter",
             unannType: closure.env.parent.name,
-            identifier: "super",
+            identifier: SUPER_KEYWORD,
           },
         );
         args.unshift(args[0]);
@@ -501,17 +494,14 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         {
           kind: "FormalParameter",
           unannType: closure.env.name,
-          identifier: "this",
+          identifier: THIS_KEYWORD,
         },
       );
-    } else {
-      // Extend env from class frame.
-      context.environment.extendEnv(closure.env, mtdOrConDescriptor);
     }
 
     // Bind arguments to corresponding FormalParameters.
     for (let i = 0; i < args.length; i++) {
-      context.environment.defineVariable(params[i].identifier, params[i].unannType, args[i]);
+      environment.defineVariable(params[i].identifier, params[i].unannType, args[i]);
     }
 
     // Push method/constructor body.
@@ -523,16 +513,16 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.ENV]: (
     command: EnvInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash, 
   ) => {
-    context.environment.restoreEnv(command.env);
+    environment.restoreEnv(command.env);
   },
 
   [InstrType.RESET]: (
     command: ResetInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash, 
   ) => {
@@ -545,7 +535,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.EVAL_VAR]: (
     command: EvalVarInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -557,69 +547,139 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       control.push(instr.evalVarInstr(name, command.srcNode));
       return;
     }
-    stash.push(context.environment.getVariable(command.symbol));
+    stash.push(environment.getVariable(command.symbol));
   },
 
   [InstrType.RES]: (
     command: ResInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
-    // TODO throw NullPointerException if instance field but instance is null
     const varOrClass = stash.pop()! as Variable | Class;
-    console.assert(varOrClass.kind !== "Variable" || varOrClass.value.kind === "Object");
-    const v = varOrClass.kind === "Variable"
-      ? (varOrClass.value as Object).frame.getVariable(command.name)
-      : /*varOrClass.kind === "Class" ?*/ varOrClass.frame.getVariable(command.name);
-    stash.push(v);
+    
+    // E.g., test.x when test is a variable.
+    if (varOrClass.kind === StructType.VARIABLE) {
+      // Name resolution is based on the target type, not target obj.
+      let classOfField = environment.getClass(varOrClass.type);
+
+      // Check recursively if static/instance field.
+      let staticField = classOfField.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name);
+      let instanceField = classOfField.instanceFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name);
+      while (!staticField && !instanceField && classOfField.superclass) {
+        classOfField = classOfField.superclass;
+        staticField = classOfField.staticFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name);
+        instanceField = classOfField.instanceFields.find(f => f.variableDeclaratorList[0].variableDeclaratorId === command.name);
+      }
+
+      // E.g., test.x where x is a static field.
+      if (staticField) {
+        const variable = classOfField.frame.getVariable(command.name);
+        stash.push(variable);
+        return;
+      }
+
+      // E.g., test.x where x is an instance field.
+      if (instanceField) {
+        // Throw NullPointerException if instance field but target is null.
+        if (isNull(varOrClass.value as Literal | Object)) {
+          throw new errors.NullPointerException();
+        }
+
+        const obj = varOrClass.value as Object;
+        let objFrameClass = obj.class;
+        let objFrame = obj.frame
+        // Name resolution is based on the target type, not target obj.
+        while (objFrameClass.frame.name !== classOfField.frame.name && objFrameClass.superclass) {
+          // Object constitutes chain of class/superclass frames,
+          // but each frame does not hv its corresponding class,
+          // so lookup needs to be done from its class wrt class hierarchy.
+          // TODO maybe encode class in frame name?
+          objFrameClass = objFrameClass.superclass;
+          objFrame = objFrame.parent;
+        }
+        const variable = objFrame.getVariable(command.name)
+        stash.push(variable);
+        return;
+      }
+
+      throw new errors.UndeclaredVariableError(command.name)
+    }
+
+    // E.g., Test.x where Test is a class.
+    const variable = varOrClass.frame.getVariable(command.name);
+    stash.push(variable);
   },
 
   [InstrType.DEREF]: (
     command: DerefInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
-    const variable = stash.pop()! as Variable;
-    stash.push(variable.value as Literal | Object);
+    const varOrClass = stash.pop()! as Variable | Class;
+    const value = varOrClass.kind === StructType.CLASS
+      ? varOrClass
+      // Variable can store variable now.
+      : varOrClass.value.kind === StructType.VARIABLE
+      ? varOrClass.value.value as Literal | Object
+      : varOrClass.value as Literal | Object;
+    stash.push(value);
   },
 
   [InstrType.NEW]: (
     command: NewInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
     // To be restore after extending curr env to declare instance fields in obj frame.
-    const currEnv = context.environment.current;
-    context.environment.extendEnv(command.c.frame, "object");
+    const currEnv = environment.current;
 
-    // Declare declared and inherited instance fields.
-    let currClass: Class | undefined = command.c;
-    while (currClass) {
-      currClass.instanceFields.forEach(i => {
+    // Get class hierarchy.
+    const objClass = command.c;
+    let currClass: Class = objClass;
+    const classHierachy: Class[] = [currClass];
+    while (currClass.superclass) {
+      classHierachy.unshift(currClass.superclass);
+      currClass = currClass.superclass;
+    };
+    
+    // Create obj with both declared and inherited fields.
+    let obj: Object = environment.createObj(objClass);
+    classHierachy.forEach((c, i) => {
+      // A frame is alr created in createObj() and does not extend from any env, 
+      // only subsequent frames need to extend from prev frame.
+      if (i > 0) environment.extendEnv(environment.current, NO_FRAME_NAME);
+
+      // Declare instance fields.
+      c.instanceFields.forEach(i => {
         const id = i.variableDeclaratorList[0].variableDeclaratorId;
         const type = i.fieldType;
-        context.environment.declareVariable(id, type);
+        environment.declareVariable(id, type);
       });
-      currClass = currClass.superclass;
-    }
+      
+      // Set alias to static fields.
+      c.staticFields.forEach(i => {
+        const id = i.variableDeclaratorList[0].variableDeclaratorId;
+        const type = i.fieldType;
+        const variable = c.frame.getVariable(id);
+        environment.defineVariable(id, type, variable);
+      });
+    });
 
+    // Set obj to correct frame.
+    obj!.frame = environment.current;
     // Push obj on stash.
-    const obj = {
-      kind: "Object",
-      frame: context.environment.current,
-    } as Object;
-    stash.push(obj);
+    stash.push(obj!);
 
     // Restore env.
-    context.environment.restoreEnv(currEnv);
+    environment.restoreEnv(currEnv);
   },
 
   [InstrType.RES_TYPE]: (
     command: ResTypeInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -636,30 +696,66 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         type = "String[]";
       }
     } else if (value.kind === "ExpressionName") {
-      const v = context.environment.getName(value.name);
-      if (v.kind === "Variable") {
-        if (v.value.kind === "Literal") {
-          type = "int";
-        } else if (v.value.kind === "Object") {
-          // Type of object is name of parent frame
-          type = v.type;
+      if (isQualified(value.name)) {
+        const nameParts = value.name.split(".");
+        for (const namePart of nameParts.slice(1)) {
+          control.push(instr.resTypeContInstr(namePart, command.srcNode));
         }
-      } else /*if (v.kind === "Class")*/ {
-        type = v.frame.name;
+        control.push(instr.resTypeInstr(node.exprNameNode(nameParts[0], command.srcNode), command.srcNode));
+        return;
       }
-    } else if (value.kind === "Class") {
+      const v = environment.getName(value.name);
+      type = v.kind === StructType.VARIABLE ? v.type : v.frame.name;
+    } else if (value.kind === StructType.CLASS) {
       type = value.frame.name;
     }
     
-    stash.push({
-      kind: "Type",
-      type: type!,
-    } as Type);
+    stash.push(struct.typeStruct(type!));
+  },
+
+  [InstrType.RES_TYPE_CONT]: (
+    command: ResTypeContInstr,
+    environment: Environment,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const typeToSearchIn = stash.pop()! as Type;
+
+    let classToSearchIn: Class | undefined = environment.getClass(typeToSearchIn.type);
+    let type;
+    do {
+      // Check if instance field.
+      for (const f of classToSearchIn.instanceFields) {
+        if (command.name === f.variableDeclaratorList[0].variableDeclaratorId) {
+          type = f.fieldType;
+          break;
+        }
+      }
+      if (type) break;
+
+      // Check if static field.
+      for (const f of classToSearchIn.staticFields) {
+        if (command.name === f.variableDeclaratorList[0].variableDeclaratorId) {
+          type = f.fieldType;
+          break;
+        }
+      }
+      if (type) break;
+
+      // Check if superclass instance/static field.
+      classToSearchIn = classToSearchIn.superclass;
+    } while (classToSearchIn)
+
+    if (!type) {
+      throw new errors.UndeclaredVariableError(command.name);
+    }
+    
+    stash.push(struct.typeStruct(type));
   },
 
   [InstrType.RES_OVERLOAD]: (
     command: ResOverloadInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -670,12 +766,13 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     }
     argTypes.reverse();
 
-    // Retrieve class to search in for method overloading resolution.
-    const classType: Type = stash.pop()! as Type;
-    const classToSearchIn: Class = context.environment.getClass(classType.type);
+    // Retrieve target type for method overloading resolution.
+    const targetType: Type = stash.pop()! as Type;
+    const classToSearchIn: Class = environment.getClass(targetType.type);
 
     // Method overloading resolution.
-    const closure: Closure = classToSearchIn.frame.resOverload(command.name, argTypes);
+    const classStore: EnvNode = environment.global;
+    const closure: Closure = resOverload(classToSearchIn, command.name, argTypes, classStore);
     stash.push(closure);
 
     // Post-processing required if overload resolved method is instance method.
@@ -686,45 +783,44 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         n++;
       }
       (control.peekN(n)! as ResOverloadInstr).arity++;
-      
-      // Push qualifier to be used in method overriding resolution.
-      const qualifier = (command.srcNode as MethodInvocation).identifier.split(".")[0];
-      control.push(node.exprNameNode(qualifier));
     };
   },
 
   [InstrType.RES_OVERRIDE]: (
     command: ResOverrideInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
-    const objOrClosure = stash.pop()! as Object | Closure;
-    const isStaticMtd = objOrClosure.kind === "Closure";
-    if (isStaticMtd) {
+    const target = stash.pop()!;
+    const overloadResolvedClosure = stash.pop()! as Closure;
+
+    if (isStatic(overloadResolvedClosure.mtdOrCon as MethodDeclaration)) {
       // No method overriding resolution is required if resolved method is a static method.
-      stash.push(objOrClosure);
+      stash.push(overloadResolvedClosure);
       return;
     }
 
-    const obj = objOrClosure;
-    const overloadResolvedClosure = stash.pop()! as Closure;
-    
+    // Throw NullPointerException if method to be invoked is instance method
+    // but instance is null.
+    if (isNull(target)) {
+      throw new errors.NullPointerException();
+    }
+
     // Retrieve class to search in for method overriding resolution.
-    const classToSearchIn: Class = context.environment.getClass(obj.frame.parent.name);
+    const classToSearchIn: Class = environment.getClass((target as Object).class.frame.name);
 
     // Method overriding resolution.
-    const overrideResolvedClosure: Closure = classToSearchIn.frame.resOverride(overloadResolvedClosure);
+    const overrideResolvedClosure: Closure = resOverride(classToSearchIn, overloadResolvedClosure);
     stash.push(overrideResolvedClosure);
-   
-    // Push qualifier as implicit FormalParameter this.
-    const qualifier = (command.srcNode as MethodInvocation).identifier.split(".")[0];
-    control.push(node.exprNameNode(qualifier));
+
+    // Push target as implicit FormalParameter this.
+    stash.push(target);
   },
 
   [InstrType.RES_CON_OVERLOAD]: (
     command: ResConOverloadInstr,
-    context: Context,
+    environment: Environment,
     control: Control,
     stash: Stash,
   ) => {
@@ -737,10 +833,10 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // Retrieve class to search in for method resolution.
     const className: Identifier = (stash.pop()! as Type).type;
-    const classToSearchIn: Class = context.environment.getClass(className);
+    const classToSearchIn: Class = environment.getClass(className);
 
     // Constructor overloading resolution.
-    const closure: Closure = classToSearchIn.frame.resConOverload(className, argTypes);
+    const closure: Closure = resConOverload(classToSearchIn, className, argTypes);
     stash.push(closure);
 
     // No post-processing required for constructor.

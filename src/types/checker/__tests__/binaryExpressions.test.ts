@@ -1,7 +1,7 @@
 import { BadOperandTypesError } from "../../errors";
 import { check } from "..";
 import { parse } from "../../../ast/parser";
-import { Type } from "../../types";
+import { Type } from "../../types/type";
 
 const createProgram = (statement: string) => `
   public class Main {
@@ -42,11 +42,11 @@ const testcases: {
   },
   {
     input: 'String test = 1 - "A";',
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
     input: 'String test = "A" - 1;',
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [new BadOperandTypesError()] },
   },
   {
     input: 'String test = "A" - "A";',
@@ -100,6 +100,22 @@ const testcases: {
     input: 'String test = 1 + (1 + "A");',
     result: { type: null, errors: [] },
   },
+  {
+    input: "double test = 0.1 + 0.1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double test = 0.1 + 0.1F;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: 'String test = "string" + 0.1;',
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int test = 1 + true;",
+    result: { type: null, errors: [new BadOperandTypesError()] },
+  },
 ];
 
 describe("Type Checker", () => {
@@ -116,7 +132,7 @@ describe("Type Checker", () => {
       else expect(result.currentType).toBeInstanceOf(testcase.result.type);
       expect(result.errors.length).toBe(testcase.result.errors.length);
       testcase.result.errors.forEach((error, index) => {
-        expect(result.errors[index].name).toBe(error.name);
+        expect(result.errors[index].message).toBe(error.message);
       });
     });
   });
