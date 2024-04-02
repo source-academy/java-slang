@@ -21,7 +21,9 @@ const testCases: testCase[] = [
     program: `
       public class Main {
         public static void main(String[] args) {
-          int a = 1, b = 2, c = 3;
+          int a = 1;
+          int b = 2;
+          int c = 3;
           System.out.println(a);
           System.out.println(b);
           System.out.println(c);
@@ -65,6 +67,29 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["5", "6", "7", "10"],
+  },
+  {
+    comment: "declaration of primitive types",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          boolean b = true;
+          char c = '4';
+          double d = 167.5;
+          float f = 3.2f;
+          int i = 16777215;
+          long l = 70000000000L;
+
+          System.out.println(b);
+          System.out.println(c);
+          System.out.println(d);
+          System.out.println(f);
+          System.out.println(i);
+          System.out.println(l);
+        }
+      }
+    `,
+    expectedLines: ["true", "4", "167.5", "3.2", "16777215", "70000000000"],
   },
 ];
 

@@ -2,6 +2,7 @@ import { UnannType } from "../ast/types/classes";
 import { ImportDeclaration } from "../ast/types/packages-and-modules";
 import { generateClassAccessFlags, generateFieldAccessFlags, generateMethodAccessFlags } from "./compiler-utils";
 import { InvalidMethodCallError, SymbolCannotBeResolvedError, SymbolNotFoundError, SymbolRedeclarationError } from "./error";
+import { libraries } from "./import/libs";
 
 export const typeMap = new Map([
   ['byte', 'B'],
@@ -85,63 +86,32 @@ export class SymbolTable {
     this.curIdx = 0;
     this.importedPackages = [];
     this.importedClassMap = new Map();
-    this.setup();
   }
 
   private setup() {
-    this.importedPackages.push("java/lang/");
-    this.insertClassInfo({
-      name: "java/lang/String",
-      accessFlags: generateClassAccessFlags(["public", "final"])
+    libraries.forEach(p => {
+      this.importedPackages.push(p.packageName + '/');
+      p.classes.forEach(c => {
+        this.insertClassInfo({
+          name: c.className,
+          accessFlags: generateClassAccessFlags(c.accessFlags),
+        });
+        c.fields.forEach(f => this.insertFieldInfo({
+          name: f.fieldName,
+          accessFlags: generateFieldAccessFlags(f.accessFlags),
+          parentClassName: c.className,
+          typeName: f.typeName,
+          typeDescriptor: this.generateFieldDescriptor(f.typeName)
+        }));
+        c.methods.forEach(m => this.insertMethodInfo({
+          name: m.methodName,
+          accessFlags: generateMethodAccessFlags(m.accessFlags),
+          parentClassName: c.className,
+          typeDescriptor: this.generateMethodDescriptor(m.argsTypeName, m.returnTypeName)
+        }));
+        this.returnToRoot();
+      });
     });
-    this.returnToRoot();
-    this.insertClassInfo({
-      name: "java/io/PrintStream",
-      accessFlags: generateClassAccessFlags(["public", "final"])
-    });
-    this.insertMethodInfo({
-      name: "println",
-      accessFlags: generateMethodAccessFlags(["public"]),
-      parentClassName: "java/io/PrintStream",
-      typeDescriptor: this.generateMethodDescriptor(["java/lang/String"], "void")
-    });
-    this.insertMethodInfo({
-      name: "println",
-      accessFlags: generateMethodAccessFlags(["public"]),
-      parentClassName: "java/io/PrintStream",
-      typeDescriptor: this.generateMethodDescriptor(["int"], "void")
-    });
-    this.insertMethodInfo({
-      name: "println",
-      accessFlags: generateMethodAccessFlags(["public"]),
-      parentClassName: "java/io/PrintStream",
-      typeDescriptor: this.generateMethodDescriptor(["long"], "void")
-    });
-    this.insertMethodInfo({
-      name: "println",
-      accessFlags: generateMethodAccessFlags(["public"]),
-      parentClassName: "java/io/PrintStream",
-      typeDescriptor: this.generateMethodDescriptor(["float"], "void")
-    });
-    this.insertMethodInfo({
-      name: "println",
-      accessFlags: generateMethodAccessFlags(["public"]),
-      parentClassName: "java/io/PrintStream",
-      typeDescriptor: this.generateMethodDescriptor(["double"], "void")
-    });
-    this.returnToRoot();
-    this.insertClassInfo({
-      name: "java/lang/System",
-      accessFlags: generateClassAccessFlags(["public", "final"])
-    });
-    this.insertFieldInfo({
-      name: "out",
-      accessFlags: generateFieldAccessFlags(["static"]),
-      parentClassName: "java/lang/System",
-      typeName: "java/io/PrintStream",
-      typeDescriptor: this.generateFieldDescriptor("java/io/PrintStream")
-    });
-    this.returnToRoot();
   }
 
   private getNewTable() {
@@ -155,6 +125,10 @@ export class SymbolTable {
   }
 
   handleImports(imports: Array<ImportDeclaration>) {
+    if (imports.length === 0) {
+      imports.push({ isStatic: false, identifier: "java.lang.*" });
+    }
+
     imports.forEach(i => {
       const id = i.identifier;
       if (id.endsWith('*')) {
@@ -164,6 +138,8 @@ export class SymbolTable {
         this.importedClassMap.set(typeName, id.replaceAll('.', '/'));
       }
     });
+
+    this.setup();
   }
 
   extend() {
@@ -382,11 +358,11 @@ export class SymbolTable {
 
     typeName = typeName.slice(0, last);
     return "[".repeat(dim) +
-      (typeMap.has(typeName) ? typeMap.get(typeName) : 'L' + this.queryClass(typeName).name + ';');
+      (typeMap.has(typeName) ? typeMap.get(typeName) : 'L' + (typeName.includes('/') ? typeName : this.queryClass(typeName).name) + ';');
   }
 
   generateMethodDescriptor(paramsType: Array<UnannType>, result: string) {
-    const paramsDescriptor = paramsType.map(t => this.generateFieldDescriptor(t)).join(",");
+    const paramsDescriptor = paramsType.map(t => this.generateFieldDescriptor(t)).join("");
     const resultDescriptor = this.generateFieldDescriptor(result);
 
     return '(' + paramsDescriptor + ')' + resultDescriptor;

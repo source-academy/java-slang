@@ -732,7 +732,6 @@ describe("extract ReturnStatement correctly", () => {
                     kind: "ReturnStatement",
                     exp: {
                       kind: "Void",
-                      location: expect.anything(),
                     },
                     location: expect.anything(),
                   },

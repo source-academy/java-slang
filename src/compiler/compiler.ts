@@ -135,7 +135,7 @@ export class Compiler {
     const accessFlags = generateFieldAccessFlags(fieldNode.fieldModifier);
     const type = fieldNode.fieldType;
     fieldNode.variableDeclaratorList.forEach(v => {
-      const fullType = type + v.dims;
+      const fullType = type + (v.dims ?? "");
       const typeDescriptor = this.symbolTable.generateFieldDescriptor(fullType);
       this.fields.push({
         accessFlags: accessFlags,

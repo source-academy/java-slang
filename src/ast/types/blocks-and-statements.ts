@@ -30,7 +30,7 @@ export type Statement =
   | ForStatement
   | EmptyStatement;
 
-export interface EmptyStatement {
+export interface EmptyStatement extends BaseNode {
   kind: "EmptyStatement";
 }
 
