@@ -207,14 +207,21 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       const primary = this.primary(newPrimaryCtx)
       const primaryRest = this.visit(lastSuffix)
       if (!primaryRest) return {} as Primary // Temporary
-      if (primary.kind === 'FieldAccess' && primaryRest.kind === 'MethodInvocation') {
-        // example.test() -> primary: example.test, primaryRest: ()
-        return {
-          ...primaryRest,
-          identifier: primary.identifier,
-          location: primary.location,
-          primary: primary.primary
-        } as Primary
+      if (primaryRest.kind === 'MethodInvocation') {
+        if (primary.kind === 'FieldAccess') {
+          return {
+            ...primaryRest,
+            identifier: primary.identifier,
+            location: primary.location,
+            primary: primary.primary
+          } as Primary
+        } else if (primary.kind === 'ExpressionName') {
+          return {
+            ...primaryRest,
+            identifier: primary.name,
+            location: primary.location
+          }
+        }
       }
       return { ...primaryRest, primary }
     }

@@ -85,6 +85,7 @@ export interface MethodInvocation extends BaseNode {
   kind: 'MethodInvocation'
   identifier: Identifier
   argumentList: ArgumentList
+  primary?: Primary
 }
 
 export type ArgumentList = Array<Expression>
