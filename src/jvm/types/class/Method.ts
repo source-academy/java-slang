@@ -638,4 +638,9 @@ export class Method {
   _getCode() {
     return this.code
   }
+
+  static _exit() {
+    Method.reflectMethodClass = null
+    Method.reflectConstructorClass = null
+  }
 }

@@ -361,6 +361,7 @@ function lookupMethod(
     !checkInterface,
     checkInterface
   )
+
   if (lookupResult.status === ResultType.ERROR) {
     return lookupResult
   }
@@ -500,7 +501,7 @@ export function runInvokespecial(thread: Thread): void {
   }
 
   if (methodRef.checkAbstract()) {
-    thread.throwNewException('java/lang/AbstractMethodError', '')
+    thread.throwNewException('java/lang/AbstractMethodError', methodRef.getName())
     return
   }
 

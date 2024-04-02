@@ -8,6 +8,7 @@ import { Method } from './types/class/Method'
 import { JvmObject } from './types/reference/Object'
 import { ImmediateResult, ResultType } from './types/Result'
 import { INACCESSIBLE } from './utils'
+import { Field } from './types/class/Field'
 
 export default class Thread {
   private static threadIdCounter = 0
@@ -106,6 +107,13 @@ export default class Thread {
 
       this.invokeStackFrame(
         new InternalStackFrame(this.threadClass, exitMethod, 0, [this.javaObject], () => {
+          // Reset static fields
+          // Classes are cached and not re-imported
+          // We need to reset so that the next run is clean
+          Field._exit()
+          Method._exit()
+          JvmObject._exit()
+
           monitor.notifyAll()
           monitor.exit(this)
           this.setStatus(ThreadStatus.TERMINATED)

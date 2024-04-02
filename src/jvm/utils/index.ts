@@ -306,7 +306,11 @@ export function string2arraybuffer(str: string) {
 export const logger: {
   warnings: string[]
   warn: (msg: string) => void
+  logs: string[]
+  log: (msg: string) => void
 } = {
   warnings: [],
-  warn: (msg: string) => logger.warnings.push(msg)
+  warn: (msg: string) => logger.warnings.push(msg),
+  log: (msg: string) => logger.logs.push(msg),
+  logs: []
 }

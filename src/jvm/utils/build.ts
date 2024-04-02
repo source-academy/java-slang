@@ -10,7 +10,7 @@ import * as fs from 'node:fs'
 
 const CLASSFILE_PATH = process.argv[2] ?? ''
 const OUTDIR = 'dist/jvm/utils'
-const include = ['java', 'sun/misc', 'modules']
+const include = ['java', 'sun', 'modules', 'jdk']
 
 function cf2b64(path: string): string {
   const buffer = fs.readFileSync(path, null)

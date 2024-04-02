@@ -157,6 +157,10 @@ export class JvmObject {
   hashCode(): number {
     return this.id
   }
+
+  static _exit() {
+    JvmObject.maxId = 0
+  }
 }
 
 export enum JavaType {
