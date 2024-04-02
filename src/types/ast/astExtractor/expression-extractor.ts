@@ -205,9 +205,6 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   primary(ctx: PrimaryCtx): Primary {
-    console.log(ctx)
-    // Primary will always have a prefix. 
-
     let primary = this.visit(ctx.primaryPrefix);
     if (ctx.primarySuffix) {
       const lastSuffix = ctx.primarySuffix[ctx.primarySuffix.length - 1];
@@ -313,10 +310,8 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
-    console.log(ctx);
     let fqn = this.visit(ctx.fqnOrRefTypePartFirst);
     if (ctx.fqnOrRefTypePartRest) {
-      console.log("Rest", ctx.fqnOrRefTypePartRest);
       for (const r of ctx.fqnOrRefTypePartRest) {
         fqn += "." + this.visit(r);
       }

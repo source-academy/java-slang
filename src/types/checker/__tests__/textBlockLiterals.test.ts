@@ -1,5 +1,5 @@
 import { check } from "..";
-import { parse } from "../../../ast/parser";
+import { parse } from "../../ast";
 import { Type } from "../../types/type";
 
 const createProgram = (statement: string) => `
