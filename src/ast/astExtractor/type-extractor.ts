@@ -1,6 +1,7 @@
 import {
   BaseJavaCstVisitorWithDefaults,
   DimsCtx,
+  FloatingPointTypeCtx,
   IntegralTypeCtx,
   NumericTypeCtx,
   UnannClassOrInterfaceTypeCtx,
@@ -9,9 +10,8 @@ import {
   UnannPrimitiveTypeWithOptionalDimsSuffixCtx,
   UnannReferenceTypeCtx,
   UnannTypeCstNode,
-  UnannTypeCtx
+  UnannTypeCtx,
 } from "java-parser";
-
 import { UnannType } from "../types/classes";
 
 export class TypeExtractor extends BaseJavaCstVisitorWithDefaults {
@@ -22,12 +22,14 @@ export class TypeExtractor extends BaseJavaCstVisitorWithDefaults {
   unannType(ctx: UnannTypeCtx) {
     if (ctx.unannPrimitiveTypeWithOptionalDimsSuffix) {
       return this.visit(ctx.unannPrimitiveTypeWithOptionalDimsSuffix);
-    } else /* if (ctx.unannReferenceType) */ {
+    } /* if (ctx.unannReferenceType) */ else {
       return this.visit(ctx.unannReferenceType!);
     }
   }
 
-  unannPrimitiveTypeWithOptionalDimsSuffix(ctx: UnannPrimitiveTypeWithOptionalDimsSuffixCtx) {
+  unannPrimitiveTypeWithOptionalDimsSuffix(
+    ctx: UnannPrimitiveTypeWithOptionalDimsSuffixCtx
+  ) {
     let type = this.visit(ctx.unannPrimitiveType);
     ctx.dims && (type += this.visit(ctx.dims));
     return type;
@@ -36,7 +38,7 @@ export class TypeExtractor extends BaseJavaCstVisitorWithDefaults {
   unannPrimitiveType(ctx: UnannPrimitiveTypeCtx) {
     if (ctx.numericType) {
       return this.visit(ctx.numericType);
-    } else /* if (ctx.Boolean) */ {
+    } /* if (ctx.Boolean) */ else {
       return "boolean" as UnannType;
     }
   }
@@ -44,6 +46,8 @@ export class TypeExtractor extends BaseJavaCstVisitorWithDefaults {
   numericType(ctx: NumericTypeCtx) {
     if (ctx.integralType) {
       return this.visit(ctx.integralType);
+    } else if (ctx.floatingPointType) {
+      return this.visit(ctx.floatingPointType);
     }
   }
 
@@ -56,8 +60,16 @@ export class TypeExtractor extends BaseJavaCstVisitorWithDefaults {
       return "int";
     } else if (ctx.Long) {
       return "long";
-    } else /* if (ctx.Char) */ {
+    } /* if (ctx.Char) */ else {
       return "char";
+    }
+  }
+
+  floatingPointType(ctx: FloatingPointTypeCtx) {
+    if (ctx.Double) {
+      return "double";
+    } /* if (ctx.Float) */ else {
+      return "float";
     }
   }
 

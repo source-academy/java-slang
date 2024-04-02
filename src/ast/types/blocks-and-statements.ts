@@ -6,14 +6,14 @@ export interface Block extends BaseNode {
   blockStatements: Array<BlockStatement>;
 }
 export type BlockStatement =
-  LocalVariableDeclarationStatement
+  | LocalVariableDeclarationStatement
   | Statement
   | ExplicitConstructorInvocation;
 
 export interface ExplicitConstructorInvocation extends BaseNode {
   kind: "ExplicitConstructorInvocation";
   thisOrSuper: "this" | "super";
-  argumentList: ArgumentList
+  argumentList: ArgumentList;
 }
 
 export interface LocalVariableDeclarationStatement extends BaseNode {
@@ -22,13 +22,23 @@ export interface LocalVariableDeclarationStatement extends BaseNode {
   variableDeclaratorList: Array<VariableDeclarator>;
 }
 
-export type Statement = StatementWithoutTrailingSubstatement | IfStatement | WhileStatement | ForStatement;
+export type Statement =
+  | Block
+  | StatementWithoutTrailingSubstatement
+  | IfStatement
+  | WhileStatement
+  | ForStatement
+  | EmptyStatement;
+
+export interface EmptyStatement {
+  kind: "EmptyStatement";
+}
 
 export interface IfStatement extends BaseNode {
   kind: "IfStatement";
   condition: Expression;
   consequent: Statement;
-  alternate: Statement;
+  alternate?: Statement;
 }
 
 export interface WhileStatement extends BaseNode {
@@ -47,7 +57,7 @@ export type ForStatement = BasicForStatement | EnhancedForStatement;
 export interface BasicForStatement extends BaseNode {
   kind: "BasicForStatement";
   forInit: Array<ExpressionStatement> | LocalVariableDeclarationStatement;
-  condition: Expression;
+  condition?: Expression;
   forUpdate: Array<ExpressionStatement>;
   body: Statement;
 }
@@ -56,11 +66,17 @@ export interface EnhancedForStatement extends BaseNode {
   kind: "EnhancedForStatement";
 }
 
-export type StatementWithoutTrailingSubstatement = Block | ExpressionStatement | DoStatement | ReturnStatement | BreakStatement | ContinueStatement;
+export type StatementWithoutTrailingSubstatement =
+  | Block
+  | ExpressionStatement
+  | DoStatement
+  | ReturnStatement
+  | BreakStatement
+  | ContinueStatement;
 
 export interface ExpressionStatement extends BaseNode {
   kind: "ExpressionStatement";
-  stmtExp: StatementExpression
+  stmtExp: StatementExpression;
 }
 
 export type StatementExpression = MethodInvocation | Assignment;
@@ -98,14 +114,19 @@ export interface ReturnStatement extends BaseNode {
   exp: Expression;
 }
 
-export type Expression = Primary | BinaryExpression | UnaryExpression | Void;
+export type Expression =
+  | Primary
+  | BinaryExpression
+  | UnaryExpression
+  | TernaryExpression
+  | Void;
 
 export interface Void extends BaseNode {
   kind: "Void";
 }
 
 export type Primary =
-  Literal
+  | Literal
   | ExpressionName
   | Assignment
   | MethodInvocation
@@ -113,7 +134,7 @@ export type Primary =
   | ClassInstanceCreationExpression;
 
 export interface ClassInstanceCreationExpression extends BaseNode {
-  kind: "ClassInstanceCreationExpression",
+  kind: "ClassInstanceCreationExpression";
   identifier: Identifier;
   argumentList: ArgumentList;
 }
@@ -121,13 +142,13 @@ export interface ClassInstanceCreationExpression extends BaseNode {
 export interface Literal extends BaseNode {
   kind: "Literal";
   literalType:
-  | IntegerLiteral
-  | FloatingPointLiteral
-  | BooleanLiteral
-  | CharacterLiteral
-  | TextBlockLiteral
-  | StringLiteral
-  | NullLiteral;
+    | IntegerLiteral
+    | FloatingPointLiteral
+    | BooleanLiteral
+    | CharacterLiteral
+    | TextBlockLiteral
+    | StringLiteral
+    | NullLiteral;
 }
 
 export type IntegerLiteral =
@@ -186,7 +207,26 @@ export interface NullLiteral {
   value: "null";
 }
 
-export type BinaryOperator = "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "<<" | ">>" | ">>>" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||";
+export type BinaryOperator =
+  | "+"
+  | "-"
+  | "*"
+  | "/"
+  | "%"
+  | "|"
+  | "&"
+  | "^"
+  | "<<"
+  | ">>"
+  | ">>>"
+  | "=="
+  | "!="
+  | "<"
+  | "<="
+  | ">"
+  | ">="
+  | "&&"
+  | "||";
 export interface BinaryExpression extends BaseNode {
   kind: "BinaryExpression";
   operator: BinaryOperator;
@@ -202,7 +242,19 @@ export interface ExpressionName extends BaseNode {
 export interface Assignment extends BaseNode {
   kind: "Assignment";
   left: LeftHandSide;
-  operator: "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "|=" | "&=" | "^=" | "<<=" | ">>=" | ">>>=";
+  operator:
+    | "="
+    | "+="
+    | "-="
+    | "*="
+    | "/="
+    | "%="
+    | "|="
+    | "&="
+    | "^="
+    | "<<="
+    | ">>="
+    | ">>>=";
   right: Expression;
 }
 
@@ -229,4 +281,11 @@ export interface BreakStatement extends BaseNode {
 export interface ContinueStatement extends BaseNode {
   kind: "ContinueStatement";
   identifier?: Identifier;
+}
+
+export interface TernaryExpression extends BaseNode {
+  kind: "TernaryExpression";
+  condition: Expression;
+  consequent: Expression;
+  alternate: Expression;
 }

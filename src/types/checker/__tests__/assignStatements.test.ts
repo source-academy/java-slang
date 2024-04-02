@@ -17,35 +17,22 @@ const testcases: {
   only?: boolean;
 }[] = [
   {
-    input: "int test = 0;",
+    input: `int test = 0;`,
     result: { type: null, errors: [] },
   },
   {
-    input: 'int test = "A";',
-    result: { type: null, errors: [new IncompatibleTypesError()] },
-  },
-  {
-    input: "String test = 0;",
-    result: { type: null, errors: [new IncompatibleTypesError()] },
-  },
-  {
-    input: 'String test = "A";',
+    input: `
+      int test = 0;
+      test = 1;
+    `,
     result: { type: null, errors: [] },
   },
   {
-    input: "int test1 = 0, test2 = 0;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: 'int test1 = 0, test2 = 0, test3 = "string";',
+    input: `
+      int test = 0;
+      test = "A";
+    `,
     result: { type: null, errors: [new IncompatibleTypesError()] },
-  },
-  {
-    input: 'int test1 = "string", test2 = 0, test3 = "string";',
-    result: {
-      type: null,
-      errors: [new IncompatibleTypesError(), new IncompatibleTypesError()],
-    },
   },
 ];
 
@@ -53,7 +40,7 @@ describe("Type Checker", () => {
   testcases.map((testcase) => {
     let it = test;
     if (testcase.only) it = test.only;
-    it(`Checking local variable declaration for ${testcase.input}`, () => {
+    it(`Checking assign statements for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");

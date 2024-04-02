@@ -16,189 +16,207 @@ const testcases: {
   only?: boolean;
 }[] = [
   {
-    input: "int decimal = 0;",
+    input: "double decimaldouble = 1.;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int decimal = 10;",
+    input: "double decimaldouble = 1.1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int decimal = 11;",
+    input: "double decimaldouble = 1.e1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int decimal = 1_0;",
+    input: "double decimaldouble = 1.E1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int decimal = 1__0;",
+    input: "double decimaldouble = 1.e+1;",
     result: { type: null, errors: [] },
   },
-  // TODO: For the following program, ast extractor returns undefined for variable initializer during the parsing.
+  {
+    input: "double decimaldouble = 1.E+1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = 1.e-1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = 1.E-1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = 1.d;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = 1.D;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float decimalfloat = 1.f;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float decimalfloat = 1.F;",
+    result: { type: null, errors: [] },
+  },
+  // TODO: For the following program, java-parser throws an error during the parsing.
   // {
-  //   input: "int decimal = _1;",
-  //   result: { type: null, errors: [new IllegalUnderscoreError()] },
+  //   input: "double decimaldouble = .;",
+  //   result: { type: null, errors: [new Error()] },
+  // },
+  {
+    input: "double decimaldouble = .1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1e1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1E1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1e+1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1E+1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1e-1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1E-1;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1d;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "double decimaldouble = .1D;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float decimalfloat = .1f;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "float decimalfloat = .1F;",
+    result: { type: null, errors: [] },
+  },
+  // TODO: For the following program, java-parser throws an error during the parsing.
+  // {
+  //   input: "double hexdouble = 0x1.;",
+  //   result: { type: null, errors: [new Error()] },
   // },
   // TODO: For the following program, java-parser throws an error during the parsing.
   // {
-  //   input: "int decimal = 1_;",
-  //   result: { type: null, errors: [new IllegalUnderscoreError()] },
+  //   input: "double hexdouble = 0x1.1;",
+  //   result: { type: null, errors: [] },
   // },
   {
-    input: "long decimal = 0L;",
+    input: "double hexdouble = 0x1.p1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "long decimal = 1_0L;",
+    input: "double hexdouble = 0x1.P1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0x0;",
+    input: "double hexdouble = 0x1.p+1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0x10;",
+    input: "double hexdouble = 0x1.P+1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0x11;",
+    input: "double hexdouble = 0x1.p-1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0x1_0;",
+    input: "double hexdouble = 0x1.P-1;",
+    result: { type: null, errors: [] },
+  },
+
+  {
+    input: "double hexdouble = 0x1.p1d;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0x1__0;",
+    input: "double hexdouble = 0x1.p1D;",
     result: { type: null, errors: [] },
   },
   {
-    input: "long hex = 0x0L;",
+    input: "float hexfloat = 0x1.p1f;",
     result: { type: null, errors: [] },
   },
   {
-    input: "long hex = 0x1_0L;",
+    input: "float hexfloat = 0x1.p1F;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0X0;",
+    input: "double hexdouble = 0x.1p1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0X10;",
+    input: "double hexdouble = 0x.1P1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0X11;",
+    input: "double hexdouble = 0x.1p+1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0X1_0;",
+    input: "double hexdouble = 0x.1P+1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int hex = 0X1__0;",
+    input: "double hexdouble = 0x.1p-1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "long hex = 0X0L;",
+    input: "double hexdouble = 0x.1P-1;",
     result: { type: null, errors: [] },
   },
   {
-    input: "long hex = 0X1_0L;",
+    input: "double hexdouble = 0x.1p1d;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int octal = 00;",
+    input: "double hexdouble = 0x.1p1D;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int octal = 010;",
+    input: "float hexfloat = 0x.1p1f;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int octal = 011;",
+    input: "float hexfloat = 0x.1p1F;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int octal = 01_0;",
+    input: "Double decimaldouble = 1.;",
     result: { type: null, errors: [] },
   },
   {
-    input: "int octal = 01__0;",
+    input: "Float decimalfloat = 1.f;",
     result: { type: null, errors: [] },
   },
   {
-    input: "long octal = 00L;",
+    input: "double decimaldouble = -1.;",
     result: { type: null, errors: [] },
   },
   {
-    input: "long octal = 01_0L;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0b0;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0b10;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0b11;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0b1_0;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0b1__0;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "long binary = 0b0L;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "long binary = 0b1_0L;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0B0;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0B10;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0B11;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0B1_0;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "int binary = 0B1__0;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "long binary = 0B0L;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "long binary = 0B1_0L;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "Integer decimal = 0;",
-    result: { type: null, errors: [] },
-  },
-  {
-    input: "Long decimal = 0L;",
+    input: "float decimalfloat = -1.f;",
     result: { type: null, errors: [] },
   },
 ];
@@ -207,7 +225,7 @@ describe("Type Checker", () => {
   testcases.map((testcase) => {
     let it = test;
     if (testcase.only) it = test.only;
-    it(`Checking integer literals for ${testcase.input}`, () => {
+    it(`Checking floating point literals for ${testcase.input}`, () => {
       const program = createProgram(testcase.input);
       const ast = parse(program);
       if (!ast) throw new Error("Program parsing returns null.");
