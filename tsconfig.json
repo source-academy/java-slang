@@ -26,6 +26,7 @@
     "src/**/__tests__/**",
     "src/**/__mocks__/**",
     "src/types/**",
+    "src/compiler/**",
     "src/ast/**",
     "src/ec-evaluator/**"
   ]
