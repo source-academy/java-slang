@@ -42,23 +42,16 @@ export class Frame {
   private constructor() {}
 
   public getMethod(name: string): Method | Error {
-    let frame: Frame | null = this
-    while (frame) {
-      const method = frame._methods.get(name)
-      if (method) return method
-      frame = frame._parentFrame
-    }
+    const method = this._methods.get(name)
+    if (method) return method
+    if (this._parentFrame) return this._parentFrame.getMethod(name)
     return new CannotFindSymbolError()
   }
 
   public getReturn(): Type | Error {
-    let frame: Frame | null = this
-    while (frame) {
-      const type = frame._returnType
-      if (type) return type
-      frame = frame._parentFrame
-    }
-    return new Error('Cannot find return type.')
+    if (this._returnType) return this._returnType
+    if (this._parentFrame) return this._parentFrame.getReturn()
+    return new Error('cannot find return type')
   }
 
   public getType(name: string): Type | Error {
@@ -69,22 +62,16 @@ export class Frame {
       return new Array(prefixType)
     }
 
-    let frame: Frame | null = this
-    while (frame) {
-      const type = frame._types.get(name)
-      if (type) return type
-      frame = frame._parentFrame
-    }
+    const type = this._types.get(name)
+    if (type) return type
+    if (this._parentFrame) return this._parentFrame.getType(name)
     return new CannotFindSymbolError()
   }
 
   public getVariable(name: string): Type | Error {
-    let frame: Frame | null = this
-    while (frame) {
-      const type = frame._variables.get(name)
-      if (type) return type
-      frame = frame._parentFrame
-    }
+    const variable = this._variables.get(name)
+    if (variable) return variable
+    if (this._parentFrame) return this._parentFrame.getVariable(name)
     return new CannotFindSymbolError()
   }
 

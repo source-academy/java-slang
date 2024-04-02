@@ -233,13 +233,14 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
         case 'StringLiteral':
           return newResult(String.from(value))
         default:
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           throw new Error(`Unrecgonized literal type ${kind} found in literal.`)
       }
     }
     case 'LocalVariableDeclarationStatement': {
       if (!node.variableDeclaratorList) throw new Error('Variable declarator list is undefined.')
-      const errors: Error[] = []
       const results = node.variableDeclaratorList.map(variableDeclarator => {
+        const errors: Error[] = []
         const declaredType = frame.getType(node.localVariableType)
         if (declaredType instanceof Error) return newResult(null, [declaredType])
         const { variableInitializer } = variableDeclarator
@@ -262,7 +263,6 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
               if (checkResult.currentType == null)
                 throw new Error('Variable initializer should return a type.')
               if (!declaredType.canBeAssigned(checkResult.currentType)) {
-                console.log('HELLO!')
                 errors.push(new IncompatibleTypesError())
               }
               return
