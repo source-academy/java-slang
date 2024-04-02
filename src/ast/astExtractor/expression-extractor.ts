@@ -336,6 +336,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
           kind: "NullLiteral",
           value: "null",
         },
+        location: this.location,
       };
     } else if (ctx.TextBlock) {
       return {
@@ -351,15 +352,6 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
         literalType: {
           kind: "StringLiteral",
           value: ctx.StringLiteral[0].image,
-        },
-        location: this.location,
-      };
-    } else if (ctx.Null) {
-      return {
-        kind: "Literal",
-        literalType: {
-          kind: "NullLiteral",
-          value: ctx.Null[0].image,
         },
         location: this.location,
       };
