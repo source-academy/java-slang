@@ -118,13 +118,19 @@ BooleanLiteral
     }
   }
 
-CharacterLiteral = ['] (EscapeSequence / !['\\] .) [']
+CharacterLiteral 
+  = ['] char:(@EscapeSequence / !['\\] @.) ['] {
+    return {
+      kind: "CharacterLiteral",
+      value: char,
+    }
+  }
 
 StringLiteral 
   = '\"' chars:(@EscapeSequence / !["\\\r\n] @.)* '\"' {
     return {
       kind: "StringLiteral",
-      value: chars.join("")
+      value: '\"' + chars.join("") + '\"',
     }
   }
 
@@ -694,7 +700,10 @@ ExplicitConstructorInvocation
   Productions from §10 (Arrays)
 */
 ArrayInitializer
-  = lcurly @VariableInitializerList? comma? rcurly
+  = lcurly rcurly {
+    return [];
+  }
+  / lcurly @VariableInitializerList? comma? rcurly
 
 VariableInitializerList
   = vi:VariableInitializer vis:(comma @VariableInitializer)* {
@@ -992,8 +1001,8 @@ ConditionalExpression
         return test;
       }
       return {
-        kind: "ConditionalExpression",
-        test: test,
+        kind: "TernaryExpression",
+        condition: test,
         ... tail,
       }
     }

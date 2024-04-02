@@ -30,6 +30,19 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["TEST"],
   },
+  {
+    comment: "default import java.lang.Math",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          int a = 4, b = 5;
+          System.out.println(Math.min(a, b));
+          System.out.println(Math.max(a, b));
+        }
+      }
+    `,
+    expectedLines: ["4", "5"],
+  },
 ];
 
 export const importTest = () => describe("imports", () => {

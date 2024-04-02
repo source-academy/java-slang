@@ -17,6 +17,19 @@ const testCases: testCase[] = [
     expectedLines: ["Hello world!", "Java"],
   },
   {
+    comment: "println with char argument",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          System.out.println('c');
+          System.out.println('-');
+          System.out.println('Z');
+        }
+      }
+    `,
+    expectedLines: ["c", "-", "Z"],
+  },
+  {
     comment: "println with int argument",
     program: `
       public class Main {
@@ -53,10 +66,11 @@ const testCases: testCase[] = [
           System.out.println(10l);
           System.out.println(100L);
           System.out.println(10000000000L);
+          System.out.println(1000000000000000000L);
         }
       }
     `,
-    expectedLines: ["1", "10", "100", "10000000000"],
+    expectedLines: ["1", "10", "100", "10000000000", "1000000000000000000"],
   },
   {
     comment: "println with double argument",
@@ -71,6 +85,18 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["10.3", "0.1", "1.0", "-12.6"],
+  },
+  {
+    comment: "println with boolean argument",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          System.out.println(true);
+          System.out.println(false);
+        }
+      }
+    `,
+    expectedLines: ["true", "false"],
   },
   {
     comment: "multiple println statements",
