@@ -1,9 +1,10 @@
 import {
   ArgumentListCtx,
+  ArrayAccessSuffixCtx,
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
-  ClassOrInterfaceTypeToInstantiateCtx,
   BooleanLiteralCtx,
+  ClassOrInterfaceTypeToInstantiateCtx,
   ExpressionCstNode,
   ExpressionCtx,
   FloatingPointLiteralCtx,
@@ -11,32 +12,34 @@ import {
   FqnOrRefTypePartCommonCtx,
   FqnOrRefTypePartFirstCtx,
   FqnOrRefTypePartRestCtx,
-  IToken,
   IntegerLiteralCtx,
+  IToken,
   LiteralCtx,
   MethodInvocationSuffixCtx,
   NewExpressionCtx,
   ParenthesisExpressionCtx,
   PrimaryCtx,
   PrimaryPrefixCtx,
+  PrimarySuffixCstNode,
   PrimarySuffixCtx,
   TernaryExpressionCtx,
   UnaryExpressionCstNode,
   UnaryExpressionCtx,
-  UnqualifiedClassInstanceCreationExpressionCtx,
-  ArrayAccessSuffixCtx
+  UnqualifiedClassInstanceCreationExpressionCtx
 } from 'java-parser'
-import { Location } from '../types/ast'
 import {
+  ArgumentList,
   ArrayAccess,
   Assignment,
   BinaryExpression,
   ClassInstanceCreationExpression,
   Expression,
   ExpressionName,
-  MethodInvocation,
+  FieldAccess,
   Primary
 } from '../types/blocks-and-statements'
+import { Location } from '../types/ast'
+import { getLocation } from './utils'
 
 export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   private location: Location
@@ -194,72 +197,71 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   primary(ctx: PrimaryCtx): Primary {
-    let primary = this.visit(ctx.primaryPrefix)
     if (ctx.primarySuffix) {
       const lastSuffix = ctx.primarySuffix[ctx.primarySuffix.length - 1]
-      if (lastSuffix.children.arrayAccessSuffix) {
-        const newPrimaryCtx: PrimaryCtx = { primaryPrefix: ctx.primaryPrefix }
-        if (ctx.primarySuffix.length - 1 > 0) {
-          const newSuffixArray = ctx.primarySuffix.filter(
-            (_, index) => index !== ctx.primarySuffix!.length - 1
-          )
-          newPrimaryCtx.primarySuffix = newSuffixArray
-        }
+      const newPrimaryCtx: PrimaryCtx = { primaryPrefix: ctx.primaryPrefix }
+      const primarySuffix: PrimarySuffixCstNode[] = []
+      for (let i = 0; i < ctx.primarySuffix.length - 1; i++)
+        primarySuffix.push(ctx.primarySuffix[i])
+      if (primarySuffix.length > 0) newPrimaryCtx.primarySuffix = primarySuffix
+      const primary = this.primary(newPrimaryCtx)
+      const primaryRest = this.visit(lastSuffix)
+      if (!primaryRest) return {} as Primary // Temporary
+      if (primary.kind === 'FieldAccess' && primaryRest.kind === 'MethodInvocation') {
+        // example.test() -> primary: example.test, primaryRest: ()
         return {
-          ...this.visit(lastSuffix.children.arrayAccessSuffix),
-          primary: this.primary(newPrimaryCtx)
-        }
+          ...primaryRest,
+          identifier: primary.identifier,
+          location: primary.location,
+          primary: primary.primary
+        } as Primary
       }
-
-      for (const s of ctx.primarySuffix.filter(s => !s.children.methodInvocationSuffix)) {
-        primary += '.' + this.visit(s)
-      }
-
-      if (ctx.primarySuffix[ctx.primarySuffix.length - 1].children.methodInvocationSuffix) {
-        return {
-          kind: 'MethodInvocation',
-          identifier: primary,
-          argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
-          location: this.location
-        } as MethodInvocation
-      }
+      return { ...primaryRest, primary }
     }
-
-    if (ctx.primaryPrefix[0].children.fqnOrRefType || ctx.primaryPrefix[0].children.This) {
-      return {
-        kind: 'ExpressionName',
-        name: primary,
-        location: this.location
-      } as ExpressionName
-    }
-
-    return primary
+    return this.visit(ctx.primaryPrefix) as Primary
   }
 
   primaryPrefix(ctx: PrimaryPrefixCtx) {
-    if (ctx.literal) {
-      return this.visit(ctx.literal)
-    } else if (ctx.parenthesisExpression) {
-      return this.visit(ctx.parenthesisExpression)
+    if (ctx.This) {
+      return { kind: 'This' }
+    } else if (ctx.Void) {
+      return { kind: 'Void' }
+    } else if (ctx.castExpression) {
+      throw new Error('not implemented')
     } else if (ctx.fqnOrRefType) {
       return this.visit(ctx.fqnOrRefType)
+    } else if (ctx.literal) {
+      return this.visit(ctx.literal)
     } else if (ctx.newExpression) {
       return this.visit(ctx.newExpression)
-    } else if (ctx.This) {
-      return ctx.This[0].image
+    } else if (ctx.parenthesisExpression) {
+      return this.visit(ctx.parenthesisExpression)
+    } else if (ctx.switchStatement) {
+      throw new Error('not implemented')
+    } else if (ctx.unannPrimitiveTypeWithOptionalDimsSuffix) {
+      throw new Error('not implemented')
     }
   }
 
   primarySuffix(ctx: PrimarySuffixCtx) {
     if (ctx.methodInvocationSuffix) {
       return this.visit(ctx.methodInvocationSuffix)
-    } else if (ctx.Identifier) {
-      return ctx.Identifier[0].image
+    } else if (ctx.Dot && ctx.Identifier) {
+      return {
+        kind: 'FieldAccess',
+        identifier: ctx.Identifier[0].image,
+        location: getLocation(ctx.Identifier[0])
+      }
+    } else if (ctx.arrayAccessSuffix) {
+      return this.visit(ctx.arrayAccessSuffix)
     }
   }
 
   methodInvocationSuffix(ctx: MethodInvocationSuffixCtx) {
-    return ctx.argumentList ? this.visit(ctx.argumentList) : []
+    return {
+      kind: 'MethodInvocation',
+      argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : []
+    }
   }
 
   newExpression(ctx: NewExpressionCtx) {
@@ -281,30 +283,52 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
     return ctx.Identifier[0].image
   }
 
-  argumentList(ctx: ArgumentListCtx) {
-    const expressionExtractor = new ExpressionExtractor()
-    return ctx.expression.map(e => expressionExtractor.extract(e))
+  argumentList(ctx: ArgumentListCtx): ArgumentList {
+    const argumentList: Expression[] = []
+    ctx.expression.forEach(expression => {
+      const expressionExtractor = new ExpressionExtractor()
+      const argumentExpression = expressionExtractor.extract(expression)
+      argumentList.push(argumentExpression)
+    })
+    return argumentList
   }
 
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
-    let fqn = this.visit(ctx.fqnOrRefTypePartFirst)
-    if (ctx.fqnOrRefTypePartRest) {
-      for (const r of ctx.fqnOrRefTypePartRest) {
-        fqn += '.' + this.visit(r)
-      }
+    const firstPart = this.visit(ctx.fqnOrRefTypePartFirst)
+    if (ctx.Dot && ctx.fqnOrRefTypePartRest) {
+      const expressionName = this.visit(ctx.fqnOrRefTypePartRest) as ExpressionName
+      return {
+        kind: 'FieldAccess',
+        identifier: expressionName.name,
+        primary: firstPart,
+        location: expressionName.location
+      } as FieldAccess
     }
-    return fqn
+    return firstPart
   }
 
   fqnOrRefTypePartFirst(ctx: FqnOrRefTypePartFirstCtx) {
+    if (ctx.annotation) throw new Error('not implemented')
     return this.visit(ctx.fqnOrRefTypePartCommon)
   }
 
   fqnOrRefTypePartCommon(ctx: FqnOrRefTypePartCommonCtx) {
-    return ctx.Identifier && ctx.Identifier[0].image
+    if (ctx.Identifier) {
+      return {
+        kind: 'ExpressionName',
+        name: ctx.Identifier[0].image,
+        location: getLocation(ctx.Identifier[0])
+      } as Primary
+    }
+    throw new Error('not implemented')
   }
 
   fqnOrRefTypePartRest(ctx: FqnOrRefTypePartRestCtx) {
+    if (ctx.annotation) {
+      throw new Error('not implemented')
+    } else if (ctx.typeArguments) {
+      throw new Error('not implemented')
+    }
     return this.visit(ctx.fqnOrRefTypePartCommon)
   }
 
@@ -416,7 +440,8 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
     const expresionExtractor = new ExpressionExtractor()
     return {
       kind: 'ArrayAccess',
-      expression: expresionExtractor.extract(ctx.expression[0])
+      expression: expresionExtractor.extract(ctx.expression[0]),
+      location: getLocation(ctx.LSquare[0])
     }
   }
 }

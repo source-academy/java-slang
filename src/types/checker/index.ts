@@ -452,7 +452,6 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       return OK_RESULT
     }
     default:
-      console.log(node)
       throw new Error(`Check is not implemented for this type of node ${node.kind}.`)
   }
 }

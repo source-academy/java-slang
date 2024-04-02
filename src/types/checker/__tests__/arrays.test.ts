@@ -80,16 +80,6 @@ const testcases: {
     `,
     result: { type: null, errors: [] }
   },
-
-  {
-    input: `
-      int i = numbers.length; // Accessing array length
-      int j = numbers.hashCode(length).test(); // Checking difference
-    `,
-    result: { type: null, errors: [] },
-    only: true
-  },
-
   {
     input: `
       char[] chars = new char[5];

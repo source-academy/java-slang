@@ -127,14 +127,15 @@ export interface Void extends BaseNode {
 }
 
 export type Primary =
-  | Expression
-  | Literal
-  | ExpressionName
-  | Assignment
-  | MethodInvocation
   | ArrayAccess
-  | FieldAccess
+  | Assignment // TODO: Check JLS for this
   | ClassInstanceCreationExpression
+  | Expression
+  | ExpressionName
+  | FieldAccess
+  | Literal
+  | MethodInvocation
+  | This
 
 export interface ClassInstanceCreationExpression extends BaseNode {
   kind: 'ClassInstanceCreationExpression'
@@ -276,4 +277,8 @@ export interface TernaryExpression extends BaseNode {
   condition: Expression
   consequent: Expression
   alternate: Expression
+}
+
+export interface This extends BaseNode {
+  kind: 'This'
 }
