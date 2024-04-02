@@ -54,10 +54,17 @@ describe("Type Checker", () => {
       if (result.currentType === null)
         expect(result.currentType).toBe(testcase.result.type);
       else expect(result.currentType).toBeInstanceOf(testcase.result.type);
-      expect(result.errors.length).toBe(testcase.result.errors.length);
-      testcase.result.errors.forEach((error, index) => {
-        expect(result.errors[index].message).toBe(error.message);
-      });
+      if (testcase.result.errors.length > result.errors.length) {
+        testcase.result.errors.forEach((error, index) => {
+          if (!result.errors[index]) expect("").toBe(error.message);
+          expect(result.errors[index].message).toBe(error.message);
+        });
+      } else {
+        result.errors.forEach((error, index) => {
+          if (!testcase.result.errors[index]) expect(error.message).toBe("");
+          expect(error.message).toBe(testcase.result.errors[index].message);
+        });
+      }
     });
   });
 });
