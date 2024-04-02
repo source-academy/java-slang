@@ -1,6 +1,6 @@
 import { check } from "..";
 import { parse } from "../../../ast/parser";
-import { Type } from "../../types";
+import { Type } from "../../types/type";
 
 const createProgram = (statement: string) => `
   public class Main {
@@ -82,6 +82,34 @@ const testcases: {
     result: { type: null, errors: [] },
   },
   {
+    input: "int hex = 0X0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int hex = 0X10;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int hex = 0X11;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int hex = 0X1_0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int hex = 0X1__0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long hex = 0X0L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long hex = 0X1_0L;",
+    result: { type: null, errors: [] },
+  },
+  {
     input: "int octal = 00;",
     result: { type: null, errors: [] },
   },
@@ -137,6 +165,42 @@ const testcases: {
     input: "long binary = 0b1_0L;",
     result: { type: null, errors: [] },
   },
+  {
+    input: "int binary = 0B0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int binary = 0B10;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int binary = 0B11;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int binary = 0B1_0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "int binary = 0B1__0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long binary = 0B0L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "long binary = 0B1_0L;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "Integer decimal = 0;",
+    result: { type: null, errors: [] },
+  },
+  {
+    input: "Long decimal = 0L;",
+    result: { type: null, errors: [] },
+  },
 ];
 
 describe("Type Checker", () => {
@@ -153,7 +217,7 @@ describe("Type Checker", () => {
       else expect(result.currentType).toBeInstanceOf(testcase.result.type);
       expect(result.errors.length).toBe(testcase.result.errors.length);
       testcase.result.errors.forEach((error, index) => {
-        expect(result.errors[index].name).toBe(error.name);
+        expect(result.errors[index].message).toBe(error.message);
       });
     });
   });

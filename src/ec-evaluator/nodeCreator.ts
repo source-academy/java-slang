@@ -1,3 +1,4 @@
+import { Node } from "../ast/types/ast";
 import {
   Assignment,
   ExplicitConstructorInvocation,
@@ -13,15 +14,18 @@ import {
   VariableDeclaratorId,
 } from "../ast/types/blocks-and-statements";
 import {
+  ClassDeclaration,
   ConstructorBody,
   ConstructorDeclaration,
   ConstructorDeclarator,
   UnannType,
 } from "../ast/types/classes";
+import { OBJECT_CLASS, SUPER_KEYWORD, THIS_KEYWORD } from "./constants";
 
 export const localVarDeclNoInitNode = (
   localVariableType: UnannType,
   variableDeclaratorId: VariableDeclaratorId,
+  srcNode: Node,
 ): LocalVariableDeclarationStatement => ({
   kind: "LocalVariableDeclarationStatement",
   localVariableType,
@@ -31,11 +35,13 @@ export const localVarDeclNoInitNode = (
       variableDeclaratorId,
     } as VariableDeclarator,
   ],
+  location: srcNode.location,
 });
 
 export const expStmtAssmtNode = (
   left: string,
   right: Expression,
+  srcNode: Node,
 ): ExpressionStatement => ({
   kind: "ExpressionStatement",
   stmtExp: {
@@ -43,10 +49,13 @@ export const expStmtAssmtNode = (
     left: {
       kind: "ExpressionName",
       name: left,
+      location: srcNode.location,
     } as LeftHandSide,
     operator: "=",
     right,
+    location: srcNode.location,
   } as Assignment,
+  location: srcNode.location,
 });
 
 export const mainMtdInvExpStmtNode = (className: string): ExpressionStatement => ({
@@ -66,23 +75,28 @@ export const mainMtdInvExpStmtNode = (className: string): ExpressionStatement =>
   } as MethodInvocation,
 });
 
-export const emptyReturnStmtNode = (): ReturnStatement => ({
+export const emptyReturnStmtNode = (srcNode: Node): ReturnStatement => ({
   kind: "ReturnStatement",
   exp: {
     kind: "Void",
+    location: srcNode.location,
   },
+  location: srcNode.location,
 });
 
-export const returnThisStmtNode = (): ReturnStatement => ({
+export const returnThisStmtNode = (srcNode: Node): ReturnStatement => ({
   kind: "ReturnStatement",
   exp: {
     kind: "ExpressionName",
-    name: "this",
+    name: THIS_KEYWORD,
+    location: srcNode.location,
   } as ExpressionName,
+  location: srcNode.location,
 });
 
 export const defaultConstructorDeclNode = (
   className: string,
+  srcNode: Node,
 ): ConstructorDeclaration => ({
   kind: "ConstructorDeclaration",
   constructorModifier: [],
@@ -93,24 +107,36 @@ export const defaultConstructorDeclNode = (
   constructorBody: {
     kind: "Block",
     blockStatements: [],
+    location: srcNode.location,
   } as ConstructorBody,
+  location: srcNode.location,
 });
 
-export const nullLitNode = (): Literal => ({
+export const nullLitNode = (srcNode: Node): Literal => ({
   kind: "Literal",
   literalType: {
     kind: "NullLiteral",
     value: "null",
   },
+  location: srcNode.location,
 });
 
-export const exprNameNode = (name: string): ExpressionName => ({
+export const exprNameNode = (name: string, srcNode: Node): ExpressionName => ({
   kind: "ExpressionName",
   name,
+  location: srcNode.location,
 });
 
-export const expConInvNode = (): ExplicitConstructorInvocation => ({
+export const expConInvNode = (srcNode: Node): ExplicitConstructorInvocation => ({
   kind: "ExplicitConstructorInvocation",
-  thisOrSuper: "super",
+  thisOrSuper: SUPER_KEYWORD,
   argumentList: [],
+  location: srcNode.location,
+});
+
+export const objClassDeclNode = (): ClassDeclaration => ({
+  kind: "NormalClassDeclaration",
+  classModifier: [],
+  typeIdentifier: OBJECT_CLASS,
+  classBody: [],
 });

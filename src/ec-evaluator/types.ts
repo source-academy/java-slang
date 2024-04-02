@@ -4,13 +4,14 @@ import {
   ConstructorDeclaration,
   FieldDeclaration,
   MethodDeclaration,
+  NormalClassDeclaration,
   UnannType,
 } from "../ast/types/classes";
 import { Control, EnvNode, Environment, Stash } from "./components";
-import { RuntimeError } from "./errors";
+import { SourceError } from "./errors";
 
 export interface Context {
-  errors: RuntimeError[],
+  errors: SourceError[],
 
   control: Control,
   stash: Stash,
@@ -35,6 +36,7 @@ export enum InstrType {
   DEREF = 'Deref',
   NEW = 'New',
   RES_TYPE = 'ResType',
+  RES_TYPE_CONT = 'ResTypeCont',
   RES_OVERLOAD = 'ResOverload',
   RES_OVERRIDE = 'ResOverride',
   RES_CON_OVERLOAD = 'ResConOverload',
@@ -77,6 +79,10 @@ export interface ResTypeInstr extends BaseInstr {
   value: Expression | Class;
 }
 
+export interface ResTypeContInstr extends BaseInstr {
+  name: string;
+}
+
 export interface ResOverloadInstr extends BaseInstr {
   name: string;
   arity: number;
@@ -107,6 +113,7 @@ export type Instr =
   | DerefInstr
   | NewInstr
   | ResTypeInstr
+  | ResTypeContInstr
   | ResOverloadInstr
   | ResConOverloadInstr;
 
@@ -119,37 +126,51 @@ export type StashItem = Primitive | Reference | Value | Void | Type;
 export type Name = string;
 export type Value = Variable | Closure | Class;
 
+export type VarValue = Primitive | Reference | Symbol | Variable;
+
+export type Primitive = Literal;
+export type Reference = Object;
+
+/**
+ * Structs
+ */
+export enum StructType {
+  VARIABLE = "Variable",
+  SYMBOL = "Symbol",
+  OBJECT = "Object",
+  CLOSURE = "Closure",
+  CLASS = "Class",
+  TYPE = "Type",
+}
+
 export interface Variable {
-  kind: "Variable";
+  kind: StructType.VARIABLE;
   type: UnannType;
   name: Name;
   value: VarValue;
 }
 
-export type VarValue = Primitive | Reference | Symbol;
-
-export type Primitive = Literal;
-export type Reference = Object;
-
 export interface Symbol {
-  kind: "Symbol";
+  kind: StructType.SYMBOL;
   value: string;
 }
 
 export interface Object {
-  kind: "Object";
+  kind: StructType.OBJECT;
   frame: EnvNode;
+  class: Class;
 }
 
 export interface Closure {
-  kind: "Closure";
+  kind: StructType.CLOSURE;
   mtdOrCon: MethodDeclaration | ConstructorDeclaration;
   env: EnvNode;
 }
 
 export interface Class {
-  kind: "Class";
+  kind: StructType.CLASS;
   frame: EnvNode;
+  classDecl: NormalClassDeclaration;
   constructors: ConstructorDeclaration[];
   instanceFields: FieldDeclaration[];
   instanceMethods: MethodDeclaration[];
@@ -159,7 +180,7 @@ export interface Class {
 }
 
 export interface Type {
-  kind: "Type";
+  kind: StructType.TYPE;
   type: UnannType;
 }
 
@@ -168,6 +189,7 @@ export interface Type {
  */
 export interface Error {
   status: 'error';
+  context: Context;
 }
 
 export interface Finished {
