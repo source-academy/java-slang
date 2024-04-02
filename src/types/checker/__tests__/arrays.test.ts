@@ -65,6 +65,7 @@ const testcases: {
       numbers[0] = 10; // Correct assignment
     `,
     result: { type: null, errors: [] },
+    only: true,
   },
   {
     input: `

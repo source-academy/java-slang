@@ -73,6 +73,10 @@ export class Integer extends Class {
   public canBeAssigned(type: Type): boolean {
     return super.canBeAssigned(type) || type instanceof Primitives.Int;
   }
+
+  public equals(object: unknown): boolean {
+    return object instanceof Integer;
+  }
 }
 
 export class Long extends Class {
