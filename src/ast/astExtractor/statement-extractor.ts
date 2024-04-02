@@ -39,6 +39,7 @@ import {
   ExpressionStatement,
   IfStatement,
   MethodInvocation,
+  Primary,
   Statement,
   StatementExpression,
   VariableDeclarator,
@@ -158,10 +159,26 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
     return this.visit(ctx.primary);
   }
 
-  primary(ctx: PrimaryCtx) {
+  primary(ctx: PrimaryCtx): Primary {
     // Assignment LHS, MethodInvocation identifier
     let { name, location } = this.visit(ctx.primaryPrefix);
     if (ctx.primarySuffix) {
+      const lastSuffix = ctx.primarySuffix[ctx.primarySuffix.length - 1];
+      if (lastSuffix.children.arrayAccessSuffix) {
+        const expressionExtractor = new ExpressionExtractor();
+        const newPrimaryCtx: PrimaryCtx = { primaryPrefix: ctx.primaryPrefix };
+        if (ctx.primarySuffix.length - 1 > 0) {
+          const newSuffixArray = ctx.primarySuffix.filter(
+            (_, index) => index !== ctx.primarySuffix!.length - 1
+          );
+          newPrimaryCtx.primarySuffix = newSuffixArray;
+        }
+        return {
+          ...expressionExtractor.visit(lastSuffix.children.arrayAccessSuffix),
+          primary: this.primary(newPrimaryCtx) as Primary,
+        };
+      }
+
       for (const s of ctx.primarySuffix.filter(
         (s) => !s.children.methodInvocationSuffix
       )) {

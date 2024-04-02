@@ -1,12 +1,10 @@
-import {
-  ExpressionName,
-  VariableInitializer,
-} from "../../ast/types/blocks-and-statements";
+import { Array as ArrayType } from "../types/arrays";
 import { Frame } from "./environment";
+import { Integer, String } from "../types/nonPrimitives";
 import { Method } from "../types/methods";
 import { Node } from "../../ast/types/ast";
-import { Integer, String } from "../types/nonPrimitives";
 import { Type } from "../types/type";
+import { VariableInitializer } from "../../ast/types/blocks-and-statements";
 import {
   ArrayRequiredError,
   BadOperandTypesError,
@@ -29,7 +27,6 @@ import {
   getFloatType,
   getNumberType,
 } from "../types/primitives";
-import { Array as ArrayType } from "../types/arrays";
 
 export type Result = {
   currentType: Type | null;
@@ -71,9 +68,12 @@ export const check = (
       return newResult(primaryCheck.currentType.getContentType());
     }
     case "Assignment": {
-      const left = node.left as ExpressionName;
+      const leftCheck = check(node.left, frame);
+      if (leftCheck.errors.length > 0) return newResult(null, leftCheck.errors);
+      if (!leftCheck.currentType)
+        throw new Error("Left type in assignment should exist.");
       const right = node.right;
-      const leftType = frame.getVariable(left.name);
+      const leftType = leftCheck.currentType;
       if (leftType instanceof Error) return newResult(null, [leftType]);
       const { currentType, errors } = check(right, frame);
       if (errors.length > 0) return newResult(null, errors);
