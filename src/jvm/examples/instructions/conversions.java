@@ -1,5 +1,3 @@
-package tests;
-
 public class conversions {
     public static void main(String[] args) {
 

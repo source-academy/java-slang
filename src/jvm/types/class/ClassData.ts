@@ -1,160 +1,154 @@
-import { ACCESS_FLAGS, ClassFile } from "../../../ClassFile/types";
-import { AttributeInfo } from "../../../ClassFile/types/attributes";
-import AbstractClassLoader from "../../ClassLoader/AbstractClassLoader";
-import { ConstantPool } from "../../constant-pool";
-import { CLASS_STATUS, CLASS_TYPE, ThreadStatus } from "../../constants";
-import { InternalStackFrame } from "../../stackframe";
-import Thread from "../../thread";
-import { primitiveNameToType, attrInfo2Interface } from "../../utils";
-import {
-  ImmediateResult,
-  Result,
-  SuccessResult,
-  ErrorResult,
-  ResultType,
-} from "../Result";
-import { JvmArray } from "../reference/Array";
-import { JvmObject } from "../reference/Object";
-import { IAttribute, BootstrapMethod, BootstrapMethods } from "./Attributes";
+import { ACCESS_FLAGS, ClassFile } from '../../../ClassFile/types'
+import { AttributeInfo } from '../../../ClassFile/types/attributes'
+import AbstractClassLoader from '../../ClassLoader/AbstractClassLoader'
+import { ConstantPool } from '../../constant-pool'
+import { CLASS_STATUS, CLASS_TYPE, ThreadStatus } from '../../constants'
+import { InternalStackFrame } from '../../stackframe'
+import Thread from '../../thread'
+import { primitiveNameToType, attrInfo2Interface } from '../../utils'
+import { ImmediateResult, Result, SuccessResult, ErrorResult, ResultType } from '../Result'
+import { JvmArray } from '../reference/Array'
+import { JvmObject } from '../reference/Object'
+import { IAttribute, BootstrapMethod, BootstrapMethods } from './Attributes'
 import {
   Constant,
   ConstantClass,
   ConstantInterfaceMethodref,
   ConstantMethodref,
-  ConstantUtf8,
-} from "./Constants";
-import { Field } from "./Field";
-import { Method } from "./Method";
+  ConstantUtf8
+} from './Constants'
+import { Field } from './Field'
+import { Method } from './Method'
 
 class ClassLock {
-  private owner?: Thread;
-  private onRelease: Array<() => void> = [];
+  private owner?: Thread
+  private onRelease: Array<() => void> = []
 
   constructor() {}
 
   isOwner(thread: Thread) {
-    return this.owner === thread;
+    return this.owner === thread
   }
 
   lock(thread: Thread, onInit?: () => void): boolean {
     if (onInit) {
-      this.onRelease.push(onInit);
+      this.onRelease.push(onInit)
     }
 
     if (!this.owner) {
-      this.owner = thread;
-      return true;
+      this.owner = thread
+      return true
     }
 
-    return false;
+    return false
   }
 
   release() {
-    this.onRelease.forEach((cb) => cb());
-    this.onRelease = [];
-    this.owner = undefined;
+    this.onRelease.forEach(cb => cb())
+    this.onRelease = []
+    this.owner = undefined
   }
 }
 
 export abstract class ClassData {
-  protected loader: AbstractClassLoader;
-  protected accessFlags: number;
-  protected type: CLASS_TYPE;
-  public status: CLASS_STATUS = CLASS_STATUS.PREPARED;
-  protected classLock?: ClassLock; // Used to synchronize class initialization
-  protected thisClass: string;
-  protected packageName: string;
-  protected javaClassObject?: JvmObject;
-  protected superClass: ReferenceClassData | null = null;
-  protected interfaces: Array<ReferenceClassData> = [];
-  protected constantPool: ConstantPool;
+  protected loader: AbstractClassLoader
+  protected accessFlags: number
+  protected type: CLASS_TYPE
+  public status: CLASS_STATUS = CLASS_STATUS.PREPARED
+  protected classLock?: ClassLock // Used to synchronize class initialization
+  protected thisClass: string
+  protected packageName: string
+  protected javaClassObject?: JvmObject
+  protected superClass: ReferenceClassData | null = null
+  protected interfaces: Array<ReferenceClassData> = []
+  protected constantPool: ConstantPool
   protected fields: {
-    [fieldName: string]: Field;
-  } = {};
-  protected instanceFields: { [key: string]: Field } | null = null;
-  protected vmIndexFields?: Field[];
-  protected staticFields: Field[] = [];
+    [fieldName: string]: Field
+  } = {}
+  protected instanceFields: { [key: string]: Field } | null = null
+  protected vmIndexFields?: Field[]
+  protected staticFields: Field[] = []
   protected methods: {
-    [methodName: string]: Method;
-  } = {};
-  protected attributes: { [attributeName: string]: IAttribute } = {};
+    [methodName: string]: Method
+  } = {}
+  protected attributes: { [attributeName: string]: IAttribute } = {}
   constructor(
     loader: AbstractClassLoader,
     accessFlags: number,
     type: CLASS_TYPE,
     thisClass: string
   ) {
-    this.loader = loader;
-    this.accessFlags = accessFlags;
-    this.type = type;
-    this.thisClass = thisClass;
-    this.packageName = thisClass.split("/").slice(0, -1).join("/");
-    this.constantPool = new ConstantPool(this, []);
+    this.loader = loader
+    this.accessFlags = accessFlags
+    this.type = type
+    this.thisClass = thisClass
+    this.packageName = thisClass.split('/').slice(0, -1).join('/')
+    this.constantPool = new ConstantPool(this, [])
   }
 
   isInitialized(): boolean {
-    return this.status === CLASS_STATUS.INITIALIZED;
+    return this.status === CLASS_STATUS.INITIALIZED
   }
 
   /**
    * Gets all fields, including private and protected fields but excluding inherited fields.
    */
   getDeclaredFields(): Field[] {
-    let result: Field[] = [];
+    const result: Field[] = []
 
     for (const field of Object.values(this.fields)) {
-      result.push(field);
+      result.push(field)
     }
 
-    return result;
+    return result
   }
 
   checkPrimitive(): this is PrimitiveClassData {
-    return false;
+    return false
   }
 
   checkArray(): this is ArrayClassData {
-    return false;
+    return false
   }
 
   checkReference(): this is ReferenceClassData {
-    return false;
+    return false
   }
 
   checkPublic() {
-    return (this.accessFlags & ACCESS_FLAGS.ACC_PUBLIC) !== 0;
+    return (this.accessFlags & ACCESS_FLAGS.ACC_PUBLIC) !== 0
   }
 
   checkFinal() {
-    return (this.accessFlags & ACCESS_FLAGS.ACC_FINAL) !== 0;
+    return (this.accessFlags & ACCESS_FLAGS.ACC_FINAL) !== 0
   }
 
   checkSuper() {
-    return (this.accessFlags & ACCESS_FLAGS.ACC_SUPER) !== 0;
+    return (this.accessFlags & ACCESS_FLAGS.ACC_SUPER) !== 0
   }
 
   checkInterface() {
-    return (this.accessFlags & ACCESS_FLAGS.ACC_INTERFACE) !== 0;
+    return (this.accessFlags & ACCESS_FLAGS.ACC_INTERFACE) !== 0
   }
 
   checkAbstract() {
-    return (this.accessFlags & ACCESS_FLAGS.ACC_ABSTRACT) !== 0;
+    return (this.accessFlags & ACCESS_FLAGS.ACC_ABSTRACT) !== 0
   }
 
   checkSynthetic() {
-    return (this.accessFlags & ACCESS_FLAGS.ACC_SYNTHETIC) !== 0;
+    return (this.accessFlags & ACCESS_FLAGS.ACC_SYNTHETIC) !== 0
   }
 
   checkAnnotation() {
-    return (this.accessFlags & ACCESS_FLAGS.ACC_ANNOTATION) !== 0;
+    return (this.accessFlags & ACCESS_FLAGS.ACC_ANNOTATION) !== 0
   }
 
   checkEnum() {
-    return (this.accessFlags & ACCESS_FLAGS.ACC_ENUM) !== 0;
+    return (this.accessFlags & ACCESS_FLAGS.ACC_ENUM) !== 0
   }
 
   checkModule() {
-    return (this.accessFlags & ACCESS_FLAGS.ACC_MODULE) !== 0;
+    return (this.accessFlags & ACCESS_FLAGS.ACC_MODULE) !== 0
   }
 
   /**
@@ -162,46 +156,46 @@ export abstract class ClassData {
    * @returns {{ [fieldName: string]: Field }} Object with key "classname.fieldnamefieldtype"
    */
   getInstanceFields(): {
-    [fieldName: string]: Field;
+    [fieldName: string]: Field
   } {
     if (this.instanceFields !== null) {
-      return this.instanceFields;
+      return this.instanceFields
     }
 
-    let res: { [key: string]: Field } = {};
+    let res: { [key: string]: Field } = {}
 
     if (this.superClass) {
-      res = this.superClass.getInstanceFields();
+      res = this.superClass.getInstanceFields()
     }
 
-    this.interfaces?.forEach((constantInterfaceCls) => {
-      const fields = constantInterfaceCls.getInstanceFields();
+    this.interfaces?.forEach(constantInterfaceCls => {
+      const fields = constantInterfaceCls.getInstanceFields()
       for (const [fieldName, fieldRef] of Object.entries(fields)) {
-        res[fieldName] = fieldRef;
+        res[fieldName] = fieldRef
       }
-    });
+    })
 
     for (const [fieldName, fieldRef] of Object.entries(this.fields).filter(
-      ([fn, fr]) => !fr.checkStatic()
+      ([_fn, fr]) => !fr.checkStatic()
     )) {
-      res[`${this.thisClass}.${fieldName}`] = fieldRef;
+      res[`${this.thisClass}.${fieldName}`] = fieldRef
     }
 
-    return res;
+    return res
   }
 
   /**
    * Gets the superclass of the current class. Returns null if the current class has no superclasses.
    */
   getSuperClass(): ReferenceClassData | null {
-    return this.superClass;
+    return this.superClass
   }
 
   /**
    * Gets all interfaces this class implements. Does not include interfaces implemented by superclasses.
    */
   getInterfaces(): ReferenceClassData[] {
-    return this.interfaces;
+    return this.interfaces
   }
 
   /**
@@ -211,34 +205,32 @@ export abstract class ClassData {
    * @returns MethodRef, if any
    */
   private _resolveMethodSuper(name: string, descriptor: string): Method | null {
-    const signature = name + descriptor;
+    const signature = name + descriptor
     // If C declares a method with the name and descriptor specified by the method reference, method lookup succeeds.
     if (this.methods[signature]) {
-      return this.methods[signature];
+      return this.methods[signature]
     }
 
     // If C declares exactly one method with the name specified by the method reference,
     // and the declaration is a signature polymorphic method (§2.9.3), then method lookup succeeds.
-    if (this.thisClass === "java/lang/invoke/MethodHandle") {
-      const polyMethod =
-        this.methods[name + "([Ljava/lang/Object;)Ljava/lang/Object;"];
+    if (this.thisClass === 'java/lang/invoke/MethodHandle') {
+      const polyMethod = this.methods[name + '([Ljava/lang/Object;)Ljava/lang/Object;']
       if (
         polyMethod &&
         polyMethod.checkVarargs() &&
         polyMethod.checkNative() &&
-        Object.keys(this.methods).filter((x) => x.startsWith(name + "("))
-          .length === 1
+        Object.keys(this.methods).filter(x => x.startsWith(name + '(')).length === 1
       ) {
-        return polyMethod;
+        return polyMethod
       }
     }
 
     // Otherwise, if C has a superclass, step 2 of method resolution is recursively invoked on the direct superclass of C.
-    const superClass = this.getSuperClass();
+    const superClass = this.getSuperClass()
     if (superClass === null) {
-      return null;
+      return null
     }
-    return superClass._resolveMethodSuper(name, descriptor);
+    return superClass._resolveMethodSuper(name, descriptor)
   }
 
   /**
@@ -246,34 +238,28 @@ export abstract class ClassData {
    * @param methodName
    * @returns MethodRef, if any
    */
-  private _resolveMethodInterface(
-    name: string,
-    descriptor: string
-  ): Method | null {
-    let abstractMethod = null;
-    const signature = name + descriptor;
+  private _resolveMethodInterface(name: string, descriptor: string): Method | null {
+    let abstractMethod = null
+    const signature = name + descriptor
     for (const inter of this.interfaces) {
-      let method = inter.getMethod(signature);
+      let method = inter.getMethod(signature)
 
       if (!method) {
-        method = (inter as ReferenceClassData)._resolveMethodInterface(
-          name,
-          descriptor
-        );
+        method = inter._resolveMethodInterface(name, descriptor)
       }
 
       if (method && !method.checkPrivate() && !method.checkStatic()) {
         if (method.checkAbstract()) {
-          abstractMethod = method;
-          continue;
+          abstractMethod = method
+          continue
         }
-        return method;
+        return method
       }
     }
     if (abstractMethod !== null) {
-      return abstractMethod;
+      return abstractMethod
     }
-    return null;
+    return null
   }
 
   /**
@@ -290,44 +276,41 @@ export abstract class ClassData {
     accessingClass: ClassData
   ): ImmediateResult<Method> {
     // Otherwise, method resolution attempts to locate the referenced method in C and its superclasses
-    let result = this._resolveMethodSuper(name, descriptor);
+    let result = this._resolveMethodSuper(name, descriptor)
 
     if (result !== null) {
-      const method = result;
-      const accessCheckResult = method.checkAccess(accessingClass, this);
+      const method = result
+      const accessCheckResult = method.checkAccess(accessingClass, this)
       if (accessCheckResult.status === ResultType.ERROR) {
-        return accessCheckResult;
+        return accessCheckResult
       }
-      return { status: ResultType.SUCCESS, result };
+      return { status: ResultType.SUCCESS, result }
     }
 
     // Otherwise, method resolution attempts to locate the referenced method in the superinterfaces of the specified class C
-    result = this._resolveMethodInterface(name, descriptor);
+    result = this._resolveMethodInterface(name, descriptor)
     if (result !== null) {
-      const accessCheckResult = result.checkAccess(accessingClass, this);
+      const accessCheckResult = result.checkAccess(accessingClass, this)
       if (accessCheckResult.status === ResultType.ERROR) {
-        return accessCheckResult;
+        return accessCheckResult
       }
-      return { status: ResultType.SUCCESS, result };
+      return { status: ResultType.SUCCESS, result }
     }
     // If method lookup fails, method resolution throws a NoSuchMethodError
     return {
       status: ResultType.ERROR,
-      exceptionCls: "java/lang/NoSuchMethodError",
-      msg: name + descriptor,
-    };
+      exceptionCls: 'java/lang/NoSuchMethodError',
+      msg: name + descriptor
+    }
   }
 
-  private _checkOverrides(
-    overrideMethod: Method,
-    parentMethod: Method
-  ): boolean {
+  private _checkOverrides(overrideMethod: Method, parentMethod: Method): boolean {
     if (overrideMethod === parentMethod) {
-      return true;
+      return true
     }
 
-    const overrideClass = overrideMethod.getClass();
-    const parentClass = parentMethod.getClass();
+    const overrideClass = overrideMethod.getClass()
+    const parentClass = parentMethod.getClass()
     return (
       overrideMethod.getClass().checkCast(parentMethod.getClass()) &&
       overrideMethod.getName() === parentMethod.getName() &&
@@ -337,24 +320,24 @@ export abstract class ClassData {
         parentMethod.checkProtected() ||
         (!parentMethod.checkPrivate() &&
           parentClass.getPackageName() === overrideClass.getPackageName()))
-    );
+    )
   }
 
   private _getSignaturePolyMethod(signature: string): Method | null {
-    if (this.thisClass !== "java/lang/invoke/MethodHandle") {
-      return null;
+    if (this.thisClass !== 'java/lang/invoke/MethodHandle') {
+      return null
     }
 
-    const method = this.methods[signature];
+    const method = this.methods[signature]
     if (!method) {
-      return null;
+      return null
     }
 
     if (method.checkVarargs() && method.checkNative()) {
-      return method;
+      return method
     }
 
-    return null;
+    return null
   }
 
   private _lookupMethodSuper(
@@ -366,75 +349,64 @@ export abstract class ClassData {
     // If C contains a declaration for an instance method m that overrides the resolved method, then m is the method to be invoked.
     if (
       this.methods[signature] &&
-      (!checkOverride ||
-        this._checkOverrides(this.methods[signature], resolvedMethod))
+      (!checkOverride || this._checkOverrides(this.methods[signature], resolvedMethod))
     ) {
-      return this.methods[signature];
+      return this.methods[signature]
     }
 
-    let m;
+    let m
     if (polySignature && (m = this._getSignaturePolyMethod(polySignature))) {
-      return m;
+      return m
     }
 
     // Otherwise, if C has a superclass, step 2 of method resolution is recursively invoked on the direct superclass of C.
-    const superClass = this.getSuperClass();
+    const superClass = this.getSuperClass()
     if (superClass === null) {
-      return null;
+      return null
     }
-    return superClass?._lookupMethodSuper(
-      signature,
-      resolvedMethod,
-      checkOverride,
-      polySignature
-    );
+    return superClass?._lookupMethodSuper(signature, resolvedMethod, checkOverride, polySignature)
   }
 
   private _lookupMethodInterface(
     signature: string,
     polySignature?: string
   ): ImmediateResult<Method> {
-    let res: Method | null = null;
+    let res: Method | null = null
     for (const interfaceCls of this.interfaces) {
-      let method = interfaceCls.getMethod(signature);
+      let method = interfaceCls.getMethod(signature)
 
-      let m;
+      let m
       if (polySignature && (m = this._getSignaturePolyMethod(polySignature))) {
-        return { status: ResultType.SUCCESS, result: m };
+        return { status: ResultType.SUCCESS, result: m }
       }
 
       if (!method) {
-        const interRes = interfaceCls._lookupMethodInterface(signature);
+        const interRes = interfaceCls._lookupMethodInterface(signature)
         if (interRes.status === ResultType.SUCCESS) {
-          method = interRes.result;
+          method = interRes.result
         }
       }
 
-      if (
-        method &&
-        !method.checkPrivate() &&
-        !method.checkStatic() &&
-        !method.checkAbstract()
-      ) {
+      if (method && !method.checkPrivate() && !method.checkStatic() && !method.checkAbstract()) {
         if (res) {
           return {
             status: ResultType.ERROR,
-            exceptionCls: "java/lang/IncompatibleClassChangeError",
-            msg: "",
-          };
+            exceptionCls: 'java/lang/IncompatibleClassChangeError',
+            msg: ''
+          }
         }
-        res = method;
+        res = method
       }
     }
 
     if (res) {
-      return { status: ResultType.SUCCESS, result: res };
+      return { status: ResultType.SUCCESS, result: res }
     }
     return {
       status: ResultType.ERROR,
-      exceptionCls: "java/lang/AbstractMethodError",
-      msg: "",
-    };
+      exceptionCls: 'java/lang/AbstractMethodError',
+      msg: ''
+    }
   }
 
   lookupMethod(
@@ -445,47 +417,45 @@ export abstract class ClassData {
     checkSigPoly?: boolean,
     acceptAbstract?: boolean
   ): ImmediateResult<Method> {
-    let polySignature;
+    let polySignature
     if (checkSigPoly) {
-      polySignature = `${
-        signature.split("(")[0]
-      }([Ljava/lang/Object;)Ljava/lang/Object;`;
+      polySignature = `${signature.split('(')[0]}([Ljava/lang/Object;)Ljava/lang/Object;`
     }
     // If C contains a declaration for an instance method m that overrides
     // the resolved method, then m is the method to be invoked.
-    let methodRef = this._lookupMethodSuper(
+    const methodRef = this._lookupMethodSuper(
       signature,
       resolvedMethod,
       checkOverride,
       polySignature
-    );
+    )
     if (methodRef) {
       if (checkInterface && !methodRef.checkPublic()) {
         return {
           status: ResultType.ERROR,
-          exceptionCls: "java/lang/IllegalAccessError",
-          msg: "",
-        };
+          exceptionCls: 'java/lang/IllegalAccessError',
+          msg: ''
+        }
       }
 
       if (!acceptAbstract && methodRef.checkAbstract()) {
         return {
           status: ResultType.ERROR,
-          exceptionCls: "java/lang/AbstractMethodError",
-          msg: "",
-        };
+          exceptionCls: 'java/lang/AbstractMethodError',
+          msg: ''
+        }
       }
-      return { status: ResultType.SUCCESS, result: methodRef };
+      return { status: ResultType.SUCCESS, result: methodRef }
     }
 
-    return this._lookupMethodInterface(signature, polySignature);
+    return this._lookupMethodInterface(signature, polySignature)
   }
 
   /**
    * Gets a method declared in the current class. does not search superclasses/interfaces.
    */
   getMethod(methodName: string): Method | null {
-    return this.methods[methodName] ?? null;
+    return this.methods[methodName] ?? null
   }
 
   /**
@@ -493,7 +463,7 @@ export abstract class ClassData {
    * Excludes inherited methods.
    */
   getDeclaredMethods(): { [methodName: string]: Method } {
-    return this.methods;
+    return this.methods
   }
 
   /**
@@ -502,11 +472,11 @@ export abstract class ClassData {
   getMethodFromSlot(slot: number): Method | null {
     for (const method of Object.values(this.methods)) {
       if (method.getSlot() === slot) {
-        return method;
+        return method
       }
     }
 
-    return null;
+    return null
   }
 
   /**
@@ -515,31 +485,27 @@ export abstract class ClassData {
   getFieldFromSlot(slot: number): Field | null {
     for (const field of Object.values(this.fields)) {
       if (field.getSlot() === slot) {
-        return field;
+        return field
       }
     }
 
-    return null;
+    return null
   }
 
   /**
    * Gets the index of the field in the vmindex array
    */
   getFieldVmIndex(field: Field): number {
-    const fieldArr = this.vmIndexFields
-      ? this.vmIndexFields
-      : this._fillVmIndexFieldArr();
-    return fieldArr.indexOf(field);
+    const fieldArr = this.vmIndexFields ? this.vmIndexFields : this._fillVmIndexFieldArr()
+    return fieldArr.indexOf(field)
   }
 
   /**
    * Gets the field at the given vmindex number.
    */
   getFieldFromVmIndex(index: number): Field | null {
-    const fieldArr = this.vmIndexFields
-      ? this.vmIndexFields
-      : this._fillVmIndexFieldArr();
-    return fieldArr[index] ?? null;
+    const fieldArr = this.vmIndexFields ? this.vmIndexFields : this._fillVmIndexFieldArr()
+    return fieldArr[index] ?? null
   }
 
   /**
@@ -547,62 +513,62 @@ export abstract class ClassData {
    */
   lookupField(fieldName: string): Field | null {
     if (this.fields[fieldName]) {
-      return this.fields[fieldName];
+      return this.fields[fieldName]
     }
 
     for (let i = 0; i < this.interfaces.length; i++) {
-      let interfaceCls = this.interfaces[i];
-      const field = interfaceCls.lookupField(fieldName);
+      const interfaceCls = this.interfaces[i]
+      const field = interfaceCls.lookupField(fieldName)
 
       if (field) {
-        return field;
+        return field
       }
     }
 
-    const superClass = this.getSuperClass();
+    const superClass = this.getSuperClass()
 
     if (superClass === null) {
-      return null;
+      return null
     }
 
-    return superClass.lookupField(fieldName);
+    return superClass.lookupField(fieldName)
   }
 
   /**
    * Gets the constant at the given index in the constant pool.
    */
   getConstant(constantIndex: number): Constant {
-    const constItem = this.constantPool.get(constantIndex);
-    return constItem;
+    const constItem = this.constantPool.get(constantIndex)
+    return constItem
   }
 
   /**
    * Gets the index of the ConstantMethodRef referencing the given method in the constant pool.
    */
   getMethodConstantIndex(method: Method): number {
-    const isInterface = this.checkInterface();
+    const isInterface = this.checkInterface()
     for (let i = 1; i < this.constantPool.size(); i++) {
-      const constItem = this.getConstant(i);
+      const constItem = this.getConstant(i)
       if (
         (!isInterface && ConstantMethodref.check(constItem)) ||
         (isInterface && ConstantInterfaceMethodref.check(constItem))
       ) {
-        const clsname = constItem.getClassName();
+        const clsname = constItem.getClassName()
         if (clsname !== this.thisClass) {
-          continue;
+          continue
         }
 
-        const nameAndType = constItem.getNameAndType();
+        const nameAndType = constItem.getNameAndType()
 
         if (
           nameAndType.name === method.getName() &&
           nameAndType.descriptor === method.getDescriptor()
         ) {
-          return i;
+          return i
         }
       }
     }
-    return -1;
+    return -1
   }
 
   /**
@@ -610,14 +576,14 @@ export abstract class ClassData {
    * @todo currently used by vmtargetbridge, remove if not needed.
    */
   insertConstant(con: Constant): number {
-    return this.constantPool.insert(con);
+    return this.constantPool.insert(con)
   }
 
   /**
    * Gets the classloader that loaded the current class.
    */
   getLoader(): AbstractClassLoader {
-    return this.loader;
+    return this.loader
   }
 
   /**
@@ -625,23 +591,21 @@ export abstract class ClassData {
    * @returns pacakge name, e.g. java/lang
    */
   getPackageName(): string {
-    return this.packageName;
+    return this.packageName
   }
 
   private _fillVmIndexFieldArr(): Field[] {
     if (this.vmIndexFields) {
-      return this.vmIndexFields;
+      return this.vmIndexFields
     }
 
-    this.vmIndexFields = this.superClass
-      ? [...this.superClass._fillVmIndexFieldArr()]
-      : [];
-    this.interfaces.forEach((interfaceCls) => {
-      this.vmIndexFields?.push(...interfaceCls._fillVmIndexFieldArr());
-    });
-    this.vmIndexFields.push(...Object.values(this.fields));
+    this.vmIndexFields = this.superClass ? [...this.superClass._fillVmIndexFieldArr()] : []
+    this.interfaces.forEach(interfaceCls => {
+      this.vmIndexFields?.push(...interfaceCls._fillVmIndexFieldArr())
+    })
+    this.vmIndexFields.push(...Object.values(this.fields))
 
-    return this.vmIndexFields;
+    return this.vmIndexFields
   }
 
   /**
@@ -655,8 +619,8 @@ export abstract class ClassData {
     onDefer?: () => void | null,
     onInitialized?: () => void | null
   ): Result<ClassData> {
-    onInitialized && onInitialized();
-    return { status: ResultType.SUCCESS, result: this };
+    onInitialized && onInitialized()
+    return { status: ResultType.SUCCESS, result: this }
   }
 
   /**
@@ -665,21 +629,19 @@ export abstract class ClassData {
   getJavaObject(): JvmObject {
     if (!this.javaClassObject) {
       // We assume that java/lang/Class has been loaded at JVM initialization
-      const clsCls = (
-        this.loader.getClass("java/lang/Class") as SuccessResult<ClassData>
-      ).result;
+      const clsCls = (this.loader.getClass('java/lang/Class') as SuccessResult<ClassData>).result
 
-      this.javaClassObject = clsCls.instantiate();
-      this.javaClassObject.putNativeField("classRef", this);
+      this.javaClassObject = clsCls.instantiate()
+      this.javaClassObject.putNativeField('classRef', this)
       this.javaClassObject._putField(
-        "classLoader",
-        "Ljava/lang/ClassLoader;",
-        "java/lang/Class",
+        'classLoader',
+        'Ljava/lang/ClassLoader;',
+        'java/lang/Class',
         this.loader.getJavaObject()
-      );
+      )
     }
 
-    return this.javaClassObject;
+    return this.javaClassObject
   }
 
   /**
@@ -688,7 +650,7 @@ export abstract class ClassData {
    * @todo not implemented.
    */
   getProtectionDomain(): JvmObject | null {
-    return null;
+    return null
   }
 
   /**
@@ -696,33 +658,33 @@ export abstract class ClassData {
    * @returns bitmask of the access flags.
    */
   getAccessFlags(): number {
-    return this.accessFlags;
+    return this.accessFlags
   }
 
   /**
    *  Gets the classname for the current class, e.g. package/Class
    */
   getName(): string {
-    return this.thisClass;
+    return this.thisClass
   }
 
   /**
    * Gets the descriptor for the current class, e.g. Lpackage/Class;
    */
-  abstract getDescriptor(): string;
+  abstract getDescriptor(): string
 
   /**
    * Checks if the current class can be cast to the specified class
    * @param castTo classref of supertype
    * @returns
    */
-  abstract checkCast(castTo: ClassData): boolean;
+  abstract checkCast(castTo: ClassData): boolean
 
   /**
    * Creates a new instance of the class.
    */
   instantiate(): JvmObject {
-    return new JvmObject(this);
+    return new JvmObject(this)
   }
 
   /**
@@ -731,50 +693,48 @@ export abstract class ClassData {
    * @returns Attribute, if any.
    */
   getAttribute(name: string) {
-    return this.attributes[name];
+    return this.attributes[name]
   }
 
   /**
    * Gets the bootstrap method at the specified index in the
    * BootstrapMethods attribute array.
    */
-  getBootstrapMethod(methodIndex: number): BootstrapMethod | null {
-    return null;
+  getBootstrapMethod(_methodIndex: number): BootstrapMethod | null {
+    return null
   }
 }
 
 export class PrimitiveClassData extends ClassData {
-  private primitiveType: string;
+  private primitiveType: string
   constructor(loader: AbstractClassLoader, primitiveName: string) {
     super(
       loader,
-      ACCESS_FLAGS.ACC_ABSTRACT &
-        ACCESS_FLAGS.ACC_FINAL &
-        ACCESS_FLAGS.ACC_PUBLIC,
+      ACCESS_FLAGS.ACC_ABSTRACT & ACCESS_FLAGS.ACC_FINAL & ACCESS_FLAGS.ACC_PUBLIC,
       CLASS_TYPE.PRIMITIVE,
       primitiveName
-    );
+    )
 
-    this.primitiveType = primitiveNameToType(primitiveName) as string;
-    this.status = CLASS_STATUS.INITIALIZED;
+    this.primitiveType = primitiveNameToType(primitiveName) as string
+    this.status = CLASS_STATUS.INITIALIZED
   }
 
   checkPrimitive(): this is PrimitiveClassData {
-    return true;
+    return true
   }
 
   getDescriptor(): string {
-    return this.primitiveType;
+    return this.primitiveType
   }
 
   checkCast(castTo: ClassData): boolean {
-    return this === castTo;
+    return this === castTo
   }
 }
 
 export class ReferenceClassData extends ClassData {
-  protected bootstrapMethods: Array<BootstrapMethod> = [];
-  private protectionDomain: JvmObject | null;
+  protected bootstrapMethods: Array<BootstrapMethod> = []
+  private protectionDomain: JvmObject | null
 
   constructor(
     classfile: ClassFile,
@@ -784,92 +744,71 @@ export class ReferenceClassData extends ClassData {
     cpOverrides?: JvmArray,
     protectionDomain?: JvmObject
   ) {
-    super(loader, classfile.accessFlags, CLASS_TYPE.REFERENCE, className);
+    super(loader, classfile.accessFlags, CLASS_TYPE.REFERENCE, className)
 
-    this.loader = loader;
-    this.protectionDomain = protectionDomain ?? null;
+    this.loader = loader
+    this.protectionDomain = protectionDomain ?? null
 
-    this.constantPool = new ConstantPool(
-      this,
-      classfile.constantPool,
-      cpOverrides
-    );
+    this.constantPool = new ConstantPool(this, classfile.constantPool, cpOverrides)
 
     // get superclass
     // superclass is 0 for object.
     if (classfile.superClass !== 0) {
       const superResolution = (
         this.constantPool.get(classfile.superClass) as ConstantClass
-      ).resolve();
+      ).resolve()
       if (superResolution.status === ResultType.ERROR) {
-        onError(superResolution);
-        return;
+        onError(superResolution)
+        return
       }
-      this.superClass = superResolution.result as ReferenceClassData;
+      this.superClass = superResolution.result as ReferenceClassData
     }
 
     // interfaces
-    classfile.interfaces.forEach((interfaceIndex) => {
-      const interfaceResolution = (
-        this.constantPool.get(interfaceIndex) as ConstantClass
-      ).resolve();
+    classfile.interfaces.forEach(interfaceIndex => {
+      const interfaceResolution = (this.constantPool.get(interfaceIndex) as ConstantClass).resolve()
       if (interfaceResolution.status === ResultType.ERROR) {
-        onError(interfaceResolution);
-        return;
+        onError(interfaceResolution)
+        return
       }
-      this.interfaces.push(interfaceResolution.result as ReferenceClassData);
-    });
+      this.interfaces.push(interfaceResolution.result as ReferenceClassData)
+    })
 
     // attributes
-    this.attributes = attrInfo2Interface(
-      classfile.attributes,
-      this.constantPool
-    );
+    this.attributes = attrInfo2Interface(classfile.attributes, this.constantPool)
 
     // fields
-    this.fields = {};
+    this.fields = {}
     classfile.fields.forEach((field, index) => {
-      const fieldRef = Field.fromFieldInfo(
-        this,
-        field,
-        index,
-        this.constantPool
-      );
-      this.fields[fieldRef.getName() + fieldRef.getFieldDesc()] = fieldRef;
-    });
+      const fieldRef = Field.fromFieldInfo(this, field, index, this.constantPool)
+      this.fields[fieldRef.getName() + fieldRef.getFieldDesc()] = fieldRef
+    })
 
     // methods
-    this.methods = {};
+    this.methods = {}
     classfile.methods.forEach((methodInfo, index) => {
-      const methodAttributes: { [attributeName: string]: AttributeInfo[] } = {};
-      methodInfo.attributes.forEach((attr) => {
-        const attrName = (
-          this.constantPool.get(attr.attributeNameIndex) as ConstantUtf8
-        ).get();
+      const methodAttributes: { [attributeName: string]: AttributeInfo[] } = {}
+      methodInfo.attributes.forEach(attr => {
+        const attrName = (this.constantPool.get(attr.attributeNameIndex) as ConstantUtf8).get()
         if (!methodAttributes[attrName]) {
-          methodAttributes[attrName] = [];
+          methodAttributes[attrName] = []
         }
-        methodAttributes[attrName].push(attr);
-      });
-      const method = Method.fromInfo(
-        this,
-        methodInfo,
-        index,
-        this.constantPool
-      );
+        methodAttributes[attrName].push(attr)
+      })
+      const method = Method.fromInfo(this, methodInfo, index, this.constantPool)
 
-      this.methods[method.getName() + method.getDescriptor()] = method;
-    });
+      this.methods[method.getName() + method.getDescriptor()] = method
+    })
 
-    if (this.attributes["BootstrapMethods"]) {
+    if (this.attributes['BootstrapMethods']) {
       this.bootstrapMethods = (
-        this.attributes["BootstrapMethods"] as BootstrapMethods
-      ).bootstrapMethods;
+        this.attributes['BootstrapMethods'] as BootstrapMethods
+      ).bootstrapMethods
     }
   }
 
   checkReference(): this is ReferenceClassData {
-    return true;
+    return true
   }
 
   initialize(
@@ -878,68 +817,63 @@ export class ReferenceClassData extends ClassData {
     onInitialized?: () => void
   ): Result<ClassData> {
     if (this.status === CLASS_STATUS.INITIALIZED) {
-      onInitialized && onInitialized();
-      return { status: ResultType.SUCCESS, result: this };
+      onInitialized && onInitialized()
+      return { status: ResultType.SUCCESS, result: this }
     }
 
     if (this.status === CLASS_STATUS.INITIALIZING) {
       if (!this.classLock) {
-        throw new Error("Class lock not set during initialization");
+        throw new Error('Class lock not set during initialization')
       }
 
-      onDefer && onDefer();
+      onDefer && onDefer()
       if (this.classLock.isOwner(thread)) {
         // Object's static initializer invokes static method Object.registerNatives()
         // Invokestatic initializes Object again.
         // We return a success result so the clinit can complete.
-        return { status: ResultType.SUCCESS, result: this };
+        return { status: ResultType.SUCCESS, result: this }
       }
 
-      this.classLock.lock(thread, () =>
-        thread.setStatus(ThreadStatus.RUNNABLE)
-      );
-      thread.setStatus(ThreadStatus.WAITING);
-      return { status: ResultType.DEFER };
+      this.classLock.lock(thread, () => thread.setStatus(ThreadStatus.RUNNABLE))
+      thread.setStatus(ThreadStatus.WAITING)
+      return { status: ResultType.DEFER }
     }
 
-    if (
-      this.superClass &&
-      this.superClass.status !== CLASS_STATUS.INITIALIZED
-    ) {
-      const superInit = this.superClass.initialize(thread);
+    if (this.superClass && this.superClass.status !== CLASS_STATUS.INITIALIZED) {
+      const superInit = this.superClass.initialize(thread)
       if (superInit.status !== ResultType.SUCCESS) {
-        return superInit;
+        return superInit
       }
     }
 
-    this.status = CLASS_STATUS.INITIALIZING;
-    this.classLock = new ClassLock();
-    this.classLock.lock(thread, onInitialized);
+    this.status = CLASS_STATUS.INITIALIZING
+    this.classLock = new ClassLock()
+    this.classLock.lock(thread, onInitialized)
 
     // has static initializer
-    if (this.methods["<clinit>()V"]) {
-      onDefer && onDefer();
+    if (this.methods['<clinit>()V']) {
+      onDefer && onDefer()
       thread.invokeStackFrame(
-        new InternalStackFrame(this, this.methods["<clinit>()V"], 0, [], () => {
-          this.status = CLASS_STATUS.INITIALIZED;
-          this.classLock?.release();
+        new InternalStackFrame(this, this.methods['<clinit>()V'], 0, [], () => {
+          this.status = CLASS_STATUS.INITIALIZED
+          this.classLock?.release()
         })
-      );
-      return { status: ResultType.DEFER };
+      )
+      return { status: ResultType.DEFER }
     }
 
-    this.status = CLASS_STATUS.INITIALIZED;
-    onInitialized && onInitialized();
-    this.classLock.release();
-    return { status: ResultType.SUCCESS, result: this };
+    this.status = CLASS_STATUS.INITIALIZED
+    onInitialized && onInitialized()
+    this.classLock.release()
+    return { status: ResultType.SUCCESS, result: this }
   }
 
   getDescriptor(): string {
-    return `L${this.thisClass};`;
+    return `L${this.thisClass};`
   }
 
   getBootstrapMethod(methodIndex: number): BootstrapMethod | null {
-    return this.bootstrapMethods[methodIndex] ?? null;
+    return this.bootstrapMethods[methodIndex] ?? null
   }
 
   /**
@@ -949,36 +883,36 @@ export class ReferenceClassData extends ClassData {
    */
   checkCast(castTo: ClassData): boolean {
     if (this === castTo) {
-      return true;
+      return true
     }
 
     for (let i = 0; i < this.interfaces.length; i++) {
-      let inter = this.interfaces[i];
+      const inter = this.interfaces[i]
       if (inter.checkCast(castTo)) {
-        return true;
+        return true
       }
     }
 
-    const superClass = this.getSuperClass();
+    const superClass = this.getSuperClass()
 
     if (superClass === null) {
-      return false;
+      return false
     }
 
-    return superClass.checkCast(castTo);
+    return superClass.checkCast(castTo)
   }
 
   getProtectionDomain(): JvmObject | null {
-    return this.protectionDomain;
+    return this.protectionDomain
   }
 
   _addAttribute(attr: IAttribute) {
-    this.attributes[attr.name] = attr;
+    this.attributes[attr.name] = attr
   }
 }
 
 export class ArrayClassData extends ClassData {
-  private componentClass?: ClassData;
+  private componentClass?: ClassData
 
   constructor(
     accessFlags: number,
@@ -987,54 +921,54 @@ export class ArrayClassData extends ClassData {
     componentClass: ClassData,
     onError: (error: ErrorResult) => void
   ) {
-    super(loader, accessFlags, CLASS_TYPE.ARRAY, thisClass);
-    this.packageName = "java/lang";
-    this.componentClass = componentClass;
+    super(loader, accessFlags, CLASS_TYPE.ARRAY, thisClass)
+    this.packageName = 'java/lang'
+    this.componentClass = componentClass
 
     // #region load array superclasses/interfaces
-    const objRes = loader.getClass("java/lang/Object");
+    const objRes = loader.getClass('java/lang/Object')
     if (objRes.status === ResultType.ERROR) {
-      onError(objRes);
-      return;
+      onError(objRes)
+      return
     }
-    const cloneableRes = loader.getClass("java/lang/Cloneable");
+    const cloneableRes = loader.getClass('java/lang/Cloneable')
     if (cloneableRes.status === ResultType.ERROR) {
-      onError(cloneableRes);
-      return;
+      onError(cloneableRes)
+      return
     }
-    const serialRes = loader.getClass("java/io/Serializable");
+    const serialRes = loader.getClass('java/io/Serializable')
     if (serialRes.status === ResultType.ERROR) {
-      onError(serialRes);
-      return;
+      onError(serialRes)
+      return
     }
     // #endregion
-    this.superClass = objRes.result as ReferenceClassData;
-    this.interfaces.push(cloneableRes.result as ReferenceClassData);
-    this.interfaces.push(serialRes.result as ReferenceClassData);
+    this.superClass = objRes.result as ReferenceClassData
+    this.interfaces.push(cloneableRes.result as ReferenceClassData)
+    this.interfaces.push(serialRes.result as ReferenceClassData)
   }
 
   getDescriptor(): string {
-    return this.getName();
+    return this.getName()
   }
 
   getComponentClass(): ClassData {
     if (this.componentClass === undefined) {
-      throw new Error("Array item class not set");
+      throw new Error('Array item class not set')
     }
-    return this.componentClass;
+    return this.componentClass
   }
 
   instantiate(): JvmArray {
-    return new JvmArray(this);
+    return new JvmArray(this)
   }
 
   checkArray(): this is ArrayClassData {
-    return true;
+    return true
   }
 
   checkCast(castTo: ClassData): boolean {
     if (this === castTo) {
-      return true;
+      return true
     }
 
     // Not an array class
@@ -1043,22 +977,22 @@ export class ArrayClassData extends ClassData {
       if (!castTo.checkInterface()) {
         // If T is a class type, then T must be Object.
         // array superclass is Object.
-        return this.superClass === castTo;
+        return this.superClass === castTo
       }
 
       // is an interface
       for (let i = 0; i < this.interfaces.length; i++) {
-        let inter = this.interfaces[i];
+        const inter = this.interfaces[i]
         // If T is an interface type, then T must be one of the interfaces implemented by arrays
         if (inter === castTo) {
-          return true;
+          return true
         }
       }
-      return false;
+      return false
     }
 
     // TC and SC are reference types, and type SC can be cast to TC by recursive application of these rules.
     // Primitive classes are loaded as well anyways, we can use the same logic.
-    return this.getComponentClass().checkCast(castTo.getComponentClass());
+    return this.getComponentClass().checkCast(castTo.getComponentClass())
   }
 }

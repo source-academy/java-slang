@@ -1,43 +1,47 @@
-import { CONSTANT_TAG } from "../../ClassFile/constants/constants";
-import { OPCODE } from "../../ClassFile/constants/instructions";
-import { ACCESS_FLAGS, ClassFile } from "../../ClassFile/types";
-import { AttributeInfo, CodeAttribute } from "../../ClassFile/types/attributes";
-import { ConstantInfo, ConstantUtf8Info } from "../../ClassFile/types/constants";
-import { FIELD_FLAGS, FieldInfo } from "../../ClassFile/types/fields";
-import { METHOD_FLAGS, MethodInfo } from "../../ClassFile/types/methods";
-import AbstractClassLoader from "../ClassLoader/AbstractClassLoader";
-import { CLASS_STATUS, ThreadStatus } from "../constants";
-import { JNI } from "../jni";
-import JVM from "../jvm";
-import Thread from "../thread";
-import { ThreadPool } from "../threadpool";
-import { PrimitiveClassData, ReferenceClassData, ArrayClassData, ClassData } from "../types/class/ClassData";
-import { Field } from "../types/class/Field";
-import { Method } from "../types/class/Method";
-import { JvmArray } from "../types/reference/Array";
-import { JvmObject, JavaType } from "../types/reference/Object";
-import { ImmediateResult, ResultType } from "../types/Result";
-import { primitiveTypeToName } from "../utils";
-import AbstractSystem from "../utils/AbstractSystem";
-
+import { CONSTANT_TAG } from '../../../ClassFile/constants/constants'
+import { OPCODE } from '../../../ClassFile/constants/instructions'
+import { ACCESS_FLAGS, ClassFile } from '../../../ClassFile/types'
+import { AttributeInfo, CodeAttribute } from '../../../ClassFile/types/attributes'
+import { ConstantInfo, ConstantUtf8Info } from '../../../ClassFile/types/constants'
+import { FIELD_FLAGS, FieldInfo } from '../../../ClassFile/types/fields'
+import { METHOD_FLAGS, MethodInfo } from '../../../ClassFile/types/methods'
+import AbstractClassLoader from '../../ClassLoader/AbstractClassLoader'
+import { CLASS_STATUS, ThreadStatus } from '../../constants'
+import { JNI } from '../../jni'
+import JVM from '../../jvm'
+import Thread from '../../thread'
+import { ThreadPool } from '../../threadpool'
+import {
+  PrimitiveClassData,
+  ReferenceClassData,
+  ArrayClassData,
+  ClassData
+} from '../../types/class/ClassData'
+import { Field } from '../../types/class/Field'
+import { Method } from '../../types/class/Method'
+import { JvmArray } from '../../types/reference/Array'
+import { JvmObject, JavaType } from '../../types/reference/Object'
+import { ImmediateResult, ResultType } from '../../types/Result'
+import { primitiveTypeToName } from '../../utils'
+import AbstractSystem from '../../utils/AbstractSystem'
 
 export class TestClassLoader extends AbstractClassLoader {
   getJavaObject(): JvmObject | null {
-    return null;
+    return null
   }
-  private primitiveClasses: { [className: string]: PrimitiveClassData } = {};
+  private primitiveClasses: { [className: string]: PrimitiveClassData } = {}
   getPrimitiveClass(className: string): PrimitiveClassData {
     if (this.primitiveClasses[className]) {
-      return this.primitiveClasses[className];
+      return this.primitiveClasses[className]
     }
-    const internalName = primitiveTypeToName(className as JavaType);
+    const internalName = primitiveTypeToName(className as JavaType)
     if (!internalName) {
-      throw new Error(`Invalid primitive class name: ${className}`);
+      throw new Error(`Invalid primitive class name: ${className}`)
     }
 
-    const cls = new PrimitiveClassData(this, internalName);
-    this.primitiveClasses[internalName] = cls;
-    return cls;
+    const cls = new PrimitiveClassData(this, internalName)
+    this.primitiveClasses[internalName] = cls
+    return cls
   }
 
   private loadArray(
@@ -45,17 +49,17 @@ export class TestClassLoader extends AbstractClassLoader {
     componentCls: ReferenceClassData
   ): ImmediateResult<ArrayClassData> {
     // #region load array superclasses/interfaces
-    const objRes = this.getClass('java/lang/Object');
+    const objRes = this.getClass('java/lang/Object')
     if (objRes.status === ResultType.ERROR) {
-      return objRes;
+      return objRes
     }
-    const cloneableRes = this.getClass('java/lang/Cloneable');
+    const cloneableRes = this.getClass('java/lang/Cloneable')
     if (cloneableRes.status === ResultType.ERROR) {
-      return cloneableRes;
+      return cloneableRes
     }
-    const serialRes = this.getClass('java/io/Serializable');
+    const serialRes = this.getClass('java/io/Serializable')
     if (serialRes.status === ResultType.ERROR) {
-      return serialRes;
+      return serialRes
     }
     // #endregion
 
@@ -65,56 +69,56 @@ export class TestClassLoader extends AbstractClassLoader {
       this,
       componentCls,
       () => {}
-    );
+    )
 
-    this.loadClass(arrayClass);
-    return { status: ResultType.SUCCESS, result: arrayClass };
+    this.loadClass(arrayClass)
+    return { status: ResultType.SUCCESS, result: arrayClass }
   }
 
   load(className: string): ImmediateResult<ReferenceClassData> {
     const stubRef = this.createClass({
       className: className,
-      loader: this,
-    }) as ReferenceClassData;
+      loader: this
+    }) as ReferenceClassData
     return {
       status: ResultType.SUCCESS,
-      result: this.loadClass(stubRef) as ReferenceClassData,
-    };
+      result: this.loadClass(stubRef) as ReferenceClassData
+    }
   }
 
   loadTestClassRef(className: string, ref: ClassData) {
-    this.loadedClasses[className] = ref;
+    this.loadedClasses[className] = ref
   }
 
   createClass(options: {
-    className?: string;
-    loader?: TestClassLoader;
-    superClass?: ReferenceClassData | null;
-    constants?: ((c: ConstantInfo[]) => ConstantInfo)[];
-    interfaces?: ReferenceClassData[];
+    className?: string
+    loader?: TestClassLoader
+    superClass?: ReferenceClassData | null
+    constants?: ((c: ConstantInfo[]) => ConstantInfo)[]
+    interfaces?: ReferenceClassData[]
     methods?: {
-      accessFlags?: METHOD_FLAGS[];
-      name?: string;
-      descriptor?: string;
-      attributes?: AttributeInfo[];
-      code: DataView;
+      accessFlags?: METHOD_FLAGS[]
+      name?: string
+      descriptor?: string
+      attributes?: AttributeInfo[]
+      code: DataView
       exceptionTable?: {
-        startPc: number;
-        endPc: number;
-        handlerPc: number;
-        catchType: string;
-      }[];
-    }[];
+        startPc: number
+        endPc: number
+        handlerPc: number
+        catchType: string
+      }[]
+    }[]
     fields?: {
-      accessFlags?: FIELD_FLAGS[];
-      name?: string;
-      descriptor?: string;
-      attributes?: Array<AttributeInfo>;
-      data?: any;
-    }[];
-    flags?: number;
-    status?: CLASS_STATUS;
-    arrayComponent?: ClassData;
+      accessFlags?: FIELD_FLAGS[]
+      name?: string
+      descriptor?: string
+      attributes?: Array<AttributeInfo>
+      data?: any
+    }[]
+    flags?: number
+    status?: CLASS_STATUS
+    arrayComponent?: ClassData
   }) {
     let constantPool: ConstantInfo[] = [
       { tag: 7, nameIndex: 0 }, // dummy
@@ -122,26 +126,24 @@ export class TestClassLoader extends AbstractClassLoader {
       {
         tag: 1,
         length: 16,
-        value: options.superClass
-          ? options.superClass?.getName()
-          : 'java/lang/Object',
+        value: options.superClass ? options.superClass?.getName() : 'java/lang/Object'
       }, // superclass name
       { tag: 7, nameIndex: 4 },
       {
         tag: 1,
         length: options.className?.length ?? 9,
-        value: options.className ?? 'Test/Test',
+        value: options.className ?? 'Test/Test'
       },
       {
         tag: CONSTANT_TAG.Utf8,
         length: 4,
-        value: 'Code',
-      },
-    ];
+        value: 'Code'
+      }
+    ]
     if (options.constants) {
       options.constants.forEach(func => {
-        constantPool.push(func(constantPool));
-      });
+        constantPool.push(func(constantPool))
+      })
     }
 
     const methods = options.methods
@@ -149,41 +151,41 @@ export class TestClassLoader extends AbstractClassLoader {
           constantPool.push({
             tag: CONSTANT_TAG.Utf8,
             length: 3,
-            value: method.descriptor ?? `()V`,
-          });
+            value: method.descriptor ?? `()V`
+          })
 
           constantPool.push({
             tag: CONSTANT_TAG.Utf8,
             length: 5,
-            value: method.name ?? `test${index}`,
-          });
+            value: method.name ?? `test${index}`
+          })
           constantPool.push({
             tag: CONSTANT_TAG.Utf8,
             length: 4,
-            value: 'Test',
-          });
+            value: 'Test'
+          })
           constantPool.push({
             tag: CONSTANT_TAG.NameAndType,
             nameIndex: constantPool.length - 2,
-            descriptorIndex: constantPool.length - 3,
-          });
+            descriptorIndex: constantPool.length - 3
+          })
           constantPool.push({
             tag: CONSTANT_TAG.Class,
-            nameIndex: constantPool.length - 2,
-          });
+            nameIndex: constantPool.length - 2
+          })
           constantPool.push({
             tag: CONSTANT_TAG.Methodref,
             classIndex: constantPool.length - 1,
-            nameAndTypeIndex: constantPool.length - 2,
-          });
+            nameAndTypeIndex: constantPool.length - 2
+          })
 
           const temp: MethodInfo = {
             accessFlags: (method.accessFlags ?? []).reduce((a, b) => a | b, 0),
             nameIndex: constantPool.length - 5,
             descriptorIndex: constantPool.length - 6,
             attributes: method.attributes ?? [],
-            attributesCount: method.attributes?.length ?? 0,
-          };
+            attributesCount: method.attributes?.length ?? 0
+          }
 
           temp.attributes.push({
             attributeNameIndex: 5,
@@ -200,94 +202,91 @@ export class TestClassLoader extends AbstractClassLoader {
                     startPc: handler.startPc,
                     endPc: handler.endPc,
                     handlerPc: handler.handlerPc,
-                    catchType: 0,
-                  };
+                    catchType: 0
+                  }
                 }
 
-                const catchType = constantPool.length;
+                const catchType = constantPool.length
                 constantPool.push({
                   tag: CONSTANT_TAG.Class,
-                  nameIndex: constantPool.length + 1,
-                });
+                  nameIndex: constantPool.length + 1
+                })
                 constantPool.push({
                   tag: CONSTANT_TAG.Utf8,
-                  value: handler.catchType,
-                } as ConstantUtf8Info);
+                  value: handler.catchType
+                } as ConstantUtf8Info)
                 return {
                   startPc: handler.startPc,
                   endPc: handler.endPc,
                   handlerPc: handler.handlerPc,
-                  catchType,
-                };
+                  catchType
+                }
               }) ?? [],
             attributesCount: 0,
-            attributes: [],
-          } as CodeAttribute);
+            attributes: []
+          } as CodeAttribute)
 
-          return temp;
+          return temp
         })
-      : [];
-    const loader =
-      options.loader ?? new TestClassLoader(new TestSystem(), 'test/', null);
+      : []
+    const loader = options.loader ?? new TestClassLoader(new TestSystem(), 'test/', null)
 
     const fields: FieldInfo[] = options.fields
       ? options.fields.map((field, index) => {
           constantPool.push({
             tag: CONSTANT_TAG.Utf8,
             length: 3,
-            value: field.descriptor ?? `I`,
-          });
+            value: field.descriptor ?? `I`
+          })
           constantPool.push({
             tag: CONSTANT_TAG.Utf8,
             length: 6,
-            value: field.name ?? `field${index}`,
-          });
+            value: field.name ?? `field${index}`
+          })
           constantPool.push({
             tag: CONSTANT_TAG.Utf8,
             length: 4,
-            value: options.className ?? 'Test',
-          });
+            value: options.className ?? 'Test'
+          })
           constantPool.push({
             tag: CONSTANT_TAG.NameAndType,
             nameIndex: constantPool.length - 2,
-            descriptorIndex: constantPool.length - 3,
-          });
+            descriptorIndex: constantPool.length - 3
+          })
           constantPool.push({
             tag: CONSTANT_TAG.Class,
-            nameIndex: constantPool.length - 2,
-          });
+            nameIndex: constantPool.length - 2
+          })
           constantPool.push({
             tag: CONSTANT_TAG.Methodref,
             classIndex: constantPool.length - 1,
-            nameAndTypeIndex: constantPool.length - 2,
-          });
+            nameAndTypeIndex: constantPool.length - 2
+          })
 
           return {
             accessFlags: (field.accessFlags ?? []).reduce((a, b) => a | b, 0),
             nameIndex: constantPool.length - 5,
             descriptorIndex: constantPool.length - 6,
             attributes: field.attributes ?? [],
-            attributesCount: field.attributes?.length ?? 0,
-          };
+            attributesCount: field.attributes?.length ?? 0
+          }
         })
-      : [];
+      : []
 
     const interfaces = options.interfaces
-      ? options.interfaces.map(
-          (interfaceCls: ReferenceClassData, index: number) => {
-            const clsIndex = constantPool.length;
-            constantPool.push({
-              tag: CONSTANT_TAG.Class,
-              nameIndex: clsIndex + 1,
-            });
-            constantPool.push({
-              tag: CONSTANT_TAG.Utf8,
-              value: interfaceCls.getName(),
-            } as ConstantUtf8Info);
-            return clsIndex;
-          }
-        )
-      : [];
+      ? options.interfaces.map((interfaceCls: ReferenceClassData, index: number) => {
+          const clsIndex = constantPool.length
+          constantPool.push({
+            tag: CONSTANT_TAG.Class,
+            nameIndex: clsIndex + 1
+          })
+          constantPool.push({
+            tag: CONSTANT_TAG.Utf8,
+            value: interfaceCls.getName()
+          } as ConstantUtf8Info)
+          return clsIndex
+        })
+      : []
 
     const clsRef = options.arrayComponent
       ? new ArrayClassData(
@@ -314,44 +313,44 @@ export class TestClassLoader extends AbstractClassLoader {
             methodsCount: methods.length,
             methods: methods,
             attributesCount: 0,
-            attributes: [],
+            attributes: []
           },
           loader,
           options.className ?? 'Test/Test',
           () => {}
-        );
-    clsRef.status = options.status ?? CLASS_STATUS.PREPARED;
+        )
+    clsRef.status = options.status ?? CLASS_STATUS.PREPARED
 
-    loader.loadTestClassRef(options.className ?? 'Test/Test', clsRef);
-    return clsRef;
+    loader.loadTestClassRef(options.className ?? 'Test/Test', clsRef)
+    return clsRef
   }
 
   protected _loadArrayClass(
     className: string,
     componentCls: ReferenceClassData
   ): ImmediateResult<ArrayClassData> {
-    return this.loadArray(className, componentCls);
+    return this.loadArray(className, componentCls)
   }
 }
 
 export class TestSystem extends AbstractSystem {
   stdout(message: string): void {
-    throw new Error('Method not implemented.');
+    throw new Error('Method not implemented.')
   }
   stderr(message: string): void {
-    throw new Error('Method not implemented.');
+    throw new Error('Method not implemented.')
   }
   readFile(path: string): Promise<any> {
-    throw new Error('Method not implemented.');
+    throw new Error('Method not implemented.')
   }
   readFileSync(path: string): ClassFile {
-    throw new Error('Method not implemented.');
+    throw new Error('Method not implemented.')
   }
 }
 
 export class TestThreadPool extends ThreadPool {
   constructor(onEmpty: () => void) {
-    super(onEmpty);
+    super(onEmpty)
   }
   addThread(thread: Thread): void {}
   updateStatus(thread: Thread, oldStatus: ThreadStatus): void {}
@@ -362,101 +361,101 @@ export class TestThreadPool extends ThreadPool {
 
 export class TestThread extends Thread {
   constructor(threadClass: ReferenceClassData, jvm: JVM, tpool: ThreadPool) {
-    super(threadClass, jvm, tpool, new JvmObject(threadClass));
-    this.setStatus(ThreadStatus.RUNNABLE);
+    super(threadClass, jvm, tpool, new JvmObject(threadClass))
+    this.setStatus(ThreadStatus.RUNNABLE)
   }
 }
 
 export class TestJVM extends JVM {
-  testLoader: TestClassLoader;
+  testLoader: TestClassLoader
   tinternedStrings: {
-    [key: string]: JvmObject;
-  } = {};
-  tJNI: JNI;
+    [key: string]: JvmObject
+  } = {}
+  tJNI: JNI
   constructor(
     nativeSystem: AbstractSystem,
     testLoader: TestClassLoader,
     testJNI: JNI,
     options?: {
-      javaClassPath?: string;
-      userDir?: string;
+      javaClassPath?: string
+      userDir?: string
     }
   ) {
-    super(nativeSystem, options);
-    this.testLoader = testLoader;
-    this.tJNI = testJNI;
+    super(nativeSystem, options)
+    this.testLoader = testLoader
+    this.tJNI = testJNI
   }
 
   checkInitialized(): boolean {
-    return true;
+    return true
   }
 
   private tnewCharArr(str: string): ImmediateResult<JvmArray> {
-    const cArrRes = this.testLoader.getClass('[C');
+    const cArrRes = this.testLoader.getClass('[C')
     if (cArrRes.status === ResultType.ERROR) {
-      return cArrRes;
+      return cArrRes
     }
 
-    const cArrCls = cArrRes.result;
-    const cArr = cArrCls.instantiate() as JvmArray;
-    const jsArr: number[] = [];
+    const cArrCls = cArrRes.result
+    const cArr = cArrCls.instantiate() as JvmArray
+    const jsArr: number[] = []
     for (let i = 0; i < str.length; i++) {
-      jsArr.push(str.charCodeAt(i));
+      jsArr.push(str.charCodeAt(i))
     }
-    cArr.initArray(str.length, jsArr);
-    return { status: ResultType.SUCCESS, result: cArr };
+    cArr.initArray(str.length, jsArr)
+    return { status: ResultType.SUCCESS, result: cArr }
   }
 
   private tnewString(str: string): ImmediateResult<JvmObject> {
-    const charArr = this.tnewCharArr(str);
+    const charArr = this.tnewCharArr(str)
 
     if (charArr.status !== ResultType.SUCCESS) {
-      return charArr;
+      return charArr
     }
 
-    const strRes = this.testLoader.getClass('java/lang/String');
+    const strRes = this.testLoader.getClass('java/lang/String')
 
     if (strRes.status === ResultType.ERROR) {
-      return strRes;
+      return strRes
     }
-    const strCls = strRes.result;
-    const strObj = strCls.instantiate();
-    const fieldRef = strCls.lookupField('value[C') as Field;
-    strObj.putField(fieldRef as Field, charArr.result);
-    return { status: ResultType.SUCCESS, result: strObj };
+    const strCls = strRes.result
+    const strObj = strCls.instantiate()
+    const fieldRef = strCls.lookupField('value[C') as Field
+    strObj.putField(fieldRef as Field, charArr.result)
+    return { status: ResultType.SUCCESS, result: strObj }
   }
 
   getInternedString(str: string) {
     if (this.tinternedStrings[str]) {
-      return this.tinternedStrings[str];
+      return this.tinternedStrings[str]
     }
-    const strRes = this.tnewString(str);
+    const strRes = this.tnewString(str)
     if (strRes.status === ResultType.ERROR) {
-      throw new Error('testString creation failed');
+      throw new Error('testString creation failed')
     }
 
-    this.tinternedStrings[str] = strRes.result;
-    return this.tinternedStrings[str];
+    this.tinternedStrings[str] = strRes.result
+    return this.tinternedStrings[str]
   }
 
   getJNI(): JNI {
-    return this.tJNI;
+    return this.tJNI
   }
 }
 
 export const setupTest = () => {
-  const testSystem = new TestSystem();
-  const jni = new JNI('stdlib', testSystem);
-  const testLoader = new TestClassLoader(testSystem, '', null);
+  const testSystem = new TestSystem()
+  const jni = new JNI('stdlib', testSystem)
+  const testLoader = new TestClassLoader(testSystem, '', null)
 
   // #region create dummy classes
-  const dispatchUncaughtCode = new DataView(new ArrayBuffer(8));
-  dispatchUncaughtCode.setUint8(0, OPCODE.RETURN);
+  const dispatchUncaughtCode = new DataView(new ArrayBuffer(8))
+  dispatchUncaughtCode.setUint8(0, OPCODE.RETURN)
   testLoader.createClass({
     className: 'java/lang/Object',
     loader: testLoader,
-    superClass: null,
-  });
+    superClass: null
+  })
   const threadClass = testLoader.createClass({
     className: 'java/lang/Thread',
     methods: [
@@ -465,11 +464,11 @@ export const setupTest = () => {
         name: 'dispatchUncaughtException',
         descriptor: '(Ljava/lang/Throwable;)V',
         attributes: [],
-        code: dispatchUncaughtCode,
-      },
+        code: dispatchUncaughtCode
+      }
     ],
-    loader: testLoader,
-  }) as ReferenceClassData;
+    loader: testLoader
+  }) as ReferenceClassData
   const clsClass = testLoader.createClass({
     className: 'java/lang/Class',
     loader: testLoader,
@@ -478,20 +477,20 @@ export const setupTest = () => {
         accessFlags: [FIELD_FLAGS.ACC_PUBLIC],
         name: 'classLoader',
         descriptor: 'Ljava/lang/ClassLoader;',
-        attributes: [],
-      },
-    ],
-  });
+        attributes: []
+      }
+    ]
+  })
   testLoader.createClass({
     className: 'java/lang/Cloneable',
     loader: testLoader,
-    flags: ACCESS_FLAGS.ACC_INTERFACE | ACCESS_FLAGS.ACC_PUBLIC,
-  });
+    flags: ACCESS_FLAGS.ACC_INTERFACE | ACCESS_FLAGS.ACC_PUBLIC
+  })
   testLoader.createClass({
     className: 'java/io/Serializable',
     loader: testLoader,
-    flags: ACCESS_FLAGS.ACC_INTERFACE | ACCESS_FLAGS.ACC_PUBLIC,
-  });
+    flags: ACCESS_FLAGS.ACC_INTERFACE | ACCESS_FLAGS.ACC_PUBLIC
+  })
   const strClass = testLoader.createClass({
     className: 'java/lang/String',
     loader: testLoader,
@@ -500,46 +499,46 @@ export const setupTest = () => {
         accessFlags: [FIELD_FLAGS.ACC_FINAL, FIELD_FLAGS.ACC_PRIVATE],
         name: 'value',
         descriptor: '[C',
-        attributes: [],
-      },
-    ],
-  });
+        attributes: []
+      }
+    ]
+  })
 
-  const code = new DataView(new ArrayBuffer(100));
+  const code = new DataView(new ArrayBuffer(100))
   const testClass = testLoader.createClass({
     className: 'Test',
     constants: [
       () => ({
         tag: CONSTANT_TAG.Utf8,
         length: 3,
-        value: '()V',
+        value: '()V'
       }),
       () => ({
         tag: CONSTANT_TAG.Utf8,
         length: 5,
-        value: 'test0',
+        value: 'test0'
       }),
       () => ({
         tag: CONSTANT_TAG.Utf8,
         length: 4,
-        value: 'Test',
+        value: 'Test'
       }),
       cPool => ({
         tag: CONSTANT_TAG.NameAndType,
         nameIndex: cPool.length - 2,
-        descriptorIndex: cPool.length - 3,
+        descriptorIndex: cPool.length - 3
       }),
       cPool => ({
         tag: CONSTANT_TAG.Class,
-        nameIndex: cPool.length - 2,
+        nameIndex: cPool.length - 2
       }),
       cPool => {
         return {
           tag: CONSTANT_TAG.Methodref,
           classIndex: cPool.length - 1,
-          nameAndTypeIndex: cPool.length - 2,
-        };
-      },
+          nameAndTypeIndex: cPool.length - 2
+        }
+      }
     ],
     methods: [
       {
@@ -547,49 +546,49 @@ export const setupTest = () => {
         name: 'test0',
         descriptor: '()V',
         attributes: [],
-        code: code,
-      },
+        code: code
+      }
     ],
-    loader: testLoader,
-  });
-  const method = testClass.getMethod('test0()V') as Method;
+    loader: testLoader
+  })
+  const method = testClass.getMethod('test0()V') as Method
   // #endregion
 
   // #region exception classes
   const Throwable = testLoader.createClass({
     className: 'java/lang/Throwable',
     loader: testLoader,
-    flags: ACCESS_FLAGS.ACC_PUBLIC,
-  });
+    flags: ACCESS_FLAGS.ACC_PUBLIC
+  })
   const NullPointerException = testLoader.createClass({
     className: 'java/lang/NullPointerException',
     superClass: Throwable as ReferenceClassData,
     loader: testLoader,
-    flags: ACCESS_FLAGS.ACC_PUBLIC,
-  });
+    flags: ACCESS_FLAGS.ACC_PUBLIC
+  })
   const ArithmeticException = testLoader.createClass({
     className: 'java/lang/ArithmeticException',
     superClass: Throwable as ReferenceClassData,
     loader: testLoader,
-    flags: ACCESS_FLAGS.ACC_PUBLIC,
-  });
+    flags: ACCESS_FLAGS.ACC_PUBLIC
+  })
   const IllegalAccessError = testLoader.createClass({
     className: 'java/lang/IllegalAccessError',
     superClass: Throwable as ReferenceClassData,
     loader: testLoader,
-    flags: ACCESS_FLAGS.ACC_PUBLIC,
-  });
+    flags: ACCESS_FLAGS.ACC_PUBLIC
+  })
   testLoader.createClass({
     className: 'java/lang/NegativeArraySizeException',
     loader: testLoader,
-    flags: ACCESS_FLAGS.ACC_PUBLIC,
-  });
+    flags: ACCESS_FLAGS.ACC_PUBLIC
+  })
 
   //   #endregion
 
-  const tPool = new TestThreadPool(() => {});
-  const jvm = new TestJVM(testSystem, testLoader, jni);
-  const thread = new TestThread(threadClass as ReferenceClassData, jvm, tPool);
+  const tPool = new TestThreadPool(() => {})
+  const jvm = new TestJVM(testSystem, testLoader, jni)
+  const thread = new TestThread(threadClass as ReferenceClassData, jvm, tPool)
 
   return {
     jni,
@@ -606,8 +605,8 @@ export const setupTest = () => {
       Throwable,
       NullPointerException,
       ArithmeticException,
-      IllegalAccessError,
+      IllegalAccessError
     },
-    tPool,
-  };
-};
+    tPool
+  }
+}

@@ -1,5 +1,5 @@
-import Thread from "../../../thread";
-import { logger } from "../../../utils";
+import Thread from '../../../thread'
+import { logger } from '../../../utils'
 
 const functions = {
   /**
@@ -7,10 +7,10 @@ const functions = {
    * @param thread
    * @param locals
    */
-  "initIDs()V": (thread: Thread, locals: any[]) => {
-    logger.warn("FileInputStream.initIDs()V not implemented");
-    thread.returnStackFrame();
-  },
-};
+  'initIDs()V': (thread: Thread) => {
+    logger.warn('FileInputStream.initIDs()V not implemented')
+    thread.returnStackFrame()
+  }
+}
 
-export default functions;
+export default functions

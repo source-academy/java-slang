@@ -4,7 +4,7 @@ export enum ThreadStatus {
   BLOCKED,
   WAITING,
   TIMED_WAITING,
-  TERMINATED,
+  TERMINATED
 }
 
 export enum MethodHandleReferenceKind {
@@ -16,7 +16,7 @@ export enum MethodHandleReferenceKind {
   REF_invokeStatic = 6,
   REF_invokeSpecial = 7,
   REF_newInvokeSpecial = 8,
-  REF_invokeInterface = 9,
+  REF_invokeInterface = 9
 }
 
 export enum MemberNameFlags {
@@ -28,20 +28,20 @@ export enum MemberNameFlags {
   MN_TRUSTED_FINAL = 0x00200000, // trusted final field
   MN_HIDDEN_MEMBER = 0x00400000, // members defined in a hidden class or with @Hidden
   MN_REFERENCE_KIND_SHIFT = 24, // refKind
-  MN_REFERENCE_KIND_MASK = 0x0f000000 >> MN_REFERENCE_KIND_SHIFT,
+  MN_REFERENCE_KIND_MASK = 0x0f000000 >> MN_REFERENCE_KIND_SHIFT
 }
 
 export enum CLASS_STATUS {
   PREPARED,
   INITIALIZING,
   INITIALIZED,
-  ERROR,
+  ERROR
 }
 
 export enum CLASS_TYPE {
   REFERENCE,
   ARRAY,
-  PRIMITIVE,
+  PRIMITIVE
 }
 
 export enum CLASS_FLAGS {
@@ -53,5 +53,5 @@ export enum CLASS_FLAGS {
   ACC_SYNTHETIC = 0x1000,
   ACC_ANNOTATION = 0x2000,
   ACC_ENUM = 0x4000,
-  ACC_MODULE = 0x8000,
+  ACC_MODULE = 0x8000
 }

@@ -1,5 +1,5 @@
-import Thread from "../../../thread";
-import { JvmObject } from "../../../types/reference/Object";
+import Thread from '../../../thread'
+import { JvmObject } from '../../../types/reference/Object'
 
 const functions = {
   /**
@@ -7,35 +7,35 @@ const functions = {
    * @param thread
    * @param locals
    */
-  "registerNatives()V": (thread: Thread, locals: any[]) => {
-    thread.returnStackFrame();
+  'registerNatives()V': (thread: Thread) => {
+    thread.returnStackFrame()
   },
-  "getClass()Ljava/lang/Class;": (thread: Thread, locals: any[]) => {
-    const obj = locals[0];
-    thread.returnStackFrame(obj.getClass().getJavaObject());
+  'getClass()Ljava/lang/Class;': (thread: Thread, locals: any[]) => {
+    const obj = locals[0]
+    thread.returnStackFrame(obj.getClass().getJavaObject())
   },
-  "clone()Ljava/lang/Object;": (thread: Thread, locals: any[]) => {
-    const obj = locals[0] as JvmObject;
-    const clone = obj.clone();
-    thread.returnStackFrame(clone);
+  'clone()Ljava/lang/Object;': (thread: Thread, locals: any[]) => {
+    const obj = locals[0] as JvmObject
+    const clone = obj.clone()
+    thread.returnStackFrame(clone)
   },
-  "hashCode()I": (thread: Thread, locals: any[]) => {
-    const obj = locals[0];
-    thread.returnStackFrame(obj.hashCode());
+  'hashCode()I': (thread: Thread, locals: any[]) => {
+    const obj = locals[0]
+    thread.returnStackFrame(obj.hashCode())
   },
 
-  "wait(J)V": (thread: Thread, locals: any[]) => {
-    const obj = locals[0] as JvmObject;
-    const monitor = obj.getMonitor();
-    monitor.wait(thread, locals[1]);
-    thread.returnStackFrame();
+  'wait(J)V': (thread: Thread, locals: any[]) => {
+    const obj = locals[0] as JvmObject
+    const monitor = obj.getMonitor()
+    monitor.wait(thread, locals[1])
+    thread.returnStackFrame()
   },
-  "notifyAll()V": (thread: Thread, locals: any[]) => {
-    const obj = locals[0] as JvmObject;
-    const monitor = obj.getMonitor();
-    monitor.notifyAll(thread);
-    thread.returnStackFrame();
-  },
-};
+  'notifyAll()V': (thread: Thread, locals: any[]) => {
+    const obj = locals[0] as JvmObject
+    const monitor = obj.getMonitor()
+    monitor.notifyAll()
+    thread.returnStackFrame()
+  }
+}
 
-export default functions;
+export default functions

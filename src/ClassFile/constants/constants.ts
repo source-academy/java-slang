@@ -12,7 +12,7 @@ export enum CONSTANT_TAG {
   Utf8 = 1,
   MethodHandle = 15,
   MethodType = 16,
-  InvokeDynamic = 18,
+  InvokeDynamic = 18
 }
 
 export const constantTagMap: { [key: number]: CONSTANT_TAG } = {
@@ -29,5 +29,5 @@ export const constantTagMap: { [key: number]: CONSTANT_TAG } = {
   1: CONSTANT_TAG.Utf8,
   15: CONSTANT_TAG.MethodHandle,
   16: CONSTANT_TAG.MethodType,
-  18: CONSTANT_TAG.InvokeDynamic,
-};
+  18: CONSTANT_TAG.InvokeDynamic
+}

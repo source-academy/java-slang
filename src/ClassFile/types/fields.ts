@@ -1,12 +1,12 @@
-import { AttributeInfo } from './attributes';
+import { AttributeInfo } from './attributes'
 
 export interface FieldInfo {
-  accessFlags: number;
-  nameIndex: number;
-  descriptorIndex: number;
-  attributesCount: number;
-  attributes: Array<AttributeInfo>;
-  data?: any;
+  accessFlags: number
+  nameIndex: number
+  descriptorIndex: number
+  attributesCount: number
+  attributes: Array<AttributeInfo>
+  data?: any
 }
 
 export enum FIELD_FLAGS {
@@ -18,5 +18,5 @@ export enum FIELD_FLAGS {
   ACC_VOLATILE = 0x0040,
   ACC_TRANSIENT = 0x0080,
   ACC_SYNTHETIC = 0x1000,
-  ACC_ENUM = 0x4000,
+  ACC_ENUM = 0x4000
 }

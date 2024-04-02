@@ -18,5 +18,5 @@ export enum PREDEF_ATTRIBUTE {
   RuntimeVisibleParameterAnnotations,
   RuntimeInvisibleParameterAnnotations,
   AnnotationDefault,
-  BootstrapMethods,
+  BootstrapMethods
 }

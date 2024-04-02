@@ -1,109 +1,101 @@
-import { ThreadStatus } from "./constants";
-import Thread from "./thread";
+import { ThreadStatus } from './constants'
+import Thread from './thread'
 
 class Node<T> {
-  data: T;
-  next: Node<T>;
-  prev: Node<T>;
+  data: T
+  next: Node<T>
+  prev: Node<T>
 
   constructor(data: T, prev: Node<T>, next: Node<T>) {
-    this.data = data;
-    this.next = next;
-    this.prev = prev;
+    this.data = data
+    this.next = next
+    this.prev = prev
   }
 }
 
 export class Deque<T> {
-  private head: Node<T>;
-  private tail: Node<T>;
-  private size: number;
+  private head: Node<T>
+  private tail: Node<T>
+  private size: number
 
   constructor() {
     // Initialize dummy nodes so we do not need to check for nulls
-    this.head = new Node<T>(
-      null as T,
-      null as unknown as Node<T>,
-      null as unknown as Node<T>
-    );
-    this.tail = new Node<T>(
-      null as T,
-      null as unknown as Node<T>,
-      null as unknown as Node<T>
-    );
+    this.head = new Node<T>(null as T, null as unknown as Node<T>, null as unknown as Node<T>)
+    this.tail = new Node<T>(null as T, null as unknown as Node<T>, null as unknown as Node<T>)
 
-    this.head.next = this.tail;
-    this.tail.prev = this.head;
+    this.head.next = this.tail
+    this.tail.prev = this.head
 
-    this.size = 0;
+    this.size = 0
   }
 
   pushFront(data: T): void {
-    const prevHead = this.head.next;
-    const node = new Node<T>(data, this.head, prevHead);
-    this.head.next = node;
-    prevHead.prev = node;
-    this.size += 1;
+    const prevHead = this.head.next
+    const node = new Node<T>(data, this.head, prevHead)
+    this.head.next = node
+    prevHead.prev = node
+    this.size += 1
   }
 
   pushBack(data: T): void {
-    const prevTail = this.tail.prev;
-    const node = new Node<T>(data, prevTail, this.tail);
-    this.tail.prev = node;
-    prevTail.next = node;
-    this.size += 1;
+    const prevTail = this.tail.prev
+    const node = new Node<T>(data, prevTail, this.tail)
+    this.tail.prev = node
+    prevTail.next = node
+    this.size += 1
   }
 
   popFront(): T {
     if (this.size === 0) {
-      throw new Error("Deque is empty");
+      throw new Error('Deque is empty')
     }
 
-    const node = this.head.next;
-    const nextNode = node.next;
+    const node = this.head.next
+    const nextNode = node.next
 
-    this.head.next = nextNode;
-    nextNode.prev = this.head;
+    this.head.next = nextNode
+    nextNode.prev = this.head
 
-    this.size -= 1;
+    this.size -= 1
 
-    return node.data;
+    return node.data
   }
 
   popBack(): T {
     if (this.size === 0) {
-      throw new Error("Deque is empty");
+      throw new Error('Deque is empty')
     }
 
-    const node = this.tail.prev;
-    const prevNode = node.prev;
+    const node = this.tail.prev
+    const prevNode = node.prev
 
-    this.tail.prev = prevNode;
-    prevNode.next = this.tail;
+    this.tail.prev = prevNode
+    prevNode.next = this.tail
 
-    this.size -= 1;
+    this.size -= 1
 
-    return node.data;
+    return node.data
   }
 
   isEmpty(): boolean {
-    return this.size === 0;
+    return this.size === 0
   }
 }
 
 export abstract class ThreadPool {
-  protected threads: Thread[] = [];
-  protected currentThread: Thread | null = null;
-  protected onEmpty: () => void;
+  protected threads: Thread[] = []
+  protected currentThread: Thread | null = null
+  protected onEmpty: () => void
 
   constructor(onEmpty: () => void) {
-    this.onEmpty = onEmpty;
+    this.onEmpty = onEmpty
   }
 
   /**
    * Adds a new thread to the threadpool.
    * Schedules the thread if the status is runnable.
    */
-  abstract addThread(thread: Thread): void;
+  abstract addThread(thread: Thread): void
 
   /**
    * Updates the status of a thread.
@@ -111,126 +103,121 @@ export abstract class ThreadPool {
    * If thread status becomes terminated and no more threads are in the threadpool,
    * the onEmpty callback will be called.
    */
-  abstract updateStatus(thread: Thread, oldStatus: ThreadStatus): void;
+  abstract updateStatus(thread: Thread, oldStatus: ThreadStatus): void
 
-  abstract quantumOver(thread: Thread): void;
+  abstract quantumOver(thread: Thread): void
 
-  abstract run(onFinish?: () => void): void;
+  abstract run(onFinish?: () => void): void
 
   /**
    * Gets all threads in the threadpool.
    */
   getThreads(): Thread[] {
-    return this.threads;
+    return this.threads
   }
 
   /**
    * Gets the current scheduled thread.
    */
   getCurrentThread(): Thread | null {
-    return this.currentThread;
+    return this.currentThread
   }
 
   /**
    * Returns true if there are any non terminated threads in the threadpool.
    */
   hasThreads(): boolean {
-    this.clearTerminated();
-    return this.currentThread !== null || this.threads.length > 0;
+    this.clearTerminated()
+    return this.currentThread !== null || this.threads.length > 0
   }
 
   /**
    * Cleans up all terminated threads from the threadpool.
    */
   clearTerminated() {
-    this.threads = this.threads.filter(
-      x => x.getStatus() !== ThreadStatus.TERMINATED
-    );
+    this.threads = this.threads.filter(x => x.getStatus() !== ThreadStatus.TERMINATED)
   }
 }
 
 export class RoundRobinThreadPool extends ThreadPool {
-  private threadQueue: Deque<Thread>;
+  private threadQueue: Deque<Thread>
 
   constructor(onEmpty: () => void) {
-    super(onEmpty);
-    this.threadQueue = new Deque<Thread>();
+    super(onEmpty)
+    this.threadQueue = new Deque<Thread>()
   }
 
   addThread(thread: Thread): void {
-    this.threads.push(thread);
+    this.threads.push(thread)
 
     if (thread.getStatus() === ThreadStatus.RUNNABLE) {
       if (this.currentThread === null) {
-        this.currentThread = this.threadQueue.popFront();
+        this.currentThread = this.threadQueue.popFront()
       } else {
-        this.threadQueue.pushBack(thread);
+        this.threadQueue.pushBack(thread)
       }
     }
   }
 
   nextThread() {
     if (this.threadQueue.isEmpty()) {
-      this.currentThread = null;
+      this.currentThread = null
     } else {
-      let thread = this.threadQueue.popFront();
+      let thread = this.threadQueue.popFront()
       while (thread?.getStatus() !== ThreadStatus.RUNNABLE) {
         if (this.threadQueue.isEmpty()) {
-          this.currentThread = null;
-          return;
+          this.currentThread = null
+          return
         }
-        thread = this.threadQueue.popFront();
+        thread = this.threadQueue.popFront()
       }
-      this.currentThread = thread;
+      this.currentThread = thread
     }
   }
 
   updateStatus(thread: Thread, oldStatus: ThreadStatus): void {
     if (thread.getStatus() === oldStatus) {
-      return;
+      return
     }
 
     if (thread.getStatus() === ThreadStatus.TERMINATED) {
-      this.clearTerminated();
-      this.nextThread();
-      return;
+      this.clearTerminated()
+      this.nextThread()
+      return
     }
 
     if (thread.getStatus() === ThreadStatus.RUNNABLE) {
-      this.threadQueue.pushBack(thread);
+      this.threadQueue.pushBack(thread)
       // restart loop
       if (this.currentThread === null) {
-        this.nextThread();
+        this.nextThread()
       }
-    } else if (
-      thread === this.currentThread &&
-      oldStatus === ThreadStatus.RUNNABLE
-    ) {
-      this.nextThread();
+    } else if (thread === this.currentThread && oldStatus === ThreadStatus.RUNNABLE) {
+      this.nextThread()
     }
   }
 
   quantumOver(thread: Thread): void {
     if (thread.getStatus() === ThreadStatus.TERMINATED) {
-      this.clearTerminated();
+      this.clearTerminated()
     } else if (thread.getStatus() === ThreadStatus.RUNNABLE) {
-      this.threadQueue.pushBack(thread);
+      this.threadQueue.pushBack(thread)
     }
 
     if (this.currentThread === thread) {
-      this.nextThread();
+      this.nextThread()
     }
   }
 
   run(onFinish?: () => void): void {
     const ID = setInterval(() => {
       if (this.currentThread !== null) {
-        this.currentThread.runFor(10000);
+        this.currentThread.runFor(10000)
       }
       if (!this.hasThreads()) {
-        clearInterval(ID);
-        onFinish?.();
+        clearInterval(ID)
+        onFinish?.()
       }
-    }, 0);
+    }, 0)
   }
 }

@@ -1,0 +1,188 @@
+% !TEX root = ./java_JVM.tex
+\input source_header.tex
+\usepackage{titlesec}
+
+\setcounter{secnumdepth}{4}
+
+\newcommand{\Rule}[2]{\genfrac{}{}{0.7pt}{}{{\setlength{\fboxrule}{0pt}\setlength{\fboxsep}{3mm}\fbox{$#1$}}}{{\setlength{\fboxrule}{0pt}\setlength{\fboxsep}{3mm}\fbox{$#2$}}}}
+
+\newcommand{\TruE}{\textbf{\texttt{true}}}
+\newcommand{\FalsE}{\textbf{\texttt{false}}}
+\newcommand{\AndOp}{\texttt{\&\&}}
+\newcommand{\OrOp}{\texttt{||}}
+\newcommand{\ThenOp}{\texttt{?}}
+\newcommand{\ElseOp}{\texttt{:}}
+\newcommand{\Rc}{\texttt{\}}}
+\newcommand{\Lc}{\texttt{\{}}
+\newcommand{\Rp}{\texttt{)}}
+\newcommand{\Lp}{\texttt{(}}
+\newcommand{\Fun}{\textbf{\texttt{function}}}
+\newcommand{\Let}{\textbf{\texttt{let}}}
+\newcommand{\Return}{\textbf{\texttt{return}}}
+\newcommand{\Const}{\textbf{\texttt{const}}}
+\newcommand{\If}{\textbf{\texttt{if}}}
+\newcommand{\Else}{\textbf{\texttt{else}}}
+\newcommand{\Bool}{\texttt{boolean}}
+\newcommand{\Number}{\texttt{number}}
+\newcommand{\String}{\texttt{string}}
+\newcommand{\Undefined}{\texttt{undefined}}
+\newcommand{\Null}{\texttt{null}}
+\newcommand{\Any}{\texttt{any}}
+\newcommand{\Void}{\texttt{void}}
+\newcommand{\Pred}{\textit{Pred}}
+\newcommand{\type}{\textit{type}}
+\newcommand{\polytype}{\textit{polytype}}
+\newcommand{\predtype}{\textit{predtype}}
+\newcommand{\ExtractPos}{\ensuremath{\textit{Extract}^+}}
+\newcommand{\ExtractNeg}{\ensuremath{\textit{Extract}^-}}
+
+\begin{document}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\docheader{Java}{Source}{}{Martin Henz, Yap Hock Chuan Roland, Chuan Hao Chang}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input source_intro.tex
+
+This JVM follows the Java SE8 Edition \href{https://docs.oracle.com/javase/specs/jvms/se8/html/index.html}{JVM Specification}.
+
+This documentation contains limitations not covered in the official specifcations above, and is sectioned
+in a way that mirrors the official specification document. For general documentation of the JVM, refer to the official specification.
+
+\stepcounter{section}
+
+\section{Structure of the JVM}
+
+\addtocounter{subsection}{7}
+\subsection{Floating-Point Arithmetic}
+\stepcounter{subsubsection}
+\subsubsection{Floating-Point Modes}
+
+The \texttt{ACC\_STRICT} flag is not implemented.
+
+\addtocounter{subsection}{3}
+
+\subsection{Class Libraries}
+
+The JVM is expected to support implementation of class libraries.
+
+Since the standard library is largely left unimplemented, the full scope of what the JVM needs to support is not known.
+
+\stepcounter{section}
+\section{The class file format}
+
+\subsection{ClassFile Structure}
+
+The following values are not verified:
+
+\begin{enumerate}
+\item \texttt{magic}
+\item \texttt{minor\_version}
+\item \texttt{major\_version}
+\item \texttt{constant\_pool\_count}
+\item \texttt{interfaces\_count}
+\item \texttt{fields\_count}
+\item \texttt{methods\_count}
+\item \texttt{attributes\_count}
+\end{enumerate}
+
+\addtocounter{subsection}{2}
+\subsection{Constant Pool}
+
+The below constants may not be fully implemented.
+
+\begin{enumerate}
+\item \texttt{CONSTANT\_MethodHandle\_info}: Relies on \texttt{MethodHandleNatives::linkMethodHandleConstant} for resolution, some native methods invoked by \texttt{linkMethodHandleConstant} may not be implemented.
+\item \texttt{CONSTANT\_MethodType\_info}: Relies on \texttt{MethodHandleNatives::findMethodHandleType} for resolution, some native methods invoked by \texttt{findMethodHandleType} may not be implemented.
+\item \texttt{CONSTANT\_InvokeDynamic\_info}: Relies on \texttt{MethodHandleNatives::linkCallSite} for resolution, some native methods invoked by \texttt{linkCallSite} may not be implemented.
+\end{enumerate}
+
+There is currently a bug when resolving \texttt{InvokeDynamic} Constants, where the resolved callsite invokes the original private method instead of the JVM provided bridge method.
+
+An additional \texttt{NestHost} Attribute is added to the lambda class so it passes the access control check.
+
+\addtocounter{subsection}{2}
+\subsection{Attributes}
+
+The below attributes are not supported, and will be present in the class data as an \texttt{UnhandledAttribute}.
+
+\begin{enumerate}
+	\item \texttt{RuntimeVisibleAnnotations}
+	\item \texttt{RuntimeInvisibleAnnotations}
+	\item \texttt{RuntimeVisibleParameterAnnotations}
+	\item \texttt{RuntimeInvisibleParameterAnnotations}
+	\item \texttt{RuntimeVisibleTypeAnnotations}
+	\item \texttt{RuntimeInvisibleTypeAnnotations}
+	\item \texttt{AnnotationDefault}
+	\item \texttt{MethodParameters}
+\end{enumerate}
+
+\addtocounter{subsection}{2}
+\subsection{Verification of class Files}
+
+Verification is skipped entirely.
+
+\section{Loading, Linking, and Initializing}
+
+\stepcounter{subsection}
+\subsection{Java Virtual Machine Startup}
+
+The JVM startup process is as follows:
+
+\begin{enumerate}
+	\item Essential classes are loaded (\texttt{Object},\texttt{Thread},\texttt{System},\texttt{Class},\texttt{ClassLoader},\texttt{ThreadGroup},\texttt{Unsafe})
+	\item \texttt{ThreadGroup} and \texttt{Thread} classes are initialized, then the initial thread is instantiated.
+	\item \texttt{System} is initialized by calling \texttt{System::initializeSystemClass}.
+	\item The system class loader is initialized by calling \texttt{ClassLoader::getSystemClassLoader}.
+	\item The main class is loaded with the system class loader. the \texttt{main} method is run.
+\end{enumerate}
+
+Initialization will fail if the above classes and its dependencies cannot be found.
+
+\subsection{Creation and Loading}
+\addtocounter{subsubsection}{3}
+\subsubsection{Loading Constraints}
+
+The JVM does not ensure loading constraints are checked. The same class, loaded by 2 different class loaders, are treated as different classes.
+
+\subsection{Linking}
+
+Symbolic references are implemented as lazy resolution.
+
+\subsubsection{Verification}
+
+This is skipped.
+
+\addtocounter{subsubsection}{1}
+\subsubsection{Resolution}
+
+\addtocounter{paragraph}{4}
+\paragraph{Method Type and Method Handle Resolution}
+
+Method Type and Method Handles are resolved using Java methods. These methods may rely on native methods whose implementations are not fully implemented/tested.
+\begin{itemize}
+	\item Method types are resolved by calling \texttt{MethodHandleNatives::findMethodHandleType}.
+	\item Method handles are resolved by calling \texttt{MethodHandleNatives::linkMethodHandleConstant}.
+\end{itemize}
+
+\paragraph{Call Site Specifier Resolution}
+
+Call Site Specifiers are resolved by calling \texttt{MethodHandleNatives::linkCallSite}.
+
+\texttt{linkCallSite} may invoke native methods whose implementations are not fully implemented/tested.
+
+\subsubsection{Access Control}
+
+Access control also implements the nest mate test from the \href{https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-5.html#jvms-5.4.4}{SE11 edition JVM specifications}. 
+There is a bug where the anonymous inner classes from lambda creation are invoking private methods of the original class directly instead of the synthetic bridge methods we generate.
+To work around this, we add a \texttt{NestHost} attribute to the created class, and implement the nest mate access control logic as a hacky solution.
+
+\section{The Java Virtual Machine Instruction Set}
+
+\begin{itemize}
+\item \texttt{BREAKPOINT}: Not implemented. Throws an error.
+\item \texttt{IMPDEP1}: Not implemented. Throws an error.
+\item \texttt{IMPDEP2}: Not implemented. Throws an error.
+\end{itemize}
+
+
+\end{document}
