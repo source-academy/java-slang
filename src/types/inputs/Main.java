@@ -1,9 +1,4 @@
 public class Main {
-  public static void main(String[] args) {
-    printMessage(1); 
-  }
-
-  public static InvalidType printMessage(String message) { 
-    int test = 1 * "String";
-  }
+  public static void main(String[] args) { getStringLength("Hello World!"); }
+  public static String getStringLength(String input) { return 1; }
 }

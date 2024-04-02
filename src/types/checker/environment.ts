@@ -1,20 +1,8 @@
 import * as NonPrimitives from "../types/nonPrimitives";
 import * as Primitives from "../types/primitives";
-import { Method, Type } from "../types/type";
-
-export class FrameError extends Error {}
-
-export class CannotFindSymbolError extends FrameError {
-  constructor() {
-    super("cannot find symbol");
-  }
-}
-
-export class VariableAlreadyDefinedError extends FrameError {
-  constructor() {
-    super("variable is already defined");
-  }
-}
+import { Method } from "../types/methods";
+import { Type } from "../types/type";
+import { CannotFindSymbolError, VariableAlreadyDefinedError } from "../errors";
 
 const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   boolean: new Primitives.Boolean(),
@@ -35,6 +23,8 @@ const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   Long: new NonPrimitives.Long(),
   Short: new NonPrimitives.Short(),
   String: new NonPrimitives.String(),
+  // TODO: Fix to array type
+  "String[]": new NonPrimitives.String(),
 };
 
 export class Frame {
@@ -42,12 +32,14 @@ export class Frame {
   private _types = new Map<string, Type>();
   private _variables = new Map<string, Type>();
 
+  private _returnType: Type | null = null;
+
   private _parentFrame: Frame | null = null;
   private _childrenFrames: Frame[] = [];
 
   private constructor() {}
 
-  public getMethod(name: string): Method | FrameError {
+  public getMethod(name: string): Method | Error {
     let frame: Frame | null = this;
     while (frame) {
       const method = frame._methods.get(name);
@@ -57,21 +49,17 @@ export class Frame {
     return new CannotFindSymbolError();
   }
 
-  public getVariable(name: string): Type | FrameError {
+  public getReturn(): Type | Error {
     let frame: Frame | null = this;
     while (frame) {
-      const type = frame._variables.get(name);
+      const type = frame._returnType;
       if (type) return type;
       frame = frame._parentFrame;
     }
-    return new CannotFindSymbolError();
+    return new Error("Cannot find return type.");
   }
 
-  public isVariableInFrame(name: string): boolean {
-    return !!this._variables.get(name);
-  }
-
-  public getType(name: string): Type | FrameError {
+  public getType(name: string): Type | Error {
     let frame: Frame | null = this;
     while (frame) {
       const type = frame._types.get(name);
@@ -81,6 +69,24 @@ export class Frame {
     return new CannotFindSymbolError();
   }
 
+  public getVariable(name: string): Type | Error {
+    let frame: Frame | null = this;
+    while (frame) {
+      const type = frame._variables.get(name);
+      if (type) return type;
+      frame = frame._parentFrame;
+    }
+    return new CannotFindSymbolError();
+  }
+
+  public isMethodInFrame(name: string): boolean {
+    return !!this._methods.get(name);
+  }
+
+  public isVariableInFrame(name: string): boolean {
+    return !!this._variables.get(name);
+  }
+
   public newChildFrame(): Frame {
     const childFrame = new Frame();
     this._childrenFrames.push(childFrame);
@@ -88,21 +94,25 @@ export class Frame {
     return childFrame;
   }
 
-  public setMethod(name: string, method: Method): null | FrameError {
+  public setMethod(name: string, method: Method): null | Error {
     const existingMethod = this._methods.get(name);
     if (existingMethod) return new VariableAlreadyDefinedError();
     this._methods.set(name, method);
     return null;
   }
 
-  public setType(name: string, type: Type): null | FrameError {
+  public setReturnType(type: Type): void {
+    this._returnType = type;
+  }
+
+  public setType(name: string, type: Type): null | Error {
     const existingType = this._types.get(name);
     if (existingType) return new VariableAlreadyDefinedError();
     this._types.set(name, type);
     return null;
   }
 
-  public setVariable(name: string, type: Type): null | FrameError {
+  public setVariable(name: string, type: Type): null | Error {
     const existingVariable = this._types.get(name);
     if (existingVariable) return new VariableAlreadyDefinedError();
     this._variables.set(name, type);
@@ -125,9 +135,3 @@ export class Frame {
     return globalFrame;
   }
 }
-
-export type FrameOld = {
-  types: Record<string, Type>;
-  variables: Record<string, Type>;
-  previousFrame: FrameOld | null;
-};

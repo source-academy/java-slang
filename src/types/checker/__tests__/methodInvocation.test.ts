@@ -1,6 +1,11 @@
+import { CannotFindSymbolError } from "../../errors";
 import { check } from "..";
 import { parse } from "../../../ast/parser";
 import { Type } from "../../types/type";
+import {
+  IncompatibleTypesError,
+  MethodCannotBeAppliedError,
+} from "../../errors";
 
 const createProgram = (methods: string) => `
   public class Main {
@@ -19,6 +24,60 @@ const testcases: {
       public static void printMessage(String message) {}
     `,
     result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      public static void main(String[] args) { printMessage(100); }
+      public static void printMessage(String message) {}
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] },
+  },
+  {
+    input: `
+      public static void main(String[] args) { printMessage("Hello", "World"); }
+      public static void printMessage(String message) {}
+    `,
+    result: { type: null, errors: [new MethodCannotBeAppliedError()] },
+  },
+  {
+    input: `
+      public static void main(String[] args) {
+        printMessage("Hello, World!");
+        printMessage("This is number ", 5);
+      }
+      public static void printMessage(String message) {}
+      public static void printMessage(String message, int number) {}
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      public static void main(String[] args) {
+        nonExistentMethod(); // This method does not exist
+      }
+    `,
+    result: { type: null, errors: [new CannotFindSymbolError()] },
+  },
+  {
+    input: `
+      public static void main(String[] args) { getStringLength("Hello World!"); }
+      public static String getStringLength(String input) { return input; }
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      public static void main(String[] args) { int test = getStringLength("Hello World!"); }
+      public static String getStringLength(String input) { return input; }
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] },
+  },
+  {
+    input: `
+      public static void main(String[] args) { int test = getStringLength("Hello World!"); }
+      public static int getStringLength(String input) { return input; }
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] },
   },
 ];
 

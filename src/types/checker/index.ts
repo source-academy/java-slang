@@ -1,12 +1,18 @@
+import { Frame } from "./environment";
+import { Method } from "../types/methods";
+import { Node } from "../../ast/types/ast";
+import { String } from "../types/nonPrimitives";
+import { Type } from "../types/type";
 import {
   BadOperandTypesError,
   IncompatibleTypesError,
-  MethodCannotBeAppliedError,
+  VariableAlreadyDefinedError,
 } from "../errors";
-import { Frame, VariableAlreadyDefinedError } from "./environment";
-import { Node } from "../../ast/types/ast";
-import { String } from "../types/nonPrimitives";
-import { ClassMethod, Parameter, Type } from "../types/type";
+import {
+  createArgumentList,
+  createMethod,
+  createMethodSignature,
+} from "../typeFactories/methodFactory";
 import {
   Expression,
   ExpressionName,
@@ -51,6 +57,7 @@ export const check = (
         throw new Error(
           "Right side of assignment statment should return a type."
         );
+      console.log(node.left, leftType, node.right, currentType);
       if (!leftType.canBeAssigned(currentType))
         return newResult(null, [new IncompatibleTypesError()]);
       return OK_RESULT;
@@ -284,61 +291,85 @@ export const check = (
       }, OK_RESULT);
     }
     case "MethodInvocation": {
+      const errors: Error[] = [];
       const method = frame.getMethod(node.identifier);
       if (method instanceof Error) return newResult(null, [method]);
-      if (method.parameters.length !== node.argumentList.length)
-        return newResult(null, [new MethodCannotBeAppliedError()]);
-      const errors: Error[] = [];
-      for (let i = 0; i < method.parameters.length; i++) {
-        const parameter = method.parameters[i];
-        const argument = node.argumentList[i];
-        const argumentCheck = check(argument, frame);
-        if (argumentCheck.errors.length > 0) {
-          errors.push(...argumentCheck.errors);
+      const argumentTypes: Type[] = [];
+      for (const argument of node.argumentList) {
+        const argumentResult = check(argument, frame);
+        if (argumentResult.errors.length > 0) {
+          errors.push(...argumentResult.errors);
           continue;
         }
-        if (!argumentCheck.currentType)
-          throw new Error("Argument check should result in a type.");
-        if (!parameter.canBeAssigned(argumentCheck.currentType))
-          errors.push(new IncompatibleTypesError());
+        if (!argumentResult.currentType)
+          throw new Error("Arguments should have a type.");
+        argumentTypes.push(argumentResult.currentType);
       }
-      return newResult(method.returnType, errors);
+      const argumentList = createArgumentList(...argumentTypes);
+      if (argumentList instanceof Error)
+        return newResult(null, [...errors, argumentList]);
+      const returnType = method.invoke(argumentList);
+      if (returnType instanceof Error)
+        return newResult(null, [...errors, returnType]);
+      return newResult(returnType, errors);
     }
     case "NormalClassDeclaration": {
       const errors: Error[] = [];
       const classFrame = frame.newChildFrame();
+      const furtherChecks: (() => void)[] = [];
       node.classBody.forEach((bodyDeclaration) => {
         if (bodyDeclaration.kind === "MethodDeclaration") {
-          const method = new ClassMethod();
-          method.modifiers = bodyDeclaration.methodModifier;
-          const returnType = frame.getType(bodyDeclaration.methodHeader.result);
-          if (returnType instanceof Error) {
-            errors.push(returnType);
-            return;
-          }
-          method.returnType = returnType;
-          const parameters: Parameter[] = [];
-          bodyDeclaration.methodHeader.formalParameterList.forEach(
-            (parameter) => {
-              const type = classFrame.getType(parameter.unannType);
-              if (type instanceof Type) {
-                const param = new Parameter();
-                param.name = parameter.identifier;
-                param.type = type;
-                parameters.push(param);
-              }
+          const methodName = bodyDeclaration.methodHeader.identifier;
+          if (classFrame.isMethodInFrame(methodName)) {
+            const method = classFrame.getMethod(methodName) as Method;
+            const overloadSignature = createMethodSignature(
+              classFrame,
+              bodyDeclaration
+            );
+            if (overloadSignature instanceof Error) {
+              errors.push(overloadSignature);
+              return;
             }
-          );
-          method.parameters = parameters;
-          classFrame.setMethod(bodyDeclaration.methodHeader.identifier, method);
+            const error = method.addOverload(overloadSignature);
+            if (error) errors.push(error);
+            furtherChecks.push(() => {
+              const methodFrame = classFrame.newChildFrame();
+              overloadSignature.mapParameters((name, type) => {
+                const error = methodFrame.setVariable(name, type);
+                if (error) errors.push(error);
+              });
+              methodFrame.setReturnType(overloadSignature.getReturnType());
+              const checkResult = check(
+                bodyDeclaration.methodBody,
+                methodFrame
+              );
+              errors.push(...checkResult.errors);
+            });
+          } else {
+            const method = createMethod(frame, bodyDeclaration);
+            if (method instanceof Error) {
+              errors.push(method);
+              return;
+            }
+            classFrame.setMethod(methodName, method);
+            furtherChecks.push(() => {
+              const methodFrame = classFrame.newChildFrame();
+              const methodSignature = method.getOverload(0);
+              methodSignature.mapParameters((name, type) => {
+                const error = methodFrame.setVariable(name, type);
+                if (error) errors.push(error);
+              });
+              methodFrame.setReturnType(methodSignature.getReturnType());
+              const checkResult = check(
+                bodyDeclaration.methodBody,
+                methodFrame
+              );
+              errors.push(...checkResult.errors);
+            });
+          }
         }
       });
-      node.classBody.forEach((bodyDeclaration) => {
-        if (bodyDeclaration.kind === "MethodDeclaration") {
-          const checkResult = check(bodyDeclaration.methodBody, classFrame);
-          errors.push(...checkResult.errors);
-        }
-      });
+      furtherChecks.forEach((furtherCheck) => furtherCheck());
       return newResult(null, errors);
     }
     case "PostfixExpression": {
@@ -392,6 +423,17 @@ export const check = (
           );
       }
     }
+    case "ReturnStatement": {
+      const expressionCheck = check(node.exp, frame);
+      if (expressionCheck.errors.length > 0) return expressionCheck;
+      if (!expressionCheck.currentType)
+        throw new Error("Expression check should return a type.");
+      const returnType = frame.getReturn();
+      if (returnType instanceof Error) return newResult(null, [returnType]);
+      if (!returnType.canBeAssigned(expressionCheck.currentType))
+        return newResult(null, [new IncompatibleTypesError()]);
+      return OK_RESULT;
+    }
     case "TernaryExpression": {
       const conditionCheck = check(node.condition, frame);
       if (conditionCheck.errors.length > 0) return conditionCheck;
@@ -432,7 +474,6 @@ export const check = (
       return OK_RESULT;
     }
     default:
-      console.log(node);
       throw new Error(
         `Check is not implemented for this type of node ${node.kind}.`
       );
