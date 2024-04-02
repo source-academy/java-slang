@@ -19,7 +19,6 @@ const testcases: {
   {
     input: `int[] numbers = {1, 2, 3, 4, 5};`,
     result: { type: null, errors: [] },
-    only: true,
   },
   {
     input: `double[] values;`,
@@ -43,6 +42,13 @@ const testcases: {
     input: `
       int[] numbers = {1, 2, 3, 4, 5};
       int number = numbers[2]; // Accessing the third element
+    `,
+    result: { type: null, errors: [] },
+  },
+  {
+    input: `
+      int[][] numbers = {{1, 2, 3, 4, 5}};
+      int number = numbers[0][2]; // Accessing the third nested element
     `,
     result: { type: null, errors: [] },
   },

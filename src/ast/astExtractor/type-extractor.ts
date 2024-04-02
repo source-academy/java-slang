@@ -87,7 +87,7 @@ export class TypeExtractor extends BaseJavaCstVisitorWithDefaults {
     return ctx.Identifier[0].image;
   }
 
-  dims(_: DimsCtx) {
-    return "[]";
+  dims(ctx: DimsCtx) {
+    return "[]".repeat(ctx.LSquare.length);
   }
 }

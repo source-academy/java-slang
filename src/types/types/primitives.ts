@@ -149,6 +149,10 @@ export class Int extends Type {
       type instanceof Byte
     );
   }
+
+  public equals(object: unknown): boolean {
+    return object instanceof Int;
+  }
 }
 
 export class Long extends Type {

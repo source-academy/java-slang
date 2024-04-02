@@ -11,4 +11,8 @@ export class Array extends Type {
     if (!(type instanceof Array)) return false;
     return this._type.equals(type._type);
   }
+
+  public getContentType(): Type {
+    return this._type;
+  }
 }

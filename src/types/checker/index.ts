@@ -1,10 +1,14 @@
-import { ExpressionName } from "../../ast/types/blocks-and-statements";
+import {
+  ExpressionName,
+  VariableInitializer,
+} from "../../ast/types/blocks-and-statements";
 import { Frame } from "./environment";
 import { Method } from "../types/methods";
 import { Node } from "../../ast/types/ast";
-import { String } from "../types/nonPrimitives";
+import { Integer, String } from "../types/nonPrimitives";
 import { Type } from "../types/type";
 import {
+  ArrayRequiredError,
   BadOperandTypesError,
   IncompatibleTypesError,
   VariableAlreadyDefinedError,
@@ -25,6 +29,7 @@ import {
   getFloatType,
   getNumberType,
 } from "../types/primitives";
+import { Array as ArrayType } from "../types/arrays";
 
 export type Result = {
   currentType: Type | null;
@@ -43,6 +48,28 @@ export const check = (
   frame: Frame = Frame.globalFrame()
 ): Result => {
   switch (node.kind) {
+    case "ArrayAccess": {
+      const primaryCheck = check(node.primary, frame);
+      if (primaryCheck.errors.length > 0)
+        return newResult(null, primaryCheck.errors);
+      if (!(primaryCheck.currentType instanceof ArrayType))
+        return newResult(null, [new ArrayRequiredError()]);
+      const expressionCheck = check(node.expression, frame);
+      if (expressionCheck.errors.length > 0)
+        return newResult(null, expressionCheck.errors);
+      if (!expressionCheck.currentType)
+        throw new Error("Expression check should return a type.");
+      const integerType = new Integer();
+      const intType = new Int();
+      if (
+        !(
+          integerType.equals(expressionCheck.currentType) ||
+          intType.equals(expressionCheck.currentType)
+        )
+      )
+        return newResult(null, [new IncompatibleTypesError()]);
+      return newResult(primaryCheck.currentType.getContentType());
+    }
     case "Assignment": {
       const left = node.left as ExpressionName;
       const right = node.right;
@@ -253,31 +280,51 @@ export const check = (
     case "LocalVariableDeclarationStatement": {
       if (!node.variableDeclaratorList)
         throw new Error("Variable declarator list is undefined.");
+      const errors: Error[] = [];
       const results = node.variableDeclaratorList.map((variableDeclarator) => {
         const declaredType = frame.getType(node.localVariableType);
         if (declaredType instanceof Error)
           return newResult(null, [declaredType]);
         const { variableInitializer } = variableDeclarator;
-        if (!variableInitializer)
-          throw new Error("Variable initializer is undefined.");
-        if (Array.isArray(variableInitializer)) {
-          // Is array initializer
-        } else {
-          // Is not array initializer
-          const { currentType, errors } = check(variableInitializer, frame);
-          if (errors.length > 0) return { currentType: null, errors };
-          if (currentType == null)
-            throw new Error(
-              "Variable initializer in local variable declaration statement should return a type."
-            );
-          if (!declaredType.canBeAssigned(currentType))
-            return newResult(null, [new IncompatibleTypesError()]);
+        if (variableInitializer) {
+          const checkInitialization = (
+            declaredType: Type | ArrayType,
+            variableInitializer: VariableInitializer
+          ): void => {
+            if (errors.length > 0) return;
+            if (!Array.isArray(variableInitializer)) {
+              if (declaredType instanceof ArrayType) {
+                errors.push(new IncompatibleTypesError());
+                return;
+              }
+              const checkResult = check(variableInitializer, frame);
+              if (checkResult.errors.length > 0) {
+                errors.push(...checkResult.errors);
+                return;
+              }
+              if (checkResult.currentType == null)
+                throw new Error("Variable initializer should return a type.");
+              if (!declaredType.canBeAssigned(checkResult.currentType))
+                errors.push(new IncompatibleTypesError());
+              return;
+            }
+            if (!(declaredType instanceof ArrayType)) {
+              errors.push(new IncompatibleTypesError());
+              return;
+            }
+            const arrayContentType = declaredType.getContentType();
+            variableInitializer.forEach((variableInitializer) => {
+              checkInitialization(arrayContentType, variableInitializer);
+            });
+          };
+          checkInitialization(declaredType, variableInitializer);
         }
+        if (errors.length > 0) return newResult(null, errors);
         const error = frame.setVariable(
           variableDeclarator.variableDeclaratorId,
           declaredType
         );
-        if (error) return newResult(null, [error]);
+        if (error) return newResult(null, [...errors, error]);
         return OK_RESULT;
       });
       return results.reduce((previousResult, currentResult) => {
@@ -472,6 +519,7 @@ export const check = (
       return OK_RESULT;
     }
     default:
+      console.log(node);
       throw new Error(
         `Check is not implemented for this type of node ${node.kind}.`
       );

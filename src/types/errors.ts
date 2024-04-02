@@ -1,3 +1,9 @@
+export class ArrayRequiredError extends Error {
+  constructor() {
+    super("array required");
+  }
+}
+
 export class BadOperandTypesError extends Error {
   constructor() {
     super("bad operand");
