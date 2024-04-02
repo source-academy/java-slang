@@ -57,7 +57,6 @@ export const check = (
         throw new Error(
           "Right side of assignment statment should return a type."
         );
-      console.log(node.left, leftType, node.right, currentType);
       if (!leftType.canBeAssigned(currentType))
         return newResult(null, [new IncompatibleTypesError()]);
       return OK_RESULT;
