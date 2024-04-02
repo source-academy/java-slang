@@ -19,6 +19,7 @@ const testcases: {
   {
     input: `int[] numbers = {1, 2, 3, 4, 5};`,
     result: { type: null, errors: [] },
+    only: true,
   },
   {
     input: `double[] values;`,

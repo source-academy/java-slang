@@ -1,3 +1,4 @@
+import { ExpressionName } from "../../ast/types/blocks-and-statements";
 import { Frame } from "./environment";
 import { Method } from "../types/methods";
 import { Node } from "../../ast/types/ast";
@@ -13,10 +14,6 @@ import {
   createMethod,
   createMethodSignature,
 } from "../typeFactories/methodFactory";
-import {
-  Expression,
-  ExpressionName,
-} from "../../ast/types/blocks-and-statements";
 import {
   Boolean,
   Char,
@@ -263,17 +260,19 @@ export const check = (
         const { variableInitializer } = variableDeclarator;
         if (!variableInitializer)
           throw new Error("Variable initializer is undefined.");
-        const { currentType, errors } = check(
-          variableInitializer as Expression,
-          frame
-        );
-        if (errors.length > 0) return { currentType: null, errors };
-        if (currentType == null)
-          throw new Error(
-            "Variable initializer in local variable declaration statement should return a type."
-          );
-        if (!declaredType.canBeAssigned(currentType))
-          return newResult(null, [new IncompatibleTypesError()]);
+        if (Array.isArray(variableInitializer)) {
+          // Is array initializer
+        } else {
+          // Is not array initializer
+          const { currentType, errors } = check(variableInitializer, frame);
+          if (errors.length > 0) return { currentType: null, errors };
+          if (currentType == null)
+            throw new Error(
+              "Variable initializer in local variable declaration statement should return a type."
+            );
+          if (!declaredType.canBeAssigned(currentType))
+            return newResult(null, [new IncompatibleTypesError()]);
+        }
         const error = frame.setVariable(
           variableDeclarator.variableDeclaratorId,
           declaredType

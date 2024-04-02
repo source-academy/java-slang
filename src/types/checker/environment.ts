@@ -3,6 +3,8 @@ import * as Primitives from "../types/primitives";
 import { Method } from "../types/methods";
 import { Type } from "../types/type";
 import { CannotFindSymbolError, VariableAlreadyDefinedError } from "../errors";
+import { isArrayType, removeArraySuffix } from "./arrays";
+import { Array } from "../types/arrays";
 
 const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   boolean: new Primitives.Boolean(),
@@ -60,6 +62,13 @@ export class Frame {
   }
 
   public getType(name: string): Type | Error {
+    if (isArrayType(name)) {
+      const typePrefix = removeArraySuffix(name);
+      const prefixType = this.getType(typePrefix);
+      if (prefixType instanceof Error) return prefixType;
+      return new Array(prefixType);
+    }
+
     let frame: Frame | null = this;
     while (frame) {
       const type = frame._types.get(name);
