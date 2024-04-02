@@ -359,7 +359,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
         kind: "Literal",
         literalType: {
           kind: "NullLiteral",
-          value: ctx.Null[0].image,
+          value: ctx.Null,
         },
         location: this.location,
       };

@@ -267,7 +267,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     startLabel.offset = cg.code.length;
 
-    maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg).stackSize);
+    if (condition) {
+      maxStack = Math.max(maxStack, codeGenerators["LogicalExpression"](condition, cg).stackSize);
+    }
     maxStack = Math.max(maxStack, compile(body, cg).stackSize);
     continueLabel.offset = cg.code.length;
     forUpdate.forEach(e => {
