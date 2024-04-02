@@ -1,9 +1,9 @@
-import Thread from "../../../../../thread";
+import Thread from '../../../../../thread'
 
 const functions = {
-  "VMSupportsCS8()Z": (thread: Thread, locals: any[]) => {
-    thread.returnStackFrame(1); // support compare and swap
-  },
-};
+  'VMSupportsCS8()Z': (thread: Thread) => {
+    thread.returnStackFrame(1) // support compare and swap
+  }
+}
 
-export default functions;
+export default functions

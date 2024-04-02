@@ -1,3 +1,3 @@
-import * as JVM from "./jvm";
+import * as JVM from './jvm'
 
-export { JVM };
+export { JVM }

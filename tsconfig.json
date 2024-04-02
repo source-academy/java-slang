@@ -5,12 +5,7 @@
     "declaration": true,
     "forceConsistentCasingInFileNames": true,
     "incremental": true,
-    "lib": [
-      "dom",
-      "es2017.object",
-      "es2018",
-      "es2021.string",
-    ],
+    "lib": ["dom", "es2017.object", "es2018", "es2021.string"],
     "module": "commonjs",
     "moduleResolution": "node",
     "noImplicitAny": true,

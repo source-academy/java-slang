@@ -1,31 +1,26 @@
-import { logger } from "../..";
-import { PREDEF_ATTRIBUTE } from "../../../../ClassFile/constants/attributes";
+import { logger } from '../..'
+import { PREDEF_ATTRIBUTE } from '../../../../ClassFile/constants/attributes'
 import {
   CodeAttribute,
   ExceptionHandler,
   AttributeInfo,
-  SignatureAttribute,
-} from "../../../../ClassFile/types/attributes";
-import {
-  ConstantInfo,
-  ConstantUtf8Info,
-} from "../../../../ClassFile/types/constants";
+  SignatureAttribute
+} from '../../../../ClassFile/types/attributes'
+import { ConstantInfo, ConstantUtf8Info } from '../../../../ClassFile/types/constants'
 
 export function readAttribute(
   constPool: Array<ConstantInfo>,
   view: DataView,
   offset: number
 ): { result: { [key: string]: any }; offset: number } {
-  const attributeNameIndex = view.getUint16(offset);
-  offset += 2;
-  const constantAttributeName: ConstantUtf8Info = constPool[
-    attributeNameIndex
-  ] as ConstantUtf8Info;
+  const attributeNameIndex = view.getUint16(offset)
+  offset += 2
+  const constantAttributeName: ConstantUtf8Info = constPool[attributeNameIndex] as ConstantUtf8Info
 
-  // @ts-ignore
-  const Attrib: number = PREDEF_ATTRIBUTE[constantAttributeName.value];
-  const attributeLength = view.getUint32(offset);
-  offset += 4;
+  const Attrib: number =
+    PREDEF_ATTRIBUTE[constantAttributeName.value as keyof typeof PREDEF_ATTRIBUTE]
+  const attributeLength = view.getUint32(offset)
+  offset += 4
 
   switch (Attrib) {
     case PREDEF_ATTRIBUTE.ConstantValue:
@@ -35,15 +30,9 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.Code:
-      return readCodeAttribute(
-        constPool,
-        attributeNameIndex,
-        attributeLength,
-        view,
-        offset
-      );
+      return readCodeAttribute(constPool, attributeNameIndex, attributeLength, view, offset)
     case PREDEF_ATTRIBUTE.StackMapTable:
       return readAttributeStackMapTable(
         constPool,
@@ -51,23 +40,11 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.Exceptions:
-      return readAttributeExceptions(
-        constPool,
-        attributeNameIndex,
-        attributeLength,
-        view,
-        offset
-      );
+      return readAttributeExceptions(constPool, attributeNameIndex, attributeLength, view, offset)
     case PREDEF_ATTRIBUTE.InnerClasses:
-      return readAttributeInnerClasses(
-        constPool,
-        attributeNameIndex,
-        attributeLength,
-        view,
-        offset
-      );
+      return readAttributeInnerClasses(constPool, attributeNameIndex, attributeLength, view, offset)
     case PREDEF_ATTRIBUTE.EnclosingMethod:
       return readAttributeEnclosingMethod(
         constPool,
@@ -75,31 +52,13 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.Synthetic:
-      return readAttributeSynthetic(
-        constPool,
-        attributeNameIndex,
-        attributeLength,
-        view,
-        offset
-      );
+      return readAttributeSynthetic(constPool, attributeNameIndex, attributeLength, view, offset)
     case PREDEF_ATTRIBUTE.Signature:
-      return readAttributeSignature(
-        constPool,
-        attributeNameIndex,
-        attributeLength,
-        view,
-        offset
-      );
+      return readAttributeSignature(constPool, attributeNameIndex, attributeLength, view, offset)
     case PREDEF_ATTRIBUTE.SourceFile:
-      return readAttributeSourceFile(
-        constPool,
-        attributeNameIndex,
-        attributeLength,
-        view,
-        offset
-      );
+      return readAttributeSourceFile(constPool, attributeNameIndex, attributeLength, view, offset)
     case PREDEF_ATTRIBUTE.SourceDebugExtension:
       return readAttributeSourceDebugExtension(
         constPool,
@@ -107,7 +66,7 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.LineNumberTable:
       return readAttributeLineNumberTable(
         constPool,
@@ -115,7 +74,7 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.LocalVariableTable:
       return readAttributeLocalVariableTable(
         constPool,
@@ -123,7 +82,7 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.LocalVariableTypeTable:
       return readAttributeLocalVariableTypeTable(
         constPool,
@@ -131,15 +90,9 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.Deprecated:
-      return readAttributeDeprecated(
-        constPool,
-        attributeNameIndex,
-        attributeLength,
-        view,
-        offset
-      );
+      return readAttributeDeprecated(constPool, attributeNameIndex, attributeLength, view, offset)
     case PREDEF_ATTRIBUTE.RuntimeVisibleAnnotations:
       return readAttributeRuntimeVisibleAnnotations(
         constPool,
@@ -147,7 +100,7 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.RuntimeInvisibleAnnotations:
       return readAttributeRuntimeInvisibleAnnotations(
         constPool,
@@ -155,7 +108,7 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.RuntimeVisibleParameterAnnotations:
       return readAttributeRuntimeVisibleParameterAnnotations(
         constPool,
@@ -163,7 +116,7 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.RuntimeInvisibleParameterAnnotations:
       return readAttributeRuntimeInvisibleParameterAnnotations(
         constPool,
@@ -171,7 +124,7 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.AnnotationDefault:
       return readAttributeAnnotationDefault(
         constPool,
@@ -179,7 +132,7 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     case PREDEF_ATTRIBUTE.BootstrapMethods:
       return readAttributeBootstrapMethods(
         constPool,
@@ -187,15 +140,9 @@ export function readAttribute(
         attributeLength,
         view,
         offset
-      );
+      )
     default:
-      return readAttributeGeneric(
-        constPool,
-        attributeNameIndex,
-        attributeLength,
-        view,
-        offset
-      );
+      return readAttributeGeneric(constPool, attributeNameIndex, attributeLength, view, offset)
   }
 }
 
@@ -206,16 +153,16 @@ function readAttributeConstantValue(
   view: DataView,
   offset: number
 ) {
-  const constantvalueIndex = view.getUint16(offset);
-  offset += 2;
+  const constantvalueIndex = view.getUint16(offset)
+  offset += 2
 
   return {
     result: {
       attributeNameIndex,
-      constantvalueIndex,
+      constantvalueIndex
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readCodeAttribute(
@@ -225,51 +172,47 @@ function readCodeAttribute(
   view: DataView,
   offset: number
 ): {
-  result: CodeAttribute;
-  offset: number;
+  result: CodeAttribute
+  offset: number
 } {
-  const maxStack = view.getUint16(offset);
-  offset += 2;
-  const maxLocals = view.getUint16(offset);
-  offset += 2;
-  const codeLength = view.getUint32(offset); // size in bytes
-  offset += 4;
+  const maxStack = view.getUint16(offset)
+  offset += 2
+  const maxLocals = view.getUint16(offset)
+  offset += 2
+  const codeLength = view.getUint32(offset) // size in bytes
+  offset += 4
 
   if (codeLength <= 0 || codeLength >= 65536) {
-    throw new Error("Class format error: Code attribute invalid length");
+    throw new Error('Class format error: Code attribute invalid length')
   }
 
-  const code = new DataView(view.buffer, offset, codeLength);
-  offset += codeLength;
+  const code = new DataView(view.buffer, offset, codeLength)
+  offset += codeLength
 
-  const exceptionTableLength = view.getUint16(offset);
-  offset += 2;
+  const exceptionTableLength = view.getUint16(offset)
+  offset += 2
 
-  const exceptionTable: ExceptionHandler[] = [];
+  const exceptionTable: ExceptionHandler[] = []
   for (let i = 0; i < exceptionTableLength; i++) {
-    const startPc = view.getUint16(offset);
-    offset += 2;
-    const endPc = view.getUint16(offset);
-    offset += 2;
-    const handlerPc = view.getUint16(offset);
-    offset += 2;
-    const catchType = view.getUint16(offset);
-    offset += 2;
-    exceptionTable.push({ startPc, endPc, handlerPc, catchType });
+    const startPc = view.getUint16(offset)
+    offset += 2
+    const endPc = view.getUint16(offset)
+    offset += 2
+    const handlerPc = view.getUint16(offset)
+    offset += 2
+    const catchType = view.getUint16(offset)
+    offset += 2
+    exceptionTable.push({ startPc, endPc, handlerPc, catchType })
   }
 
-  const attributesCount = view.getUint16(offset);
-  offset += 2;
+  const attributesCount = view.getUint16(offset)
+  offset += 2
 
-  const attributes: AttributeInfo[] = [];
+  const attributes: AttributeInfo[] = []
   for (let i = 0; i < attributesCount; i++) {
-    const { result, offset: resultOffset } = readAttribute(
-      constantPool,
-      view,
-      offset
-    );
-    attributes.push(result as unknown as AttributeInfo);
-    offset = resultOffset;
+    const { result, offset: resultOffset } = readAttribute(constantPool, view, offset)
+    attributes.push(result as unknown as AttributeInfo)
+    offset = resultOffset
   }
 
   return {
@@ -283,10 +226,10 @@ function readCodeAttribute(
       attributeLength: attributeLength,
       codeLength: codeLength,
       exceptionTableLength: exceptionTableLength,
-      attributesCount: attributesCount,
+      attributesCount: attributesCount
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeStackMapTable(
@@ -296,21 +239,21 @@ function readAttributeStackMapTable(
   view: DataView,
   offset: number
 ) {
-  logger.warn("readAttributeStackMapTable is not implemented!");
-  const info = [];
+  logger.warn('readAttributeStackMapTable is not implemented!')
+  const info = []
 
   for (let i = 0; i < attributeLength; i += 1) {
-    info.push(view.getUint8(offset));
-    offset += 1;
+    info.push(view.getUint8(offset))
+    offset += 1
   }
 
   return {
     result: {
       attributeNameIndex,
-      info,
+      info
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeExceptions(
@@ -320,21 +263,21 @@ function readAttributeExceptions(
   view: DataView,
   offset: number
 ) {
-  const numberOfExceptions = view.getUint16(offset);
-  offset += 2;
-  const exceptionIndexTable = [];
+  const numberOfExceptions = view.getUint16(offset)
+  offset += 2
+  const exceptionIndexTable = []
   for (let i = 0; i < numberOfExceptions; i++) {
-    exceptionIndexTable.push(view.getUint16(offset));
-    offset += 2;
+    exceptionIndexTable.push(view.getUint16(offset))
+    offset += 2
   }
 
   return {
     result: {
       attributeNameIndex,
-      exceptionIndexTable,
+      exceptionIndexTable
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeInnerClasses(
@@ -344,35 +287,35 @@ function readAttributeInnerClasses(
   view: DataView,
   offset: number
 ) {
-  const numberOfClasses = view.getUint16(offset);
-  offset += 2;
+  const numberOfClasses = view.getUint16(offset)
+  offset += 2
 
-  const classes = [];
+  const classes = []
 
   for (let i = 0; i < numberOfClasses; i += 1) {
-    const innerClassInfoIndex = view.getUint16(offset);
-    offset += 2;
-    const outerClassInfoIndex = view.getUint16(offset);
-    offset += 2;
-    const innerNameIndex = view.getUint16(offset);
-    offset += 2;
-    const innerClassAccessFlags = view.getUint16(offset);
-    offset += 2;
+    const innerClassInfoIndex = view.getUint16(offset)
+    offset += 2
+    const outerClassInfoIndex = view.getUint16(offset)
+    offset += 2
+    const innerNameIndex = view.getUint16(offset)
+    offset += 2
+    const innerClassAccessFlags = view.getUint16(offset)
+    offset += 2
     classes.push({
       innerClassInfoIndex,
       outerClassInfoIndex,
       innerNameIndex,
-      innerClassAccessFlags,
-    });
+      innerClassAccessFlags
+    })
   }
 
   return {
     result: {
       attributeNameIndex,
-      classes,
+      classes
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeEnclosingMethod(
@@ -382,19 +325,19 @@ function readAttributeEnclosingMethod(
   view: DataView,
   offset: number
 ) {
-  const classIndex = view.getUint16(offset);
-  offset += 2;
-  const methodIndex = view.getUint16(offset);
-  offset += 2;
+  const classIndex = view.getUint16(offset)
+  offset += 2
+  const methodIndex = view.getUint16(offset)
+  offset += 2
 
   return {
     result: {
       attributeNameIndex,
       classIndex,
-      methodIndex,
+      methodIndex
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeSynthetic(
@@ -406,10 +349,10 @@ function readAttributeSynthetic(
 ) {
   return {
     result: {
-      attributeNameIndex,
+      attributeNameIndex
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeSignature(
@@ -419,16 +362,16 @@ function readAttributeSignature(
   view: DataView,
   offset: number
 ): { result: SignatureAttribute; offset: number } {
-  const signatureIndex = view.getUint16(offset);
-  offset += 2;
+  const signatureIndex = view.getUint16(offset)
+  offset += 2
   return {
     result: {
       attributeLength,
       attributeNameIndex,
-      signatureIndex,
+      signatureIndex
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeSourceFile(
@@ -438,16 +381,16 @@ function readAttributeSourceFile(
   view: DataView,
   offset: number
 ) {
-  const sourcefileIndex = view.getUint16(offset);
-  offset += 2;
+  const sourcefileIndex = view.getUint16(offset)
+  offset += 2
 
   return {
     result: {
       attributeNameIndex,
-      sourcefileIndex,
+      sourcefileIndex
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeSourceDebugExtension(
@@ -457,20 +400,20 @@ function readAttributeSourceDebugExtension(
   view: DataView,
   offset: number
 ) {
-  const debugExtension = [];
+  const debugExtension = []
 
   for (let i = 0; i < attributeLength; i += 1) {
-    debugExtension.push(view.getUint8(offset));
-    offset += 1;
+    debugExtension.push(view.getUint8(offset))
+    offset += 1
   }
 
   return {
     result: {
       attributeNameIndex,
-      debugExtension,
+      debugExtension
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeLineNumberTable(
@@ -480,29 +423,29 @@ function readAttributeLineNumberTable(
   view: DataView,
   offset: number
 ) {
-  const lineNumberTableLength = view.getUint16(offset);
-  offset += 2;
+  const lineNumberTableLength = view.getUint16(offset)
+  offset += 2
 
-  const lineNumberTable = [];
+  const lineNumberTable = []
   for (let i = 0; i < lineNumberTableLength; i++) {
-    const startPc = view.getUint16(offset);
-    offset += 2;
-    const lineNumber = view.getUint16(offset);
-    offset += 2;
+    const startPc = view.getUint16(offset)
+    offset += 2
+    const lineNumber = view.getUint16(offset)
+    offset += 2
     lineNumberTable.push({
       startPc,
-      lineNumber,
-    });
+      lineNumber
+    })
   }
 
   return {
     result: {
       attributeNameIndex,
       lineNumberTableLength,
-      lineNumberTable,
+      lineNumberTable
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeLocalVariableTable(
@@ -512,37 +455,37 @@ function readAttributeLocalVariableTable(
   view: DataView,
   offset: number
 ) {
-  const localVariableTableLength = view.getUint16(offset);
-  offset += 2;
-  const localVariableTable = [];
+  const localVariableTableLength = view.getUint16(offset)
+  offset += 2
+  const localVariableTable = []
 
   for (let i = 0; i < localVariableTableLength; i += 1) {
-    const startPc = view.getUint16(offset);
-    offset += 2;
-    const length = view.getUint16(offset);
-    offset += 2;
-    const nameIndex = view.getUint16(offset);
-    offset += 2;
-    const descriptorIndex = view.getUint16(offset);
-    offset += 2;
-    const index = view.getUint16(offset);
-    offset += 2;
+    const startPc = view.getUint16(offset)
+    offset += 2
+    const length = view.getUint16(offset)
+    offset += 2
+    const nameIndex = view.getUint16(offset)
+    offset += 2
+    const descriptorIndex = view.getUint16(offset)
+    offset += 2
+    const index = view.getUint16(offset)
+    offset += 2
     localVariableTable.push({
       startPc,
       length,
       nameIndex,
       descriptorIndex,
-      index,
-    });
+      index
+    })
   }
 
   return {
     result: {
       attributeNameIndex,
-      localVariableTable,
+      localVariableTable
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeLocalVariableTypeTable(
@@ -552,36 +495,36 @@ function readAttributeLocalVariableTypeTable(
   view: DataView,
   offset: number
 ) {
-  const localVariableTypeTableLength = view.getUint16(offset);
-  offset += 2;
-  const localVariableTypeTable = [];
+  const localVariableTypeTableLength = view.getUint16(offset)
+  offset += 2
+  const localVariableTypeTable = []
   for (let i = 0; i < localVariableTypeTableLength; i += 1) {
-    const startPc = view.getUint16(offset);
-    offset += 2;
-    const length = view.getUint16(offset);
-    offset += 2;
-    const nameIndex = view.getUint16(offset);
-    offset += 2;
-    const signatureIndex = view.getUint16(offset);
-    offset += 2;
-    const index = view.getUint16(offset);
-    offset += 2;
+    const startPc = view.getUint16(offset)
+    offset += 2
+    const length = view.getUint16(offset)
+    offset += 2
+    const nameIndex = view.getUint16(offset)
+    offset += 2
+    const signatureIndex = view.getUint16(offset)
+    offset += 2
+    const index = view.getUint16(offset)
+    offset += 2
     localVariableTypeTable.push({
       startPc,
       length,
       nameIndex,
       signatureIndex,
-      index,
-    });
+      index
+    })
   }
 
   return {
     result: {
       attributeNameIndex,
-      localVariableTypeTable,
+      localVariableTypeTable
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeDeprecated(
@@ -593,131 +536,123 @@ function readAttributeDeprecated(
 ) {
   return {
     result: {
-      attributeNameIndex,
+      attributeNameIndex
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readElementValue(
   view: DataView,
   offset: number
 ): {
-  offset: number;
-  value: any;
+  offset: number
+  value: any
 } {
-  const tag = view.getUint8(offset);
-  offset += 1;
+  const tag = view.getUint8(offset)
+  offset += 1
   switch (String.fromCharCode(tag)) {
-    case "B":
-    case "C":
-    case "D":
-    case "F":
-    case "I":
-    case "J":
-    case "S":
-    case "Z":
-    case "s":
-      const constValueIndex = view.getUint16(offset);
-      offset += 2;
+    case 'B':
+    case 'C':
+    case 'D':
+    case 'F':
+    case 'I':
+    case 'J':
+    case 'S':
+    case 'Z':
+    case 's':
+      const constValueIndex = view.getUint16(offset)
+      offset += 2
       return {
         offset,
         value: {
           tag,
-          constValueIndex,
-        },
-      };
-    case "e":
-      const typeNameIndex = view.getUint16(offset);
-      offset += 2;
-      const constNameIndex = view.getUint16(offset);
-      offset += 2;
+          constValueIndex
+        }
+      }
+    case 'e':
+      const typeNameIndex = view.getUint16(offset)
+      offset += 2
+      const constNameIndex = view.getUint16(offset)
+      offset += 2
       return {
         offset,
         value: {
           tag,
           typeNameIndex,
-          constNameIndex,
-        },
-      };
-    case "c":
-      const classInfoIndex = view.getUint16(offset);
-      offset += 2;
+          constNameIndex
+        }
+      }
+    case 'c':
+      const classInfoIndex = view.getUint16(offset)
+      offset += 2
       return {
         offset,
         value: {
           tag,
-          classInfoIndex,
-        },
-      };
-    case "@":
-      const { annotations, offset: newOffset } = readAnnotations(
-        view,
-        offset,
-        1
-      );
-      offset = newOffset;
+          classInfoIndex
+        }
+      }
+    case '@':
+      const { annotations, offset: newOffset } = readAnnotations(view, offset, 1)
+      offset = newOffset
       return {
         offset,
         value: {
           tag,
-          annotationValue: annotations,
-        },
-      };
-    case "[":
-      const numValues = view.getUint16(offset);
-      offset += 2;
-      const values = [];
+          annotationValue: annotations
+        }
+      }
+    case '[':
+      const numValues = view.getUint16(offset)
+      offset += 2
+      const values = []
       for (let i = 0; i < numValues; i += 1) {
-        const { offset: newOffset, value } = readElementValue(view, offset);
-        offset = newOffset;
-        values.push(value);
+        const { offset: newOffset, value } = readElementValue(view, offset)
+        offset = newOffset
+        values.push(value)
       }
       return {
         offset,
         value: {
           tag,
           numValues,
-          values,
-        },
-      };
+          values
+        }
+      }
     default:
-      throw new Error(`Invalid element value tag ${tag}`);
+      throw new Error(`Invalid element value tag ${tag}`)
   }
 }
 
-function readAnnotations(
-  view: DataView,
-  offset: number,
-  numAnnotations: number
-) {
-  const annotations = [];
+function readAnnotations(view: DataView, offset: number, numAnnotations: number) {
+  const annotations = []
   for (let i = 0; i < numAnnotations; i += 1) {
-    const typeIndex = view.getUint16(offset);
-    offset += 2;
-    const numElementValuePairs = view.getUint16(offset);
-    offset += 2;
-    const elementValuePairs = [];
+    const typeIndex = view.getUint16(offset)
+    offset += 2
+    const numElementValuePairs = view.getUint16(offset)
+    offset += 2
+    const elementValuePairs = []
     for (let j = 0; j < numElementValuePairs; j += 1) {
-      const elementNameIndex = view.getUint16(offset);
-      offset += 2;
-      const { offset: newOffset, value } = readElementValue(view, offset);
-      offset = newOffset;
+      const elementNameIndex = view.getUint16(offset)
+      offset += 2
+      const { offset: newOffset, value } = readElementValue(view, offset)
+      offset = newOffset
       elementValuePairs.push({
         elementNameIndex,
-        value,
-      });
+        value
+      })
     }
     annotations.push({
       typeIndex,
       numElementValuePairs,
-      elementValuePairs,
-    });
+      elementValuePairs
+    })
   }
   return {
     annotations,
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeRuntimeVisibleAnnotations(
@@ -727,22 +662,18 @@ function readAttributeRuntimeVisibleAnnotations(
   view: DataView,
   offset: number
 ) {
-  const numAnnotations = view.getUint16(offset);
-  offset += 2;
-  const { annotations, offset: newOffset } = readAnnotations(
-    view,
-    offset,
-    numAnnotations
-  );
-  offset = newOffset;
+  const numAnnotations = view.getUint16(offset)
+  offset += 2
+  const { annotations, offset: newOffset } = readAnnotations(view, offset, numAnnotations)
+  offset = newOffset
 
   return {
     result: {
       attributeNameIndex,
-      annotations,
+      annotations
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeRuntimeInvisibleAnnotations(
@@ -752,22 +683,18 @@ function readAttributeRuntimeInvisibleAnnotations(
   view: DataView,
   offset: number
 ) {
-  const numAnnotations = view.getUint16(offset);
-  offset += 2;
-  const { annotations, offset: newOffset } = readAnnotations(
-    view,
-    offset,
-    numAnnotations
-  );
-  offset = newOffset;
+  const numAnnotations = view.getUint16(offset)
+  offset += 2
+  const { annotations, offset: newOffset } = readAnnotations(view, offset, numAnnotations)
+  offset = newOffset
 
   return {
     result: {
       attributeNameIndex,
-      annotations,
+      annotations
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeRuntimeVisibleParameterAnnotations(
@@ -777,23 +704,21 @@ function readAttributeRuntimeVisibleParameterAnnotations(
   view: DataView,
   offset: number
 ) {
-  logger.warn(
-    "readAttributeRuntimeVisibleParameterAnnotations is not implemented!"
-  );
-  const info = [];
+  logger.warn('readAttributeRuntimeVisibleParameterAnnotations is not implemented!')
+  const info = []
 
   for (let i = 0; i < attributeLength; i += 1) {
-    info.push(view.getUint8(offset));
-    offset += 1;
+    info.push(view.getUint8(offset))
+    offset += 1
   }
 
   return {
     result: {
       attributeNameIndex,
-      info,
+      info
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeRuntimeInvisibleParameterAnnotations(
@@ -803,23 +728,21 @@ function readAttributeRuntimeInvisibleParameterAnnotations(
   view: DataView,
   offset: number
 ) {
-  logger.warn(
-    "readAttributeRuntimeInvisibleParameterAnnotations is not implemented!"
-  );
-  const info = [];
+  logger.warn('readAttributeRuntimeInvisibleParameterAnnotations is not implemented!')
+  const info = []
 
   for (let i = 0; i < attributeLength; i += 1) {
-    info.push(view.getUint8(offset));
-    offset += 1;
+    info.push(view.getUint8(offset))
+    offset += 1
   }
 
   return {
     result: {
       attributeNameIndex,
-      info,
+      info
     },
-    offset,
-  };
+    offset
+  }
 }
 
 function readAttributeAnnotationDefault(
@@ -829,15 +752,15 @@ function readAttributeAnnotationDefault(
   view: DataView,
   offset: number
 ) {
-  const { offset: newOffset, value } = readElementValue(view, offset);
+  const { offset: newOffset, value } = readElementValue(view, offset)
 
   return {
     result: {
       attributeNameIndex,
-      defaultValue: value,
+      defaultValue: value
     },
-    offset: newOffset,
-  };
+    offset: newOffset
+  }
 }
 
 function readAttributeBootstrapMethods(
@@ -847,26 +770,26 @@ function readAttributeBootstrapMethods(
   view: DataView,
   offset: number
 ) {
-  const numBootstrapMethods = view.getUint16(offset);
-  offset += 2;
+  const numBootstrapMethods = view.getUint16(offset)
+  offset += 2
 
-  const bootstrapMethods = [];
+  const bootstrapMethods = []
 
   for (let i = 0; i < numBootstrapMethods; i += 1) {
-    const bootstrapMethodRef = view.getUint16(offset);
-    offset += 2;
-    const numBootstrapArguments = view.getUint16(offset);
-    offset += 2;
-    const bootstrapArguments = [];
+    const bootstrapMethodRef = view.getUint16(offset)
+    offset += 2
+    const numBootstrapArguments = view.getUint16(offset)
+    offset += 2
+    const bootstrapArguments = []
 
     for (let j = 0; j < numBootstrapArguments; j += 1) {
-      bootstrapArguments.push(view.getUint16(offset));
-      offset += 2;
+      bootstrapArguments.push(view.getUint16(offset))
+      offset += 2
     }
     bootstrapMethods.push({
       bootstrapMethodRef,
-      bootstrapArguments,
-    });
+      bootstrapArguments
+    })
   }
 
   return {
@@ -874,10 +797,10 @@ function readAttributeBootstrapMethods(
       attributeNameIndex,
       attributeLength,
       numBootstrapMethods,
-      bootstrapMethods,
+      bootstrapMethods
     },
-    offset,
-  };
+    offset
+  }
 }
 
 // Non predefined attribute, ignored.
@@ -888,18 +811,18 @@ function readAttributeGeneric(
   view: DataView,
   offset: number
 ) {
-  const info = [];
+  const info = []
 
   for (let i = 0; i < attributeLength; i += 1) {
-    info.push(view.getUint8(offset));
-    offset += 1;
+    info.push(view.getUint8(offset))
+    offset += 1
   }
 
   return {
     result: {
       attributeNameIndex,
-      info,
+      info
     },
-    offset,
-  };
+    offset
+  }
 }

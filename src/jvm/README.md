@@ -44,3 +44,15 @@ export const functions = {
   },
 };
 ```
+
+## converting class files to strings
+
+A build script has been provided to create a module of the Java standard library as a hashmap of base64 strings.
+
+```sh
+node dist/jvm/utils/build.js /path/to/classfile/directory
+```
+
+It has been configured to only include modules with package name starting with `java`, `sun/misc`, `modules`.
+
+You can then import the strings using `import(java-slang/dist/jvm/utils/classfiles)`.

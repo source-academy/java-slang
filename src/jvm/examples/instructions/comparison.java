@@ -1,5 +1,3 @@
-package tests;
-
 class Comparison {
     public static void main(String[] args) {
         long l1 = 0L;

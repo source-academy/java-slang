@@ -1,24 +1,24 @@
 export enum ResultType {
   SUCCESS,
   ERROR,
-  DEFER,
+  DEFER
 }
 
 export interface SuccessResult<T> {
-  status: ResultType.SUCCESS;
-  result: T;
+  status: ResultType.SUCCESS
+  result: T
 }
 
 export interface ErrorResult {
-  status: ResultType.ERROR;
-  exceptionCls: string;
-  msg: string;
+  status: ResultType.ERROR
+  exceptionCls: string
+  msg: string
 }
 
 export interface DeferResult {
-  status: ResultType.DEFER;
+  status: ResultType.DEFER
 }
 
-export type Result<T> = SuccessResult<T> | ErrorResult | DeferResult;
+export type Result<T> = SuccessResult<T> | ErrorResult | DeferResult
 
-export type ImmediateResult<T> = SuccessResult<T> | ErrorResult;
+export type ImmediateResult<T> = SuccessResult<T> | ErrorResult

@@ -1,9 +1,9 @@
-import { ClassFile } from "../../../ClassFile/types";
-import { AttributeInfo } from "../../../ClassFile/types/attributes";
-import { readAttribute } from "./utils/readAttributes";
-import { readConstants } from "./utils/readConstants";
-import { readField } from "./utils/readField";
-import { readMethod } from "./utils/readMethod";
+import { ClassFile } from '../../../ClassFile/types'
+import { AttributeInfo } from '../../../ClassFile/types/attributes'
+import { readAttribute } from './utils/readAttributes'
+import { readConstants } from './utils/readConstants'
+import { readField } from './utils/readField'
+import { readMethod } from './utils/readMethod'
 
 /**
  * Parses a binary class file into a ClassFile object.
@@ -11,7 +11,7 @@ import { readMethod } from "./utils/readMethod";
  * @returns ClassFile object.
  */
 export default function parseBin(view: DataView) {
-  let offset = 0;
+  let offset = 0
 
   const cls: ClassFile = {
     magic: 0,
@@ -29,87 +29,70 @@ export default function parseBin(view: DataView) {
     interfacesCount: 0,
     fieldsCount: 0,
     methodsCount: 0,
-    attributesCount: 0,
-  };
+    attributesCount: 0
+  }
 
-  cls.magic = view.getUint32(offset);
-  offset += 4;
+  cls.magic = view.getUint32(offset)
+  offset += 4
 
-  cls.minorVersion = view.getUint16(offset);
-  offset += 2;
+  cls.minorVersion = view.getUint16(offset)
+  offset += 2
 
-  cls.majorVersion = view.getUint16(offset);
-  offset += 2;
+  cls.majorVersion = view.getUint16(offset)
+  offset += 2
 
-  const constantPoolCount = view.getUint16(offset);
-  offset += 2;
+  const constantPoolCount = view.getUint16(offset)
+  offset += 2
+  ;({ result: cls.constantPool, offset } = readConstants(view, offset, constantPoolCount))
 
-  ({ result: cls.constantPool, offset } = readConstants(
-    view,
-    offset,
-    constantPoolCount
-  ));
+  cls.accessFlags = view.getUint16(offset)
+  offset += 2
 
-  cls.accessFlags = view.getUint16(offset);
-  offset += 2;
+  cls.thisClass = view.getUint16(offset)
+  offset += 2
 
-  cls.thisClass = view.getUint16(offset);
-  offset += 2;
+  cls.superClass = view.getUint16(offset)
+  offset += 2
 
-  cls.superClass = view.getUint16(offset);
-  offset += 2;
-
-  const interfacesCount = view.getUint16(offset);
-  offset += 2;
-  cls.interfaces = [];
+  const interfacesCount = view.getUint16(offset)
+  offset += 2
+  cls.interfaces = []
   for (let i = 0; i < interfacesCount; i += 1) {
-    const interfaceIdx = view.getUint16(offset);
-    cls.interfaces.push(interfaceIdx);
-    offset += 2;
+    const interfaceIdx = view.getUint16(offset)
+    cls.interfaces.push(interfaceIdx)
+    offset += 2
   }
 
-  const fieldsCount = view.getUint16(offset);
-  offset += 2;
+  const fieldsCount = view.getUint16(offset)
+  offset += 2
 
-  cls.fields = [];
+  cls.fields = []
   for (let i = 0; i < fieldsCount; i += 1) {
-    const { result, offset: resultOffset } = readField(
-      cls.constantPool,
-      view,
-      offset
-    );
-    cls.fields.push(result);
-    offset = resultOffset;
+    const { result, offset: resultOffset } = readField(cls.constantPool, view, offset)
+    cls.fields.push(result)
+    offset = resultOffset
   }
 
-  const methodsCount = view.getUint16(offset);
-  offset += 2;
+  const methodsCount = view.getUint16(offset)
+  offset += 2
 
-  cls.methods = [];
+  cls.methods = []
   for (let i = 0; i < methodsCount; i += 1) {
-    const { result, offset: resultOffset } = readMethod(
-      cls.constantPool,
-      view,
-      offset
-    );
-    cls.methods.push(result);
-    offset = resultOffset;
+    const { result, offset: resultOffset } = readMethod(cls.constantPool, view, offset)
+    cls.methods.push(result)
+    offset = resultOffset
   }
-  const attributesCount = view.getUint16(offset);
-  offset += 2;
+  const attributesCount = view.getUint16(offset)
+  offset += 2
 
-  cls.attributes = [];
+  cls.attributes = []
   for (let i = 0; i < attributesCount; i += 1) {
-    const { result, offset: resultOffset } = readAttribute(
-      cls.constantPool,
-      view,
-      offset
-    );
-    cls.attributes.push(result as unknown as AttributeInfo);
-    offset = resultOffset;
+    const { result, offset: resultOffset } = readAttribute(cls.constantPool, view, offset)
+    cls.attributes.push(result as unknown as AttributeInfo)
+    offset = resultOffset
   }
 
-  return cls;
+  return cls
 }
 
 /**
@@ -119,8 +102,5 @@ export default function parseBin(view: DataView) {
  * @returns ArrayBuffer equivalent
  */
 export function a2ab(buffer: Buffer) {
-  return buffer.buffer.slice(
-    buffer.byteOffset,
-    buffer.byteOffset + buffer.byteLength
-  );
+  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
 }
