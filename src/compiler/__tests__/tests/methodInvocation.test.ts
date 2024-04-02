@@ -127,6 +127,30 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["15", "16", "5", "6"],
+  },
+  {
+    comment: "multi-argument function",
+    program: `
+      public class Main {
+        public static int add(int x, int y) {
+          return x + y;
+        }
+        public static int mul(int x, int y) {
+          return x * y;
+        }
+        public static int sumOfSquare(int x, int y) {
+          return add(mul(x, x), mul(y, y));
+        }
+
+        public static void main(String[] args) {
+          int x = 7, y = 10;
+          System.out.println(add(x, y));
+          System.out.println(mul(x, y));
+          System.out.println(sumOfSquare(x, y));
+        }
+      }
+    `,
+    expectedLines: ["17", "70", "149"],
   }
 ];
 
