@@ -3,4 +3,3 @@ dist
 
 src/ast
 src/ec-evaluator
-src/types

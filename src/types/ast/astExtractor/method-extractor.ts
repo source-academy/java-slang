@@ -9,43 +9,43 @@ import {
   ResultCtx,
   VariableArityParameterCtx,
   VariableDeclaratorIdCtx,
-  VariableParaRegularParameterCtx,
-} from "java-parser";
+  VariableParaRegularParameterCtx
+} from 'java-parser'
 import {
   MethodModifier,
   MethodDeclaration,
   Identifier,
   FormalParameter,
-  Result,
-} from "../types/classes";
-import { BlockStatementExtractor } from "./block-statement-extractor";
-import { BlockStatement } from "../types/blocks-and-statements";
-import { TypeExtractor } from "./type-extractor";
+  Result
+} from '../types/classes'
+import { BlockStatement } from '../types/blocks-and-statements'
+import { BlockStatementExtractor } from './block-statement-extractor'
+import { TypeExtractor } from './type-extractor'
 
 export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
-  private modifier: Array<MethodModifier> = [];
-  private res: Result;
-  private identifier: Identifier;
-  private params: Array<FormalParameter> = [];
-  private body: Array<BlockStatement> = [];
+  private modifier: Array<MethodModifier> = []
+  private res: Result
+  private identifier: Identifier
+  private params: Array<FormalParameter> = []
+  private body: Array<BlockStatement> = []
 
   extract(cst: MethodDeclarationCstNode): MethodDeclaration {
-    this.visit(cst);
+    this.visit(cst)
     return {
-      kind: "MethodDeclaration",
+      kind: 'MethodDeclaration',
       methodModifier: this.modifier,
       methodHeader: {
         result: this.res,
         identifier: this.identifier,
-        formalParameterList: this.params,
+        formalParameterList: this.params
       },
       methodBody: {
-        kind: "Block",
+        kind: 'Block',
         blockStatements: this.body,
-        location: cst.location,
+        location: cst.location
       },
-      location: cst.location,
-    };
+      location: cst.location
+    }
   }
 
   methodModifier(ctx: MethodModifierCtx) {
@@ -58,68 +58,68 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
       ctx.Final,
       ctx.Synchronized,
       ctx.Native,
-      ctx.Strictfp,
+      ctx.Strictfp
     ]
-      .filter((x) => x !== undefined)
-      .map((x) => (x ? x[0].image : x));
-    this.modifier.push(possibleModifiers[0] as MethodModifier);
+      .filter(x => x !== undefined)
+      .map(x => (x ? x[0].image : x))
+    this.modifier.push(possibleModifiers[0] as MethodModifier)
   }
 
   result(ctx: ResultCtx) {
-    const typeExtractor = new TypeExtractor();
+    const typeExtractor = new TypeExtractor()
     if (ctx.unannType) {
-      this.res = typeExtractor.extract(ctx.unannType[0]);
+      this.res = typeExtractor.extract(ctx.unannType[0])
     } /* if (ctx.Void) */ else {
-      this.res = "void";
+      this.res = 'void'
     }
   }
 
   methodDeclarator(ctx: MethodDeclaratorCtx) {
-    this.identifier = ctx.Identifier[0].image;
+    this.identifier = ctx.Identifier[0].image
     if (ctx.formalParameterList) {
-      this.params = this.visit(ctx.formalParameterList);
+      this.params = this.visit(ctx.formalParameterList)
     }
   }
 
   formalParameterList(ctx: FormalParameterListCtx) {
-    return ctx.formalParameter.map((p) => this.visit(p));
+    return ctx.formalParameter.map(p => this.visit(p))
   }
 
   formalParameter(ctx: FormalParameterCtx) {
     if (ctx.variableParaRegularParameter) {
-      return this.visit(ctx.variableParaRegularParameter);
+      return this.visit(ctx.variableParaRegularParameter)
     } /* if (ctx.variableArityParameter) */ else {
-      return this.visit(ctx.variableArityParameter!);
+      return this.visit(ctx.variableArityParameter!)
     }
   }
 
   variableParaRegularParameter(ctx: VariableParaRegularParameterCtx) {
-    const typeExtractor = new TypeExtractor();
+    const typeExtractor = new TypeExtractor()
     return {
-      kind: "FormalParameter",
+      kind: 'FormalParameter',
       unannType: typeExtractor.extract(ctx.unannType[0]),
-      identifier: this.visit(ctx.variableDeclaratorId),
-    } as FormalParameter;
+      identifier: this.visit(ctx.variableDeclaratorId)
+    } as FormalParameter
   }
 
   variableArityParameter(ctx: VariableArityParameterCtx) {
-    const typeExtractor = new TypeExtractor();
+    const typeExtractor = new TypeExtractor()
     return {
-      kind: "FormalParameter",
+      kind: 'FormalParameter',
       unannType: typeExtractor.extract(ctx.unannType[0]),
-      identifier: ctx.Identifier[0].image,
-    } as FormalParameter;
+      identifier: ctx.Identifier[0].image
+    } as FormalParameter
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {
-    return ctx.Identifier[0].image;
+    return ctx.Identifier[0].image
   }
 
   blockStatements(ctx: BlockStatementsCtx) {
-    ctx.blockStatement.forEach((x) => {
-      const blockStatementExtractor = new BlockStatementExtractor();
-      const blockStatement = blockStatementExtractor.extract(x);
-      if (blockStatement) this.body.push(blockStatement);
-    });
+    ctx.blockStatement.forEach(x => {
+      const blockStatementExtractor = new BlockStatementExtractor()
+      const blockStatement = blockStatementExtractor.extract(x)
+      if (blockStatement) this.body.push(blockStatement)
+    })
   }
 }

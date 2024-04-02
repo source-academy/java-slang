@@ -1,65 +1,65 @@
 export class ArrayRequiredError extends Error {
   constructor() {
-    super("array required");
+    super('array required')
   }
 }
 
 export class BadOperandTypesError extends Error {
   constructor() {
-    super("bad operand");
+    super('bad operand')
   }
 }
 
 export class CannotFindSymbolError extends Error {
   constructor() {
-    super("cannot find symbol");
+    super('cannot find symbol')
   }
 }
 
 export class FloatTooLargeError extends Error {
   constructor() {
-    super("floating-point number too large");
+    super('floating-point number too large')
   }
 }
 
 export class FloatTooSmallError extends Error {
   constructor() {
-    super("floating-point number too small");
+    super('floating-point number too small')
   }
 }
 
 export class IllegalUnderscoreError extends Error {
   constructor() {
-    super("illegal underscore");
+    super('illegal underscore')
   }
 }
 
 export class IntegerTooLargeError extends Error {
   constructor() {
-    super("integer number too large");
+    super('integer number too large')
   }
 }
 
 export class IncompatibleTypesError extends Error {
   constructor() {
-    super("incompatible types");
+    super('incompatible types')
   }
 }
 
 export class MethodAlreadyDefinedError extends Error {
   constructor() {
-    super("method is already defined");
+    super('method is already defined')
   }
 }
 
 export class MethodCannotBeAppliedError extends Error {
   constructor() {
-    super("method cannot be applied");
+    super('method cannot be applied')
   }
 }
 
 export class VariableAlreadyDefinedError extends Error {
   constructor() {
-    super("variable is already defined");
+    super('variable is already defined')
   }
 }

@@ -1,5 +1,3 @@
-import { BlockStatementExtractor } from "./block-statement-extractor";
-import { ExpressionExtractor } from "./expression-extractor";
 import {
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
@@ -32,8 +30,8 @@ import {
   ExpressionStatementCtx,
   LocalVariableTypeCtx,
   VariableDeclaratorListCtx,
-  VariableDeclaratorCtx,
-} from "java-parser";
+  VariableDeclaratorCtx
+} from 'java-parser'
 import {
   BasicForStatement,
   ExpressionStatement,
@@ -42,177 +40,165 @@ import {
   Primary,
   Statement,
   StatementExpression,
-  VariableDeclarator,
-} from "../types/blocks-and-statements";
-import { Location } from "../types/ast";
-import { TypeExtractor } from "./type-extractor";
+  VariableDeclarator
+} from '../types/blocks-and-statements'
+import { Location } from '../types/ast'
+import { ExpressionExtractor } from './expression-extractor'
+import { BlockStatementExtractor } from './block-statement-extractor'
+import { TypeExtractor } from './type-extractor'
 
 export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   constructor() {
-    super();
+    super()
   }
 
   extract(cst: StatementCstNode): Statement {
     if (cst.children.forStatement) {
-      return this.visit(cst.children.forStatement);
+      return this.visit(cst.children.forStatement)
     } else if (cst.children.ifStatement) {
-      return this.visit(cst.children.ifStatement);
+      return this.visit(cst.children.ifStatement)
     } else if (cst.children.labeledStatement) {
-      return this.visit(cst.children.labeledStatement);
+      return this.visit(cst.children.labeledStatement)
     } else if (cst.children.statementWithoutTrailingSubstatement) {
-      return this.visit(cst.children.statementWithoutTrailingSubstatement);
+      return this.visit(cst.children.statementWithoutTrailingSubstatement)
     } else if (cst.children.whileStatement) {
-      return this.visit(cst.children.whileStatement);
+      return this.visit(cst.children.whileStatement)
     } else {
       return {
-        kind: "EmptyStatement",
-      };
+        kind: 'EmptyStatement'
+      }
     }
   }
 
-  statementWithoutTrailingSubstatement(
-    ctx: StatementWithoutTrailingSubstatementCtx
-  ) {
+  statementWithoutTrailingSubstatement(ctx: StatementWithoutTrailingSubstatementCtx) {
     if (ctx.expressionStatement) {
-      return this.visit(ctx.expressionStatement);
+      return this.visit(ctx.expressionStatement)
     } else if (ctx.block) {
-      return this.visit(ctx.block);
+      return this.visit(ctx.block)
     } else if (ctx.breakStatement) {
-      return { kind: "BreakStatement" };
+      return { kind: 'BreakStatement' }
     } else if (ctx.continueStatement) {
-      return { kind: "ContinueStatement" };
+      return { kind: 'ContinueStatement' }
     } else if (ctx.returnStatement) {
-      const returnStatementExp = this.visit(ctx.returnStatement);
+      const returnStatementExp = this.visit(ctx.returnStatement)
       return {
-        kind: "ReturnStatement",
+        kind: 'ReturnStatement',
         exp: returnStatementExp,
-        location: ctx.returnStatement[0].location,
-      };
+        location: ctx.returnStatement[0].location
+      }
     }
   }
 
   expressionStatement(ctx: ExpressionStatementCtx): ExpressionStatement {
-    const stmtExp = this.visit(ctx.statementExpression);
+    const stmtExp = this.visit(ctx.statementExpression)
     return {
-      kind: "ExpressionStatement",
+      kind: 'ExpressionStatement',
       stmtExp,
-      location: stmtExp.location,
-    };
+      location: stmtExp.location
+    }
   }
 
   statementExpression(ctx: StatementExpressionCtx) {
-    return this.visit(ctx.expression);
+    return this.visit(ctx.expression)
   }
 
   returnStatement(ctx: ReturnStatementCtx) {
     if (ctx.expression) {
-      const expressionExtractor = new ExpressionExtractor();
-      return expressionExtractor.extract(ctx.expression[0]);
+      const expressionExtractor = new ExpressionExtractor()
+      return expressionExtractor.extract(ctx.expression[0])
     }
-    return { kind: "Void" };
+    return { kind: 'Void' }
   }
 
   expression(ctx: ExpressionCtx) {
     if (ctx.lambdaExpression) {
-      throw new Error("Unimplemented extractor.");
+      throw new Error('Unimplemented extractor.')
     } else if (ctx.ternaryExpression) {
-      return this.visit(ctx.ternaryExpression);
+      return this.visit(ctx.ternaryExpression)
     }
   }
 
   ternaryExpression(ctx: TernaryExpressionCtx) {
-    if (
-      ctx.binaryExpression &&
-      ctx.QuestionMark &&
-      ctx.Colon &&
-      ctx.expression
-    ) {
-      const expressionExtractor = new ExpressionExtractor();
-      return expressionExtractor.ternaryExpression(ctx);
+    if (ctx.binaryExpression && ctx.QuestionMark && ctx.Colon && ctx.expression) {
+      const expressionExtractor = new ExpressionExtractor()
+      return expressionExtractor.ternaryExpression(ctx)
     }
-    return this.visit(ctx.binaryExpression);
+    return this.visit(ctx.binaryExpression)
   }
 
   binaryExpression(ctx: BinaryExpressionCtx) {
     // Assignment
     if (ctx.AssignmentOperator && ctx.expression) {
-      const expressionExtractor = new ExpressionExtractor();
-      const left = this.visit(ctx.unaryExpression[0]);
+      const expressionExtractor = new ExpressionExtractor()
+      const left = this.visit(ctx.unaryExpression[0])
       return {
-        kind: "Assignment",
+        kind: 'Assignment',
         left,
-        operator: "=",
+        operator: '=',
         right: expressionExtractor.extract(ctx.expression[0]),
-        location: left.location,
-      };
+        location: left.location
+      }
     }
     // MethodInvocation
-    return this.visit(ctx.unaryExpression[0]);
+    return this.visit(ctx.unaryExpression[0])
   }
 
   unaryExpression(ctx: UnaryExpressionCtx) {
     if (ctx.UnaryPrefixOperator || ctx.UnarySuffixOperator) {
-      const expressionExtractor = new ExpressionExtractor();
-      return expressionExtractor.unaryExpression(ctx);
+      const expressionExtractor = new ExpressionExtractor()
+      return expressionExtractor.unaryExpression(ctx)
     }
     // Assignment LHS, MethodInvocation
-    return this.visit(ctx.primary);
+    return this.visit(ctx.primary)
   }
 
   primary(ctx: PrimaryCtx): Primary {
     // Assignment LHS, MethodInvocation identifier
-    let { name, location } = this.visit(ctx.primaryPrefix);
+    let { name, location } = this.visit(ctx.primaryPrefix)
     if (ctx.primarySuffix) {
-      const lastSuffix = ctx.primarySuffix[ctx.primarySuffix.length - 1];
+      const lastSuffix = ctx.primarySuffix[ctx.primarySuffix.length - 1]
       if (lastSuffix.children.arrayAccessSuffix) {
-        const expressionExtractor = new ExpressionExtractor();
-        const newPrimaryCtx: PrimaryCtx = { primaryPrefix: ctx.primaryPrefix };
+        const expressionExtractor = new ExpressionExtractor()
+        const newPrimaryCtx: PrimaryCtx = { primaryPrefix: ctx.primaryPrefix }
         if (ctx.primarySuffix.length - 1 > 0) {
           const newSuffixArray = ctx.primarySuffix.filter(
             (_, index) => index !== ctx.primarySuffix!.length - 1
-          );
-          newPrimaryCtx.primarySuffix = newSuffixArray;
+          )
+          newPrimaryCtx.primarySuffix = newSuffixArray
         }
         return {
           ...expressionExtractor.visit(lastSuffix.children.arrayAccessSuffix),
-          primary: this.primary(newPrimaryCtx) as Primary,
-        };
+          primary: this.primary(newPrimaryCtx)
+        }
       }
 
-      for (const s of ctx.primarySuffix.filter(
-        (s) => !s.children.methodInvocationSuffix
-      )) {
-        name += "." + this.visit(s);
+      for (const s of ctx.primarySuffix.filter(s => !s.children.methodInvocationSuffix)) {
+        name += '.' + this.visit(s)
       }
 
       // MethodInvocation
-      if (
-        ctx.primarySuffix[ctx.primarySuffix.length - 1].children
-          .methodInvocationSuffix
-      ) {
+      if (ctx.primarySuffix[ctx.primarySuffix.length - 1].children.methodInvocationSuffix) {
         return {
-          kind: "MethodInvocation",
+          kind: 'MethodInvocation',
           identifier: name,
-          argumentList: this.visit(
-            ctx.primarySuffix[ctx.primarySuffix.length - 1]
-          ),
-          location,
-        } as MethodInvocation;
+          argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
+          location
+        } as MethodInvocation
       }
     }
     return {
-      kind: "ExpressionName",
+      kind: 'ExpressionName',
       name,
-      location,
-    };
+      location
+    }
   }
 
   primaryPrefix(ctx: PrimaryPrefixCtx): { name: string; location: Location } {
     // Assignment LHS, MethodInvocation identifier
     if (ctx.fqnOrRefType) {
-      return this.visit(ctx.fqnOrRefType);
+      return this.visit(ctx.fqnOrRefType)
     } else if (ctx.This) {
-      const thisKeyword = ctx.This[0];
+      const thisKeyword = ctx.This[0]
       return {
         name: thisKeyword.image,
         location: {
@@ -221,53 +207,53 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
           startColumn: thisKeyword.startColumn,
           endOffset: thisKeyword.endOffset,
           endLine: thisKeyword.endLine,
-          endColumn: thisKeyword.endColumn,
-        } as Location,
-      };
+          endColumn: thisKeyword.endColumn
+        } as Location
+      }
     }
-    throw new Error("Unimplemeted extractor.");
+    throw new Error('Unimplemeted extractor.')
   }
 
   primarySuffix(ctx: PrimarySuffixCtx) {
     // MethodInvocation argumentList
     if (ctx.methodInvocationSuffix) {
-      return this.visit(ctx.methodInvocationSuffix);
+      return this.visit(ctx.methodInvocationSuffix)
     } else if (ctx.Identifier) {
-      return ctx.Identifier[0].image;
+      return ctx.Identifier[0].image
     }
   }
 
   methodInvocationSuffix(ctx: MethodInvocationSuffixCtx) {
     // MethodInvocation argumentList
-    return ctx.argumentList ? this.visit(ctx.argumentList) : [];
+    return ctx.argumentList ? this.visit(ctx.argumentList) : []
   }
 
   argumentList(ctx: ArgumentListCtx) {
     // MethodInvocation argumentList
-    const expressionExtractor = new ExpressionExtractor();
-    return ctx.expression.map((e) => expressionExtractor.extract(e));
+    const expressionExtractor = new ExpressionExtractor()
+    return ctx.expression.map(e => expressionExtractor.extract(e))
   }
 
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
     // Assignment LHS, MethodInvocation identifier
-    let { name, location } = this.visit(ctx.fqnOrRefTypePartFirst);
+    let { name, location } = this.visit(ctx.fqnOrRefTypePartFirst)
     if (ctx.fqnOrRefTypePartRest) {
       for (const r of ctx.fqnOrRefTypePartRest) {
-        name += "." + this.visit(r).name;
+        name += '.' + this.visit(r).name
       }
     }
-    return { name, location };
+    return { name, location }
   }
 
   fqnOrRefTypePartFirst(ctx: FqnOrRefTypePartFirstCtx) {
     // Assignment LHS, MethodInvocation identifier
-    return this.visit(ctx.fqnOrRefTypePartCommon);
+    return this.visit(ctx.fqnOrRefTypePartCommon)
   }
 
   fqnOrRefTypePartCommon(ctx: FqnOrRefTypePartCommonCtx) {
     // Assignment LHS, MethodInvocation identifier
     if (ctx.Identifier) {
-      const identifier = ctx.Identifier[0];
+      const identifier = ctx.Identifier[0]
       return {
         name: identifier.image,
         location: {
@@ -276,139 +262,137 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
           startColumn: identifier.startColumn,
           endOffset: identifier.endOffset,
           endLine: identifier.endLine,
-          endColumn: identifier.endColumn,
-        } as Location,
-      };
+          endColumn: identifier.endColumn
+        } as Location
+      }
     }
-    throw new Error("Unimplemented extractor.");
+    throw new Error('Unimplemented extractor.')
   }
 
   fqnOrRefTypePartRest(ctx: FqnOrRefTypePartRestCtx) {
-    return this.visit(ctx.fqnOrRefTypePartCommon);
+    return this.visit(ctx.fqnOrRefTypePartCommon)
   }
 
   ifStatement(ctx: IfStatementCtx): IfStatement {
-    const consequentStatements: StatementCstNode[] = [];
-    const alternateStatements: StatementCstNode[] = [];
-    ctx.statement.forEach((statement) => {
-      if (!ctx.Else) consequentStatements.push(statement);
+    const consequentStatements: StatementCstNode[] = []
+    const alternateStatements: StatementCstNode[] = []
+    ctx.statement.forEach(statement => {
+      if (!ctx.Else) consequentStatements.push(statement)
       else
         statement.location.startOffset > ctx.Else[0].endOffset
           ? alternateStatements.push(statement)
-          : consequentStatements.push(statement);
-    });
-    const expressionExtractor = new ExpressionExtractor();
+          : consequentStatements.push(statement)
+    })
+    const expressionExtractor = new ExpressionExtractor()
     const result: Statement = {
-      kind: "IfStatement",
+      kind: 'IfStatement',
       condition: expressionExtractor.extract(ctx.expression[0]),
       consequent:
         consequentStatements.length > 0
           ? this.extract(consequentStatements[0])
-          : { kind: "EmptyStatement" },
-    };
-    if (alternateStatements.length === 0) return result;
-    return { ...result, alternate: this.extract(alternateStatements[0]) };
+          : { kind: 'EmptyStatement' }
+    }
+    if (alternateStatements.length === 0) return result
+    return { ...result, alternate: this.extract(alternateStatements[0]) }
   }
 
   block(ctx: BlockCtx): Statement {
-    if (ctx.blockStatements) return this.visit(ctx.blockStatements);
-    return { kind: "EmptyStatement" };
+    if (ctx.blockStatements) return this.visit(ctx.blockStatements)
+    return { kind: 'EmptyStatement' }
   }
 
   blockStatements(ctx: BlockStatementsCtx): Statement {
     return {
-      kind: "Block",
-      blockStatements: ctx.blockStatement.map((blockStatement) => {
-        const blockStatementExtrator = new BlockStatementExtractor();
-        return blockStatementExtrator.extract(blockStatement);
-      }),
-    };
+      kind: 'Block',
+      blockStatements: ctx.blockStatement.map(blockStatement => {
+        const blockStatementExtrator = new BlockStatementExtractor()
+        return blockStatementExtrator.extract(blockStatement)
+      })
+    }
   }
 
   whileStatement(ctx: WhileStatementCtx) {
-    const expressionExtractor = new ExpressionExtractor();
-    const statementExtractor = new StatementExtractor();
+    const expressionExtractor = new ExpressionExtractor()
+    const statementExtractor = new StatementExtractor()
     return {
-      kind: "WhileStatement",
+      kind: 'WhileStatement',
       condition: expressionExtractor.extract(ctx.expression[0]),
-      body: statementExtractor.extract(ctx.statement[0]),
-    };
+      body: statementExtractor.extract(ctx.statement[0])
+    }
   }
 
   forStatement(ctx: ForStatementCtx) {
     if (ctx.basicForStatement) {
-      return this.visit(ctx.basicForStatement);
+      return this.visit(ctx.basicForStatement)
     } else if (ctx.enhancedForStatement) {
-      return this.visit(ctx.enhancedForStatement);
+      return this.visit(ctx.enhancedForStatement)
     }
   }
 
   basicForStatement(ctx: BasicForStatementCtx): BasicForStatement {
-    const expressionExtractor = new ExpressionExtractor();
-    const statementExtractor = new StatementExtractor();
+    const expressionExtractor = new ExpressionExtractor()
+    const statementExtractor = new StatementExtractor()
     return {
-      kind: "BasicForStatement",
+      kind: 'BasicForStatement',
       forInit: ctx.forInit ? this.visit(ctx.forInit) : [],
       condition: expressionExtractor.extract(ctx.expression![0]),
       forUpdate: ctx.forUpdate ? this.visit(ctx.forUpdate) : [],
-      body: statementExtractor.extract(ctx.statement[0]),
-    };
+      body: statementExtractor.extract(ctx.statement[0])
+    }
   }
 
   forInit(ctx: ForInitCtx) {
     if (ctx.localVariableDeclaration) {
-      return this.visit(ctx.localVariableDeclaration);
+      return this.visit(ctx.localVariableDeclaration)
     } else if (ctx.statementExpressionList) {
-      return this.visit(ctx.statementExpressionList);
+      return this.visit(ctx.statementExpressionList)
     }
   }
 
   localVariableDeclaration(ctx: LocalVariableDeclarationCtx) {
     return {
-      kind: "LocalVariableDeclarationStatement",
+      kind: 'LocalVariableDeclarationStatement',
       localVariableType: this.visit(ctx.localVariableType),
-      variableDeclaratorList: this.visit(ctx.variableDeclaratorList),
-    };
+      variableDeclaratorList: this.visit(ctx.variableDeclaratorList)
+    }
   }
 
   forUpdate(ctx: ForUpdateCtx) {
-    return this.visit(ctx.statementExpressionList);
+    return this.visit(ctx.statementExpressionList)
   }
 
   statementExpressionList(ctx: StatementExpressionListCtx) {
-    const result: Array<StatementExpression> = [];
-    ctx.statementExpression.forEach((stmtExp) => {
-      result.push(this.visit(stmtExp));
-    });
-    return result;
+    const result: Array<StatementExpression> = []
+    ctx.statementExpression.forEach(stmtExp => {
+      result.push(this.visit(stmtExp))
+    })
+    return result
   }
 
   localVariableType(ctx: LocalVariableTypeCtx) {
-    const typeExtractor = new TypeExtractor();
+    const typeExtractor = new TypeExtractor()
     if (ctx.unannType) {
-      return typeExtractor.extract(ctx.unannType[0]);
+      return typeExtractor.extract(ctx.unannType[0])
     }
-    throw new Error("Unimplemented extractor.");
+    throw new Error('Unimplemented extractor.')
   }
 
   variableDeclaratorList(ctx: VariableDeclaratorListCtx) {
-    return ctx.variableDeclarator
-      .map((variableDeclarator) => this.visit(variableDeclarator))
-      .flat();
+    return ctx.variableDeclarator.map(variableDeclarator => this.visit(variableDeclarator)).flat()
   }
 
   variableDeclarator(ctx: VariableDeclaratorCtx) {
-    const declarations: VariableDeclarator[] = [];
+    const declarations: VariableDeclarator[] = []
     ctx.variableDeclaratorId.forEach((variable, index) => {
-      const expressionExtractor = new ExpressionExtractor();
+      const expressionExtractor = new ExpressionExtractor()
       declarations.push({
-        kind: "VariableDeclarator",
+        kind: 'VariableDeclarator',
         variableDeclaratorId: variable.children.Identifier[0].image,
         variableInitializer: expressionExtractor.extract(
           ctx.variableInitializer![index].children.expression![0]
-        ),
-      });
-    });
-    return declarations;
+        )
+      })
+    })
+    return declarations
   }
 }

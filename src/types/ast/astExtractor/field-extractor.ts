@@ -3,35 +3,35 @@ import {
   FieldDeclarationCstNode,
   FieldModifierCtx,
   VariableDeclaratorIdCtx,
-  VariableInitializerCtx,
-} from "java-parser";
+  VariableInitializerCtx
+} from 'java-parser'
 
-import { Expression } from "../types/blocks-and-statements";
-import { Identifier, FieldDeclaration, FieldModifier } from "../types/classes";
-import { ExpressionExtractor } from "./expression-extractor";
-import { TypeExtractor } from "./type-extractor";
+import { Expression } from '../types/blocks-and-statements'
+import { Identifier, FieldDeclaration, FieldModifier } from '../types/classes'
+import { ExpressionExtractor } from './expression-extractor'
+import { TypeExtractor } from './type-extractor'
 
 export class FieldExtractor extends BaseJavaCstVisitorWithDefaults {
-  private modifier: Array<FieldModifier> = [];
-  private identifier: Identifier;
-  private value: Expression;
+  private modifier: Array<FieldModifier> = []
+  private identifier: Identifier
+  private value: Expression
 
   extract(cst: FieldDeclarationCstNode): FieldDeclaration {
-    this.visit(cst);
-    const typeExtractor = new TypeExtractor();
+    this.visit(cst)
+    const typeExtractor = new TypeExtractor()
     return {
-      kind: "FieldDeclaration",
+      kind: 'FieldDeclaration',
       fieldModifier: this.modifier,
       fieldType: typeExtractor.extract(cst.children.unannType[0]),
       variableDeclaratorList: [
         {
-          kind: "VariableDeclarator",
+          kind: 'VariableDeclarator',
           variableDeclaratorId: this.identifier,
-          variableInitializer: this.value,
-        },
+          variableInitializer: this.value
+        }
       ],
-      location: cst.location,
-    };
+      location: cst.location
+    }
   }
 
   fieldModifier(ctx: FieldModifierCtx) {
@@ -42,19 +42,21 @@ export class FieldExtractor extends BaseJavaCstVisitorWithDefaults {
       ctx.Static,
       ctx.Final,
       ctx.Transient,
-      ctx.Volatile,
-    ].filter(x => x !== undefined).map(x => x ? x[0].image : x);
-    possibleModifiers.map(m => this.modifier.push(m as FieldModifier));
+      ctx.Volatile
+    ]
+      .filter(x => x !== undefined)
+      .map(x => (x ? x[0].image : x))
+    possibleModifiers.map(m => this.modifier.push(m as FieldModifier))
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {
-    this.identifier = ctx.Identifier[0].image;
+    this.identifier = ctx.Identifier[0].image
   }
 
   variableInitializer(ctx: VariableInitializerCtx) {
     if (ctx.expression) {
-      const expressionExtractor = new ExpressionExtractor();
-      this.value = expressionExtractor.extract(ctx.expression[0]);
+      const expressionExtractor = new ExpressionExtractor()
+      this.value = expressionExtractor.extract(ctx.expression[0])
     }
   }
 }

@@ -1,7 +1,7 @@
-import { check } from "..";
-import { BadOperandTypesError, IncompatibleTypesError } from "../../errors";
-import { parse } from "../../ast";
-import { Type } from "../../types/type";
+import { check } from '..'
+import { BadOperandTypesError, IncompatibleTypesError } from '../../errors'
+import { parse } from '../../ast'
+import { Type } from '../../types/type'
 
 const createProgram = (statement: string) => `
   public class Main {
@@ -9,12 +9,12 @@ const createProgram = (statement: string) => `
       ${statement}
     }
   }
-`;
+`
 
 const testcases: {
-  input: string;
-  result: { type: Type | null; errors: Error[] };
-  only?: boolean;
+  input: string
+  result: { type: Type | null; errors: Error[] }
+  only?: boolean
 }[] = [
   {
     input: `
@@ -23,7 +23,7 @@ const testcases: {
         test = 1;
       }
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -33,7 +33,7 @@ const testcases: {
         test = 1;
       }
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -47,7 +47,7 @@ const testcases: {
         test = 4;
       }
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -56,7 +56,7 @@ const testcases: {
         test = 1;
       }
     `,
-    result: { type: null, errors: [new IncompatibleTypesError()] },
+    result: { type: null, errors: [new IncompatibleTypesError()] }
   },
   {
     input: `
@@ -65,7 +65,7 @@ const testcases: {
         test = 1;
       }
     `,
-    result: { type: null, errors: [new BadOperandTypesError()] },
+    result: { type: null, errors: [new BadOperandTypesError()] }
   },
 
   {
@@ -77,7 +77,7 @@ const testcases: {
         }
       }
     `,
-    result: { type: null, errors: [new BadOperandTypesError()] },
+    result: { type: null, errors: [new BadOperandTypesError()] }
   },
   {
     input: `
@@ -85,7 +85,7 @@ const testcases: {
       int b = 10; 
       if (a < b) {} else {}
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -93,7 +93,7 @@ const testcases: {
       int b = 10; 
       if (a <= b) {} else {}
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -101,7 +101,7 @@ const testcases: {
       int b = 10; 
       if (a > b) {} else {}
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -109,7 +109,7 @@ const testcases: {
       int b = 10; 
       if (a >= b) {} else {}
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -119,7 +119,7 @@ const testcases: {
         if (b > 0) {} else {} 
       } else {}
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -127,7 +127,7 @@ const testcases: {
       double b = 10.5; 
       if (a < b) {} else {}
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -135,7 +135,7 @@ const testcases: {
       boolean b = false; 
       if (a && b) {} else {}
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -143,14 +143,14 @@ const testcases: {
       boolean b = false; 
       if (a || b) {} else {}
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
       boolean a = true; 
       if (!a) {} else {}
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -158,7 +158,7 @@ const testcases: {
       int b = 10; 
       (a < b) ? "true" : "false";
     `,
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -166,33 +166,32 @@ const testcases: {
       int b = 10; 
       a == b ? "true" : "false";
     `,
-    result: { type: null, errors: [] },
-  },
-];
+    result: { type: null, errors: [] }
+  }
+]
 
-describe("Type Checker", () => {
-  testcases.map((testcase) => {
-    let it = test;
-    if (testcase.only) it = test.only;
+describe('Type Checker', () => {
+  testcases.map(testcase => {
+    let it = test
+    if (testcase.only) it = test.only
     it(`Checking if then else statements for ${testcase.input}`, () => {
-      const program = createProgram(testcase.input);
-      const ast = parse(program);
-      if (!ast) throw new Error("Program parsing returns null.");
-      const result = check(ast);
-      if (result.currentType === null)
-        expect(result.currentType).toBe(testcase.result.type);
-      else expect(result.currentType).toBeInstanceOf(testcase.result.type);
+      const program = createProgram(testcase.input)
+      const ast = parse(program)
+      if (!ast) throw new Error('Program parsing returns null.')
+      const result = check(ast)
+      if (result.currentType === null) expect(result.currentType).toBe(testcase.result.type)
+      else expect(result.currentType).toBeInstanceOf(testcase.result.type)
       if (testcase.result.errors.length > result.errors.length) {
         testcase.result.errors.forEach((error, index) => {
-          if (!result.errors[index]) expect("").toBe(error.message);
-          expect(result.errors[index].message).toBe(error.message);
-        });
+          if (!result.errors[index]) expect('').toBe(error.message)
+          expect(result.errors[index].message).toBe(error.message)
+        })
       } else {
         result.errors.forEach((error, index) => {
-          if (!testcase.result.errors[index]) expect(error.message).toBe("");
-          expect(error.message).toBe(testcase.result.errors[index].message);
-        });
+          if (!testcase.result.errors[index]) expect(error.message).toBe('')
+          expect(error.message).toBe(testcase.result.errors[index].message)
+        })
       }
-    });
-  });
-});
+    })
+  })
+})

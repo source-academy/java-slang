@@ -1,6 +1,6 @@
-import { check } from "..";
-import { parse } from "../../ast";
-import { Type } from "../../types/type";
+import { check } from '..'
+import { parse } from '../../ast'
+import { Type } from '../../types/type'
 
 const createProgram = (statement: string) => `
   public class Main {
@@ -8,54 +8,53 @@ const createProgram = (statement: string) => `
       ${statement}
     }
   }
-`;
+`
 
 const testcases: {
-  input: string;
-  result: { type: Type | null; errors: Error[] };
-  only?: boolean;
+  input: string
+  result: { type: Type | null; errors: Error[] }
+  only?: boolean
 }[] = [
   {
     input: "char test = 'a';",
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: "char test = 'A';",
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: "char test = '\\u0000';",
-    result: { type: null, errors: [] },
+    result: { type: null, errors: [] }
   },
   {
     input: "Character test = 'a';",
-    result: { type: null, errors: [] },
-  },
-];
+    result: { type: null, errors: [] }
+  }
+]
 
-describe("Type Checker", () => {
-  testcases.map((testcase) => {
-    let it = test;
-    if (testcase.only) it = test.only;
+describe('Type Checker', () => {
+  testcases.map(testcase => {
+    let it = test
+    if (testcase.only) it = test.only
     it(`Checking character literals for ${testcase.input}`, () => {
-      const program = createProgram(testcase.input);
-      const ast = parse(program);
-      if (!ast) throw new Error("Program parsing returns null.");
-      const result = check(ast);
-      if (result.currentType === null)
-        expect(result.currentType).toBe(testcase.result.type);
-      else expect(result.currentType).toBeInstanceOf(testcase.result.type);
+      const program = createProgram(testcase.input)
+      const ast = parse(program)
+      if (!ast) throw new Error('Program parsing returns null.')
+      const result = check(ast)
+      if (result.currentType === null) expect(result.currentType).toBe(testcase.result.type)
+      else expect(result.currentType).toBeInstanceOf(testcase.result.type)
       if (testcase.result.errors.length > result.errors.length) {
         testcase.result.errors.forEach((error, index) => {
-          if (!result.errors[index]) expect("").toBe(error.message);
-          expect(result.errors[index].message).toBe(error.message);
-        });
+          if (!result.errors[index]) expect('').toBe(error.message)
+          expect(result.errors[index].message).toBe(error.message)
+        })
       } else {
         result.errors.forEach((error, index) => {
-          if (!testcase.result.errors[index]) expect(error.message).toBe("");
-          expect(error.message).toBe(testcase.result.errors[index].message);
-        });
+          if (!testcase.result.errors[index]) expect(error.message).toBe('')
+          expect(error.message).toBe(testcase.result.errors[index].message)
+        })
       }
-    });
-  });
-});
+    })
+  })
+})
