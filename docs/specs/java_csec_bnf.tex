@@ -16,15 +16,14 @@
 && \textit{constructor-declaration}              && \quad ::= & \quad && \textit{identifier} \ \textbf{\texttt{(}} \textit{formal-parameter} ... \textbf{\texttt{)}} \ \textit{block} && \\[2mm]
 && \textit{type}                                 && \quad ::= & \quad && \textit{primitive-type} \ | \ \textit{reference-type} && \\[1mm]
 && \textit{primitive-type}                       && \quad ::= & \quad && \textbf{\texttt{int}} && \\[1mm]
-&& \textit{reference-type}                       && \quad ::= & \quad && \textit{identifer} && \\[2mm]
+&& \textit{reference-type}                       && \quad ::= & \quad && \textit{identifier} \ | \ \textbf{\texttt{String[]}} && \\[2mm]
 && \textit{block}                                && \quad ::= & \quad && \textbf{\texttt{\{}} \textit{block-statement} ... \textbf{\texttt{\}}} && \\[1mm]
 && \textit{block-statement}                      && \quad ::= & \quad && \textit{local-variable-declaration-statement} && \\
 &&                                               &&         | & \quad && \textit{expression-statement} && \\
 &&                                               &&         | & \quad && \textit{return-statement} && \\
 &&                                               &&         | & \quad && \textit{explicit-constructor-invocation} && \\[2mm]
 && \textit{local-variable-declaration-statement} && \quad ::= & \quad && \textit{type} \ \textit{identifier} \ [ \ \textbf{\texttt{=}} \ \textit{expression} \ ] \ \textbf{\texttt{;}} && \\[2mm]
-&& \textit{expression-statement}                 && \quad ::= & \quad && \textit{statement-expression} \ \textbf{\texttt{;}} && \\[1mm]
-&& \textit{statement-expression}                 && \quad ::= & \quad && \textit{assignment} \ | \ \textit{method-invocation} && \\[2mm]
+&& \textit{expression-statement}                 && \quad ::= & \quad && \textit{expression} \ \textbf{\texttt{;}} && \\[2mm]
 && \textit{return-statement}                     && \quad ::= & \quad && \textbf{\texttt{return}} \ [ \ \textit{expression} \ ] \ \textbf{\texttt{;}} && \\[2mm]
 && \textit{explicit-constructor-invocation}      && \quad ::= & \quad && \textit{primary} \ \textbf{\texttt{(}} \textit{expression} ... \textbf{\texttt{)}} \ \textbf{\texttt{;}} && \\[2mm]
 && \textit{assignment}                           && \quad ::= & \quad && \textit{left-hand-side} \ \textbf{\texttt{=}} \ \textit{expression} && \\[1mm]
