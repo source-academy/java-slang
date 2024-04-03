@@ -7,7 +7,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 describe("evaluate method overloading correctly", () => {
   it("should resolve to test(int x) instead of test()", () => {

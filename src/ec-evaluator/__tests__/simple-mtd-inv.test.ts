@@ -6,7 +6,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 describe("evaluate static MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in static MethodInvocation with simple name correctly", () => {

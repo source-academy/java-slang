@@ -6,7 +6,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 describe("evaluate simple qualified names correctly", () => {  
   it("evaluate LHS Class correctly", () => {
