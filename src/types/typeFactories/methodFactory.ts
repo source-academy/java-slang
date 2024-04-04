@@ -1,4 +1,4 @@
-import { FormalParameter, MethodDeclaration } from '../../ast/types/classes'
+import { FormalParameter, MethodDeclaration } from '../ast/types/classes'
 import { Frame } from '../checker/environment'
 import { Type } from '../types/type'
 import {

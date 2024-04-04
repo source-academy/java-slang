@@ -1,9 +1,8 @@
 import { Array as ArrayType } from '../types/arrays'
 import { Integer, String } from '../types/nonPrimitives'
 import { Method } from '../types/methods'
-import { Node } from '../../ast/types/ast'
+import { Node } from '../ast/types'
 import { Type } from '../types/type'
-import { VariableInitializer } from '../../ast/types/blocks-and-statements'
 import {
   ArrayRequiredError,
   BadOperandTypesError,
@@ -27,6 +26,7 @@ import {
   getNumberType
 } from '../types/primitives'
 import { Frame } from './environment'
+import { createArrayType } from '../typeFactories/arrayFactory'
 
 export type Result = {
   currentType: Type | null
@@ -60,6 +60,38 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       )
         return newResult(null, [new IncompatibleTypesError()])
       return newResult(primaryCheck.currentType.getContentType())
+    }
+    case 'ArrayCreationExpression': {
+      let type = frame.getType(node.type)
+      if (type instanceof Error) return newResult(null, [type])
+      if (node.dimensionExpressions) {
+        const dimensionExpressionErrors: Error[] = []
+        node.dimensionExpressions.forEach(dimensionExpression => {
+          const checkResult = check(dimensionExpression.expression, frame)
+          if (checkResult.errors.length > 0)
+            return dimensionExpressionErrors.push(...checkResult.errors)
+          const dimensionExpressionType = checkResult.currentType
+          const integerType = new Integer()
+          const intType = new Int()
+          if (
+            !integerType.equals(dimensionExpressionType) &&
+            !intType.equals(dimensionExpressionType)
+          )
+            return dimensionExpressionErrors.push(new IncompatibleTypesError())
+          type = new ArrayType(type as Type)
+        })
+      }
+      if (node.arrayInitializer) {
+        const arrayType = createArrayType(type, node.arrayInitializer, expression => {
+          const result = check(expression, frame)
+          if (result.errors.length > 0) return result.errors[0]
+          if (!result.currentType)
+            throw new Error('array initializer expression should have a type')
+          return result.currentType
+        })
+        if (arrayType instanceof Error) return newResult(null, [arrayType])
+      }
+      return newResult(type)
     }
     case 'Assignment': {
       const leftCheck = check(node.left, frame)
@@ -189,6 +221,15 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
     case 'ExpressionStatement': {
       return check(node.stmtExp, frame)
     }
+    case 'FieldAccess': {
+      const checkPrimary = check(node.primary, frame)
+      if (checkPrimary.errors.length > 0) return newResult(null, checkPrimary.errors)
+      const primaryType = checkPrimary.currentType
+      if (!primaryType) throw new Error('cannot access field of no type')
+      const fieldType = primaryType.accessField(node.identifier)
+      if (fieldType instanceof Error) return newResult(null, [fieldType])
+      return newResult(fieldType)
+    }
     case 'IfStatement': {
       const errors: Error[] = []
       const conditionResult = check(node.condition, frame)
@@ -240,47 +281,21 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
     case 'LocalVariableDeclarationStatement': {
       if (!node.variableDeclaratorList) throw new Error('Variable declarator list is undefined.')
       const results = node.variableDeclaratorList.map(variableDeclarator => {
-        const errors: Error[] = []
         const declaredType = frame.getType(node.localVariableType)
         if (declaredType instanceof Error) return newResult(null, [declaredType])
         const { variableInitializer } = variableDeclarator
         if (variableInitializer) {
-          const checkInitialization = (
-            declaredType: Type | ArrayType,
-            variableInitializer: VariableInitializer
-          ): void => {
-            if (errors.length > 0) return
-            if (!Array.isArray(variableInitializer)) {
-              if (declaredType instanceof ArrayType) {
-                errors.push(new IncompatibleTypesError())
-                return
-              }
-              const checkResult = check(variableInitializer, frame)
-              if (checkResult.errors.length > 0) {
-                errors.push(...checkResult.errors)
-                return
-              }
-              if (checkResult.currentType == null)
-                throw new Error('Variable initializer should return a type.')
-              if (!declaredType.canBeAssigned(checkResult.currentType)) {
-                errors.push(new IncompatibleTypesError())
-              }
-              return
-            }
-            if (!(declaredType instanceof ArrayType)) {
-              errors.push(new IncompatibleTypesError())
-              return
-            }
-            const arrayContentType = declaredType.getContentType()
-            variableInitializer.forEach(variableInitializer => {
-              checkInitialization(arrayContentType, variableInitializer)
-            })
-          }
-          checkInitialization(declaredType, variableInitializer)
+          const type = createArrayType(declaredType, variableInitializer, expression => {
+            const result = check(expression, frame)
+            if (result.errors.length > 0) return result.errors[0]
+            if (!result.currentType)
+              throw new Error('array initializer expression should have a type')
+            return result.currentType
+          })
+          if (type instanceof Error) return newResult(null, [type])
         }
-        if (errors.length > 0) return newResult(null, errors)
         const error = frame.setVariable(variableDeclarator.variableDeclaratorId, declaredType)
-        if (error) return newResult(null, [...errors, error])
+        if (error) return newResult(null, [error])
         return OK_RESULT
       })
       return results.reduce((previousResult, currentResult) => {

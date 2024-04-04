@@ -1,8 +1,14 @@
-import { BaseNode } from './ast'
 import { ClassDeclaration, Identifier } from './classes'
+import { BaseNode } from '.'
 
-export type AST = CompilationUnit
+interface NodeMap {
+  CompilationUnit: CompilationUnit
+}
+
+export type ModuleNode = NodeMap[keyof NodeMap]
+
 export type CompilationUnit = OrdinaryCompilationUnit
+
 export interface OrdinaryCompilationUnit extends BaseNode {
   kind: 'CompilationUnit'
   importDeclarations: Array<ImportDeclaration>

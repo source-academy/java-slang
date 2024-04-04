@@ -1,5 +1,7 @@
-import { BaseNode } from './ast'
 import { Block, VariableDeclarator } from './blocks-and-statements'
+import { BaseNode } from '.'
+
+export type ClassNode = ClassDeclaration
 
 export type ClassDeclaration = NormalClassDeclaration
 

@@ -10,6 +10,12 @@ export class BadOperandTypesError extends Error {
   }
 }
 
+export class CannotBeDereferencedError extends Error {
+  constructor() {
+    super('cannot be dereferenced')
+  }
+}
+
 export class CannotFindSymbolError extends Error {
   constructor() {
     super('cannot find symbol')

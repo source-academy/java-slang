@@ -6,6 +6,8 @@ export abstract class Type {
 
   abstract canBeAssigned(type: Type): boolean
 
+  abstract accessField(name: string): Type | Error
+
   public equals(object: unknown): boolean {
     return object instanceof Type && this.name === object.name
   }

@@ -1,7 +1,7 @@
 import { BaseJavaCstVisitorWithDefaults, CstNode, TypeDeclarationCtx } from 'java-parser'
 
 import { NormalClassDeclaration } from '../types/classes'
-import { AST } from '../types/packages-and-modules'
+import { AST } from '../types'
 import { ClassExtractor } from './class-extractor'
 
 export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {

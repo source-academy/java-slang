@@ -1,3 +1,4 @@
+import { CannotBeDereferencedError, CannotFindSymbolError } from '../errors'
 import * as Primitives from './primitives'
 import { Type } from './type'
 
@@ -6,6 +7,10 @@ export class Class extends Type {
   constructor(className: string) {
     super('class')
     this.className = className
+  }
+
+  public accessField(_name: string): Error | Type {
+    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -20,6 +25,10 @@ export class Boolean extends Class {
     super('Boolean')
   }
 
+  public accessField(_name: string): Error | Type {
+    return new CannotFindSymbolError()
+  }
+
   public canBeAssigned(type: Type): boolean {
     return super.canBeAssigned(type) || type instanceof Primitives.Boolean
   }
@@ -28,6 +37,10 @@ export class Boolean extends Class {
 export class Byte extends Class {
   constructor() {
     super('Byte')
+  }
+
+  public accessField(_name: string): Error | Type {
+    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -40,6 +53,10 @@ export class Character extends Class {
     super('Character')
   }
 
+  public accessField(_name: string): Error | Type {
+    return new CannotFindSymbolError()
+  }
+
   public canBeAssigned(type: Type): boolean {
     return super.canBeAssigned(type) || type instanceof Primitives.Char
   }
@@ -48,6 +65,10 @@ export class Character extends Class {
 export class Double extends Class {
   constructor() {
     super('Double')
+  }
+
+  public accessField(_name: string): Error | Type {
+    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -60,6 +81,10 @@ export class Float extends Class {
     super('Float')
   }
 
+  public accessField(_name: string): Error | Type {
+    return new CannotFindSymbolError()
+  }
+
   public canBeAssigned(type: Type): boolean {
     return super.canBeAssigned(type) || type instanceof Primitives.Float
   }
@@ -68,6 +93,10 @@ export class Float extends Class {
 export class Integer extends Class {
   constructor() {
     super('Integer')
+  }
+
+  public accessField(_name: string): Error | Type {
+    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -84,6 +113,10 @@ export class Long extends Class {
     super('Long')
   }
 
+  public accessField(_name: string): Error | Type {
+    return new CannotFindSymbolError()
+  }
+
   public canBeAssigned(type: Type): boolean {
     return super.canBeAssigned(type) || type instanceof Primitives.Long
   }
@@ -92,6 +125,10 @@ export class Long extends Class {
 export class Short extends Class {
   constructor() {
     super('Short')
+  }
+
+  public accessField(_name: string): Error | Type {
+    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -120,6 +157,10 @@ export class String extends Class {
 export class Void extends Type {
   constructor() {
     super('void')
+  }
+
+  public accessField(_name: string): Error | Type {
+    return new CannotBeDereferencedError()
   }
 
   public canBeAssigned(type: Type): boolean {

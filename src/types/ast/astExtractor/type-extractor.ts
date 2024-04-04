@@ -4,6 +4,7 @@ import {
   FloatingPointTypeCtx,
   IntegralTypeCtx,
   NumericTypeCtx,
+  PrimitiveTypeCtx,
   UnannClassOrInterfaceTypeCtx,
   UnannClassTypeCtx,
   UnannPrimitiveTypeCtx,
@@ -87,5 +88,11 @@ export class TypeExtractor extends BaseJavaCstVisitorWithDefaults {
 
   dims(ctx: DimsCtx) {
     return '[]'.repeat(ctx.LSquare.length)
+  }
+
+  primitiveType(ctx: PrimitiveTypeCtx) {
+    if (ctx.Boolean) return 'boolean'
+    if (ctx.numericType) return this.visit(ctx.numericType)
+    throw new Error('not implemented')
   }
 }

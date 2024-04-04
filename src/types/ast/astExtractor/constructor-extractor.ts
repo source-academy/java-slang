@@ -20,7 +20,7 @@ import {
   ConstructorDeclaration
 } from '../types/classes'
 import { BlockStatement, ExplicitConstructorInvocation } from '../types/blocks-and-statements'
-import { Location } from '../types/ast'
+import { Location } from '../types'
 import { BlockStatementExtractor } from './block-statement-extractor'
 import { TypeExtractor } from './type-extractor'
 import { ExpressionExtractor } from './expression-extractor'

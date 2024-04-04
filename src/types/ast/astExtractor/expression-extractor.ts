@@ -1,10 +1,17 @@
 import {
   ArgumentListCtx,
   ArrayAccessSuffixCtx,
+  ArrayCreationDefaultInitSuffixCtx,
+  ArrayCreationExplicitInitSuffixCtx,
+  ArrayCreationExpressionCtx,
+  ArrayInitializerCtx,
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
   BooleanLiteralCtx,
   ClassOrInterfaceTypeToInstantiateCtx,
+  DimExprCtx,
+  DimExprsCtx,
+  DimsCtx,
   ExpressionCstNode,
   ExpressionCtx,
   FloatingPointLiteralCtx,
@@ -25,21 +32,26 @@ import {
   TernaryExpressionCtx,
   UnaryExpressionCstNode,
   UnaryExpressionCtx,
-  UnqualifiedClassInstanceCreationExpressionCtx
+  UnqualifiedClassInstanceCreationExpressionCtx,
+  VariableInitializerCtx,
+  VariableInitializerListCtx
 } from 'java-parser'
 import {
   ArgumentList,
   ArrayAccess,
+  ArrayCreationExpression,
   Assignment,
   BinaryExpression,
   ClassInstanceCreationExpression,
+  DimensionExpression,
   Expression,
   ExpressionName,
   FieldAccess,
   Primary
 } from '../types/blocks-and-statements'
-import { Location } from '../types/ast'
+import { Location } from '../types'
 import { getLocation } from './utils'
+import { TypeExtractor } from './type-extractor'
 
 export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   private location: Location
@@ -272,7 +284,9 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   newExpression(ctx: NewExpressionCtx) {
-    if (ctx.unqualifiedClassInstanceCreationExpression) {
+    if (ctx.arrayCreationExpression) {
+      return this.visit(ctx.arrayCreationExpression)
+    } else if (ctx.unqualifiedClassInstanceCreationExpression) {
       return this.visit(ctx.unqualifiedClassInstanceCreationExpression)
     }
   }
@@ -450,5 +464,71 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       expression: expresionExtractor.extract(ctx.expression[0]),
       location: getLocation(ctx.LSquare[0])
     }
+  }
+
+  arrayCreationExpression(ctx: ArrayCreationExpressionCtx): ArrayCreationExpression {
+    const result: { [key: string]: any } = { kind: 'ArrayCreationExpression' }
+    const typeExtractor = new TypeExtractor()
+    if (ctx.classOrInterfaceType) result.type = typeExtractor.visit(ctx.classOrInterfaceType)
+    else if (ctx.primitiveType) result.type = typeExtractor.visit(ctx.primitiveType)
+    if (ctx.arrayCreationDefaultInitSuffix)
+      result.dimensionExpressions = this.visit(ctx.arrayCreationDefaultInitSuffix)
+    else if (ctx.arrayCreationExplicitInitSuffix) {
+      const { arrayInitializer, dimensions } = this.visit(ctx.arrayCreationExplicitInitSuffix)
+      result.arrayInitializer = arrayInitializer
+      result.type += dimensions
+    }
+    result.location = getLocation(ctx.New[0])
+    return result as ArrayCreationExpression
+  }
+
+  arrayCreationDefaultInitSuffix(ctx: ArrayCreationDefaultInitSuffixCtx) {
+    if (ctx.dims) throw new Error('not implemented')
+    return this.visit(ctx.dimExprs)
+  }
+
+  arrayCreationExplicitInitSuffix(ctx: ArrayCreationExplicitInitSuffixCtx) {
+    return {
+      arrayInitializer: this.visit(ctx.arrayInitializer),
+      dimensions: this.visit(ctx.dims)
+    }
+  }
+
+  dims(ctx: DimsCtx) {
+    return '[]'.repeat(ctx.LSquare.length)
+  }
+
+  dimExprs(ctx: DimExprsCtx) {
+    return ctx.dimExpr.map(dimExpr => this.visit(dimExpr))
+  }
+
+  dimExpr(ctx: DimExprCtx): DimensionExpression {
+    const expressionExtractor = new ExpressionExtractor()
+    return {
+      kind: 'DimensionExpression',
+      expression: expressionExtractor.extract(ctx.expression[0]),
+      location: getLocation(ctx.LSquare[0])
+    }
+  }
+
+  arrayInitializer(ctx: ArrayInitializerCtx) {
+    if (ctx.variableInitializerList) {
+      return this.visit(ctx.variableInitializerList)
+    }
+  }
+
+  variableInitializer(ctx: VariableInitializerCtx) {
+    if (ctx.expression) {
+      const expressionExtractor = new ExpressionExtractor()
+      return expressionExtractor.extract(ctx.expression[0])
+    } else if (ctx.arrayInitializer) {
+      return this.visit(ctx.arrayInitializer)
+    }
+  }
+
+  variableInitializerList(ctx: VariableInitializerListCtx) {
+    return ctx.variableInitializer.map(variableInitializer => {
+      return this.visit(variableInitializer)
+    })
   }
 }

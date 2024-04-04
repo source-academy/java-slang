@@ -88,8 +88,16 @@ const testcases: {
     result: { type: null, errors: [] }
   },
   {
+    input: `
+      int[][] arr1 = new int[10][20];
+      int[][] arr2 = { { 1, 2 }, { 3, 4 } };
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    // This error is not flagged in the type checker but during runtime
     input: `int[] numbers = new int[-1]; // Attempting to create an array with negative size`,
-    result: { type: null, errors: [new IncompatibleTypesError()] }
+    result: { type: null, errors: [] }
   }
 ]
 

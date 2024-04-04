@@ -1,5 +1,4 @@
 import {
-  ArrayInitializerCtx,
   BaseJavaCstVisitorWithDefaults,
   BlockStatementCstNode,
   LocalVariableDeclarationCtx,
@@ -7,9 +6,7 @@ import {
   LocalVariableTypeCtx,
   VariableDeclaratorCtx,
   VariableDeclaratorIdCtx,
-  VariableDeclaratorListCtx,
-  VariableInitializerCtx,
-  VariableInitializerListCtx
+  VariableDeclaratorListCtx
 } from 'java-parser'
 import {
   BlockStatement,
@@ -22,13 +19,13 @@ import { TypeExtractor } from './type-extractor'
 
 export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   extract(cst: BlockStatementCstNode): BlockStatement {
-    this.visit(cst)
     if (cst.children.localVariableDeclarationStatement) {
       return this.visit(cst.children.localVariableDeclarationStatement)
-    } /* if (cst.children.statement) */ else {
+    } else if (cst.children.statement) {
       const statementExtractor = new StatementExtractor()
-      return statementExtractor.extract(cst.children.statement![0])
+      return statementExtractor.extract(cst.children.statement[0])
     }
+    throw new Error('not implemented')
   }
 
   localVariableDeclarationStatement(
@@ -65,35 +62,16 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   variableDeclarator(ctx: VariableDeclaratorCtx): VariableDeclarator {
-    return {
-      kind: 'VariableDeclarator',
-      variableDeclaratorId: this.visit(ctx.variableDeclaratorId),
-      variableInitializer: ctx.variableInitializer ? this.visit(ctx.variableInitializer) : undefined
+    const variableDeclarator: { [key: string]: any } = { kind: 'VariableDeclarator' }
+    variableDeclarator.variableDeclaratorId = this.visit(ctx.variableDeclaratorId)
+    if (ctx.variableInitializer) {
+      const expressionExtractor = new ExpressionExtractor()
+      variableDeclarator.variableInitializer = expressionExtractor.visit(ctx.variableInitializer)
     }
+    return variableDeclarator as VariableDeclarator
   }
 
   variableDeclaratorId(ctx: VariableDeclaratorIdCtx) {
     return ctx.Identifier[0].image
-  }
-
-  variableInitializer(ctx: VariableInitializerCtx) {
-    if (ctx.expression) {
-      const expressionExtractor = new ExpressionExtractor()
-      return expressionExtractor.extract(ctx.expression[0])
-    } else if (ctx.arrayInitializer) {
-      return this.visit(ctx.arrayInitializer)
-    }
-  }
-
-  arrayInitializer(ctx: ArrayInitializerCtx) {
-    if (ctx.variableInitializerList) {
-      return this.visit(ctx.variableInitializerList)
-    }
-  }
-
-  variableInitializerList(ctx: VariableInitializerListCtx) {
-    return ctx.variableInitializer.map(variableInitializer => {
-      return this.visit(variableInitializer)
-    })
   }
 }

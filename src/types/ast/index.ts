@@ -1,6 +1,6 @@
 import { parse as parseToCst } from 'java-parser'
 import { ASTExtractor } from './astExtractor/ast-extractor'
-import { AST } from './types/packages-and-modules'
+import { AST } from './types'
 
 /**
  * Parse program string into Abstract Syntax Tree (AST).

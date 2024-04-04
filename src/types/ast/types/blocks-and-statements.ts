@@ -1,59 +1,28 @@
-import { BaseNode } from './ast'
 import { Identifier, UnannType } from './classes'
+import { BaseNode, Location } from '.'
 
-export interface Block extends BaseNode {
-  kind: 'Block'
-  blockStatements: Array<BlockStatement>
-}
-export type BlockStatement =
-  | LocalVariableDeclarationStatement
-  | Statement
-  | ExplicitConstructorInvocation
+export type BlocksAndStatementsNode = BlockStatement | Primary | StatementExpression | Expression
 
-export interface ExplicitConstructorInvocation extends BaseNode {
-  kind: 'ExplicitConstructorInvocation'
-  thisOrSuper: 'this' | 'super'
-  argumentList: ArgumentList
+// ====
+
+export type ArgumentList = Array<Expression>
+
+export interface ArrayAccess extends BaseNode {
+  kind: 'ArrayAccess'
+  primary: Primary
+  expression: Expression
 }
 
-export interface LocalVariableDeclarationStatement extends BaseNode {
-  kind: 'LocalVariableDeclarationStatement'
-  localVariableType: LocalVariableType
-  variableDeclaratorList: Array<VariableDeclarator>
+export interface ArrayCreationExpression extends BaseNode {
+  kind: 'ArrayCreationExpression'
+  type: string
+  dimensionExpressions?: DimensionExpression[] // Undefined if arrayInitializer - new int[5]
+  arrayInitializer?: ArrayInitializer // Undefined if dimensionExpressions - new int[]{ 1,2,3 }
+  location?: Location
 }
 
-export type Statement =
-  | Block
-  | StatementWithoutTrailingSubstatement
-  | IfStatement
-  | WhileStatement
-  | ForStatement
-  | EmptyStatement
+export type ArrayInitializer = Array<VariableInitializer>
 
-export interface EmptyStatement extends BaseNode {
-  kind: 'EmptyStatement'
-}
-
-export interface IfStatement extends BaseNode {
-  kind: 'IfStatement'
-  condition: Expression
-  consequent: Statement
-  alternate?: Statement
-}
-
-export interface WhileStatement extends BaseNode {
-  kind: 'WhileStatement'
-  condition: Expression
-  body: Statement
-}
-
-export interface DoStatement extends BaseNode {
-  kind: 'DoStatement'
-  condition: Expression
-  body: Statement
-}
-
-export type ForStatement = BasicForStatement | EnhancedForStatement
 export interface BasicForStatement extends BaseNode {
   kind: 'BasicForStatement'
   forInit: Array<ExpressionStatement> | LocalVariableDeclarationStatement
@@ -62,52 +31,53 @@ export interface BasicForStatement extends BaseNode {
   body: Statement
 }
 
+export interface Block extends BaseNode {
+  kind: 'Block'
+  blockStatements: Array<BlockStatement>
+}
+
+export type BlockStatement =
+  | ExplicitConstructorInvocation
+  | LocalVariableDeclarationStatement
+  | Statement
+
+export interface ClassInstanceCreationExpression extends BaseNode {
+  kind: 'ClassInstanceCreationExpression'
+  identifier: Identifier
+  argumentList: ArgumentList
+}
+
+export interface DimensionExpression extends BaseNode {
+  kind: 'DimensionExpression'
+  expression: Expression
+  location?: Location
+}
+
+export interface DoStatement extends BaseNode {
+  kind: 'DoStatement'
+  condition: Expression
+  body: Statement
+}
+
+export interface EmptyStatement extends BaseNode {
+  kind: 'EmptyStatement'
+}
+
 export interface EnhancedForStatement extends BaseNode {
   kind: 'EnhancedForStatement'
 }
 
-export type StatementWithoutTrailingSubstatement =
-  | Block
-  | ExpressionStatement
-  | DoStatement
-  | ReturnStatement
-  | BreakStatement
-  | ContinueStatement
+export interface ExplicitConstructorInvocation extends BaseNode {
+  kind: 'ExplicitConstructorInvocation'
+  thisOrSuper: 'this' | 'super'
+  argumentList: ArgumentList
+}
+
+export type Expression = BinaryExpression | TernaryExpression | UnaryExpression | Void
 
 export interface ExpressionStatement extends BaseNode {
   kind: 'ExpressionStatement'
   stmtExp: StatementExpression
-}
-
-export type StatementExpression = MethodInvocation | Assignment
-
-export interface MethodInvocation extends BaseNode {
-  kind: 'MethodInvocation'
-  identifier: Identifier
-  argumentList: ArgumentList
-  primary?: Primary
-}
-
-export type ArgumentList = Array<Expression>
-
-export type LocalVariableType = UnannType
-
-export interface VariableDeclarator {
-  kind: 'VariableDeclarator'
-  variableDeclaratorId: VariableDeclaratorId
-  dims?: string
-  variableInitializer?: VariableInitializer
-}
-
-export type VariableDeclaratorId = Identifier
-export type VariableInitializer = Expression | ArrayInitializer
-
-export type ArrayInitializer = Array<VariableInitializer>
-
-export interface ArrayAccess extends BaseNode {
-  kind: 'ArrayAccess'
-  primary: Primary
-  expression: Expression
 }
 
 export interface FieldAccess extends BaseNode {
@@ -116,32 +86,13 @@ export interface FieldAccess extends BaseNode {
   identifier: Identifier
 }
 
-export interface ReturnStatement extends BaseNode {
-  kind: 'ReturnStatement'
-  exp: Expression
-}
+export type ForStatement = BasicForStatement | EnhancedForStatement
 
-export type Expression = BinaryExpression | UnaryExpression | TernaryExpression | Void
-
-export interface Void extends BaseNode {
-  kind: 'Void'
-}
-
-export type Primary =
-  | ArrayAccess
-  | Assignment // TODO: Check JLS for this
-  | ClassInstanceCreationExpression
-  | Expression
-  | ExpressionName
-  | FieldAccess
-  | Literal
-  | MethodInvocation
-  | This
-
-export interface ClassInstanceCreationExpression extends BaseNode {
-  kind: 'ClassInstanceCreationExpression'
-  identifier: Identifier
-  argumentList: ArgumentList
+export interface IfStatement extends BaseNode {
+  kind: 'IfStatement'
+  condition: Expression
+  consequent: Statement
+  alternate?: Statement
 }
 
 export interface Literal extends BaseNode {
@@ -154,6 +105,88 @@ export interface Literal extends BaseNode {
     | TextBlockLiteral
     | NullLiteral
 }
+
+export interface LocalVariableDeclarationStatement extends BaseNode {
+  kind: 'LocalVariableDeclarationStatement'
+  localVariableType: LocalVariableType
+  variableDeclaratorList: Array<VariableDeclarator>
+}
+
+export type LocalVariableType = UnannType
+
+export interface MethodInvocation extends BaseNode {
+  kind: 'MethodInvocation'
+  identifier: Identifier
+  argumentList: ArgumentList
+  primary?: Primary
+}
+
+export type Primary = ArrayCreationExpression | PrimaryNoNewArray
+
+export type PrimaryNoNewArray =
+  | ArrayAccess
+  | ClassInstanceCreationExpression
+  // | ClassLiteral
+  | ExpressionName
+  | FieldAccess
+  | Literal
+  // | ParenthesisExpression
+  | MethodInvocation
+  // | MethodReference
+  | This
+// | TypeName
+
+export interface ReturnStatement extends BaseNode {
+  kind: 'ReturnStatement'
+  exp: Expression
+}
+
+export type Statement =
+  | ForStatement
+  | IfStatement
+  // | LabeledStatement
+  | StatementWithoutTrailingSubstatement
+  | WhileStatement
+
+export type StatementExpression = MethodInvocation | Assignment
+
+export type StatementWithoutTrailingSubstatement =
+  // | AssertStatement
+  | Block
+  | BreakStatement
+  | ContinueStatement
+  | DoStatement
+  | EmptyStatement
+  | ExpressionStatement
+  | ReturnStatement
+// | ThrowStatement
+// | TryStatement
+// | SwitchStatement
+// | SynchronizedStatement
+// | YieldStatement
+
+export interface VariableDeclarator {
+  kind: 'VariableDeclarator'
+  variableDeclaratorId: VariableDeclaratorId
+  dims?: string
+  variableInitializer?: VariableInitializer
+}
+
+export type VariableDeclaratorId = Identifier
+
+export type VariableInitializer = Expression | ArrayInitializer
+
+export interface Void extends BaseNode {
+  kind: 'Void'
+}
+
+export interface WhileStatement extends BaseNode {
+  kind: 'WhileStatement'
+  condition: Expression
+  body: Statement
+}
+
+// ===== UNSORTED =====
 
 export type IntegerLiteral =
   | DecimalIntegerLiteral
@@ -249,12 +282,15 @@ export interface Assignment extends BaseNode {
 }
 
 export type LeftHandSide = ExpressionName | ArrayAccess
-export type UnaryExpression = PrefixExpression | PostfixExpression
+export type UnaryExpression =
+  // | CastExpression
+  PrefixExpression | Primary | PostfixExpression
+// | SwitchExpression
 
 export interface PrefixExpression extends BaseNode {
   kind: 'PrefixExpression'
   operator: '-' | '+' | '++' | '--' | '!' | '~'
-  expression: Expression
+  expression: UnaryExpression
 }
 
 export interface PostfixExpression extends BaseNode {

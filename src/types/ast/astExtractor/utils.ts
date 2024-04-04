@@ -1,4 +1,4 @@
-import { Location } from '../types/ast'
+import { Location } from '../types'
 
 export const getLocation = (object: Location): Location => ({
   startLine: object.startLine,

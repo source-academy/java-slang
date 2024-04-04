@@ -84,6 +84,10 @@ export class MethodSignature extends Type {
     super('method signature')
   }
 
+  public accessField(_name: string): Error | Type {
+    return new Error('not impemented')
+  }
+
   public canBeAssigned(type: Type): boolean {
     if (!(type instanceof MethodSignature)) return false
     if (!this.returnType.canBeAssigned(type.returnType)) return false
@@ -132,6 +136,10 @@ export class Method extends Type {
   constructor(methodSignature: MethodSignature) {
     super('method')
     this.methodSignatures.push(methodSignature)
+  }
+
+  public accessField(_name: string): Error | Type {
+    return new Error('not impemented')
   }
 
   public canBeAssigned(type: Type): boolean {

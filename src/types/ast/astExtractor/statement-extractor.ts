@@ -42,7 +42,7 @@ import {
   StatementExpression,
   VariableDeclarator
 } from '../types/blocks-and-statements'
-import { Location } from '../types/ast'
+import { Location } from '../types'
 import { ExpressionExtractor } from './expression-extractor'
 import { BlockStatementExtractor } from './block-statement-extractor'
 import { TypeExtractor } from './type-extractor'
