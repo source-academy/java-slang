@@ -142,7 +142,7 @@ export class Method extends Type {
     return new Error('not impemented')
   }
 
-  public canBeAssigned(type: Type): boolean {
+  public canBeAssigned(_type: Type): boolean {
     throw new Error('Not implemented yet')
   }
 

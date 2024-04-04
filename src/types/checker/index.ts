@@ -25,8 +25,8 @@ import {
   getFloatType,
   getNumberType
 } from '../types/primitives'
-import { Frame } from './environment'
 import { createArrayType } from '../typeFactories/arrayFactory'
+import { Frame } from './environment'
 
 export type Result = {
   currentType: Type | null

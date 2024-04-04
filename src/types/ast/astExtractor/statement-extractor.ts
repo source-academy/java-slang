@@ -154,7 +154,7 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   primary(ctx: PrimaryCtx): Primary {
     // Assignment LHS, MethodInvocation identifier
-    let { name, location } = this.visit(ctx.primaryPrefix)
+    const primaryPrefix = this.visit(ctx.primaryPrefix)
     if (ctx.primarySuffix) {
       const lastSuffix = ctx.primarySuffix[ctx.primarySuffix.length - 1]
       if (lastSuffix.children.arrayAccessSuffix) {
@@ -173,23 +173,23 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
       }
 
       for (const s of ctx.primarySuffix.filter(s => !s.children.methodInvocationSuffix)) {
-        name += '.' + this.visit(s)
+        primaryPrefix.name += '.' + this.visit(s)
       }
 
       // MethodInvocation
       if (ctx.primarySuffix[ctx.primarySuffix.length - 1].children.methodInvocationSuffix) {
         return {
           kind: 'MethodInvocation',
-          identifier: name,
+          identifier: primaryPrefix.name,
           argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
-          location
+          location: primaryPrefix.location
         } as MethodInvocation
       }
     }
     return {
       kind: 'ExpressionName',
-      name,
-      location
+      name: primaryPrefix.name,
+      location: primaryPrefix.location
     }
   }
 
@@ -236,13 +236,13 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
 
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
     // Assignment LHS, MethodInvocation identifier
-    let { name, location } = this.visit(ctx.fqnOrRefTypePartFirst)
+    const fqnOrRefTypePartFirst = this.visit(ctx.fqnOrRefTypePartFirst)
     if (ctx.fqnOrRefTypePartRest) {
       for (const r of ctx.fqnOrRefTypePartRest) {
-        name += '.' + this.visit(r).name
+        fqnOrRefTypePartFirst.name += '.' + this.visit(r).name
       }
     }
-    return { name, location }
+    return fqnOrRefTypePartFirst
   }
 
   fqnOrRefTypePartFirst(ctx: FqnOrRefTypePartFirstCtx) {

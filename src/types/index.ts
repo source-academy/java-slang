@@ -1,4 +1,4 @@
-import { Node } from '../ast/types/ast'
+import { Node } from './ast/types'
 import { check } from './checker'
 
 export type TypeCheckResult = { hasTypeErrors: boolean }

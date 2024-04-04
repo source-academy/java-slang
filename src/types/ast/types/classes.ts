@@ -67,7 +67,7 @@ export interface MethodHeader {
   formalParameterList: Array<FormalParameter>
 }
 
-export type Result = 'void' | UnannType
+export type Result = UnannType
 
 export interface FormalParameter {
   kind: 'FormalParameter'
