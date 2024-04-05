@@ -30,10 +30,12 @@ import {
   ExpressionStatementCtx,
   LocalVariableTypeCtx,
   VariableDeclaratorListCtx,
-  VariableDeclaratorCtx
+  VariableDeclaratorCtx,
+  EnhancedForStatementCtx
 } from 'java-parser'
 import {
   BasicForStatement,
+  EnhancedForStatement,
   ExpressionStatement,
   IfStatement,
   MethodInvocation,
@@ -46,6 +48,7 @@ import { Location } from '../types'
 import { ExpressionExtractor } from './expression-extractor'
 import { BlockStatementExtractor } from './block-statement-extractor'
 import { TypeExtractor } from './type-extractor'
+import { getLocation } from './utils'
 
 export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   constructor() {
@@ -394,5 +397,19 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
       })
     })
     return declarations
+  }
+
+  enhancedForStatement(ctx: EnhancedForStatementCtx): EnhancedForStatement {
+    const blockStatementExtractor = new BlockStatementExtractor()
+    const expressionExtractor = new ExpressionExtractor()
+    const statementExtractor = new StatementExtractor()
+    return {
+      kind: 'EnhancedForStatement',
+      localVariableType: blockStatementExtractor.visit(ctx.localVariableType),
+      variableDeclaratorId: blockStatementExtractor.visit(ctx.variableDeclaratorId),
+      expression: expressionExtractor.extract(ctx.expression[0]),
+      statement: statementExtractor.extract(ctx.statement[0]),
+      location: getLocation(ctx.For[0])
+    }
   }
 }

@@ -1,5 +1,7 @@
 public class Main {
   public static void main(String[] args) {
-    int[] numbers = new int[-1];
+    int[] arr = {1, 2, 3};
+    for (int num : arr) {}
+    System.out.println(num);
   }
 }

@@ -7,6 +7,7 @@ import {
   ArrayRequiredError,
   BadOperandTypesError,
   IncompatibleTypesError,
+  NotApplicableToExpressionTypeError,
   VariableAlreadyDefinedError
 } from '../errors'
 import {
@@ -211,6 +212,24 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       return OK_RESULT
     }
     case 'EmptyStatement': {
+      return OK_RESULT
+    }
+    case 'EnhancedForStatement': {
+      const variableType = frame.getType(node.localVariableType)
+      if (variableType instanceof Error) return newResult(null, [variableType])
+      const expressionCheck = check(node.expression, frame)
+      if (expressionCheck.errors.length > 0) return newResult(null, expressionCheck.errors)
+      const expressionType = expressionCheck.currentType
+      if (!(expressionType instanceof ArrayType))
+        return newResult(null, [new NotApplicableToExpressionTypeError()])
+      const arrayContentType = expressionType.getContentType()
+      if (!variableType.canBeAssigned(arrayContentType))
+        return newResult(null, [new IncompatibleTypesError()])
+      const forExpressionFrame = frame.newChildFrame()
+      const error = forExpressionFrame.setVariable(node.variableDeclaratorId, variableType)
+      if (error) return newResult(null, [error])
+      const statementCheck = check(node.statement, forExpressionFrame)
+      if (statementCheck.errors.length > 0) return newResult(null, statementCheck.errors)
       return OK_RESULT
     }
     case 'ExpressionName': {

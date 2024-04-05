@@ -71,6 +71,35 @@ const testcases: {
       for (int i = 0; i < arr.length; i++) {}
     `,
     result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      int[] arr = {1, 2, 3, 4, 5};
+      for (int num : arr) {}
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      int[] arr = {1, 2, 3, 4, 5};
+      for (double num : arr) {}
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      int[] arr = {1, 2, 3, 4, 5};
+      for (String num : arr) {}
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] }
+  },
+  {
+    input: `
+      int[] arr = {1, 2, 3, 4, 5};
+      for (int num : arr) {}
+      String test = num;
+    `,
+    result: { type: null, errors: [new CannotFindSymbolError()] }
   }
 ]
 

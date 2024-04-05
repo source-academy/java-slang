@@ -65,6 +65,11 @@ export interface EmptyStatement extends BaseNode {
 
 export interface EnhancedForStatement extends BaseNode {
   kind: 'EnhancedForStatement'
+  localVariableType: LocalVariableType
+  variableDeclaratorId: VariableDeclaratorId
+  expression: Expression
+  statement: Statement
+  location?: Location
 }
 
 export interface ExplicitConstructorInvocation extends BaseNode {

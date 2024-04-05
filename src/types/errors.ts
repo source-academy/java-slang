@@ -34,6 +34,12 @@ export class FloatTooSmallError extends Error {
   }
 }
 
+export class NotApplicableToExpressionTypeError extends Error {
+  constructor() {
+    super('not applicable to expression type')
+  }
+}
+
 export class IllegalUnderscoreError extends Error {
   constructor() {
     super('illegal underscore')
