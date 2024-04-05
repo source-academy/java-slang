@@ -98,7 +98,8 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     return {
       kind: 'FormalParameter',
       unannType: typeExtractor.extract(ctx.unannType[0]),
-      identifier: this.visit(ctx.variableDeclaratorId)
+      identifier: this.visit(ctx.variableDeclaratorId),
+      isVariableArityParameter: false
     } as FormalParameter
   }
 
@@ -107,7 +108,8 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     return {
       kind: 'FormalParameter',
       unannType: typeExtractor.extract(ctx.unannType[0]),
-      identifier: ctx.Identifier[0].image
+      identifier: ctx.Identifier[0].image,
+      isVariableArityParameter: true
     } as FormalParameter
   }
 

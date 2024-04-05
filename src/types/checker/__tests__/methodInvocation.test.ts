@@ -1,8 +1,13 @@
-import { CannotFindSymbolError } from '../../errors'
+import {
+  CannotFindSymbolError,
+  IncompatibleTypesError,
+  MethodCannotBeAppliedError,
+  VarargsParameterMustBeLastParameter,
+  VariableAlreadyDefinedError
+} from '../../errors'
 import { check } from '..'
 import { parse } from '../../ast'
 import { Type } from '../../types/type'
-import { IncompatibleTypesError, MethodCannotBeAppliedError } from '../../errors'
 
 const createProgram = (methods: string) => `
   public class Main {
@@ -75,6 +80,34 @@ const testcases: {
       public static int getStringLength(String input) { return input; }
     `,
     result: { type: null, errors: [new IncompatibleTypesError()] }
+  },
+  {
+    input: `
+      public static void main(String[] args) { printMultipleMessages("Hello", "World"); }
+      public static void printMultipleMessages(String... message, String message) {} // Duplicate Identifier
+    `,
+    result: { type: null, errors: [new VarargsParameterMustBeLastParameter()] }
+  },
+  {
+    input: `
+      public static void main(String[] args) { printMultipleMessages("Hello", "World"); }
+      public static void printMultipleMessages(String message, String message) {} // Duplicate Identifier
+    `,
+    result: { type: null, errors: [new VariableAlreadyDefinedError()] }
+  },
+  {
+    input: `
+      public static void main(String[] args) { printMultipleMessages("Hello", "World", "!"); }
+      public static void printMultipleMessages(String... messages) { for (String msg : messages) {} }
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      public static void main(String[] args) { printMultipleMessages(); }
+      public static void printMultipleMessages(String... messages) { for (String msg : messages) {} }
+    `,
+    result: { type: null, errors: [] }
   }
 ]
 

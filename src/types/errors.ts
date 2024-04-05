@@ -70,6 +70,12 @@ export class MethodCannotBeAppliedError extends Error {
   }
 }
 
+export class VarargsParameterMustBeLastParameter extends Error {
+  constructor() {
+    super('varargs parameter must be the last parameter')
+  }
+}
+
 export class VariableAlreadyDefinedError extends Error {
   constructor() {
     super('variable is already defined')

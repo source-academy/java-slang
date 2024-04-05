@@ -381,7 +381,8 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
             furtherChecks.push(() => {
               const methodFrame = classFrame.newChildFrame()
               const methodSignature = method.getOverload(0)
-              methodSignature.mapParameters((name, type) => {
+              methodSignature.mapParameters((name, type, isVarargs) => {
+                if (isVarargs) type = new ArrayType(type)
                 const error = methodFrame.setVariable(name, type)
                 if (error) errors.push(error)
               })
@@ -392,6 +393,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
           }
         }
       })
+      if (errors.length > 0) return newResult(null, errors)
       furtherChecks.forEach(furtherCheck => furtherCheck())
       return newResult(null, errors)
     }

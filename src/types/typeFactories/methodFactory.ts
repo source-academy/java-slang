@@ -1,6 +1,3 @@
-import { FormalParameter, MethodDeclaration } from '../ast/types/classes'
-import { Frame } from '../checker/environment'
-import { Type } from '../types/type'
 import {
   ArgumentList,
   ClassMethod,
@@ -9,6 +6,10 @@ import {
   Parameter,
   ParameterList
 } from '../types/methods'
+import { FormalParameter, MethodDeclaration } from '../ast/types/classes'
+import { Frame } from '../checker/environment'
+import { Type } from '../types/type'
+import { VarargsParameterMustBeLastParameter, VariableAlreadyDefinedError } from '../errors'
 
 export const createArgumentList = (...argumentTypes: Type[]): ArgumentList | Error => {
   const argumentList = new ArgumentList()
@@ -22,11 +23,21 @@ const createParameterList = (
   frame: Frame,
   ...parameterDeclarations: FormalParameter[]
 ): ParameterList | Error => {
+  const identifiers = new Set<string>()
   const parameters: ParameterList = new ParameterList()
-  for (const parameterDeclaration of parameterDeclarations) {
+  for (let i = 0; i < parameterDeclarations.length; i++) {
+    const parameterDeclaration = parameterDeclarations[i]
+    if (parameterDeclaration.isVariableArityParameter && i + 1 !== parameterDeclarations.length)
+      return new VarargsParameterMustBeLastParameter()
     const parameterType = frame.getType(parameterDeclaration.unannType)
     if (parameterType instanceof Error) return parameterType
-    const parameter = new Parameter(parameterDeclaration.identifier, parameterType)
+    if (identifiers.has(parameterDeclaration.identifier)) return new VariableAlreadyDefinedError()
+    identifiers.add(parameterDeclaration.identifier)
+    const parameter = new Parameter(
+      parameterDeclaration.identifier,
+      parameterType,
+      parameterDeclaration.isVariableArityParameter
+    )
     parameters.addParameter(parameter)
   }
   return parameters

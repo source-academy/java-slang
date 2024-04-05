@@ -23,28 +23,37 @@ export class ArgumentList {
 }
 
 export class Parameter {
-  public name: string
-  public type: Type
-  constructor(name: string, type: Type) {
-    this.name = name
-    this.type = type
+  private _name: string
+  private _type: Type
+  private _isVarargs: boolean
+
+  constructor(name: string, type: Type, isVarargs: boolean = false) {
+    this._name = name
+    this._type = type
+    this._isVarargs = isVarargs
   }
 
   public canBeAssigned(type: Type): boolean {
-    if (type instanceof Parameter) return this.type.canBeAssigned(type.type)
-    return this.type.canBeAssigned(type)
+    if (type instanceof Parameter) return this._type.canBeAssigned(type._type)
+    return this._type.canBeAssigned(type)
   }
 
   public equals(object: unknown): boolean {
-    return object instanceof Parameter && this.name === object.name && this.type.equals(object.type)
+    return (
+      object instanceof Parameter && this._name === object._name && this._type.equals(object._type)
+    )
   }
 
   public getName(): string {
-    return this.name
+    return this._name
   }
 
   public getType(): Type {
-    return this.type
+    return this._type
+  }
+
+  public isVarargs(): boolean {
+    return this._isVarargs
   }
 }
 
@@ -65,11 +74,23 @@ export class ParameterList {
   }
 
   public matchesArguments(args: ArgumentList): boolean {
-    if (this.length() !== args.length()) return false
+    const isLastParameterVarargs = this.get(this.length() - 1).isVarargs()
+    if (isLastParameterVarargs && args.length() < this.length() - 1) return false
+    if (!isLastParameterVarargs && args.length() !== this.length()) return false
     for (let i = 0; i < this.length(); i++) {
       const parameter = this.get(i)
-      const argument = args.get(i)
-      if (!parameter.canBeAssigned(argument)) return false
+      if (!parameter.isVarargs()) {
+        const argument = args.get(i)
+        if (!parameter.canBeAssigned(argument)) return false
+        continue
+      }
+
+      for (let j = i; j < args.length(); j++) {
+        const argument = args.get(j)
+        if (!parameter.canBeAssigned(argument)) return false
+      }
+
+      break
     }
     return true
   }
@@ -120,11 +141,11 @@ export class MethodSignature extends Type {
     return this.parameters.length()
   }
 
-  public mapParameters<T>(mapper: (name: string, type: Type) => T): T[] {
+  public mapParameters<T>(mapper: (name: string, type: Type, isVarargs: boolean) => T): T[] {
     const result: T[] = []
     for (let i = 0; i < this.parameterSize(); i++) {
       const parameter = this.parameters.get(i)
-      result.push(mapper(parameter.getName(), parameter.getType()))
+      result.push(mapper(parameter.getName(), parameter.getType(), parameter.isVarargs()))
     }
     return result
   }

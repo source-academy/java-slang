@@ -73,6 +73,7 @@ export interface FormalParameter {
   kind: 'FormalParameter'
   unannType: UnannType
   identifier: Identifier
+  isVariableArityParameter: boolean
 }
 
 export interface FieldDeclaration extends BaseNode {
