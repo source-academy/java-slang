@@ -45,8 +45,7 @@ const testcases: {
     result: {
       type: null,
       errors: [new IncompatibleTypesError(), new IncompatibleTypesError()]
-    },
-    only: true
+    }
   }
 ]
 

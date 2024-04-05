@@ -25,8 +25,7 @@ const testcases: {
       int test = 0;
       test = 1;
     `,
-    result: { type: null, errors: [] },
-    only: true
+    result: { type: null, errors: [] }
   },
   {
     input: `

@@ -64,6 +64,13 @@ const testcases: {
       for (int i = 0; i < 10; i++) {}
     `,
     result: { type: null, errors: [new VariableAlreadyDefinedError()] }
+  },
+  {
+    input: `
+      int[] arr = {1, 2, 3, 4, 5};
+      for (int i = 0; i < arr.length; i++) {}
+    `,
+    result: { type: null, errors: [] }
   }
 ]
 

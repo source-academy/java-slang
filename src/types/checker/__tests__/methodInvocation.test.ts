@@ -67,8 +67,7 @@ const testcases: {
       public static void main(String[] args) { int test = getStringLength("Hello World!"); }
       public static String getStringLength(String input) { return input; }
     `,
-    result: { type: null, errors: [new IncompatibleTypesError()] },
-    only: true
+    result: { type: null, errors: [new IncompatibleTypesError()] }
   },
   {
     input: `
