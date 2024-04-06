@@ -35,6 +35,7 @@ jobs:
         run: yarn build
       - uses: actions/setup-java@v4
         with:
+          distribution: 'oracle'
           java-version: '17.0'
       - uses: ArtiomTr/jest-coverage-report-action@v2
         with:
