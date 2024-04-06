@@ -374,7 +374,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
     const conRes = compile(consequent, cg)
     const conSize = conRes.stackSize
-    let resType = conRes.resultType
+    const resType = conRes.resultType
     maxStack = Math.max(maxStack, conSize)
 
     const endLabel = cg.generateNewLabel()
@@ -389,6 +389,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   LogicalExpression: (node: Node, cg: CodeGenerator) => {
+    const isNullLiteral = (node: Node) => {
+      return node.kind === 'Literal' && node.literalType.kind === 'NullLiteral'
+    }
     const f = (node: Node, targetLabel: Label, onTrue: boolean): CompileResult => {
       if (node.kind === 'Literal') {
         const {
@@ -408,8 +411,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
       if (node.kind === 'BinaryExpression') {
         const { left: left, right: right, operator: op } = node
-        let l: CompileResult
-        let r: CompileResult
+        let l: CompileResult = { stackSize: 0, resultType: EMPTY_TYPE }
+        let r: CompileResult = { stackSize: 0, resultType: EMPTY_TYPE }
         if (op === '&&') {
           if (onTrue) {
             const falseLabel = cg.generateNewLabel()
@@ -420,7 +423,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             l = f(left, targetLabel, false)
             r = f(right, targetLabel, false)
           }
-          return { stackSize: Math.max(l.stackSize, 1 + r.stackSize), resultType: l.resultType }
         } else if (op === '||') {
           if (onTrue) {
             l = f(left, targetLabel, true)
@@ -431,13 +433,21 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             r = f(right, targetLabel, false)
             falseLabel.offset = cg.code.length
           }
-          return { stackSize: Math.max(l.stackSize, 1 + r.stackSize), resultType: l.resultType }
         } else if (op in reverseLogicalOp) {
-          l = f(left, targetLabel, onTrue)
-          r = f(right, targetLabel, onTrue)
-          cg.addBranchInstr(onTrue ? logicalOp[op] : reverseLogicalOp[op], targetLabel)
-          return { stackSize: Math.max(l.stackSize, 1 + r.stackSize), resultType: l.resultType }
+          if (isNullLiteral(left)) {
+            // still use l to represent the first argument pushed onto stack
+            l = f(right, targetLabel, onTrue)
+            cg.addBranchInstr(onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
+          } else if (isNullLiteral(right)) {
+            l = f(left, targetLabel, onTrue)
+            cg.addBranchInstr(onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
+          } else {
+            l = f(left, targetLabel, onTrue)
+            r = f(right, targetLabel, onTrue)
+            cg.addBranchInstr(onTrue ? logicalOp[op] : reverseLogicalOp[op], targetLabel)
+          }
         }
+        return { stackSize: Math.max(l.stackSize, 1 + (['D', 'J'].includes(l.resultType) ? 1 : 0) + r.stackSize), resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
       }
 
       return compile(node, cg)
@@ -805,6 +815,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       case 'BooleanLiteral': {
         cg.code.push(value === 'true' ? OPCODE.ICONST_1 : OPCODE.ICONST_0)
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
+      }
+      case 'NullLiteral': {
+        cg.code.push(OPCODE.ACONST_NULL)
+        return { stackSize: 1, resultType: EMPTY_TYPE }
       }
     }
 

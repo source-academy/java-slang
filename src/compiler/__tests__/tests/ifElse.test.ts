@@ -281,6 +281,39 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["15", "-15"],
   },
+  {
+    comment: "conditional expression involving null",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          Main m = null;
+          if (m == null) {
+            System.out.println("m is null");
+          } else {
+            System.out.println("uh oh");
+          }
+          if (null == null) {
+            System.out.println("null is null");
+          } else {
+            System.out.println("uh oh");
+          }
+
+          Main obj = new Main();
+          if (null == obj) {
+            System.out.println("uh oh");
+          } else {
+            System.out.println("obj not null");
+          }
+          if (null != null) {
+            System.out.println("uh oh");
+          } else {
+            System.out.println("null is still null");
+          }
+        }
+      }
+    `,
+    expectedLines: ["m is null", "null is null", "obj not null", "null is still null"],
+  },
 ];
 
 export const ifElseTest = () => describe("if else statements", () => {
