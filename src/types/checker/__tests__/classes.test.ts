@@ -1,5 +1,6 @@
 import { check } from '..'
 import { parse } from '../../ast'
+import { CyclicInheritanceError } from '../../errors'
 import { Type } from '../../types/type'
 
 const testcases: {
@@ -83,8 +84,18 @@ const testcases: {
           }
         }
     `,
-    result: { type: null, errors: [] },
-    only: true
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+        class A extends B {}
+        class B extends A {}
+        
+        public class Main {
+          public static void main(String[] args) {}
+        }
+    `,
+    result: { type: null, errors: [new CyclicInheritanceError()] }
   }
 ]
 
@@ -106,7 +117,6 @@ describe('Type Checker', () => {
         })
       } else {
         result.errors.forEach((error, index) => {
-          console.log(error)
           if (!testcase.result.errors[index]) expect(error.message).toBe('')
           expect(error.message).toBe(testcase.result.errors[index].message)
         })

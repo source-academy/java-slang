@@ -22,6 +22,12 @@ export class CannotFindSymbolError extends Error {
   }
 }
 
+export class CyclicInheritanceError extends Error {
+  constructor() {
+    super('cyclic inheritance')
+  }
+}
+
 export class FloatTooLargeError extends Error {
   constructor() {
     super('floating-point number too large')

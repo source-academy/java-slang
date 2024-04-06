@@ -39,6 +39,7 @@ describe('Type Checker', () => {
         })
       } else {
         result.errors.forEach((error, index) => {
+          console.log(error)
           if (!testcase.result.errors[index]) expect(error.message).toBe('')
           expect(error.message).toBe(testcase.result.errors[index].message)
         })

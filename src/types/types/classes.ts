@@ -1,9 +1,10 @@
 import { CannotFindSymbolError, VariableAlreadyDefinedError } from '../errors'
-import { Method } from './methods'
+import { Method, MethodSignature } from './methods'
+import { Null } from './primitives'
 import { Type } from './type'
 
 export interface Class extends Type {
-  accessConstructor(): Method | null
+  accessConstructor(): Method
   getParentClass(): Class
   setConstructor(method: Method): void
   setField(name: string, type: Type): null | Error
@@ -12,16 +13,19 @@ export interface Class extends Type {
 }
 
 export class ClassImpl extends Type implements Class {
-  private _constructor: Method | null
+  private _constructor: Method
   private _fields = new Map<string, Type>()
   private _methods = new Map<string, Method>()
   private _parent: Class = new ObjectClass()
 
   constructor(name: string) {
     super(`Class: ${name}`)
+    const defaultConstructorSignature = new MethodSignature()
+    defaultConstructorSignature.setReturnType(this)
+    this._constructor = new Method(defaultConstructorSignature)
   }
 
-  public accessConstructor(): Method | null {
+  public accessConstructor(): Method {
     return this._constructor
   }
 
@@ -38,6 +42,7 @@ export class ClassImpl extends Type implements Class {
   }
 
   public canBeAssigned(type: Type): boolean {
+    if (type instanceof Null) return true
     if (!(type instanceof ClassImpl)) return false
     while (type instanceof ClassImpl) {
       if (this.name === type.name) return true
@@ -53,6 +58,14 @@ export class ClassImpl extends Type implements Class {
   public hasMethod(name: string): boolean {
     const method = this._methods.get(name)
     return !!method
+  }
+
+  public mapFields(mapper: (name: string, type: Type) => void) {
+    this._fields.forEach((value, key) => mapper(key, value))
+  }
+
+  public mapMethods(mapper: (name: string, method: Method) => void) {
+    this._methods.forEach((value, key) => mapper(key, value))
   }
 
   public setConstructor(method: Method): void {
@@ -83,7 +96,7 @@ export class ObjectClass extends Type implements Class {
     super('Class: Object')
   }
 
-  public accessConstructor(): Method | null {
+  public accessConstructor(): Method {
     throw new Error('Not implemented')
   }
 
@@ -96,7 +109,7 @@ export class ObjectClass extends Type implements Class {
   }
 
   public canBeAssigned(type: Type): boolean {
-    return type instanceof ClassImpl || type instanceof ObjectClass
+    return type instanceof ClassImpl || type instanceof ObjectClass || type instanceof Null
   }
 
   public getParentClass(): Class {

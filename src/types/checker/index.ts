@@ -24,7 +24,8 @@ import {
 import { createArrayType } from '../typeFactories/arrayFactory'
 import { ClassImpl } from '../types/classes'
 import { Frame } from './environment'
-import { addClassesToFrame } from './prechecks'
+import { addClassesToFrame, resolveClassRelationships } from './prechecks'
+import { Method } from '../types/methods'
 
 export type Result = {
   currentType: Type | null
@@ -42,6 +43,8 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
   const typeCheckingFrame = frame.newChildFrame()
   const addClassesResult = addClassesToFrame(node, typeCheckingFrame)
   if (addClassesResult.errors.length > 0) return addClassesResult
+  const resolveClassesResult = resolveClassRelationships(node, typeCheckingFrame)
+  if (resolveClassesResult.errors.length > 0) return resolveClassesResult
   return typeCheckBody(node, typeCheckingFrame)
 }
 
@@ -212,8 +215,26 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
     case 'ClassInstanceCreationExpression': {
       const classType = frame.getType(node.identifier)
       if (classType instanceof Error) return newResult(null, [classType])
-      // TODO: Check constructor arguments
-      return newResult(classType)
+      if (!(classType instanceof ClassImpl)) throw new Error('ClassImpl instance was expected')
+      const errors: Error[] = []
+      const argumentTypes: Type[] = []
+      for (const argument of node.argumentList) {
+        const argumentResult = typeCheckBody(argument, frame)
+        if (argumentResult.errors.length > 0) {
+          errors.push(...argumentResult.errors)
+          continue
+        }
+        if (!argumentResult.currentType) throw new Error('Arguments should have a type.')
+        argumentTypes.push(argumentResult.currentType)
+      }
+      if (errors.length > 0) return newResult(null, errors)
+      const argumentList = createArgumentList(...argumentTypes)
+      if (argumentList instanceof Error) return newResult(null, [argumentList])
+      const constructor = classType.accessConstructor()
+      if (!constructor) throw new Error('constructor should not be null')
+      const returnType = constructor.invoke(argumentList)
+      if (returnType instanceof Error) return newResult(null, [returnType])
+      return newResult(returnType)
     }
     case 'CompilationUnit': {
       const errors: Error[] = []
@@ -315,35 +336,40 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
     }
     case 'LocalVariableDeclarationStatement': {
       if (!node.variableDeclaratorList) throw new Error('Variable declarator list is undefined.')
-      const results = node.variableDeclaratorList.map(variableDeclarator => {
+      const errors: Error[] = []
+      for (const variableDeclarator of node.variableDeclaratorList) {
         const declaredType = frame.getType(node.localVariableType)
         if (declaredType instanceof Error) return newResult(null, [declaredType])
-        const { variableInitializer } = variableDeclarator
-        if (variableInitializer) {
-          const type = createArrayType(declaredType, variableInitializer, expression => {
-            const result = typeCheckBody(expression, frame)
-            if (result.errors.length > 0) return result.errors[0]
-            if (!result.currentType)
-              throw new Error('array initializer expression should have a type')
-            return result.currentType
-          })
-          if (type instanceof Error) return newResult(null, [type])
+        if (variableDeclarator.variableInitializer) {
+          const type = createArrayType(
+            declaredType,
+            variableDeclarator.variableInitializer,
+            expression => {
+              const result = typeCheckBody(expression, frame)
+              if (result.errors.length > 0) return result.errors[0]
+              if (!result.currentType)
+                throw new Error('array initializer expression should have a type')
+              return result.currentType
+            }
+          )
+          if (type instanceof Error) errors.push(type)
         }
         const error = frame.setVariable(variableDeclarator.variableDeclaratorId, declaredType)
-        if (error) return newResult(null, [error])
-        return OK_RESULT
-      })
-      return results.reduce((previousResult, currentResult) => {
-        if (currentResult.errors.length === 0) return previousResult
-        return {
-          currentType: null,
-          errors: [...previousResult.errors, ...currentResult.errors]
-        }
-      }, OK_RESULT)
+        if (error) errors.push(error)
+      }
+      return newResult(null, errors)
     }
     case 'MethodInvocation': {
       const errors: Error[] = []
-      const method = frame.getMethod(node.identifier)
+      let method: Method | Error
+      if (node.primary) {
+        const primaryCheck = typeCheckBody(node.primary, frame)
+        if (primaryCheck.errors.length > 0) return newResult(null, primaryCheck.errors)
+        if (!primaryCheck.currentType) throw new Error('primary check should return a type')
+        method = primaryCheck.currentType.accessMethod(node.identifier)
+      } else {
+        method = frame.getMethod(node.identifier)
+      }
       if (method instanceof Error) return newResult(null, [method])
       const argumentTypes: Type[] = []
       for (const argument of node.argumentList) {
@@ -368,6 +394,17 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       if (!(classType instanceof ClassImpl))
         throw new Error('class type retrieved should be ClassImpl')
 
+      const classFrame = frame.newChildFrame()
+      classType.mapFields((name, type) => {
+        const error = classFrame.setVariable(name, type)
+        if (error) errors.push(error)
+      })
+      classType.mapMethods((name, method) => {
+        const error = classFrame.setMethod(name, method)
+        if (error) errors.push(error)
+      })
+      if (errors.length > 0) return newResult(null, errors)
+
       let numConstructorDeclarations = 0
       let numFieldDeclarations = 0
       let numMethodDeclarations = 0
@@ -381,7 +418,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
             const signature = constructor.getOverload(
               i - numFieldDeclarations - numMethodDeclarations
             )
-            const methodFrame = frame.newChildFrame()
+            const methodFrame = classFrame.newChildFrame()
             const constructorMethodErrors: Error[] = []
             signature.mapParameters((name, type, isVarargs) => {
               if (isVarargs) type = new ArrayType(type)
@@ -418,13 +455,21 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
             break
           }
           case 'MethodDeclaration': {
-            const method = classType.accessMethod(bodyDeclaration.methodHeader.identifier)
+            const methodName = bodyDeclaration.methodHeader.identifier
+            const method = classType.accessMethod(methodName)
             if (method instanceof Error) throw new Error('ClassImpl should have the method')
-            const signature = method.getOverload(
-              i - numConstructorDeclarations - numFieldDeclarations
-            )
-            const methodFrame = frame.newChildFrame()
+            const overloadIndex = node.classBody
+              .filter(node => {
+                return (
+                  node.kind === 'MethodDeclaration' && node.methodHeader.identifier === methodName
+                )
+              })
+              .findIndex(node => node === bodyDeclaration)
+            const signature = method.getOverload(overloadIndex)
+
+            const methodFrame = classFrame.newChildFrame()
             const methodErrors: Error[] = []
+            methodFrame.setReturnType(signature.getReturnType())
             signature.mapParameters((name, type, isVarargs) => {
               if (isVarargs) type = new ArrayType(type)
               const error = methodFrame.setVariable(name, type)
@@ -434,6 +479,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
               errors.push(...methodErrors)
               break
             }
+
             const { errors: checkErrors } = typeCheckBody(bodyDeclaration.methodBody, methodFrame)
             if (checkErrors.length > 0) errors.push(...checkErrors)
             break
@@ -444,7 +490,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
         if (bodyDeclaration.kind === 'FieldDeclaration') numFieldDeclarations += 1
         if (bodyDeclaration.kind === 'MethodDeclaration') numMethodDeclarations += 1
       }
-      return OK_RESULT
+      return newResult(null, errors)
     }
     case 'PostfixExpression': {
       const expressionCheck = typeCheckBody(node.expression, frame)

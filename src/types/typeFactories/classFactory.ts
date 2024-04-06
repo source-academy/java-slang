@@ -18,12 +18,6 @@ export const createClass = (
 ): Class | Error => {
   const classType = new ClassImpl(node.typeIdentifier)
   frame.setType(node.typeIdentifier, classType)
-  if (node.extendsTypeIdentifier) {
-    const extendsType = frame.getType(node.extendsTypeIdentifier)
-    if (extendsType instanceof Error) return extendsType
-    if (!(extendsType instanceof ClassImpl)) throw new Error('class can only extend another class')
-    classType.setParentClass(extendsType)
-  }
 
   for (const bodyNode of node.classBody) {
     switch (bodyNode.kind) {

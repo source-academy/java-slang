@@ -74,6 +74,7 @@ export class ParameterList {
   }
 
   public matchesArguments(args: ArgumentList): boolean {
+    if (this.length() === 0) return args.length() === 0
     const isLastParameterVarargs = this.get(this.length() - 1).isVarargs()
     if (isLastParameterVarargs && args.length() < this.length() - 1) return false
     if (!isLastParameterVarargs && args.length() !== this.length()) return false
@@ -98,8 +99,8 @@ export class ParameterList {
 
 export class MethodSignature extends Type {
   public returnType: Type
-  public parameters: ParameterList
-  public exceptions: object[]
+  public parameters: ParameterList = new ParameterList()
+  public exceptions: object[] = []
 
   constructor() {
     super('method signature')
@@ -148,6 +149,10 @@ export class MethodSignature extends Type {
       result.push(mapper(parameter.getName(), parameter.getType(), parameter.isVarargs()))
     }
     return result
+  }
+
+  public setReturnType(type: Type): void {
+    this.returnType = type
   }
 }
 

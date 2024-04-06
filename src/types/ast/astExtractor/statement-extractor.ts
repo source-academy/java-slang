@@ -2,28 +2,17 @@ import {
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
   BasicForStatementCtx,
-  BinaryExpressionCtx,
   BlockCtx,
   BlockStatementsCtx,
-  ExpressionCtx,
-  FqnOrRefTypeCtx,
-  FqnOrRefTypePartCommonCtx,
-  FqnOrRefTypePartFirstCtx,
-  FqnOrRefTypePartRestCtx,
   ForInitCtx,
   ForStatementCtx,
   ForUpdateCtx,
   IfStatementCtx,
   MethodInvocationSuffixCtx,
-  PrimaryCtx,
-  PrimaryPrefixCtx,
-  PrimarySuffixCtx,
   ReturnStatementCtx,
   StatementCstNode,
   StatementExpressionCtx,
   StatementWithoutTrailingSubstatementCtx,
-  TernaryExpressionCtx,
-  UnaryExpressionCtx,
   WhileStatementCtx,
   LocalVariableDeclarationCtx,
   StatementExpressionListCtx,
@@ -38,13 +27,10 @@ import {
   EnhancedForStatement,
   ExpressionStatement,
   IfStatement,
-  MethodInvocation,
-  Primary,
   Statement,
   StatementExpression,
   VariableDeclarator
 } from '../types/blocks-and-statements'
-import { Location } from '../types'
 import { ExpressionExtractor } from './expression-extractor'
 import { BlockStatementExtractor } from './block-statement-extractor'
 import { TypeExtractor } from './type-extractor'
@@ -102,7 +88,8 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   statementExpression(ctx: StatementExpressionCtx) {
-    return this.visit(ctx.expression)
+    const expressionExtractor = new ExpressionExtractor()
+    return expressionExtractor.extract(ctx.expression[0])
   }
 
   returnStatement(ctx: ReturnStatementCtx) {
@@ -111,122 +98,6 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
       return expressionExtractor.extract(ctx.expression[0])
     }
     return { kind: 'Void' }
-  }
-
-  expression(ctx: ExpressionCtx) {
-    if (ctx.lambdaExpression) {
-      throw new Error('Unimplemented extractor.')
-    } else if (ctx.ternaryExpression) {
-      return this.visit(ctx.ternaryExpression)
-    }
-  }
-
-  ternaryExpression(ctx: TernaryExpressionCtx) {
-    if (ctx.binaryExpression && ctx.QuestionMark && ctx.Colon && ctx.expression) {
-      const expressionExtractor = new ExpressionExtractor()
-      return expressionExtractor.ternaryExpression(ctx)
-    }
-    return this.visit(ctx.binaryExpression)
-  }
-
-  binaryExpression(ctx: BinaryExpressionCtx) {
-    // Assignment
-    if (ctx.AssignmentOperator && ctx.expression) {
-      const expressionExtractor = new ExpressionExtractor()
-      const left = this.visit(ctx.unaryExpression[0])
-      return {
-        kind: 'Assignment',
-        left,
-        operator: '=',
-        right: expressionExtractor.extract(ctx.expression[0]),
-        location: left.location
-      }
-    }
-    // MethodInvocation
-    return this.visit(ctx.unaryExpression[0])
-  }
-
-  unaryExpression(ctx: UnaryExpressionCtx) {
-    if (ctx.UnaryPrefixOperator || ctx.UnarySuffixOperator) {
-      const expressionExtractor = new ExpressionExtractor()
-      return expressionExtractor.unaryExpression(ctx)
-    }
-    // Assignment LHS, MethodInvocation
-    return this.visit(ctx.primary)
-  }
-
-  primary(ctx: PrimaryCtx): Primary {
-    // Assignment LHS, MethodInvocation identifier
-    const primaryPrefix = this.visit(ctx.primaryPrefix)
-    if (ctx.primarySuffix) {
-      const lastSuffix = ctx.primarySuffix[ctx.primarySuffix.length - 1]
-      if (lastSuffix.children.arrayAccessSuffix) {
-        const expressionExtractor = new ExpressionExtractor()
-        const newPrimaryCtx: PrimaryCtx = { primaryPrefix: ctx.primaryPrefix }
-        if (ctx.primarySuffix.length - 1 > 0) {
-          const newSuffixArray = ctx.primarySuffix.filter(
-            (_, index) => index !== ctx.primarySuffix!.length - 1
-          )
-          newPrimaryCtx.primarySuffix = newSuffixArray
-        }
-        return {
-          ...expressionExtractor.visit(lastSuffix.children.arrayAccessSuffix),
-          primary: this.primary(newPrimaryCtx)
-        }
-      }
-
-      for (const s of ctx.primarySuffix.filter(s => !s.children.methodInvocationSuffix)) {
-        primaryPrefix.name += '.' + this.visit(s)
-      }
-
-      // MethodInvocation
-      if (ctx.primarySuffix[ctx.primarySuffix.length - 1].children.methodInvocationSuffix) {
-        return {
-          kind: 'MethodInvocation',
-          identifier: primaryPrefix.name,
-          argumentList: this.visit(ctx.primarySuffix[ctx.primarySuffix.length - 1]),
-          location: primaryPrefix.location
-        } as MethodInvocation
-      }
-    }
-    return {
-      kind: 'ExpressionName',
-      name: primaryPrefix.name,
-      location: primaryPrefix.location
-    }
-  }
-
-  primaryPrefix(ctx: PrimaryPrefixCtx): { name: string; location: Location } {
-    // Assignment LHS, MethodInvocation identifier
-    if (ctx.fqnOrRefType) {
-      return this.visit(ctx.fqnOrRefType)
-    } else if (ctx.This) {
-      const thisKeyword = ctx.This[0]
-      return {
-        name: thisKeyword.image,
-        location: {
-          startOffset: thisKeyword.startOffset,
-          startLine: thisKeyword.startLine,
-          startColumn: thisKeyword.startColumn,
-          endOffset: thisKeyword.endOffset,
-          endLine: thisKeyword.endLine,
-          endColumn: thisKeyword.endColumn
-        } as Location
-      }
-    } else if (ctx.newExpression) {
-      const expressionExtractor = new ExpressionExtractor()
-      return expressionExtractor.visit(ctx.newExpression)
-    }
-    throw new Error('Unimplemeted extractor.')
-  }
-
-  primarySuffix(ctx: PrimarySuffixCtx) {
-    // MethodInvocation argumentList
-    if (ctx.methodInvocationSuffix) {
-      return this.visit(ctx.methodInvocationSuffix)
-    } else if (ctx.Identifier) {
-      return ctx.Identifier[0].image
-    }
   }
 
   methodInvocationSuffix(ctx: MethodInvocationSuffixCtx) {
@@ -238,45 +109,6 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
     // MethodInvocation argumentList
     const expressionExtractor = new ExpressionExtractor()
     return ctx.expression.map(e => expressionExtractor.extract(e))
-  }
-
-  fqnOrRefType(ctx: FqnOrRefTypeCtx) {
-    // Assignment LHS, MethodInvocation identifier
-    const fqnOrRefTypePartFirst = this.visit(ctx.fqnOrRefTypePartFirst)
-    if (ctx.fqnOrRefTypePartRest) {
-      for (const r of ctx.fqnOrRefTypePartRest) {
-        fqnOrRefTypePartFirst.name += '.' + this.visit(r).name
-      }
-    }
-    return fqnOrRefTypePartFirst
-  }
-
-  fqnOrRefTypePartFirst(ctx: FqnOrRefTypePartFirstCtx) {
-    // Assignment LHS, MethodInvocation identifier
-    return this.visit(ctx.fqnOrRefTypePartCommon)
-  }
-
-  fqnOrRefTypePartCommon(ctx: FqnOrRefTypePartCommonCtx) {
-    // Assignment LHS, MethodInvocation identifier
-    if (ctx.Identifier) {
-      const identifier = ctx.Identifier[0]
-      return {
-        name: identifier.image,
-        location: {
-          startOffset: identifier.startOffset,
-          startLine: identifier.startLine,
-          startColumn: identifier.startColumn,
-          endOffset: identifier.endOffset,
-          endLine: identifier.endLine,
-          endColumn: identifier.endColumn
-        } as Location
-      }
-    }
-    throw new Error('Unimplemented extractor.')
-  }
-
-  fqnOrRefTypePartRest(ctx: FqnOrRefTypePartRestCtx) {
-    return this.visit(ctx.fqnOrRefTypePartCommon)
   }
 
   ifStatement(ctx: IfStatementCtx): IfStatement {

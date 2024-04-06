@@ -1,6 +1,5 @@
+class A extends B {}
+class B extends A {}
 public class Main {
-  public static void main(String[] args) { 
-    Object object = new Object();
-    object.super();
-  }
+  public static void main(String[] args) {}
 }
