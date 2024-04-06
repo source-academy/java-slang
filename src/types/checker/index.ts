@@ -23,9 +23,9 @@ import {
 } from '../types/primitives'
 import { createArrayType } from '../typeFactories/arrayFactory'
 import { ClassImpl } from '../types/classes'
+import { Method } from '../types/methods'
 import { Frame } from './environment'
 import { addClassesToFrame, resolveClassRelationships } from './prechecks'
-import { Method } from '../types/methods'
 
 export type Result = {
   currentType: Type | null
@@ -405,7 +405,6 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       })
       if (errors.length > 0) return newResult(null, errors)
 
-      let numConstructorDeclarations = 0
       let numFieldDeclarations = 0
       let numMethodDeclarations = 0
       for (let i = 0; i < node.classBody.length; i++) {
@@ -486,7 +485,6 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
           }
         }
 
-        if (bodyDeclaration.kind === 'ConstructorDeclaration') numConstructorDeclarations += 1
         if (bodyDeclaration.kind === 'FieldDeclaration') numFieldDeclarations += 1
         if (bodyDeclaration.kind === 'MethodDeclaration') numMethodDeclarations += 1
       }
