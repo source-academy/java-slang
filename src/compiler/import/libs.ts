@@ -1,3 +1,4 @@
+import { readFileSync } from "fs";
 import { ClassModifier, FieldModifier, MethodModifier } from "../../ast/types/classes";
 
 type RawClassInfo = {
@@ -40,7 +41,7 @@ interface MethodInfo {
 
 export type LibInfo = Array<PackageInfo>;
 
-const rawLibraries: RawLibInfo = require('./imports.json');
+const rawLibraries: RawLibInfo = JSON.parse(readFileSync('./src/compiler/import/imports.json', 'utf-8'))
 
 const dotToSlash = (s: string) => {
   return s.replaceAll('.', '/');

@@ -2,6 +2,5 @@ node_modules
 dist
 
 src/ast
-src/compiler
 src/ec-evaluator
 src/types
