@@ -1,14 +1,10 @@
 import { Node } from "../ast/types/ast";
 import {
-  Assignment,
-  BinaryExpression,
   BlockStatement,
   DecimalIntegerLiteral,
   Expression,
-  ExpressionName,
   ExpressionStatement,
   Literal,
-  LocalVariableDeclarationStatement,
   MethodInvocation,
   ReturnStatement,
 } from "../ast/types/blocks-and-statements";
@@ -267,26 +263,26 @@ export const makeNonLocalVarNonParamSimpleNameQualified = (
   const makeSimpleNameQualifiedHelper = (exprOrBlkStmt: Expression | BlockStatement) => {
     switch(exprOrBlkStmt.kind) {
       case "ExpressionName":
-        const exprName = exprOrBlkStmt as ExpressionName;
+        const exprName = exprOrBlkStmt;
         isSimple(exprName.name) && !localVars.has(exprName.name) && (exprName.name = `${qualifier}.${exprName.name}`);
         break;
       case "Assignment":
-        const asgn = exprOrBlkStmt as Assignment;
+        const asgn = exprOrBlkStmt;
         makeSimpleNameQualifiedHelper(asgn.left);
         makeSimpleNameQualifiedHelper(asgn.right);
         break;
       case "BinaryExpression":
-        const binExpr = exprOrBlkStmt as BinaryExpression;
+        const binExpr = exprOrBlkStmt;
         makeSimpleNameQualifiedHelper(binExpr.left);
         makeSimpleNameQualifiedHelper(binExpr.right);
         break;
       case "LocalVariableDeclarationStatement":
-        const localVarDecl = exprOrBlkStmt as LocalVariableDeclarationStatement;
+        const localVarDecl = exprOrBlkStmt;
         localVarDecl.variableDeclaratorList[0].variableInitializer 
           && makeSimpleNameQualifiedHelper(localVarDecl.variableDeclaratorList[0].variableInitializer as Expression)
         break;
       case "ExpressionStatement":
-        const exprStmt = exprOrBlkStmt as ExpressionStatement;
+        const exprStmt = exprOrBlkStmt;
         exprStmt.stmtExp.kind === "Assignment" && makeSimpleNameQualifiedHelper(exprStmt.stmtExp)
       default:
     }
@@ -329,9 +325,9 @@ export const prependInstanceFieldsInitIfNeeded = (
 export const appendOrReplaceReturn = (
   constructor: ConstructorDeclaration,
 ): void => {
-  let conBodyBlockStmts: BlockStatement[] = constructor.constructorBody.blockStatements;
+  const conBodyBlockStmts: BlockStatement[] = constructor.constructorBody.blockStatements;
   // TODO deep search
-  let returnStmt = conBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement" && stmt.exp.kind === "Void");
+  const returnStmt = conBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement" && stmt.exp.kind === "Void");
   if (returnStmt) {
     // Replace empty ReturnStatement with ReturnStatement with this keyword.
     (returnStmt as ReturnStatement).exp = exprNameNode(THIS_KEYWORD, constructor);

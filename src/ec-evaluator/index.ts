@@ -12,9 +12,9 @@ export const runECEvaluator = (
   const context = createContext();
   try {
     // parse() may throw SyntaxError.
-    const compilationUnit = parse(code!);
+    const compilationUnit = parse(code);
 
-    context.control.push(compilationUnit!);
+    context.control.push(compilationUnit);
     // evaluate() may throw RuntimeError
     const value = evaluate(context, targetStep);
 
