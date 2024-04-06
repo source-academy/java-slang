@@ -45,6 +45,5 @@ lerna-debug.log*
 .vscode/settings.json
 
 
-# generated class files, test output
+# generated class files
 *.class
-src/compiler/__tests__/output
