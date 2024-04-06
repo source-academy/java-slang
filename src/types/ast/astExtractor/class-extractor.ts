@@ -32,7 +32,7 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
       classModifier: this.modifier,
       typeIdentifier: this.identifier,
       classBody: this.body,
-      sclass: this.sclass,
+      extendsTypeIdentifier: this.sclass,
       location: cst.location
     } as NormalClassDeclaration
   }

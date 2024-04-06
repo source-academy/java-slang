@@ -1,7 +1,7 @@
 import { Block, VariableDeclarator } from './blocks-and-statements'
 import { BaseNode } from '.'
 
-export type ClassNode = ClassDeclaration
+export type ClassNode = ClassDeclaration | ClassBodyDeclaration
 
 export type ClassDeclaration = NormalClassDeclaration
 
@@ -9,7 +9,7 @@ export interface NormalClassDeclaration extends BaseNode {
   kind: 'NormalClassDeclaration'
   classModifier: Array<ClassModifier>
   typeIdentifier: Identifier
-  sclass?: Identifier
+  extendsTypeIdentifier?: Identifier
   classBody: Array<ClassBodyDeclaration>
 }
 

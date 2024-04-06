@@ -168,13 +168,8 @@ export class Method extends Type {
   }
 
   public addOverload(methodSignature: MethodSignature): null | Error {
-    for (let i = 0; i < this.methodSignatures.length; i++) {
-      if (this.methodSignatures[i].equals(methodSignature)) {
-        console.log(this.methodSignatures[i])
-        console.log(methodSignature)
-        return new MethodAlreadyDefinedError()
-      }
-    }
+    for (let i = 0; i < this.methodSignatures.length; i++)
+      if (this.methodSignatures[i].equals(methodSignature)) return new MethodAlreadyDefinedError()
     this.methodSignatures.push(methodSignature)
     return null
   }

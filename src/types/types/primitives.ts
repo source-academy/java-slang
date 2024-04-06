@@ -1,4 +1,4 @@
-import { CannotBeDereferencedError, IntegerTooLargeError } from '../errors'
+import { IntegerTooLargeError } from '../errors'
 import { Type } from './type'
 
 export class Boolean extends Type {
@@ -9,10 +9,6 @@ export class Boolean extends Type {
   public static from(value: string): Boolean | Error {
     if (!['true', 'false'].includes(value)) throw new Error(`Unrecognized boolean ${value}.`)
     return new Boolean()
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -40,10 +36,6 @@ export class Byte extends Type {
     return new Byte()
   }
 
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
-  }
-
   public canBeAssigned(type: Type): boolean {
     return type instanceof Byte
   }
@@ -58,10 +50,6 @@ export class Char extends Type {
     if (value.charAt(0) !== "'") throw new Error(`Unrecognized character ${value}.`)
     if (value.charAt(value.length - 1) !== "'") throw new Error(`Unrecognized character ${value}.`)
     return new Char()
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -84,10 +72,6 @@ export class Double extends Type {
       base === 16 ? parseHexFloat(value) : Number(value)
     }
     return new Double()
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -118,10 +102,6 @@ export class Float extends Type {
       base === 16 ? parseHexFloat(value) : Number(value)
     }
     return new Float()
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -156,10 +136,6 @@ export class Int extends Type {
     return new Int()
   }
 
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
-  }
-
   public canBeAssigned(type: Type): boolean {
     return (
       type instanceof Int || type instanceof Char || type instanceof Short || type instanceof Byte
@@ -189,10 +165,6 @@ export class Long extends Type {
     return new Long()
   }
 
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
-  }
-
   public canBeAssigned(type: Type): boolean {
     return (
       type instanceof Long ||
@@ -212,10 +184,6 @@ export class Null extends Type {
   public static from(value: string): Null {
     if (value !== 'null') throw new Error(`Unrecognized null ${value}.`)
     return new Null()
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
   }
 
   public canBeAssigned(_type: Type): boolean {
@@ -241,10 +209,6 @@ export class Short extends Type {
     if (short > this.SHORT_MAX) return new IntegerTooLargeError()
     if (short < this.SHORT_MIN) return new IntegerTooLargeError()
     return new Short()
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
   }
 
   public canBeAssigned(type: Type): boolean {

@@ -1,6 +1,5 @@
 import { Array as ArrayType } from '../types/arrays'
 import { Integer, String } from '../types/nonPrimitives'
-import { Method } from '../types/methods'
 import { Node } from '../ast/types'
 import { Type } from '../types/type'
 import {
@@ -10,11 +9,7 @@ import {
   NotApplicableToExpressionTypeError,
   VariableAlreadyDefinedError
 } from '../errors'
-import {
-  createArgumentList,
-  createMethod,
-  createMethodSignature
-} from '../typeFactories/methodFactory'
+import { createArgumentList } from '../typeFactories/methodFactory'
 import {
   Boolean,
   Char,
@@ -27,28 +22,37 @@ import {
   getNumberType
 } from '../types/primitives'
 import { createArrayType } from '../typeFactories/arrayFactory'
+import { ClassImpl } from '../types/classes'
 import { Frame } from './environment'
+import { addClassesToFrame } from './prechecks'
 
 export type Result = {
   currentType: Type | null
   errors: Error[]
 }
 
-const newResult = (currentType: Type | null = null, errors: Error[] = []): Result => ({
+export const newResult = (currentType: Type | null = null, errors: Error[] = []): Result => ({
   currentType,
   errors
 })
 
-const OK_RESULT: Result = newResult(null)
+export const OK_RESULT: Result = newResult(null)
 
 export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result => {
+  const typeCheckingFrame = frame.newChildFrame()
+  const addClassesResult = addClassesToFrame(node, typeCheckingFrame)
+  if (addClassesResult.errors.length > 0) return addClassesResult
+  return typeCheckBody(node, typeCheckingFrame)
+}
+
+export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): Result => {
   switch (node.kind) {
     case 'ArrayAccess': {
-      const primaryCheck = check(node.primary, frame)
+      const primaryCheck = typeCheckBody(node.primary, frame)
       if (primaryCheck.errors.length > 0) return newResult(null, primaryCheck.errors)
       if (!(primaryCheck.currentType instanceof ArrayType))
         return newResult(null, [new ArrayRequiredError()])
-      const expressionCheck = check(node.expression, frame)
+      const expressionCheck = typeCheckBody(node.expression, frame)
       if (expressionCheck.errors.length > 0) return newResult(null, expressionCheck.errors)
       if (!expressionCheck.currentType) throw new Error('Expression check should return a type.')
       const integerType = new Integer()
@@ -68,7 +72,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       if (node.dimensionExpressions) {
         const dimensionExpressionErrors: Error[] = []
         node.dimensionExpressions.forEach(dimensionExpression => {
-          const checkResult = check(dimensionExpression.expression, frame)
+          const checkResult = typeCheckBody(dimensionExpression.expression, frame)
           if (checkResult.errors.length > 0)
             return dimensionExpressionErrors.push(...checkResult.errors)
           const dimensionExpressionType = checkResult.currentType
@@ -84,7 +88,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       }
       if (node.arrayInitializer) {
         const arrayType = createArrayType(type, node.arrayInitializer, expression => {
-          const result = check(expression, frame)
+          const result = typeCheckBody(expression, frame)
           if (result.errors.length > 0) return result.errors[0]
           if (!result.currentType)
             throw new Error('array initializer expression should have a type')
@@ -95,13 +99,13 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       return newResult(type)
     }
     case 'Assignment': {
-      const leftCheck = check(node.left, frame)
+      const leftCheck = typeCheckBody(node.left, frame)
       if (leftCheck.errors.length > 0) return newResult(null, leftCheck.errors)
       if (!leftCheck.currentType) throw new Error('Left type in assignment should exist.')
       const right = node.right
       const leftType = leftCheck.currentType
       if (leftType instanceof Error) return newResult(null, [leftType])
-      const { currentType, errors } = check(right, frame)
+      const { currentType, errors } = typeCheckBody(right, frame)
       if (errors.length > 0) return newResult(null, errors)
       if (!currentType) throw new Error('Right side of assignment statment should return a type.')
       if (!leftType.canBeAssigned(currentType))
@@ -114,7 +118,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       if (Array.isArray(node.forInit)) {
         forConditionFrame = frame
         node.forInit.forEach(forInit => {
-          const forInitCheck = check(forInit, forConditionFrame)
+          const forInitCheck = typeCheckBody(forInit, forConditionFrame)
           errors.push(...forInitCheck.errors)
         })
       } else {
@@ -129,28 +133,28 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
         if (preCheckErrors.length > 0) {
           errors.push(...preCheckErrors)
         } else {
-          const forInitCheck = check(node.forInit, forConditionFrame)
+          const forInitCheck = typeCheckBody(node.forInit, forConditionFrame)
           errors.push(...forInitCheck.errors)
         }
       }
       if (node.condition) {
-        const conditionCheck = check(node.condition, forConditionFrame)
+        const conditionCheck = typeCheckBody(node.condition, forConditionFrame)
         errors.push(...conditionCheck.errors)
       }
       node.forUpdate.forEach(forUpdate => {
-        const checkResult = check(forUpdate, forConditionFrame)
+        const checkResult = typeCheckBody(forUpdate, forConditionFrame)
         errors.push(...checkResult.errors)
       })
       const forBodyFrame = forConditionFrame.newChildFrame()
-      const bodyCheck = check(node.body, forBodyFrame)
+      const bodyCheck = typeCheckBody(node.body, forBodyFrame)
       if (bodyCheck.errors) errors.push(...bodyCheck.errors)
       return newResult(null, errors)
     }
     case 'BinaryExpression': {
       const { left, operator, right } = node
-      const { currentType: leftType, errors: leftErrors } = check(left, frame)
+      const { currentType: leftType, errors: leftErrors } = typeCheckBody(left, frame)
       if (leftErrors.length > 0) return { currentType: null, errors: leftErrors }
-      const { currentType: rightType, errors: rightErrors } = check(right, frame)
+      const { currentType: rightType, errors: rightErrors } = typeCheckBody(right, frame)
       if (rightErrors.length > 0) return { currentType: null, errors: rightErrors }
       if (!leftType || !rightType)
         throw new Error('Left and right of binary expression should have a type.')
@@ -197,7 +201,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       const errors: Error[] = []
       const newFrame = frame.newChildFrame()
       node.blockStatements.forEach(statement => {
-        const result = check(statement, newFrame)
+        const result = typeCheckBody(statement, newFrame)
         if (result.errors) errors.push(...result.errors)
       })
       return newResult(null, errors)
@@ -205,8 +209,20 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
     case 'BreakStatement': {
       return OK_RESULT
     }
+    case 'ClassInstanceCreationExpression': {
+      const classType = frame.getType(node.identifier)
+      if (classType instanceof Error) return newResult(null, [classType])
+      // TODO: Check constructor arguments
+      return newResult(classType)
+    }
     case 'CompilationUnit': {
-      return check(node.topLevelClassOrInterfaceDeclarations[0])
+      const errors: Error[] = []
+      for (const classDeclaration of node.topLevelClassOrInterfaceDeclarations) {
+        const result = typeCheckBody(classDeclaration, frame)
+        if (result.errors.length > 0) errors.push(...result.errors)
+      }
+      if (errors.length > 0) return newResult(null, errors)
+      return OK_RESULT
     }
     case 'ContinueStatement': {
       return OK_RESULT
@@ -217,7 +233,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
     case 'EnhancedForStatement': {
       const variableType = frame.getType(node.localVariableType)
       if (variableType instanceof Error) return newResult(null, [variableType])
-      const expressionCheck = check(node.expression, frame)
+      const expressionCheck = typeCheckBody(node.expression, frame)
       if (expressionCheck.errors.length > 0) return newResult(null, expressionCheck.errors)
       const expressionType = expressionCheck.currentType
       if (!(expressionType instanceof ArrayType))
@@ -228,7 +244,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       const forExpressionFrame = frame.newChildFrame()
       const error = forExpressionFrame.setVariable(node.variableDeclaratorId, variableType)
       if (error) return newResult(null, [error])
-      const statementCheck = check(node.statement, forExpressionFrame)
+      const statementCheck = typeCheckBody(node.statement, forExpressionFrame)
       if (statementCheck.errors.length > 0) return newResult(null, statementCheck.errors)
       return OK_RESULT
     }
@@ -238,10 +254,10 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       return newResult(type)
     }
     case 'ExpressionStatement': {
-      return check(node.stmtExp, frame)
+      return typeCheckBody(node.stmtExp, frame)
     }
     case 'FieldAccess': {
-      const checkPrimary = check(node.primary, frame)
+      const checkPrimary = typeCheckBody(node.primary, frame)
       if (checkPrimary.errors.length > 0) return newResult(null, checkPrimary.errors)
       const primaryType = checkPrimary.currentType
       if (!primaryType) throw new Error('cannot access field of no type')
@@ -251,13 +267,13 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
     }
     case 'IfStatement': {
       const errors: Error[] = []
-      const conditionResult = check(node.condition, frame)
+      const conditionResult = typeCheckBody(node.condition, frame)
       if (conditionResult.errors) errors.push(...conditionResult.errors)
       const booleanType = new Boolean()
       if (conditionResult.currentType && !booleanType.canBeAssigned(conditionResult.currentType))
         errors.push(new IncompatibleTypesError())
       const newFrame = frame.newChildFrame()
-      const consequentResult = check(node.consequent, newFrame)
+      const consequentResult = typeCheckBody(node.consequent, newFrame)
       if (consequentResult.errors) errors.push(...consequentResult.errors)
       return newResult(null, errors)
     }
@@ -305,7 +321,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
         const { variableInitializer } = variableDeclarator
         if (variableInitializer) {
           const type = createArrayType(declaredType, variableInitializer, expression => {
-            const result = check(expression, frame)
+            const result = typeCheckBody(expression, frame)
             if (result.errors.length > 0) return result.errors[0]
             if (!result.currentType)
               throw new Error('array initializer expression should have a type')
@@ -331,7 +347,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       if (method instanceof Error) return newResult(null, [method])
       const argumentTypes: Type[] = []
       for (const argument of node.argumentList) {
-        const argumentResult = check(argument, frame)
+        const argumentResult = typeCheckBody(argument, frame)
         if (argumentResult.errors.length > 0) {
           errors.push(...argumentResult.errors)
           continue
@@ -347,58 +363,91 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
     }
     case 'NormalClassDeclaration': {
       const errors: Error[] = []
-      const classFrame = frame.newChildFrame()
-      const furtherChecks: (() => void)[] = []
-      node.classBody.forEach(bodyDeclaration => {
-        if (bodyDeclaration.kind === 'MethodDeclaration') {
-          const methodName = bodyDeclaration.methodHeader.identifier
-          if (classFrame.isMethodInFrame(methodName)) {
-            const method = classFrame.getMethod(methodName) as Method
-            const overloadSignature = createMethodSignature(classFrame, bodyDeclaration)
-            if (overloadSignature instanceof Error) {
-              errors.push(overloadSignature)
-              return
-            }
-            const error = method.addOverload(overloadSignature)
-            if (error) errors.push(error)
-            furtherChecks.push(() => {
-              const methodFrame = classFrame.newChildFrame()
-              overloadSignature.mapParameters((name, type) => {
-                const error = methodFrame.setVariable(name, type)
-                if (error) errors.push(error)
-              })
-              methodFrame.setReturnType(overloadSignature.getReturnType())
-              const checkResult = check(bodyDeclaration.methodBody, methodFrame)
-              errors.push(...checkResult.errors)
+      const classType = frame.getType(node.typeIdentifier)
+      if (classType instanceof Error) return newResult(null, [classType])
+      if (!(classType instanceof ClassImpl))
+        throw new Error('class type retrieved should be ClassImpl')
+
+      let numConstructorDeclarations = 0
+      let numFieldDeclarations = 0
+      let numMethodDeclarations = 0
+      for (let i = 0; i < node.classBody.length; i++) {
+        const bodyDeclaration = node.classBody[i]
+
+        switch (bodyDeclaration.kind) {
+          case 'ConstructorDeclaration': {
+            const constructor = classType.accessConstructor()
+            if (!constructor) throw new Error('ClassImpl should have a constructor')
+            const signature = constructor.getOverload(
+              i - numFieldDeclarations - numMethodDeclarations
+            )
+            const methodFrame = frame.newChildFrame()
+            const constructorMethodErrors: Error[] = []
+            signature.mapParameters((name, type, isVarargs) => {
+              if (isVarargs) type = new ArrayType(type)
+              const error = methodFrame.setVariable(name, type)
+              if (error) constructorMethodErrors.push(error)
             })
-          } else {
-            const method = createMethod(frame, bodyDeclaration)
-            if (method instanceof Error) {
-              errors.push(method)
-              return
+            if (constructorMethodErrors.length > 0) {
+              errors.push(...constructorMethodErrors)
+              break
             }
-            classFrame.setMethod(methodName, method)
-            furtherChecks.push(() => {
-              const methodFrame = classFrame.newChildFrame()
-              const methodSignature = method.getOverload(0)
-              methodSignature.mapParameters((name, type, isVarargs) => {
-                if (isVarargs) type = new ArrayType(type)
-                const error = methodFrame.setVariable(name, type)
-                if (error) errors.push(error)
-              })
-              methodFrame.setReturnType(methodSignature.getReturnType())
-              const checkResult = check(bodyDeclaration.methodBody, methodFrame)
-              errors.push(...checkResult.errors)
+            const { errors: checkErrors } = typeCheckBody(
+              bodyDeclaration.constructorBody,
+              methodFrame
+            )
+            if (checkErrors.length > 0) errors.push(...checkErrors)
+            break
+          }
+          case 'FieldDeclaration': {
+            for (const variableDeclarator of bodyDeclaration.variableDeclaratorList) {
+              const field = classType.accessField(variableDeclarator.variableDeclaratorId)
+              if (field instanceof Error) throw new Error('field should exist in class')
+              const initializer = variableDeclarator.variableInitializer
+              if (initializer) {
+                const type = createArrayType(field, initializer, expression => {
+                  const result = typeCheckBody(expression, frame)
+                  if (result.errors.length > 0) return result.errors[0]
+                  if (!result.currentType)
+                    throw new Error('array initializer expression should have a type')
+                  return result.currentType
+                })
+                if (type instanceof Error) errors.push(type)
+              }
+            }
+            break
+          }
+          case 'MethodDeclaration': {
+            const method = classType.accessMethod(bodyDeclaration.methodHeader.identifier)
+            if (method instanceof Error) throw new Error('ClassImpl should have the method')
+            const signature = method.getOverload(
+              i - numConstructorDeclarations - numFieldDeclarations
+            )
+            const methodFrame = frame.newChildFrame()
+            const methodErrors: Error[] = []
+            signature.mapParameters((name, type, isVarargs) => {
+              if (isVarargs) type = new ArrayType(type)
+              const error = methodFrame.setVariable(name, type)
+              if (error) methodErrors.push(error)
             })
+            if (methodErrors.length > 0) {
+              errors.push(...methodErrors)
+              break
+            }
+            const { errors: checkErrors } = typeCheckBody(bodyDeclaration.methodBody, methodFrame)
+            if (checkErrors.length > 0) errors.push(...checkErrors)
+            break
           }
         }
-      })
-      if (errors.length > 0) return newResult(null, errors)
-      furtherChecks.forEach(furtherCheck => furtherCheck())
-      return newResult(null, errors)
+
+        if (bodyDeclaration.kind === 'ConstructorDeclaration') numConstructorDeclarations += 1
+        if (bodyDeclaration.kind === 'FieldDeclaration') numFieldDeclarations += 1
+        if (bodyDeclaration.kind === 'MethodDeclaration') numMethodDeclarations += 1
+      }
+      return OK_RESULT
     }
     case 'PostfixExpression': {
-      const expressionCheck = check(node.expression, frame)
+      const expressionCheck = typeCheckBody(node.expression, frame)
       if (expressionCheck.errors.length > 0) return expressionCheck
       const doubleType = new Double()
       if (!expressionCheck.currentType) throw new Error('Expression check did not return a type.')
@@ -419,7 +468,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
               case 'OctalIntegerLiteral':
               case 'HexadecimalFloatingPointLiteral': {
                 expression.literalType.value = '-' + expression.literalType.value
-                return check(expression, frame)
+                return typeCheckBody(expression, frame)
               }
               case 'BooleanLiteral':
               case 'CharacterLiteral':
@@ -430,9 +479,9 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
           }
         }
         case '+':
-          return check(expression, frame)
+          return typeCheckBody(expression, frame)
         case '!':
-          const expressionCheck = check(expression, frame)
+          const expressionCheck = typeCheckBody(expression, frame)
           if (expressionCheck.errors.length > 0) return expressionCheck
           if (!expressionCheck.currentType) throw new Error('Type missing in ! prefix expression.')
           const booleanType = new Boolean()
@@ -443,7 +492,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       }
     }
     case 'ReturnStatement': {
-      const expressionCheck = check(node.exp, frame)
+      const expressionCheck = typeCheckBody(node.exp, frame)
       if (expressionCheck.errors.length > 0) return expressionCheck
       if (!expressionCheck.currentType) throw new Error('Expression check should return a type.')
       const returnType = frame.getReturn()
@@ -453,18 +502,18 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       return OK_RESULT
     }
     case 'TernaryExpression': {
-      const conditionCheck = check(node.condition, frame)
+      const conditionCheck = typeCheckBody(node.condition, frame)
       if (conditionCheck.errors.length > 0) return conditionCheck
       if (!conditionCheck.currentType)
         throw new Error('Type missing in ternary expresion condition.')
       const booleanType = new Boolean()
       if (!booleanType.canBeAssigned(conditionCheck.currentType))
         return newResult(null, [new BadOperandTypesError()])
-      const consequentCheck = check(node.consequent, frame)
+      const consequentCheck = typeCheckBody(node.consequent, frame)
       if (consequentCheck.errors.length > 0) return conditionCheck
       if (!consequentCheck.currentType)
         throw new Error('Type missing in ternary expresion consequent expression.')
-      const alternateCheck = check(node.alternate, frame)
+      const alternateCheck = typeCheckBody(node.alternate, frame)
       if (alternateCheck.errors.length > 0) return conditionCheck
       if (!alternateCheck.currentType)
         throw new Error('Type missing in ternary expresion alternate expression.')
@@ -475,7 +524,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       return newResult(null, [new BadOperandTypesError()])
     }
     case 'WhileStatement': {
-      const conditionCheck = check(node.condition, frame)
+      const conditionCheck = typeCheckBody(node.condition, frame)
       if (conditionCheck.errors.length > 0) return conditionCheck
       if (!conditionCheck.currentType)
         throw new Error('Type missing in ternary expresion condition.')
@@ -483,7 +532,7 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
       if (!booleanType.canBeAssigned(conditionCheck.currentType))
         return newResult(null, [new BadOperandTypesError()])
       const newFrame = frame.newChildFrame()
-      const bodyCheck = check(node.body, newFrame)
+      const bodyCheck = typeCheckBody(node.body, newFrame)
       if (bodyCheck.errors.length > 0) return bodyCheck
       return OK_RESULT
     }

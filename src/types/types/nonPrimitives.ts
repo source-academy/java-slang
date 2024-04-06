@@ -1,32 +1,10 @@
-import { CannotBeDereferencedError, CannotFindSymbolError } from '../errors'
+import { ClassImpl } from './classes'
 import * as Primitives from './primitives'
 import { Type } from './type'
 
-export class Class extends Type {
-  public className: string
-  constructor(className: string) {
-    super('class')
-    this.className = className
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotFindSymbolError()
-  }
-
-  public canBeAssigned(type: Type): boolean {
-    if (type instanceof Primitives.Null) return true
-    if (!(type instanceof Class)) return false
-    return this.className === type.className
-  }
-}
-
-export class Boolean extends Class {
+export class Boolean extends ClassImpl {
   constructor() {
     super('Boolean')
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -34,13 +12,9 @@ export class Boolean extends Class {
   }
 }
 
-export class Byte extends Class {
+export class Byte extends ClassImpl {
   constructor() {
     super('Byte')
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -48,13 +22,9 @@ export class Byte extends Class {
   }
 }
 
-export class Character extends Class {
+export class Character extends ClassImpl {
   constructor() {
     super('Character')
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -62,13 +32,9 @@ export class Character extends Class {
   }
 }
 
-export class Double extends Class {
+export class Double extends ClassImpl {
   constructor() {
     super('Double')
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -76,13 +42,9 @@ export class Double extends Class {
   }
 }
 
-export class Float extends Class {
+export class Float extends ClassImpl {
   constructor() {
     super('Float')
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -90,13 +52,9 @@ export class Float extends Class {
   }
 }
 
-export class Integer extends Class {
+export class Integer extends ClassImpl {
   constructor() {
     super('Integer')
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -108,13 +66,9 @@ export class Integer extends Class {
   }
 }
 
-export class Long extends Class {
+export class Long extends ClassImpl {
   constructor() {
     super('Long')
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -122,13 +76,9 @@ export class Long extends Class {
   }
 }
 
-export class Short extends Class {
+export class Short extends ClassImpl {
   constructor() {
     super('Short')
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotFindSymbolError()
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -136,7 +86,7 @@ export class Short extends Class {
   }
 }
 
-export class String extends Class {
+export class String extends ClassImpl {
   constructor() {
     super('String')
   }
@@ -157,10 +107,6 @@ export class String extends Class {
 export class Void extends Type {
   constructor() {
     super('void')
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new CannotBeDereferencedError()
   }
 
   public canBeAssigned(type: Type): boolean {

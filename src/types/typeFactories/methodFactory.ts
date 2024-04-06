@@ -6,7 +6,7 @@ import {
   Parameter,
   ParameterList
 } from '../types/methods'
-import { FormalParameter, MethodDeclaration } from '../ast/types/classes'
+import { ConstructorDeclaration, FormalParameter, MethodDeclaration } from '../ast/types/classes'
 import { Frame } from '../checker/environment'
 import { Type } from '../types/type'
 import { VarargsParameterMustBeLastParameter, VariableAlreadyDefinedError } from '../errors'
@@ -45,21 +45,34 @@ const createParameterList = (
 
 export const createMethodSignature = (
   frame: Frame,
-  node: MethodDeclaration
+  node: MethodDeclaration | ConstructorDeclaration
 ): MethodSignature | Error => {
   const methodSignature = new ClassMethod()
-  const returnType = frame.getType(node.methodHeader.result)
+  const returnType = frame.getType(
+    node.kind === 'MethodDeclaration'
+      ? node.methodHeader.result
+      : node.constructorDeclarator.identifier
+  )
   if (returnType instanceof Error) return returnType
-  const parameters = createParameterList(frame, ...node.methodHeader.formalParameterList)
+  const parameterList =
+    node.kind === 'MethodDeclaration'
+      ? node.methodHeader.formalParameterList
+      : node.constructorDeclarator.formalParameterList
+  const parameters = createParameterList(frame, ...parameterList)
   if (parameters instanceof Error) return parameters
-  methodSignature.modifiers.push(...node.methodModifier)
+  const modifier: string[] =
+    node.kind === 'MethodDeclaration' ? node.methodModifier : node.constructorModifier
+  methodSignature.modifiers.push(...modifier)
   methodSignature.parameters = parameters
   methodSignature.returnType = returnType
   // TODO: Add exceptions for method signatures
   return methodSignature
 }
 
-export const createMethod = (frame: Frame, node: MethodDeclaration): Method | Error => {
+export const createMethod = (
+  frame: Frame,
+  node: MethodDeclaration | ConstructorDeclaration
+): Method | Error => {
   const methodSignature = createMethodSignature(frame, node)
   if (methodSignature instanceof Error) return methodSignature
   return new Method(methodSignature)

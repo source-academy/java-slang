@@ -213,6 +213,9 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
           endColumn: thisKeyword.endColumn
         } as Location
       }
+    } else if (ctx.newExpression) {
+      const expressionExtractor = new ExpressionExtractor()
+      return expressionExtractor.visit(ctx.newExpression)
     }
     throw new Error('Unimplemeted extractor.')
   }

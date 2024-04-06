@@ -62,7 +62,7 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
     ]
       .filter(x => x !== undefined)
       .map(x => (x ? x[0].image : x))
-    this.modifier.push(possibleModifiers[0] as MethodModifier)
+    if (possibleModifiers.length > 0) this.modifier.push(possibleModifiers[0] as MethodModifier)
   }
 
   result(ctx: ResultCtx) {
