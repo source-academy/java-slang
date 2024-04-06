@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'oracle'
-          java-version: '17.0'
+          java-version: '17'
       - uses: ArtiomTr/jest-coverage-report-action@v2
         with:
           test-script: yarn test
