@@ -28,7 +28,7 @@ import {
 } from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
 import { Control, EnvNode, Environment, Stash } from "./components";
-import { BLOCK_FRAME, GLOBAL_FRAME, NO_FRAME_NAME, OBJECT_CLASS, STEP_LIMIT, SUPER_KEYWORD, THIS_KEYWORD } from "./constants";
+import { BLOCK_FRAME, GLOBAL_FRAME, OBJECT_CLASS, STEP_LIMIT, SUPER_KEYWORD, THIS_KEYWORD } from "./constants";
 import * as errors from "./errors";
 import * as instr from './instrCreator';
 import * as node from './nodeCreator';
@@ -650,7 +650,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     classHierachy.forEach((c, i) => {
       // A frame is alr created in createObj() and does not extend from any env, 
       // only subsequent frames need to extend from prev frame.
-      if (i > 0) environment.extendEnv(environment.current, NO_FRAME_NAME);
+      if (i > 0) environment.extendEnv(environment.current, c.frame.name);
 
       // Declare instance fields.
       c.instanceFields.forEach(i => {

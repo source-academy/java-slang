@@ -1,5 +1,5 @@
 import { UnannType } from "../ast/types/classes";
-import { DECLARED_BUT_NOT_YET_ASSIGNED, GLOBAL_FRAME, OBJECT_FRAME } from "./constants";
+import { DECLARED_BUT_NOT_YET_ASSIGNED, GLOBAL_FRAME, OBJECT_CLASS } from "./constants";
 import * as errors from "./errors";
 import * as struct from "./structCreator";
 import {
@@ -60,7 +60,7 @@ export class Environment {
 
   createObj(c: Class): Object {
     // Create new environment.
-    const node = new EnvNode(OBJECT_FRAME);
+    const node = new EnvNode(OBJECT_CLASS);
 
     // Create new object.
     const obj = struct.objStruct(node, c);
