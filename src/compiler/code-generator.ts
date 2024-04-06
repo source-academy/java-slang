@@ -22,7 +22,8 @@ import {
   BinaryOperator,
   DoStatement,
   ClassInstanceCreationExpression,
-  ExpressionStatement
+  ExpressionStatement,
+  TernaryExpression
 } from '../ast/types/blocks-and-statements'
 import { MethodDeclaration, UnannType } from '../ast/types/classes'
 import { ConstantPoolManager } from './constant-pool-manager'
@@ -169,11 +170,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     cg.symbolTable.extend()
     let maxStack = 0
     let resultType = ''
-    ;(node as Block).blockStatements.forEach(x => {
-      const { stackSize: stackSize, resultType: type } = compile(x, cg)
-      maxStack = Math.max(maxStack, stackSize)
-      resultType = type
-    })
+      ; (node as Block).blockStatements.forEach(x => {
+        const { stackSize: stackSize, resultType: type } = compile(x, cg)
+        maxStack = Math.max(maxStack, stackSize)
+        resultType = type
+      })
     cg.symbolTable.teardown()
 
     return { stackSize: maxStack, resultType }
@@ -357,6 +358,32 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
       endLabel.offset = cg.code.length
     }
+
+    return { stackSize: maxStack, resultType: resType }
+  },
+
+  TernaryExpression: (node: Node, cg: CodeGenerator) => {
+    let maxStack = 0
+    const {
+      condition: condition,
+      consequent: consequent,
+      alternate: alternate
+    } = node as TernaryExpression
+
+    const elseLabel = cg.generateNewLabel()
+    maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
+    const conRes = compile(consequent, cg)
+    const conSize = conRes.stackSize
+    let resType = conRes.resultType
+    maxStack = Math.max(maxStack, conSize)
+
+    const endLabel = cg.generateNewLabel()
+    cg.addBranchInstr(OPCODE.GOTO, endLabel)
+
+    elseLabel.offset = cg.code.length
+    const { stackSize: altSize } = compile(alternate, cg)
+    maxStack = Math.max(maxStack, altSize)
+    endLabel.offset = cg.code.length
 
     return { stackSize: maxStack, resultType: resType }
   },

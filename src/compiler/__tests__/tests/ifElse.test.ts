@@ -268,6 +268,19 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["Yes", "Yes", "Yes", "Yes"],
   },
+  {
+    comment: "ternary operators",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          int a = 5, b = 10, c = 15;
+          System.out.println(a < b ? c : -c);
+          System.out.println(a < b ? b > c ? c : -c : 0);
+        }
+      }
+    `,
+    expectedLines: ["15", "-15"],
+  },
 ];
 
 export const ifElseTest = () => describe("if else statements", () => {

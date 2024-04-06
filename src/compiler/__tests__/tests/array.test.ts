@@ -85,6 +85,32 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["7", "9", "11", "13", "15"],
   },
+  {
+    comment: "pass array to and from function",
+    program: `
+      public class Main {
+        public static void printArr(int[] a) {
+          for (int i = 0; i < a.length; i++) {
+            System.out.println(a[i]);
+          }
+        }
+
+        public static int[] getSampleArr() {
+          int[] arr = {3, 1, 4, 1, 5, 9};
+          return arr;
+        }
+
+        public static void main(String[] args) {
+          int[] a = {1, 2, 3, 4, 5};
+          printArr(a);
+
+          a = getSampleArr();
+          printArr(a);
+        }
+      }
+    `,
+    expectedLines: ["1", "2", "3", "4", "5", "3", "1", "4", "1", "5", "9"],
+  },
 ];
 
 export const arrayTest = () => describe("arrays", () => {
