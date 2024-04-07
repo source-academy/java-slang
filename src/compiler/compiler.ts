@@ -14,8 +14,8 @@ import { SymbolTable } from "./symbol-table";
 import { generateCode } from "./code-generator";
 
 const MAGIC = 0xcafebabe;
+const MAJOR_VERSION = 45;
 const MINOR_VERSION = 0;
-const MAJOR_VERSION = 61;
 
 export class Compiler {
   private symbolTable: SymbolTable;
