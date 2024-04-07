@@ -96,6 +96,29 @@ const testcases: {
         }
     `,
     result: { type: null, errors: [new CyclicInheritanceError()] }
+  },
+  {
+    input: `
+        class A extends B {}
+        class B {}
+
+        public class Main {
+          public static void main(String[] args) {}
+        }
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+        class A {
+          public void hello(B b) {}
+        }
+        class B {}
+        public class Main {
+          public static void main(String[] args) {}
+        }
+    `,
+    result: { type: null, errors: [] }
   }
 ]
 
