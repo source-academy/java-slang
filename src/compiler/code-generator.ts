@@ -138,7 +138,7 @@ const arrayTypeCode: { [type: string]: number } = {
   B: 8,
   S: 9,
   I: 10,
-  J: 11,
+  J: 11
 }
 
 const normalLoadOp: { [type: string]: OPCODE } = {
@@ -181,11 +181,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     cg.symbolTable.extend()
     let maxStack = 0
     let resultType = ''
-      ; (node as Block).blockStatements.forEach(x => {
-        const { stackSize: stackSize, resultType: type } = compile(x, cg)
-        maxStack = Math.max(maxStack, stackSize)
-        resultType = type
-      })
+    ;(node as Block).blockStatements.forEach(x => {
+      const { stackSize: stackSize, resultType: type } = compile(x, cg)
+      maxStack = Math.max(maxStack, stackSize)
+      resultType = type
+    })
     cg.symbolTable.teardown()
 
     return { stackSize: maxStack, resultType }
@@ -226,7 +226,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         if (arrayElemType in arrayTypeCode) {
           cg.code.push(OPCODE.NEWARRAY, arrayTypeCode[arrayElemType])
         } else {
-          cg.code.push(OPCODE.ANEWARRAY, 0, cg.constantPoolManager.indexClassInfo(variableInfo.typeName.slice(0, -2)))
+          cg.code.push(
+            OPCODE.ANEWARRAY,
+            0,
+            cg.constantPoolManager.indexClassInfo(variableInfo.typeName.slice(0, -2))
+          )
         }
 
         vi.forEach((val, i) => {
