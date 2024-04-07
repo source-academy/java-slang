@@ -119,6 +119,21 @@ const testcases: {
         }
     `,
     result: { type: null, errors: [] }
+  },
+  {
+    input: `
+        class StaticMember {
+          static String staticVariable = "Static Variable";
+          static void staticMethod() { System.out.println("Static method."); }
+        }
+        public class Main {
+          public static void main(String[] args) {
+            System.out.println(StaticMember.staticVariable); // Access static variable
+            StaticMember.staticMethod(); // Call static method
+          }
+        }
+    `,
+    result: { type: null, errors: [] }
   }
 ]
 

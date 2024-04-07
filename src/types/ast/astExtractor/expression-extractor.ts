@@ -46,7 +46,6 @@ import {
   DimensionExpression,
   Expression,
   ExpressionName,
-  FieldAccess,
   Primary
 } from '../types/blocks-and-statements'
 import { Location } from '../types'
@@ -317,13 +316,17 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
     const firstPart = this.visit(ctx.fqnOrRefTypePartFirst)
     if (ctx.Dot && ctx.fqnOrRefTypePartRest) {
-      const expressionName = this.visit(ctx.fqnOrRefTypePartRest) as ExpressionName
-      return {
-        kind: 'FieldAccess',
-        identifier: expressionName.name,
-        primary: firstPart,
-        location: expressionName.location
-      } as FieldAccess
+      let result: Primary = firstPart
+      for (const fqnOrRefTypePartRest of ctx.fqnOrRefTypePartRest) {
+        const expressionName = this.visit(fqnOrRefTypePartRest) as ExpressionName
+        result = {
+          kind: 'FieldAccess',
+          identifier: expressionName.name,
+          primary: result,
+          location: expressionName.location
+        }
+      }
+      return result
     }
     return firstPart
   }

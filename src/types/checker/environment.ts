@@ -1,10 +1,21 @@
 import * as NonPrimitives from '../types/nonPrimitives'
 import * as Primitives from '../types/primitives'
-import { Method } from '../types/methods'
+import { Method, MethodSignature, Parameter } from '../types/methods'
 import { Type } from '../types/type'
 import { CannotFindSymbolError, VariableAlreadyDefinedError } from '../errors'
 import { Array } from '../types/arrays'
+import { ClassImpl } from '../types/classes'
 import { isArrayType, removeArraySuffix } from './arrays'
+
+const SYSTEM_CLASS = new ClassImpl('System')
+const PRINTSTREAM_CLASS = new ClassImpl('PrintStream')
+SYSTEM_CLASS.setField('out', PRINTSTREAM_CLASS)
+const PRINTLN_METHOD_SIGNATURE = new MethodSignature()
+PRINTLN_METHOD_SIGNATURE.parameters.addParameter(
+  new Parameter('message', new NonPrimitives.String())
+)
+const PRINTLN_METHOD = new Method(PRINTLN_METHOD_SIGNATURE)
+PRINTSTREAM_CLASS.setMethod('println', PRINTLN_METHOD)
 
 const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   boolean: new Primitives.Boolean(),
@@ -25,8 +36,9 @@ const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   Long: new NonPrimitives.Long(),
   Short: new NonPrimitives.Short(),
   String: new NonPrimitives.String(),
-  // TODO: Fix to array type
-  'String[]': new NonPrimitives.String()
+
+  // Hard coded variables
+  System: SYSTEM_CLASS
 }
 
 export class Frame {

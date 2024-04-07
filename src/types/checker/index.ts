@@ -5,6 +5,7 @@ import { Type } from '../types/type'
 import {
   ArrayRequiredError,
   BadOperandTypesError,
+  CannotFindSymbolError,
   IncompatibleTypesError,
   NotApplicableToExpressionTypeError,
   VariableAlreadyDefinedError
@@ -272,7 +273,10 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       return OK_RESULT
     }
     case 'ExpressionName': {
-      const type = frame.getVariable(node.name)
+      const variable = frame.getVariable(node.name)
+      if (!(variable instanceof Error)) return newResult(variable)
+      if (!(variable instanceof CannotFindSymbolError)) return newResult(null, [variable])
+      const type = frame.getType(node.name)
       if (type instanceof Error) return newResult(null, [type])
       return newResult(type)
     }
