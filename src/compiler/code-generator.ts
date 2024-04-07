@@ -130,6 +130,17 @@ const arrayStoreOp: { [type: string]: OPCODE } = {
   Z: OPCODE.BASTORE
 }
 
+const arrayTypeCode: { [type: string]: number } = {
+  Z: 4,
+  C: 5,
+  F: 6,
+  D: 7,
+  B: 8,
+  S: 9,
+  I: 10,
+  J: 11,
+}
+
 const normalLoadOp: { [type: string]: OPCODE } = {
   B: OPCODE.ILOAD,
   C: OPCODE.ILOAD,
@@ -211,8 +222,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
       if (Array.isArray(vi)) {
         maxStack = compile(createIntLiteralNode(vi.length), cg).stackSize
-        cg.code.push(OPCODE.NEWARRAY, 10)
         const arrayElemType = variableInfo.typeDescriptor.slice(1)
+        if (arrayElemType in arrayTypeCode) {
+          cg.code.push(OPCODE.NEWARRAY, arrayTypeCode[arrayElemType])
+        } else {
+          cg.code.push(OPCODE.ANEWARRAY, 0, cg.constantPoolManager.indexClassInfo(variableInfo.typeName.slice(0, -2)))
+        }
+
         vi.forEach((val, i) => {
           cg.code.push(OPCODE.DUP)
           const size1 = compile(createIntLiteralNode(i), cg).stackSize
@@ -423,6 +439,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             l = f(left, targetLabel, false)
             r = f(right, targetLabel, false)
           }
+          return {
+            stackSize: Math.max(
+              l.stackSize,
+              1 + (['D', 'J'].includes(l.resultType) ? 1 : 0) + r.stackSize
+            ),
+            resultType: cg.symbolTable.generateFieldDescriptor('boolean')
+          }
         } else if (op === '||') {
           if (onTrue) {
             l = f(left, targetLabel, true)
@@ -433,21 +456,40 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             r = f(right, targetLabel, false)
             falseLabel.offset = cg.code.length
           }
+          return {
+            stackSize: Math.max(
+              l.stackSize,
+              1 + (['D', 'J'].includes(l.resultType) ? 1 : 0) + r.stackSize
+            ),
+            resultType: cg.symbolTable.generateFieldDescriptor('boolean')
+          }
         } else if (op in reverseLogicalOp) {
           if (isNullLiteral(left)) {
             // still use l to represent the first argument pushed onto stack
             l = f(right, targetLabel, onTrue)
-            cg.addBranchInstr(onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
+            cg.addBranchInstr(
+              onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL,
+              targetLabel
+            )
           } else if (isNullLiteral(right)) {
             l = f(left, targetLabel, onTrue)
-            cg.addBranchInstr(onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
+            cg.addBranchInstr(
+              onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL,
+              targetLabel
+            )
           } else {
             l = f(left, targetLabel, onTrue)
             r = f(right, targetLabel, onTrue)
             cg.addBranchInstr(onTrue ? logicalOp[op] : reverseLogicalOp[op], targetLabel)
           }
+          return {
+            stackSize: Math.max(
+              l.stackSize,
+              1 + (['D', 'J'].includes(l.resultType) ? 1 : 0) + r.stackSize
+            ),
+            resultType: cg.symbolTable.generateFieldDescriptor('boolean')
+          }
         }
-        return { stackSize: Math.max(l.stackSize, 1 + (['D', 'J'].includes(l.resultType) ? 1 : 0) + r.stackSize), resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
       }
 
       return compile(node, cg)

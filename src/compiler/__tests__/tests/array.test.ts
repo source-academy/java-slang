@@ -111,6 +111,95 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["1", "2", "3", "4", "5", "3", "1", "4", "1", "5", "9"],
   },
+  {
+    comment: "array of float",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          float[] b = {1.1f, 8.8f, 3.14f};
+          for (int i = 0; i < b.length; i++) {
+            System.out.println(b[i]);
+          }
+        }
+      }
+    `,
+    expectedLines: ["1.1", "8.8", "3.14"],
+  },
+  {
+    comment: "array of long",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          long[] a = {3L, 5L, 7L};
+          for (int i = 0; i < a.length; i++) {
+            System.out.println(a[i]);
+          }
+        }
+      }
+    `,
+    expectedLines: ["3", "5", "7"],
+  },
+  {
+    comment: "array of double",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          double[] b = {3.3, 5.5, 7.9};
+          for (int i = 0; i < b.length; i++) {
+            System.out.println(b[i]);
+          }
+        }
+      }
+    `,
+    expectedLines: ["3.3", "5.5", "7.9"],
+  },
+  {
+    comment: "array of boolean",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          boolean[] a = {true, false, false, true};
+          for (int i = 0; i < a.length; i++) {
+            System.out.println(a[i]);
+          }
+        }
+      }
+    `,
+    expectedLines: ["true", "false", "false", "true"],
+  },
+  {
+    comment: "array of char",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          char[] a = {'J', 'a', 'v', 'a'};
+          for (int i = 0; i < a.length; i++) {
+            System.out.println(a[i]);
+          }
+        }
+      }
+    `,
+    expectedLines: ["J", "a", "v", "a"],
+  },
+  {
+    comment: "array of reference type",
+    program: `
+      public class Main {
+        public int data;
+        Main(int data) {
+          this.data = data;
+        }
+        public static void main(String[] args) {
+          Main[] a = {new Main(7), new Main(2), new Main(5), new Main(6)};
+          for (int i = 0; i < a.length; i++) {
+            Main m = a[i];
+            System.out.println(m.data);
+          }
+        }
+      }
+    `,
+    expectedLines: ["7", "2", "5", "6"],
+  },
 ];
 
 export const arrayTest = () => describe("arrays", () => {
