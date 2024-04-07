@@ -1,6 +1,6 @@
 import { check } from '..'
 import { parse } from '../../ast'
-import { CyclicInheritanceError } from '../../errors'
+import { CannotFindSymbolError, CyclicInheritanceError } from '../../errors'
 import { Type } from '../../types/type'
 
 const testcases: {
@@ -134,6 +134,23 @@ const testcases: {
         }
     `,
     result: { type: null, errors: [] }
+  },
+  {
+    input: `
+        class AccessControl {
+          private void privateMethod() { System.out.println("Private method."); }
+          public void attemptAccess() { privateMethod(); }
+        }
+        
+        public class Main {
+          public static void main(String[] args) {
+            AccessControl obj = new AccessControl();
+            obj.attemptAccess();
+            obj.privateMethod(); // Should be flagged as an error
+          }
+        }
+    `,
+    result: { type: null, errors: [new CannotFindSymbolError()] }
   }
 ]
 
