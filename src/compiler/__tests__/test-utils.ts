@@ -35,8 +35,8 @@ export function runTest(program: string, expectedResult: string) {
 
   const prevDir = process.cwd();
   process.chdir(pathToTestDir);
-  execSync("java -noverify Main > output 2> err.log");
-  const actualResult = fs.readFileSync("./output", 'utf-8');
+  execSync("java -noverify Main > output.log 2> err.log");
+  const actualResult = fs.readFileSync("./output.log", 'utf-8');
   process.chdir(prevDir);
 
   expect(actualResult).toBe(expectedResult);
