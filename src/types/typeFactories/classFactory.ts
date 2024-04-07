@@ -10,14 +10,15 @@ import { Method, MethodSignature } from '../types/methods'
 type CreateMethod = (node: MethodDeclaration) => MethodSignature | Error
 type CreateConstructor = (node: ConstructorDeclaration) => MethodSignature | Error
 
-export const createClass = (
+export const createClassFieldsAndMethods = (
   node: NormalClassDeclaration,
   frame: Frame,
   createConstructor: CreateConstructor,
   createMethod: CreateMethod
 ): Class | Error => {
-  const classType = new ClassImpl(node.typeIdentifier)
-  frame.setType(node.typeIdentifier, classType)
+  const classType = frame.getType(node.typeIdentifier)
+  if (classType instanceof Error) throw new Error('expected class type to be retrieved')
+  if (!(classType instanceof ClassImpl)) throw new Error('expected class type to be retrieved')
 
   for (const bodyNode of node.classBody) {
     switch (bodyNode.kind) {

@@ -25,7 +25,7 @@ import { createArrayType } from '../typeFactories/arrayFactory'
 import { ClassImpl } from '../types/classes'
 import { Method } from '../types/methods'
 import { Frame } from './environment'
-import { addClassesToFrame, resolveClassRelationships } from './prechecks'
+import { addClasses, addClassMethods, addClassParents } from './prechecks'
 
 export type Result = {
   currentType: Type | null
@@ -41,10 +41,12 @@ export const OK_RESULT: Result = newResult(null)
 
 export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result => {
   const typeCheckingFrame = frame.newChildFrame()
-  const addClassesResult = addClassesToFrame(node, typeCheckingFrame)
+  const addClassesResult = addClasses(node, typeCheckingFrame)
   if (addClassesResult.errors.length > 0) return addClassesResult
-  const resolveClassesResult = resolveClassRelationships(node, typeCheckingFrame)
-  if (resolveClassesResult.errors.length > 0) return resolveClassesResult
+  const addClassParentsResult = addClassParents(node, typeCheckingFrame)
+  if (addClassParentsResult.errors.length > 0) return addClassParentsResult
+  const addClassMethodsResult = addClassMethods(node, typeCheckingFrame)
+  if (addClassMethodsResult.errors.length > 0) return addClassMethodsResult
   return typeCheckBody(node, typeCheckingFrame)
 }
 
