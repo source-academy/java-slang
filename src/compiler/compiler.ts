@@ -1,3 +1,5 @@
+import * as fs from 'fs'
+import * as peggy from 'peggy'
 import { ClassFile } from '../ClassFile/types'
 import { AST } from '../ast/types/packages-and-modules'
 import {
@@ -51,6 +53,15 @@ export class Compiler {
     const classFiles: Array<ClassFile> = []
     ast.topLevelClassOrInterfaceDeclarations.forEach(x => classFiles.push(this.compileClass(x)))
     return classFiles[0]
+  }
+
+  compileFromSource(javaProgram: string) {
+    const javaPegGrammar = fs.readFileSync(__dirname + '/__tests__/main.pegjs', 'utf8')
+    const parser = peggy.generate(javaPegGrammar, {
+      allowedStartRules: ['CompilationUnit']
+    })
+    const ast = parser.parse(javaProgram)
+    return this.compile(ast)
   }
 
   private compileClass(classNode: ClassDeclaration): ClassFile {
@@ -219,8 +230,7 @@ export class Compiler {
         formalParameterList: constructor.constructorDeclarator.formalParameterList,
         result: 'void'
       },
-      methodBody: constructor.constructorBody,
-      location: { startLine: 0, startOffset: 0 }
+      methodBody: constructor.constructorBody
     }
 
     this.compileMethod(methodNode)

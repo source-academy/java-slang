@@ -15,7 +15,7 @@ export type testCase = {
 
 const debug = false;
 const pathToTestDir = "./src/compiler/__tests__/";
-const javaPegGrammar = fs.readFileSync('./src/compiler/__tests__/main.pegjs', 'utf-8');
+const javaPegGrammar = fs.readFileSync('./src/compiler/main.pegjs', 'utf-8');
 const parser = peggy.generate(javaPegGrammar, {
   allowedStartRules: ["CompilationUnit"],
 });
@@ -31,6 +31,7 @@ export function runTest(program: string, expectedLines: string[]) {
   }
 
   const classFile = compiler.compile(ast as AST);
+  //const classFile = compiler.compileFromSource(program);
   binaryWriter.writeBinary(classFile, pathToTestDir);
 
   const prevDir = process.cwd();
