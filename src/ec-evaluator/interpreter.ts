@@ -28,7 +28,7 @@ import {
 } from "../ast/types/classes";
 import { CompilationUnit } from "../ast/types/packages-and-modules";
 import { Control, EnvNode, Environment, Stash } from "./components";
-import { BLOCK_FRAME, GLOBAL_FRAME, NO_FRAME_NAME, OBJECT_CLASS, STEP_LIMIT, SUPER_KEYWORD, THIS_KEYWORD } from "./constants";
+import { BLOCK_FRAME, GLOBAL_FRAME, OBJECT_CLASS, STEP_LIMIT, SUPER_KEYWORD, THIS_KEYWORD } from "./constants";
 import * as errors from "./errors";
 import * as instr from './instrCreator';
 import * as node from './nodeCreator';
@@ -129,9 +129,9 @@ export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): Sta
 const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   CompilationUnit: (
     command: CompilationUnit,
-    environment: Environment,
+    _environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     // Get first class that defines the main method according to program order.
     const className = searchMainMtdClass(command.topLevelClassOrInterfaceDeclarations);
@@ -148,7 +148,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: NormalClassDeclaration,
     environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     const className = command.typeIdentifier;
 
@@ -210,7 +210,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: Block,
     environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     // Save current environment before extending.
     control.push(instr.envInstr(environment.current, command));
@@ -222,8 +222,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ConstructorDeclaration: (
     command: ConstructorDeclaration,
     environment: Environment,
-    control: Control,
-    stash: Stash,
+    _control: Control,
+    _stash: Stash,
   ) => {
     // Use constructor descriptor as key.
     const conDescriptor: string = getDescriptor(command);
@@ -234,8 +234,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   MethodDeclaration: (
     command: MethodDeclaration,
     environment: Environment,
-    control: Control,
-    stash: Stash,
+    _control: Control,
+    _stash: Stash,
   ) => {
     // Use method descriptor as key.
     const mtdDescriptor: string = getDescriptor(command);
@@ -247,7 +247,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: FieldDeclaration,
     environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     // FieldDeclaration to be evaluated are always static fields.
     // Instance fields are transformed into Assignment ExpressionStatement inserted into constructors.
@@ -272,7 +272,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: LocalVariableDeclarationStatement,
     environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     const type: LocalVariableType = command.localVariableType;
     const declaration: VariableDeclarator = command.variableDeclaratorList[0];
@@ -293,9 +293,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ExpressionStatement: (
     command: ExpressionStatement,
-    environment: Environment,
+    _environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     control.push(instr.popInstr(command));
     control.push(command.stmtExp);
@@ -303,9 +303,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ReturnStatement: (
     command: ReturnStatement,
-    environment: Environment,
+    _environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     control.push(instr.resetInstr(command));
     control.push(command.exp);
@@ -313,9 +313,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Assignment: (
     command: Assignment,
-    environment: Environment,
+    _environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     control.push(instr.assmtInstr(command));
     control.push(command.right);
@@ -324,9 +324,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   
   MethodInvocation: (
     command: MethodInvocation,
-    environment: Environment,
+    _environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     const nameParts = command.identifier.split(".");
     const target = nameParts.splice(0, nameParts.length - 1).join(".");
@@ -347,7 +347,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ClassInstanceCreationExpression,
     environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     const c: Class = environment.getClass(command.identifier);
 
@@ -361,9 +361,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ExplicitConstructorInvocation: (
     command: ExplicitConstructorInvocation,
-    environment: Environment,
+    _environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     control.push(instr.popInstr(command));
     control.push(instr.invInstr(command.argumentList.length + 1, command));
@@ -376,8 +376,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Literal: (
     command: Literal,
-    environment: Environment,
-    control: Control,
+    _environment: Environment,
+    _control: Control,
     stash: Stash,
   ) => {
     stash.push(command);
@@ -385,8 +385,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   Void: (
     command: Void,
-    environment: Environment,
-    control: Control,
+    _environment: Environment,
+    _control: Control,
     stash: Stash,
   ) => {
     stash.push(command);
@@ -394,9 +394,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   ExpressionName: (
     command: ExpressionName,
-    environment: Environment,
+    _environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     control.push(instr.derefInstr(command));
     control.push(instr.evalVarInstr(command.name, command));
@@ -404,9 +404,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   BinaryExpression: (
     command: BinaryExpression,
-    environment: Environment,
+    _environment: Environment,
     control: Control,
-    stash: Stash
+    _stash: Stash
   ) => {
     control.push(instr.binOpInstr(command.operator, command));
     control.push(command.right);
@@ -414,18 +414,18 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   },
 
   [InstrType.POP]: (
-    command: Instr,
-    environment: Environment,
-    control: Control,
+    _command: Instr,
+    _environment: Environment,
+    _control: Control,
     stash: Stash,
   ) => {
     stash.pop();
   },
   
   [InstrType.ASSIGNMENT]: (
-    command: AssmtInstr,
-    environment: Environment,
-    control: Control,
+    _command: AssmtInstr,
+    _environment: Environment,
+    _control: Control,
     stash: Stash,
   ) => {
     // value is popped before variable becuase value is evaluated later than variable.
@@ -438,8 +438,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
   [InstrType.BINARY_OP]: (
     command: BinOpInstr,
-    environment: Environment,
-    control: Control,
+    _environment: Environment,
+    _control: Control,
     stash: Stash,
   ) => {
     const right = stash.pop()! as Literal;
@@ -514,17 +514,17 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   [InstrType.ENV]: (
     command: EnvInstr,
     environment: Environment,
-    control: Control,
-    stash: Stash, 
+    _control: Control,
+    _stash: Stash,
   ) => {
     environment.restoreEnv(command.env);
   },
 
   [InstrType.RESET]: (
     command: ResetInstr,
-    environment: Environment,
+    _environment: Environment,
     control: Control,
-    stash: Stash, 
+    _stash: Stash,
   ) => {
     // Continue popping ControlItem until Marker is found.
     const next: ControlItem | undefined = control.pop();
@@ -553,7 +553,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   [InstrType.RES]: (
     command: ResInstr,
     environment: Environment,
-    control: Control,
+    _control: Control,
     stash: Stash,
   ) => {
     const varOrClass = stash.pop()! as Variable | Class;
@@ -612,9 +612,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   },
 
   [InstrType.DEREF]: (
-    command: DerefInstr,
-    environment: Environment,
-    control: Control,
+    _command: DerefInstr,
+    _environment: Environment,
+    _control: Control,
     stash: Stash,
   ) => {
     const varOrClass = stash.pop()! as Variable | Class;
@@ -630,7 +630,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   [InstrType.NEW]: (
     command: NewInstr,
     environment: Environment,
-    control: Control,
+    _control: Control,
     stash: Stash,
   ) => {
     // To be restore after extending curr env to declare instance fields in obj frame.
@@ -646,11 +646,11 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     };
     
     // Create obj with both declared and inherited fields.
-    let obj: Object = environment.createObj(objClass);
+    const obj: Object = environment.createObj(objClass);
     classHierachy.forEach((c, i) => {
       // A frame is alr created in createObj() and does not extend from any env, 
       // only subsequent frames need to extend from prev frame.
-      if (i > 0) environment.extendEnv(environment.current, NO_FRAME_NAME);
+      if (i > 0) environment.extendEnv(environment.current, c.frame.name);
 
       // Declare instance fields.
       c.instanceFields.forEach(i => {
@@ -669,9 +669,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     });
 
     // Set obj to correct frame.
-    obj!.frame = environment.current;
+    obj.frame = environment.current;
     // Push obj on stash.
-    stash.push(obj!);
+    stash.push(obj);
 
     // Restore env.
     environment.restoreEnv(currEnv);
@@ -716,7 +716,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   [InstrType.RES_TYPE_CONT]: (
     command: ResTypeContInstr,
     environment: Environment,
-    control: Control,
+    _control: Control,
     stash: Stash,
   ) => {
     const typeToSearchIn = stash.pop()! as Type;
@@ -787,9 +787,9 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   },
 
   [InstrType.RES_OVERRIDE]: (
-    command: ResOverrideInstr,
+    _command: ResOverrideInstr,
     environment: Environment,
-    control: Control,
+    _control: Control,
     stash: Stash,
   ) => {
     const target = stash.pop()!;
@@ -821,7 +821,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   [InstrType.RES_CON_OVERLOAD]: (
     command: ResConOverloadInstr,
     environment: Environment,
-    control: Control,
+    _control: Control,
     stash: Stash,
   ) => {
     // Retrieve arg types in reversed order for constructor resolution.

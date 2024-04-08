@@ -116,8 +116,7 @@ export class ResOverloadError extends RuntimeError {
   };
 
   public explain() {
-    return `${super.explain()}: Overloading resolution of method ${this.name} \
-      with argTypes ${this.argTypes.map(t => t.type).join(", ")} failed.`;
+    return `${super.explain()}: Overloading resolution of method ${this.name} with argument type${this.argTypes.length > 1 ? "s" : ""} ${this.argTypes.map(t => t.type).join(", ")} failed.`;
   }
 }
 
@@ -127,8 +126,7 @@ export class ResOverloadAmbiguousError extends RuntimeError {
   };
 
   public explain() {
-    return `${super.explain()}: Overloading resolution of method ${this.name} \
-      with argTypes ${this.argTypes.map(t => t.type).join(", ")} is ambiguous.`;
+    return `${super.explain()}: Overloading resolution of method ${this.name} with argument type${this.argTypes.length > 1 ? "s" : ""} ${this.argTypes.map(t => t.type).join(", ")} is ambiguous.`;
   }
 }
 
@@ -138,8 +136,7 @@ export class ResConOverloadError extends RuntimeError {
   };
 
   public explain() {
-    return `${super.explain()}: Overloading resolution of constructor ${this.name} \
-      with argTypes ${this.argTypes.map(t => t.type).join(", ")} failed.`;
+    return `${super.explain()}: Overloading resolution of constructor ${this.name} with argument type${this.argTypes.length > 1 ? "s" : ""} ${this.argTypes.map(t => t.type).join(", ")} failed.`;
   }
 }
 

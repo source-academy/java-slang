@@ -6,7 +6,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 describe("evaluate default constructor", () => {
   it("evaluate default constructor without instance field initialization correctly", () => {

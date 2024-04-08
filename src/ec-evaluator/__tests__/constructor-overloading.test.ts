@@ -6,7 +6,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 describe("evaluate constructor overloading resolution correctly", () => {
   it("evaluate superclass constructor invocation correctly", () => {

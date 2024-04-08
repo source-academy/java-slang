@@ -6,7 +6,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 it("evaluate LocalVariableDeclarationStatement to a basic arithmetic operation correctly", () => {
   const programStr = `

@@ -1,14 +1,10 @@
 import { Node } from "../ast/types/ast";
 import {
-  Assignment,
-  BinaryExpression,
   BlockStatement,
   DecimalIntegerLiteral,
   Expression,
-  ExpressionName,
   ExpressionStatement,
   Literal,
-  LocalVariableDeclarationStatement,
   MethodInvocation,
   ReturnStatement,
 } from "../ast/types/blocks-and-statements";
@@ -33,7 +29,7 @@ import {
 import { ControlItem, Context, Instr, Class, Type, Closure, StashItem } from "./types";
 
 /**
- * Stack is implemented for agenda and stash registers.
+ * Components.
  */
 interface IStack<T> {
   push(...items: T[]): void
@@ -45,7 +41,6 @@ interface IStack<T> {
 }
 
 export class Stack<T> implements IStack<T> {
-  // Bottom of the array is at index 0
   private storage: T[] = []
 
   public push(...items: T[]): void {
@@ -81,46 +76,25 @@ export class Stack<T> implements IStack<T> {
   }
 
   public getStack(): T[] {
-    // return a copy of the stack's contents
+    // Return copy instead of original.
     return [...this.storage]
   }
 }
 
-/**
- * Typeguard for Instr to distinguish between program statements and instructions.
- *
- * @param command An ControlItem
- * @returns true if the ControlItem is an instruction and false otherwise.
- */
 export const isInstr = (command: ControlItem): command is Instr => {
   return (command as Instr).instrType !== undefined
 }
 
-/**
- * Typeguard for esNode to distinguish between program statements and instructions.
- *
- * @param command An ControlItem
- * @returns true if the ControlItem is an esNode and false if it is an instruction.
- */
 export const isNode = (command: ControlItem): command is Node => {
   return (command as Node).kind !== undefined
 }
 
-/**
- * A helper function for handling sequences of statements.
- * Statements must be pushed in reverse order, and each statement is separated by a pop
- * instruction so that only the result of the last statement remains on stash.
- * Value producing statements have an extra pop instruction.
- *
- * @param seq Array of statements.
- * @returns Array of commands to be pushed into agenda.
- */
 export const handleSequence = (seq: ControlItem[]): ControlItem[] => {
+  // Create copy so that original is not mutated.
   const result: ControlItem[] = []
   for (const command of seq) {
     result.push(command)
   }
-  // Push statements in reverse order
   return result.reverse()
 }
 
@@ -289,26 +263,26 @@ export const makeNonLocalVarNonParamSimpleNameQualified = (
   const makeSimpleNameQualifiedHelper = (exprOrBlkStmt: Expression | BlockStatement) => {
     switch(exprOrBlkStmt.kind) {
       case "ExpressionName":
-        const exprName = exprOrBlkStmt as ExpressionName;
+        const exprName = exprOrBlkStmt;
         isSimple(exprName.name) && !localVars.has(exprName.name) && (exprName.name = `${qualifier}.${exprName.name}`);
         break;
       case "Assignment":
-        const asgn = exprOrBlkStmt as Assignment;
+        const asgn = exprOrBlkStmt;
         makeSimpleNameQualifiedHelper(asgn.left);
         makeSimpleNameQualifiedHelper(asgn.right);
         break;
       case "BinaryExpression":
-        const binExpr = exprOrBlkStmt as BinaryExpression;
+        const binExpr = exprOrBlkStmt;
         makeSimpleNameQualifiedHelper(binExpr.left);
         makeSimpleNameQualifiedHelper(binExpr.right);
         break;
       case "LocalVariableDeclarationStatement":
-        const localVarDecl = exprOrBlkStmt as LocalVariableDeclarationStatement;
+        const localVarDecl = exprOrBlkStmt;
         localVarDecl.variableDeclaratorList[0].variableInitializer 
           && makeSimpleNameQualifiedHelper(localVarDecl.variableDeclaratorList[0].variableInitializer as Expression)
         break;
       case "ExpressionStatement":
-        const exprStmt = exprOrBlkStmt as ExpressionStatement;
+        const exprStmt = exprOrBlkStmt;
         exprStmt.stmtExp.kind === "Assignment" && makeSimpleNameQualifiedHelper(exprStmt.stmtExp)
       default:
     }
@@ -351,9 +325,9 @@ export const prependInstanceFieldsInitIfNeeded = (
 export const appendOrReplaceReturn = (
   constructor: ConstructorDeclaration,
 ): void => {
-  let conBodyBlockStmts: BlockStatement[] = constructor.constructorBody.blockStatements;
+  const conBodyBlockStmts: BlockStatement[] = constructor.constructorBody.blockStatements;
   // TODO deep search
-  let returnStmt = conBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement" && stmt.exp.kind === "Void");
+  const returnStmt = conBodyBlockStmts.find(stmt => stmt.kind === "ReturnStatement" && stmt.exp.kind === "Void");
   if (returnStmt) {
     // Replace empty ReturnStatement with ReturnStatement with this keyword.
     (returnStmt as ReturnStatement).exp = exprNameNode(THIS_KEYWORD, constructor);
@@ -502,8 +476,6 @@ export const resOverride = (
       break;
     }
   }
-
-  // TODO is there method overriding resolution failure?
 
   return overrideResolvedClosure;
 };

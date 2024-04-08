@@ -7,7 +7,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 describe("evaluate main method correctly", () => {
   it("should throw an error when main method is not defined", () => {
