@@ -110,14 +110,13 @@ const testCases: testCase[] = [
         }
       }
     `,
-    expectedLines: ["This is a test.", "123", "Another test with additional line\n", "321"],
+    expectedLines: ["This is a test.", "123", "Another test with additional line", "", "321"],
   }
 ];
 
 export const printlnTest = () => describe("println", () => {
   for (let testCase of testCases) {
     const { comment: comment, program: program, expectedLines: expectedLines } = testCase;
-    const expectedResult = expectedLines.join("\n") + "\n";
-    it(comment, () => runTest(program, expectedResult));
+    it(comment, () => runTest(program, expectedLines));
   }
 });

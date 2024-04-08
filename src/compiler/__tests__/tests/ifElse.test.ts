@@ -319,7 +319,6 @@ const testCases: testCase[] = [
 export const ifElseTest = () => describe("if else statements", () => {
   for (let testCase of testCases) {
     const { comment: comment, program: program, expectedLines: expectedLines } = testCase;
-    const expectedResult = expectedLines.join("\n") + "\n";
-    it(comment, () => runTest(program, expectedResult));
+    it(comment, () => runTest(program, expectedLines));
   }
 });

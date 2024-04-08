@@ -22,7 +22,7 @@ const parser = peggy.generate(javaPegGrammar, {
 const compiler = new Compiler();
 const binaryWriter = new BinaryWriter();
 
-export function runTest(program: string, expectedResult: string) {
+export function runTest(program: string, expectedLines: string[]) {
   const ast = parser.parse(program);
   expect(ast).not.toBeNull();
 
@@ -36,10 +36,12 @@ export function runTest(program: string, expectedResult: string) {
   const prevDir = process.cwd();
   process.chdir(pathToTestDir);
   execSync("java -noverify Main > output.log 2> err.log");
-  const actualResult = fs.readFileSync("./output.log", 'utf-8');
+
+  // ignore difference between \r\n and \n
+  const actualLines = fs.readFileSync("./output.log", 'utf-8').split(/\r?\n/).slice(0, -1);
   process.chdir(prevDir);
 
-  expect(actualResult).toBe(expectedResult);
+  expect(actualLines).toStrictEqual(expectedLines);
 }
 
 describe("compiler's test utils", () => {

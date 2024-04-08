@@ -83,7 +83,6 @@ const testCases: testCase[] = [
 export const arithmeticExpressionTest = () => describe("arithmetic expression", () => {
   for (let testCase of testCases) {
     const { comment: comment, program: program, expectedLines: expectedLines } = testCase;
-    const expectedResult = expectedLines.join("\n") + "\n";
-    it(comment, () => runTest(program, expectedResult));
+    it(comment, () => runTest(program, expectedLines));
   }
 });
