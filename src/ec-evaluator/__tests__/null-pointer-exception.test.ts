@@ -1,7 +1,7 @@
 import { parse } from "../../ast/parser";
 import { NullPointerException } from "../errors";
 import { evaluate } from "../interpreter";
-import { createContextStub } from "./utils";
+import { createContextStub } from "./__utils__/utils";
 
 describe("should throw NullPointerException correctly", () => {
   it("should throw NullPointerException when invoking instance method but target is null", () => {

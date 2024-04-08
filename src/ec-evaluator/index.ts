@@ -6,17 +6,15 @@ import { evaluate } from "./interpreter";
 import { Context, Error, Finished, Result } from "./types";
 
 export const runECEvaluator = (
-  files: Partial<Record<string, string>>,
-  entrypointFilePath: string,
-  context: Context,
+  code: string,
   targetStep: number = STEP_LIMIT,
 ): Promise<Result> => {
+  const context = createContext();
   try {
-    const code = files[entrypointFilePath];
     // parse() may throw SyntaxError.
-    const compilationUnit = parse(code!);
+    const compilationUnit = parse(code);
 
-    context.control.push(compilationUnit!);
+    context.control.push(compilationUnit);
     // evaluate() may throw RuntimeError
     const value = evaluate(context, targetStep);
 

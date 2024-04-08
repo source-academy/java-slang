@@ -3,7 +3,6 @@ dist
 
 src/ast
 src/compiler
-src/ec-evaluator
 src/types
 
 **/__tests__/*

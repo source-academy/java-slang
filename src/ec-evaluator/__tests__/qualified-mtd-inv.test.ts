@@ -6,7 +6,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 describe("evaluate simple qualified MethodInvocation correctly", () => {
   it("evaluate static MethodInvocation in static MethodInvocation with qualified class name correctly", () => {

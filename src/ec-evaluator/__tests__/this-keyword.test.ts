@@ -6,7 +6,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 describe("evaluate field access with this keyword correctly", () => {  
   it("evaluate LHS this correctly", () => {

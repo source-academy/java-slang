@@ -1,7 +1,7 @@
-import { Environment } from "../components";
-import { STEP_LIMIT } from "../constants";
-import { ControlItem, Context, StashItem, StructType } from "../types";
-import { Stack, isNode } from "../utils";
+import { Environment } from "../../components";
+import { STEP_LIMIT } from "../../constants";
+import { ControlItem, Context, StashItem, StructType } from "../../types";
+import { Stack, isNode } from "../../utils";
 
 export class StackStub<T> extends Stack<T> {
   private trace: T[] = [];

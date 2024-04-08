@@ -7,7 +7,7 @@ import {
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./utils";
+} from "./__utils__/utils";
 
 describe("evaluate static fields with inheritance", () => {
   it("evaluate inherited static field via simple name correctly", () => {

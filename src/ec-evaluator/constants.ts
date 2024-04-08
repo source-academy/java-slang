@@ -9,6 +9,4 @@ export const SUPER_KEYWORD = "super";
 export const OBJECT_CLASS = "Object";
 
 export const GLOBAL_FRAME = "global";
-export const OBJECT_FRAME = "object";
 export const BLOCK_FRAME = "block";
-export const NO_FRAME_NAME = "";
