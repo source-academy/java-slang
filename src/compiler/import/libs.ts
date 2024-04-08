@@ -1,17 +1,10 @@
-import { readFileSync } from "fs";
 import { ClassModifier, FieldModifier, MethodModifier } from "../../ast/types/classes";
+import { rawLibInfo } from "./lib-info";
 
 type RawClassInfo = {
   name: string,
   fields?: string[],
   methods?: string[],
-};
-
-interface RawLibInfo {
-  packages: [{
-    name: string,
-    classes: Array<RawClassInfo>,
-  }]
 };
 
 interface PackageInfo {
@@ -40,8 +33,6 @@ interface MethodInfo {
 };
 
 export type LibInfo = Array<PackageInfo>;
-
-const rawLibraries: RawLibInfo = JSON.parse(readFileSync('./src/compiler/import/imports.json', 'utf-8'))
 
 const dotToSlash = (s: string) => {
   return s.replaceAll('.', '/');
@@ -82,7 +73,7 @@ function convertClassInfo(c: RawClassInfo): ClassInfo {
   }
 }
 
-export const libraries: LibInfo = rawLibraries.packages.map(p => {
+export const libraries: LibInfo = rawLibInfo.packages.map(p => {
   return {
     packageName: dotToSlash(p.name),
     classes: p.classes.map(c => convertClassInfo(c)),
