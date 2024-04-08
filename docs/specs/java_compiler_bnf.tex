@@ -1,0 +1,43 @@
+\begin{alignat*}{9}
+&& \textit{compilation-unit}                     && \quad ::= & \quad && \textit{import-declaration} ... \ \textit{class-declaration}  && \\[1mm]
+&& \textit{import-declaration} && \quad ::= & \quad && \textit{single-type-import-declaration} && \\
+&& && | & \quad && \textit{type-import-on-demand-declaration} && \\[1mm]
+&& \textit{single-type-import-declaration} && \quad ::= & \quad && \textbf{\texttt{import}} \ \textit{type-name} \ \textbf{\texttt{;}} && \\[1mm]
+&& \textit{type-import-on-demand-declaration} && \quad ::= & \quad && \textbf{\texttt{import}} \ \textit{package-name} \ \textbf{\texttt{$.\ *$}} && \\[1mm]
+&& \textit{class-declaration}                    && \quad ::= & \quad && \textbf{\texttt{public class}} \ \textit{identifier} \ \textit{class-body} && \\[1mm]
+&& \textit{class-body}                           && \quad ::= & \quad && \textbf{\texttt{\{}} \textit{class-body-declaration} ... \textbf{\texttt{\}}} && \\[1mm]
+&& \textit{class-body-declaration}               && \quad ::= & \quad && \textit{field-declaration} && \\
+&&                                               &&         | & \quad && \textit{method-declaration} && \\
+&&                                               &&         | & \quad && \textit{constructor-declaration} && \\[2mm]
+&& \textit{field-declaration}                    && \quad ::= & \quad && \textit{field-modifier} \ \textit{type} \ \textit{identifier} \ \textbf{\texttt{;}} && \\[1mm]
+&& \textit{field-modifier}                       && \quad ::= & \quad && \textbf{\texttt{public}} \ [ \ \textbf{\texttt{static}} \ ] && \\[1mm]
+&& \textit{method-declaration}                   && \quad ::= & \quad && \textit{method-modifier} \ \textit{method-header} \ \textit{block} && \\[1mm]
+&& \textit{method-modifier}                      && \quad ::= & \quad && \textbf{\texttt{public}} \ [ \ \textbf{\texttt{static}} \ ] && \\[1mm]
+&& \textit{method-header}                        && \quad ::= & \quad && \textit{result-type} \ \textit{method-declarator} && \\[1mm]
+&& \textit{result-type}                          && \quad ::= & \quad && \textit{type} \ | \ \textbf{\texttt{void}} && \\[1mm]
+&& \textit{method-declarator}                    && \quad ::= & \quad && \textit{identifier} \ \textbf{\texttt{(}} \textit{formal-parameters} \textbf{\texttt{)}} && \\[1mm]
+&& \textit{formal-parameters}                     && \quad ::= & \quad && \epsilon \ | \ \textit{formal-parameter} \
+ | \ \textit{formal-parameter} \ (\textbf{\texttt{,}} \textit{formal-parameter}) ... &&\\[2mm]
+&& \textit{formal-parameter}                     && \quad ::= & \quad && \textit{type} \ \textit{identifer} && \\[2mm]
+&& \textit{constructor-declaration}              && \quad ::= & \quad && \textit{identifier} \ \textbf{\texttt{(}} \textit{formal-parameters} \textbf{\texttt{)}} \ \textit{block} && \\[2mm]
+&& \textit{type}                                 && \quad ::= & \quad && \textit{primitive-type} \ | \ \textit{reference-type} && \\[1mm]
+&& \textit{primitive-type}                       && \quad ::= & \quad && \textbf{\texttt{int}} \ | \ \textbf{\texttt{float}} \ | \ \textbf{\texttt{long}} \ | \ \textbf{\texttt{double}} \ | \ \textbf{\texttt{boolean}} \ | \ \textbf{\texttt{char}} && \\[1mm]
+&& \textit{reference-type}                       && \quad ::= & \quad && \textit{identifer} \ (\textbf{\texttt{\string[]}})&& \\[2mm]
+&& \textit{block}                                && \quad ::= & \quad && \textbf{\texttt{\{}} \textit{block-statement} ... \textbf{\texttt{\}}} && \\[1mm]
+&& \textit{block-statement}                      && \quad ::= & \quad && \textit{local-variable-declaration-statement} && \\
+&&                                               &&         | & \quad && \textit{statement} && \\[1mm]
+&& \textit{local-variable-declaration-statement} && \quad ::= & \quad && \textit{type} \ \textit{identifier} \ [ \ \textbf{\texttt{=}} \ \textit{variable-initializer} \ ] \ \textbf{\texttt{;}} && \\[2mm]
+&& \textit{variable-initializer} && \quad ::= & \quad && \textit{expression} \ | \ \textbf{\texttt{\{}} \textit{expressions} \ \textbf{\texttt{\}}} && \\[2mm]
+&& \textit{statement}                      && \quad ::= & \quad && \textit{block} && \\
+&&                                               &&         | & \quad && \textit{if-statement} && \\
+&&                                               &&         | & \quad && \textit{for-statement} && \\
+&&                                               &&         | & \quad && \textit{while-statement} && \\
+&&                                               &&         | & \quad && \textit{do-statement} && \\
+&&                                               &&         | & \quad && \textbf{\texttt{;}} && \\
+&&                                               &&         | & \quad && \textbf{\texttt{break ;}} && \\
+&&                                               &&         | & \quad && \textbf{\texttt{continue ;}} && \\
+&&                                               &&         | & \quad && \textbf{\texttt{return}} \ [ \ \textit{expression} \ ] \ \textbf{\texttt{;}} && \\
+&&                                               &&         | & \quad && \textit{expression-statement} && \\
+&& \textit{if-statement}                         && \quad ::= & \quad && \textbf{\texttt{if (}} \textit{statement-expression} \textbf{\texttt{)}} \ \textit{statement} \ [ \ \textbf{\texttt{else }} \textit{statement} \ ]&& \\[1mm]
+&& \textit{for-statement}                        && \quad ::= & \quad && \textbf{\texttt{for (}} \ [ \ \textit{for-init} \ ] \ \textbf{\texttt{;}} \ [ \ \textit{expression} \ ] \ \textbf{\texttt{;}} \ [ \ \textit{for-update} \ ] \ \textbf{\texttt{)}} \textit{statement} && \\[1mm]
+\end{alignat*}

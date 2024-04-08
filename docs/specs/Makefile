@@ -1,6 +1,6 @@
 PDFLATEX = latexmk -pdf
 
-SPECSCOMPONENT = JVM csec
+SPECSCOMPONENT = JVM csec compiler
 
 SPECS = $(SPECSCOMPONENT:%=java_%)
 
