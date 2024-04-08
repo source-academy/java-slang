@@ -1,6 +1,6 @@
 {
   "name": "java-slang",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "dist/index.js",
   "types": "dist/main.d.ts",
   "repository": "https://github.com/source-academy/java-slang.git",
