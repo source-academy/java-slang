@@ -1,7 +1,7 @@
 import { inspect } from "util";
-import { Compiler } from "../compiler";
-import { BinaryWriter } from "../binary-writer";
-import { AST } from "../../ast/types/packages-and-modules";
+import { Compiler } from "../../compiler";
+import { BinaryWriter } from "../../binary-writer";
+import { AST } from "../../../ast/types/packages-and-modules";
 import { execSync } from "child_process";
 
 import * as peggy from "peggy";
@@ -44,6 +44,6 @@ export function runTest(program: string, expectedLines: string[]) {
   expect(actualLines).toStrictEqual(expectedLines);
 }
 
-describe("compiler's test utils", () => {
-  it("Prevent jest from complaining", () => { });
-});
+//describe("compiler's test utils", () => {
+//  it("Prevent jest from complaining", () => { });
+//});
