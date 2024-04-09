@@ -1,126 +1,115 @@
-import * as Primitives from "./primitives";
-import { Type } from "./type";
+import { ClassImpl } from './classes'
+import * as Primitives from './primitives'
+import { Type } from './type'
 
-export class Class extends Type {
-  public className: string;
-  constructor(className: string) {
-    super("class");
-    this.className = className;
+export class Boolean extends ClassImpl {
+  constructor() {
+    super('Boolean')
   }
 
   public canBeAssigned(type: Type): boolean {
-    if (type instanceof Primitives.Null) return true;
-    if (!(type instanceof Class)) return false;
-    return this.className === type.className;
+    return super.canBeAssigned(type) || type instanceof Primitives.Boolean
   }
 }
 
-export class Boolean extends Class {
+export class Byte extends ClassImpl {
   constructor() {
-    super("Boolean");
+    super('Byte')
   }
 
   public canBeAssigned(type: Type): boolean {
-    return super.canBeAssigned(type) || type instanceof Primitives.Boolean;
+    return super.canBeAssigned(type) || type instanceof Primitives.Byte
   }
 }
 
-export class Byte extends Class {
+export class Character extends ClassImpl {
   constructor() {
-    super("Byte");
+    super('Character')
   }
 
   public canBeAssigned(type: Type): boolean {
-    return super.canBeAssigned(type) || type instanceof Primitives.Byte;
+    return super.canBeAssigned(type) || type instanceof Primitives.Char
   }
 }
 
-export class Character extends Class {
+export class Double extends ClassImpl {
   constructor() {
-    super("Character");
+    super('Double')
   }
 
   public canBeAssigned(type: Type): boolean {
-    return super.canBeAssigned(type) || type instanceof Primitives.Char;
+    return super.canBeAssigned(type) || type instanceof Primitives.Double
   }
 }
 
-export class Double extends Class {
+export class Float extends ClassImpl {
   constructor() {
-    super("Double");
+    super('Float')
   }
 
   public canBeAssigned(type: Type): boolean {
-    return super.canBeAssigned(type) || type instanceof Primitives.Double;
+    return super.canBeAssigned(type) || type instanceof Primitives.Float
   }
 }
 
-export class Float extends Class {
+export class Integer extends ClassImpl {
   constructor() {
-    super("Float");
+    super('Integer')
   }
 
   public canBeAssigned(type: Type): boolean {
-    return super.canBeAssigned(type) || type instanceof Primitives.Float;
+    return super.canBeAssigned(type) || type instanceof Primitives.Int
+  }
+
+  public equals(object: unknown): boolean {
+    return object instanceof Integer
   }
 }
 
-export class Integer extends Class {
+export class Long extends ClassImpl {
   constructor() {
-    super("Integer");
+    super('Long')
   }
 
   public canBeAssigned(type: Type): boolean {
-    return super.canBeAssigned(type) || type instanceof Primitives.Int;
+    return super.canBeAssigned(type) || type instanceof Primitives.Long
   }
 }
 
-export class Long extends Class {
+export class Short extends ClassImpl {
   constructor() {
-    super("Long");
+    super('Short')
   }
 
   public canBeAssigned(type: Type): boolean {
-    return super.canBeAssigned(type) || type instanceof Primitives.Long;
+    return super.canBeAssigned(type) || type instanceof Primitives.Short
   }
 }
 
-export class Short extends Class {
+export class String extends ClassImpl {
   constructor() {
-    super("Short");
-  }
-
-  public canBeAssigned(type: Type): boolean {
-    return super.canBeAssigned(type) || type instanceof Primitives.Short;
-  }
-}
-
-export class String extends Class {
-  constructor() {
-    super("String");
+    super('String')
   }
 
   public static from(value: string): String {
-    if (value.charAt(0) !== '"')
-      throw new Error(`Unrecognized string ${value}.`);
-    if (value.charAt(value.length - 1) !== '"')
-      throw new Error(`Unrecognized string ${value}.`);
+    if (value.charAt(0) !== '"') throw new Error(`Unrecognized string ${value}.`)
+    if (value.charAt(value.length - 1) !== '"') throw new Error(`Unrecognized string ${value}.`)
     if (
       value.length > 6 &&
       value.substring(0, 3) === '"""' &&
       value.substring(value.length - 3, value.length) !== '"""'
     )
-      throw new Error(`Unrecognized string ${value}.`);
-    return new String();
+      throw new Error(`Unrecognized string ${value}.`)
+    return new String()
   }
 }
 
 export class Void extends Type {
   constructor() {
-    super("void");
+    super('void')
   }
 
   public canBeAssigned(type: Type): boolean {
-    return type instanceof Void;
+    return type instanceof Void
   }
 }

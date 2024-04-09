@@ -1,9 +1,6 @@
 public class Main {
   public static void main(String[] args) {
-    printMessage(1); 
+    throwing();
   }
-
-  public static InvalidType printMessage(String message) { 
-    int test = 1 * "String";
-  }
+  public static void throwing() throws Exception {}
 }
