@@ -1,0 +1,41 @@
+\subsection*{Operator precedence}
+The table below lists all unary operators, binary operators, and assigment operators that are valid according to the BNF-form above, from highest to lowest precedence.
+
+\begin{center}
+
+\begin{tabularx}{1.0\textwidth} { 
+  | >{\centering\arraybackslash}X 
+  | >{\centering\arraybackslash}X
+  | >{\centering\arraybackslash}X | }
+ \hline
+ operator(s) & description & associativity \\ 
+ \hline
+ \textbf{\texttt{++ -}}\textbf{\texttt{-}} & unary post increment/decrement & left to right \\ 
+ \hline
+ \textbf{\texttt{+ - !\ \textasciitilde }} \textbf{\texttt{++ -}}\textbf{\texttt{-}} & unary pre operations & right to left \\ 
+ \hline
+ \textbf{\texttt{* / \%}} & multiplicative & left to right \\ 
+ \hline
+ \textbf{\texttt{+ -}} & additive & left to right \\ 
+ \hline
+ \textbf{\texttt{<}}\textbf{\texttt{<}} \ \textbf{\texttt{>}}\textbf{\texttt{>}} \ \textbf{\texttt{>}}\textbf{\texttt{>}}\textbf{\texttt{>}} & bit shift & left to right \\ 
+ \hline
+ \textbf{\texttt{< <= > >=}} & relational & left to right \\ 
+ \hline
+ \textbf{\texttt{== !=}} & equality & left to right \\ 
+ \hline
+ \textbf{\texttt{\&}} & bitwise AND & left to right \\ 
+ \hline
+ \textbf{\texttt{\string^}} & bitwise XOR & left to right \\ 
+ \hline
+ \textbf{\texttt{|}} & bitwise OR & left to right \\ 
+ \hline
+ \textbf{\texttt{\&\&}} & logical AND & left to right \\ 
+ \hline
+ \textbf{\texttt{||}} & logical OR & left to right \\ 
+ \hline
+ \textbf{\texttt{= += -= *= /= \%= \&= \string^= |= }} \textbf{\texttt{<}}\textbf{\texttt{<=}} \ \textbf{\texttt{>}}\textbf{\texttt{>=}} \ \textbf{\texttt{>}}\textbf{\texttt{>}}\textbf{\texttt{>=}}  & assignment & right to left \\ 
+ \hline
+\end{tabularx}
+
+\end{center}

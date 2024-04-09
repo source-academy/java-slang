@@ -1,0 +1,10 @@
+\subsection*{Constraints}
+Besides adhering to the BNF-form specification, the program also needs to satisfy several additional constraints. These constraints are listed separately below to capture aspects of the sublanguage that would be challenging to express solely through the BNF-form.
+\begin{itemize}
+    \item The program should be free of any type errors.
+    \item The program should contain only ASCII characters.
+    \item There should be exactly one method in the class with the method signature \textbf{public static void main(String[])}.
+    \item Type conversion is not supported at all. For example, conversion from \textbf{int} to \textbf{long} is not supported. Hence, both operands of a binary operator must have exactly same type.
+    \item For unary expressions and conditional expressions, the operands could only have type \textbf{int/boolean}.
+    \item The program shall not have any overloaded method. 
+\end{itemize}

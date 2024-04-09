@@ -162,7 +162,12 @@ UnicodeEscape
    = 'u'+ HexDigit HexDigit HexDigit HexDigit
 
 NullLiteral
-  = "null"
+  = "null" {
+    return {
+      kind: "NullLiteral",
+      value: "null",
+    }
+  }
 
 _ 
   = (Whitespace / Comment)*

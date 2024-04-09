@@ -1,25 +1,25 @@
 export interface ConstantUtf8Value {
-  value: string;
+  value: string
 }
 
 export interface ConstantIntegerValue {
-  value: number;
+  value: number
 }
 
 export interface ConstantFloatValue {
-  value: number;
+  value: number
 }
 
 export interface ConstantLongValue {
-  value: bigint;
+  value: bigint
 }
 
 export interface ConstantDoubleValue {
-  value: number;
+  value: number
 }
 
 export interface ConstantClassValue {
-  name: ConstantUtf8Value;
+  name: ConstantUtf8Value
 }
 
 export interface ConstantStringValue {
@@ -27,18 +27,18 @@ export interface ConstantStringValue {
 }
 
 export interface ConstantFieldrefValue {
-  class: ConstantClassValue;
-  nameAndType: ConstantNameAndTypeValue;
+  class: ConstantClassValue
+  nameAndType: ConstantNameAndTypeValue
 }
 
 export interface ConstantMethodrefValue {
-  class: ConstantClassValue;
-  nameAndType: ConstantNameAndTypeValue;
+  class: ConstantClassValue
+  nameAndType: ConstantNameAndTypeValue
 }
 
 export interface ConstantNameAndTypeValue {
-  name: ConstantUtf8Value;
-  descriptor: ConstantUtf8Value;
+  name: ConstantUtf8Value
+  descriptor: ConstantUtf8Value
 }
 
 export type ConstantTypeValue =
@@ -51,5 +51,4 @@ export type ConstantTypeValue =
   | ConstantStringValue
   | ConstantFieldrefValue
   | ConstantMethodrefValue
-  | ConstantNameAndTypeValue;
-
+  | ConstantNameAndTypeValue

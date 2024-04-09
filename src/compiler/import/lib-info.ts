@@ -1,4 +1,4 @@
-{
+export const rawLibInfo = {
   "packages": [
     {
       "name": "java.lang",

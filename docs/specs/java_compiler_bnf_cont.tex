@@ -1,0 +1,45 @@
+\begin{alignat*}{9}
+&& \textit{for-init}                             && \quad ::= & \quad && \textit{local-variable-declaration} \ | \ \textit{statement-expression-list} && \\[1mm]
+&& \textit{for-update}                           && \quad ::= & \quad && \textit{statement-expression-list} && \\[1mm]
+&& \textit{while-statement}                      && \quad ::= & \quad && \textbf{\texttt{while (}} \textit{expression} \textbf{\texttt{)}} \ \textit{statement} && \\[1mm]
+&& \textit{do-statement}                         && \quad ::= & \quad && \textbf{\texttt{do}} \ \textit{statement} \ \textbf{\texttt{while (}} \ \textit{expression} \ \textbf{\texttt{) ;}}&& \\[1mm]
+&& \textit{statement-expression-list}                     && \quad ::= & \quad && \epsilon \ | \ \textit{statement-expression} \ (\textbf{\texttt{,}} \textit{statement-expression}) ... && \\[2mm]
+&& \textit{expression-statement}                 && \quad ::= & \quad && \textit{statement-expression} \ \textbf{\texttt{;}} && \\[1mm]
+&& \textit{statement-expression}                 && \quad ::= & \quad && \textit{assignment} \ | \ \textit{unary-expression}  \ | \ \textit{method-invocation} && \\[2mm]
+&& \textit{assignment}                           && \quad ::= & \quad && \textit{left-hand-side} \ \textit{assignment-operator} \ \textit{expression} && \\[1mm]
+&& \textit{left-hand-side}                       && \quad ::= & \quad && \textit{expression-name} \ | \ \textit{field-access} \ | \ \textit{array-access} && \\[2mm]
+&& \textit{assignment-operator}                      && \quad ::= & \quad && \textbf{\texttt{=}} \ | \ \textbf{\texttt{+=}} \ | \ \textbf{\texttt{-=}} \ | \ \textbf{\texttt{*=}} \ | \ \textbf{\texttt{/=}} \ | \ \textbf{\texttt{\%=}} \ | \ \textbf{\texttt{\&=}} \ | \ \textbf{\texttt{\string^=}} \ | \ \textbf{\texttt{|=}} \ | \ \textbf{\texttt{<}}\textbf{\texttt{<=}} \ | \ \textbf{\texttt{>}}\textbf{\texttt{>=}} \ | \ \textbf{\texttt{>}}\textbf{\texttt{>}}\textbf{\texttt{>=}}  && \\[1mm]
+&& \textit{expressions}                           && \quad ::= & \quad && \epsilon \ | \ \textit{expression} \  (\textbf{\texttt{,}}\textit{expression}) ...&& \\
+&& \textit{expression}                           && \quad ::= & \quad && \textit{assignment} && \\
+&&                                               &&         | & \quad && \textit{non-assignment-expression} && \\
+&& \textit{non-assignment-expression}                           && \quad ::= & \quad && \textit{unary-expression} && \\
+&&                                               &&         | & \quad && \textit{binary-expression} && \\
+&&                                               &&         | & \quad && \textit{ternary-expression} && \\
+&&                                               &&         | & \quad && \textit{primary} && \\
+&&                                               &&         | & \quad && \textit{expression-name} && \\
+&& \textit{primary}                           && \quad ::= & \quad && \textit{literal} && \\
+&&                                               &&         | & \quad && \textit{field-access} && \\
+&&                                               &&         | & \quad && \textit{array-access} && \\
+&&                                               &&         | & \quad && \textit{method-invocation} && \\
+&&                                              &&         | & \quad && \textit{class-instance-creation-expression} && \\[2mm]
+&& \textit{unary-expression}                     && \quad ::= & \quad && \textit{unary-operator} \ \textit{expression} && \\
+&&                                               &&         | & \quad && \textit{expression} \ \textit{increment-decrement-operator} && \\[1mm]
+&&                                               &&         | & \quad && \textit{increment-decrement-operator} \ \textit{expression} && \\[1mm]
+&& \textit{unary-operator}                       && \quad ::= & \quad && \textbf{\texttt{+}} \ | \ \textbf{\texttt{-}} \ | \ \textbf{\texttt{!}} \ | \ \textbf{\texttt{\textasciitilde}} && \\[1mm]
+&& \textit{increment-decrement-operator}                      && \quad ::= & \quad && \textbf{\texttt{++}} \ | \ \textbf{\texttt{-}}\textbf{\texttt{-}} && \\[1mm]
+&& \textit{binary-expression}                    && \quad ::= & \quad && \textit{expression} \ \textit{binary-operator} \ \textit{expression} && \\[1mm]
+&& \textit{binary-operator}                      && \quad ::= & \quad && \textbf{\texttt{+}} \ | \ \textbf{\texttt{-}} \ | \ \textbf{\texttt{*}} \ | \ \textbf{\texttt{/}} \ | \ \textbf{\texttt{\%}} \ | \ \textbf{\texttt{\&}} \ | \ \textbf{\texttt{\string^}} \ | \ \textbf{\texttt{|}} \ | \ \textbf{\texttt{<}}\textbf{\texttt{<}} \ | \ \textbf{\texttt{>}}\textbf{\texttt{>}} \ | \ \textbf{\texttt{\&\&}} \ | \ \textbf{\texttt{||}} \ | \ \textbf{\texttt{==}} \ | \ \textbf{\texttt{!=}} \ | \ \textbf{\texttt{<=}} \ | \ \textbf{\texttt{>=}} && \\
+&&                                               &&         | & \quad && \textbf{\texttt{<}} \ | \ \textbf{\texttt{>}} \ | \ \textbf{\texttt{>}}\textbf{\texttt{>}}\textbf{\texttt{>}}  && \\[1mm]
+&& \textit{ternary-expression}                    && \quad ::= & \quad && \textit{expression} \ \textbf{\texttt{?}} \ \textit{expression} \ \textbf{\texttt{:}} \  \textit{non-assignment-expression} && \\[1mm]
+&& \textit{field-access}                         && \quad ::= & \quad && (\textbf{\texttt{this}} \ | \ \textit{expression-name})
+ \textbf{\texttt{.}} 
+  \textit{identifier} && \\[2mm]
+&& \textit{array-access}                         && \quad ::= & \quad && \textit{expression} \ [ \ \textit{expression} \ ] && \\[2mm]
+&& \textit{method-invocation}                    && \quad ::= & \quad && \textit{expression-name} \ \textbf{\texttt{(}} \textit{expression} ... \textbf{\texttt{)}} && \\
+&&                                               &&         | & \quad && \textbf{\texttt{this}} \textbf{\texttt{.}} \textit{identifier} \ \textbf{\texttt{(}} \textit{expression} ... \textbf{\texttt{)}} && \\
+&& \textit{class-instance-creation-expression}   && \quad ::= & \quad && \textbf{\texttt{new}} \ \textit{identifier} \ \textbf{\texttt{(}} \textit{expression} ... \textbf{\texttt{)}} && \\[2mm]
+&& \textit{expression-name}                      && \quad ::= & \quad && \textit{identifier} \ | \ \textit{expression-name} \textbf{\texttt{.}} \textit{identifier} && \\[1mm]
+&& \textit{type-name}                            && \quad ::= & \quad && \textit{identifier} \ | \ \textit{package-name} \textbf{\texttt{.}} \textit{identifier} && \\[1mm]
+&& \textit{package-name}                         && \quad ::= & \quad && \textit{identifier} \ | \ \textit{package-name} \textbf{\texttt{.}} \textit{identifier} && \\[1mm]
+&& \textit{literal}                              && \quad ::= & \quad && number \ | \ string \ | \ \textbf{\texttt{true}} \ | \ \textbf{\texttt{false}} \ | \ \textbf{\texttt{null}}&& \\[2mm]
+\end{alignat*}
