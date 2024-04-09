@@ -1,6 +1,6 @@
 import { check } from '..'
 import { parse } from '../../ast'
-import { CannotFindSymbolError, CyclicInheritanceError } from '../../errors'
+import { CyclicInheritanceError } from '../../errors'
 import { Type } from '../../types/type'
 
 const testcases: {
