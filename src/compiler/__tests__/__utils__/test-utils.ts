@@ -2,6 +2,7 @@ import { inspect } from "util";
 import { Compiler } from "../../compiler";
 import { BinaryWriter } from "../../binary-writer";
 import { AST } from "../../../ast/types/packages-and-modules";
+import { javaPegGrammar } from "../../grammar"
 import { execSync } from "child_process";
 
 import * as peggy from "peggy";
@@ -15,7 +16,6 @@ export type testCase = {
 
 const debug = false;
 const pathToTestDir = "./src/compiler/__tests__/";
-const javaPegGrammar = fs.readFileSync('./src/compiler/main.pegjs', 'utf-8');
 const parser = peggy.generate(javaPegGrammar, {
   allowedStartRules: ["CompilationUnit"],
 });
