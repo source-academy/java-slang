@@ -31,7 +31,6 @@ export function runTest(program: string, expectedLines: string[]) {
   }
 
   const classFile = compiler.compile(ast as AST);
-  //const classFile = compiler.compileFromSource(program);
   binaryWriter.writeBinary(classFile, pathToTestDir);
 
   const prevDir = process.cwd();

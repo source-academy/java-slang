@@ -56,7 +56,7 @@ export class Compiler {
   }
 
   compileFromSource(javaProgram: string) {
-    const javaPegGrammar = fs.readFileSync(__dirname + '/__tests__/main.pegjs', 'utf8')
+    const javaPegGrammar = fs.readFileSync(__dirname + '/main.pegjs', 'utf8')
     const parser = peggy.generate(javaPegGrammar, {
       allowedStartRules: ['CompilationUnit']
     })
