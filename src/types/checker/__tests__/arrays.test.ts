@@ -1,5 +1,5 @@
 import { check } from '..'
-import { BadOperandTypesError, IncompatibleTypesError } from '../../errors'
+import { IncompatibleTypesError } from '../../errors'
 import { parse } from '../../ast'
 import { Type } from '../../types/type'
 
@@ -17,155 +17,86 @@ const testcases: {
   only?: boolean
 }[] = [
   {
+    input: `int[] numbers = {1, 2, 3, 4, 5};`,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `double[] values;`,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `String[] names = {1, 2, 3};`,
+    result: { type: null, errors: [new IncompatibleTypesError()] }
+  },
+  {
     input: `
-      int test = 0;
-      if (true) {
-        test = 1;
-      }
+      int[][] matrix = {
+        {1, 2, 3},
+        {4, 5, 6},
+        {7, 8, 9}
+      };
     `,
     result: { type: null, errors: [] }
   },
   {
     input: `
-      int test = 0;
-      if (false) {}
-      else {
-        test = 1;
-      }
+      int[] numbers = {1, 2, 3, 4, 5};
+      int number = numbers[2]; // Accessing the third element
     `,
     result: { type: null, errors: [] }
   },
   {
     input: `
-      int test = 0;
-      if (true) {
-        test = 1;
-        test = 2;
-      }
-      else {
-        test = 3;
-        test = 4;
-      }
+      int[][] numbers = {{1, 2, 3, 4, 5}};
+      int number = numbers[0][2]; // Accessing the third nested element
     `,
     result: { type: null, errors: [] }
   },
   {
     input: `
-      int test = 0;
-      if (1 + 1) {
-        test = 1;
-      }
+      String[] names = {"Alice", "Bob", "Charlie"};
+      String name = names["1"]; // Incorrect index type
     `,
     result: { type: null, errors: [new IncompatibleTypesError()] }
   },
   {
     input: `
-      int test = 0;
-      if (1 * "Hello") {
-        test = 1;
-      }
-    `,
-    result: { type: null, errors: [new BadOperandTypesError()] }
-  },
-
-  {
-    input: `
-      int test = 0;
-      if (true) {
-        if (1 * "Hello") {
-          test = 1;
-        }
-      }
-    `,
-    result: { type: null, errors: [new BadOperandTypesError()] }
-  },
-  {
-    input: `
-      int a = 5; 
-      int b = 10; 
-      if (a < b) {} else {}
+      int[] numbers = new int[5];
+      numbers[0] = 10; // Correct assignment
     `,
     result: { type: null, errors: [] }
   },
   {
     input: `
-      int a = 5; 
-      int b = 10; 
-      if (a <= b) {} else {}
+      boolean[] flags = new boolean[3];
+      flags[0] = 1;
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] }
+  },
+  {
+    input: `
+      int[] numbers = {1, 2, 3, 4, 5};
+      int length = numbers.length; // Accessing array length
     `,
     result: { type: null, errors: [] }
   },
   {
     input: `
-      int a = 5; 
-      int b = 10; 
-      if (a > b) {} else {}
+      char[] chars = new char[5];
+      chars = new char[]{'a', 'b', 'c', 'd', 'e'}; // Reinitialization with values    
     `,
     result: { type: null, errors: [] }
   },
   {
     input: `
-      int a = 5; 
-      int b = 10; 
-      if (a >= b) {} else {}
+      int[][] arr1 = new int[10][20];
+      int[][] arr2 = { { 1, 2 }, { 3, 4 } };
     `,
     result: { type: null, errors: [] }
   },
   {
-    input: `
-      int a = 5; 
-      int b = 10; 
-      if (a < b) { 
-        if (b > 0) {} else {} 
-      } else {}
-    `,
-    result: { type: null, errors: [] }
-  },
-  {
-    input: `
-      int a = 5; 
-      double b = 10.5; 
-      if (a < b) {} else {}
-    `,
-    result: { type: null, errors: [] }
-  },
-  {
-    input: `
-      boolean a = true; 
-      boolean b = false; 
-      if (a && b) {} else {}
-    `,
-    result: { type: null, errors: [] }
-  },
-  {
-    input: `
-      boolean a = true; 
-      boolean b = false; 
-      if (a || b) {} else {}
-    `,
-    result: { type: null, errors: [] }
-  },
-  {
-    input: `
-      boolean a = true; 
-      if (!a) {} else {}
-    `,
-    result: { type: null, errors: [] }
-  },
-  {
-    input: `
-      int a = 5; 
-      int b = 10; 
-      (a < b) ? "true" : "false";
-    `,
-    result: { type: null, errors: [] }
-  },
-  {
-    input: `
-      int a = 5; 
-      int b = 10; 
-      a == b ? "true" : "false";
-    `,
+    // This error is not flagged in the type checker but during runtime
+    input: `int[] numbers = new int[-1]; // Attempting to create an array with negative size`,
     result: { type: null, errors: [] }
   }
 ]
@@ -174,7 +105,7 @@ describe('Type Checker', () => {
   testcases.map(testcase => {
     let it = test
     if (testcase.only) it = test.only
-    it(`Checking if then else statements for ${testcase.input}`, () => {
+    it(`Checking arrays for '${testcase.input}'`, () => {
       const program = createProgram(testcase.input)
       const ast = parse(program)
       if (!ast) throw new Error('Program parsing returns null.')
