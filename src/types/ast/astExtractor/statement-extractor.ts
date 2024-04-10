@@ -188,10 +188,12 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   localVariableDeclaration(ctx: LocalVariableDeclarationCtx) {
+    const { localVariableType, location } = this.visit(ctx.localVariableType)
     return {
       kind: 'LocalVariableDeclarationStatement',
-      localVariableType: this.visit(ctx.localVariableType),
-      variableDeclaratorList: this.visit(ctx.variableDeclaratorList)
+      localVariableType: localVariableType,
+      variableDeclaratorList: this.visit(ctx.variableDeclaratorList),
+      location
     }
   }
 
@@ -210,7 +212,10 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   localVariableType(ctx: LocalVariableTypeCtx) {
     const typeExtractor = new TypeExtractor()
     if (ctx.unannType) {
-      return typeExtractor.extract(ctx.unannType[0])
+      return {
+        localVariableType: typeExtractor.extract(ctx.unannType[0]),
+        location: ctx.unannType[0].location
+      }
     }
     throw new Error('Unimplemented extractor.')
   }
@@ -228,7 +233,8 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
         variableDeclaratorId: variable.children.Identifier[0].image,
         variableInitializer: expressionExtractor.extract(
           ctx.variableInitializer![index].children.expression![0]
-        )
+        ),
+        location: ctx.Equals ? getLocation(ctx.Equals[0]) : undefined
       })
     })
     return declarations
@@ -238,9 +244,10 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
     const blockStatementExtractor = new BlockStatementExtractor()
     const expressionExtractor = new ExpressionExtractor()
     const statementExtractor = new StatementExtractor()
+    const { localVariableType } = blockStatementExtractor.visit(ctx.localVariableType)
     return {
       kind: 'EnhancedForStatement',
-      localVariableType: blockStatementExtractor.visit(ctx.localVariableType),
+      localVariableType: localVariableType,
       variableDeclaratorId: blockStatementExtractor.visit(ctx.variableDeclaratorId),
       expression: expressionExtractor.extract(ctx.expression[0]),
       statement: statementExtractor.extract(ctx.statement[0]),

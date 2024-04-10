@@ -175,6 +175,7 @@ export interface VariableDeclarator {
   variableDeclaratorId: VariableDeclaratorId
   dims?: string
   variableInitializer?: VariableInitializer
+  location?: Location
 }
 
 export type VariableDeclaratorId = Identifier

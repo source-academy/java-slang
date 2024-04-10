@@ -40,16 +40,21 @@ export class BlockStatementExtractor extends BaseJavaCstVisitorWithDefaults {
   localVariableDeclaration(
     ctx: LocalVariableDeclarationCtx
   ): Omit<LocalVariableDeclarationStatement, 'kind'> {
+    const { localVariableType, location } = this.visit(ctx.localVariableType)
     return {
-      localVariableType: this.visit(ctx.localVariableType),
-      variableDeclaratorList: this.visit(ctx.variableDeclaratorList)
+      localVariableType: localVariableType,
+      variableDeclaratorList: this.visit(ctx.variableDeclaratorList),
+      location
     }
   }
 
   localVariableType(ctx: LocalVariableTypeCtx) {
     const typeExtractor = new TypeExtractor()
     if (ctx.unannType) {
-      return typeExtractor.extract(ctx.unannType[0])
+      return {
+        localVariableType: typeExtractor.extract(ctx.unannType[0]),
+        location: ctx.unannType[0].location
+      }
     } else if (ctx.Var) {
       throw new Error('Not implemented')
     }
