@@ -179,13 +179,14 @@ function compile(node: Node, cg: CodeGenerator): CompileResult {
 const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => CompileResult } = {
   Block: (node: Node, cg: CodeGenerator) => {
     cg.symbolTable.extend()
+    const block = node as Block
     let maxStack = 0
-    let resultType = ''
-      ; (node as Block).blockStatements.forEach(x => {
-        const { stackSize: stackSize, resultType: type } = compile(x, cg)
-        maxStack = Math.max(maxStack, stackSize)
-        resultType = type
-      })
+    let resultType = EMPTY_TYPE
+    block.blockStatements.forEach(x => {
+      const { stackSize: stackSize, resultType: type } = compile(x, cg)
+      maxStack = Math.max(maxStack, stackSize)
+      resultType = type
+    })
     cg.symbolTable.teardown()
 
     return { stackSize: maxStack, resultType }
@@ -548,8 +549,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   ExpressionStatement: (node: Node, cg: CodeGenerator) => {
-    const n = node as ExpressionStatement
-    return compile(n.stmtExp, cg)
+    const { stmtExp } = node as ExpressionStatement
+    return compile(stmtExp, cg)
   },
 
   MethodInvocation: (node: Node, cg: CodeGenerator) => {
@@ -803,7 +804,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           field
         )
       }
-      const fetchedFieldTypeDescriptor = (fieldInfos[fieldInfos.length - 1] as FieldInfo).typeDescriptor
+      const fetchedFieldTypeDescriptor = (fieldInfos[fieldInfos.length - 1] as FieldInfo)
+        .typeDescriptor
       return {
         stackSize: 1 + (['D', 'J'].includes(fetchedFieldTypeDescriptor) ? 1 : 0),
         resultType: fetchedFieldTypeDescriptor

@@ -50,9 +50,9 @@ export class BinaryWriter {
   }
 
   private getClassName(classFile: ClassFile) {
-    const classInfo = classFile.constantPool[classFile.thisClass - 1] as ConstantClassInfo;
-    const classNameInfo = classFile.constantPool[classInfo.nameIndex - 1] as ConstantUtf8Info;
-    return classNameInfo.value;
+    const classInfo = classFile.constantPool[classFile.thisClass - 1] as ConstantClassInfo
+    const classNameInfo = classFile.constantPool[classInfo.nameIndex - 1] as ConstantUtf8Info
+    return classNameInfo.value
   }
 
   private toBinary(classFile: ClassFile) {
