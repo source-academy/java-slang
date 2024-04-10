@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: main
           submodules: recursive
       - name: Verify version has changed
         # We use jq as `npm pkg get version` returns a quoted string
