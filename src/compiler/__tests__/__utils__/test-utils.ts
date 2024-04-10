@@ -1,5 +1,4 @@
 import { inspect } from "util";
-//import { Compiler } from "../../compiler";
 import { compile } from "../../index";
 import { BinaryWriter } from "../../binary-writer";
 import { AST } from "../../../ast/types/packages-and-modules";
@@ -20,7 +19,6 @@ const pathToTestDir = "./src/compiler/__tests__/";
 const parser = peggy.generate(javaPegGrammar, {
   allowedStartRules: ["CompilationUnit"],
 });
-//const compiler = new Compiler();
 const binaryWriter = new BinaryWriter();
 
 export function runTest(program: string, expectedLines: string[]) {
