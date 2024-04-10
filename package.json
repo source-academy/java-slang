@@ -3,7 +3,10 @@
   "version": "1.0.6",
   "main": "dist/index.js",
   "types": "dist/main.d.ts",
-  "repository": "https://github.com/source-academy/java-slang.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/source-academy/java-slang.git"
+  },
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc --build --force",
