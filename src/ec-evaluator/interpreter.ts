@@ -103,7 +103,7 @@ export const evaluate = (context: Context, targetStep: number = STEP_LIMIT): Sta
   const control = context.control;
   const stash = context.stash;
 
-  context.totalSteps = 1;
+  context.totalSteps = 0;
 
   let command = control.peek();
   
