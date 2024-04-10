@@ -238,7 +238,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           const size1 = compile(createIntLiteralNode(i), cg).stackSize
           const size2 = compile(val as Expression, cg).stackSize
           cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE)
-          maxStack = Math.max(maxStack, 1 + size1 + size2)
+          maxStack = Math.max(maxStack, 2 + size1 + size2)
         })
         cg.code.push(OPCODE.ASTORE, curIdx)
       } else {

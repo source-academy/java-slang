@@ -1,21 +1,15 @@
 import * as peggy from 'peggy'
 import { AST } from '../ast/types/packages-and-modules'
+import { ClassFile } from '../ClassFile/types'
 import { Compiler } from './compiler'
 import { javaPegGrammar } from './grammar'
-import { BinaryWriter } from './binary-writer'
 
-export const compile = (ast: AST): string => {
+export const compile = (ast: AST): ClassFile => {
   const compiler = new Compiler()
-  const classFile = compiler.compile(ast)
-
-  const binaryWriter = new BinaryWriter()
-  const byteArray = binaryWriter.generateBinary(classFile)
-  const base64encoded = Buffer.from(byteArray).toString('base64')
-
-  return base64encoded
+  return compiler.compile(ast)
 }
 
-export const compileFromSource = (javaProgram: string): string => {
+export const compileFromSource = (javaProgram: string): ClassFile => {
   const parser = peggy.generate(javaPegGrammar, {
     allowedStartRules: ['CompilationUnit'],
     cache: true
