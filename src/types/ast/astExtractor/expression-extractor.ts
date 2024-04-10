@@ -56,7 +56,7 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   private location: Location
 
   extract(cst: ExpressionCstNode): Expression {
-    this.location = cst.location
+    this.location = cst.location as Location
     return this.visit(cst)
   }
 

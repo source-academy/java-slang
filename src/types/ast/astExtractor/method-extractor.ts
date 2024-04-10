@@ -21,6 +21,7 @@ import {
 import { BlockStatement } from '../types/blocks-and-statements'
 import { BlockStatementExtractor } from './block-statement-extractor'
 import { TypeExtractor } from './type-extractor'
+import { Location } from '../types'
 
 export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<MethodModifier> = []
@@ -42,9 +43,9 @@ export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
       methodBody: {
         kind: 'Block',
         blockStatements: this.body,
-        location: cst.location
+        location: cst.location as Location
       },
-      location: cst.location
+      location: cst.location as Location
     }
   }
 

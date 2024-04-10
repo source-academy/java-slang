@@ -10,6 +10,7 @@ import { Expression } from '../types/blocks-and-statements'
 import { Identifier, FieldDeclaration, FieldModifier } from '../types/classes'
 import { ExpressionExtractor } from './expression-extractor'
 import { TypeExtractor } from './type-extractor'
+import { Location } from '../types'
 
 export class FieldExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<FieldModifier> = []
@@ -30,7 +31,7 @@ export class FieldExtractor extends BaseJavaCstVisitorWithDefaults {
           variableInitializer: this.value
         }
       ],
-      location: cst.location
+      location: cst.location as Location
     }
   }
 

@@ -1,7 +1,7 @@
 import { BaseJavaCstVisitorWithDefaults, CstNode, TypeDeclarationCtx } from 'java-parser'
 
 import { NormalClassDeclaration } from '../types/classes'
-import { AST } from '../types'
+import { AST, Location } from '../types'
 import { ClassExtractor } from './class-extractor'
 
 export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
@@ -13,7 +13,7 @@ export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
       kind: 'CompilationUnit',
       importDeclarations: [],
       topLevelClassOrInterfaceDeclarations: this.topLevelClassOrInterfaceDeclarations,
-      location: cst.location
+      location: cst.location as Location
     }
   }
 

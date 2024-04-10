@@ -9,10 +9,10 @@ export type AST = CompilationUnit
 export interface Location {
   startOffset: number
   startLine: number
-  startColumn?: number
-  endOffset?: number
-  endLine?: number
-  endColumn?: number
+  startColumn: number
+  endOffset: number
+  endLine: number
+  endColumn: number
 }
 
 export interface BaseNode {
