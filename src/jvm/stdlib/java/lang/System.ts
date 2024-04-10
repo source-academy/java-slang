@@ -181,6 +181,16 @@ const functions = {
   'identityHashCode(Ljava/lang/Object;)I': (thread: Thread) => {
     logger.warn('System.identityHashCode(Ljava/lang/Object;)I not implemented')
     thread.returnStackFrame(0)
+  },
+
+  /**
+   * Returns the current time in nanoseconds.
+   * Accuracy is only in millis since browsers do not support hrtime.
+   * @param thread
+   */
+  'nanoTime()J': (thread: Thread) => {
+    const time = BigInt(Date.now()) * BigInt(1000000)
+    thread.returnStackFrame64(time)
   }
 }
 
