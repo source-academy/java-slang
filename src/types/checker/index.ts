@@ -115,7 +115,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       if (errors.length > 0) return newResult(null, errors)
       if (!currentType) throw new Error('Right side of assignment statment should return a type.')
       if (!leftType.canBeAssigned(currentType))
-        return newResult(null, [new IncompatibleTypesError()])
+        return newResult(null, [new IncompatibleTypesError(node.location)])
       return OK_RESULT
     }
     case 'BasicForStatement': {
@@ -346,17 +346,21 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       for (const variableDeclarator of node.variableDeclaratorList) {
         const declaredType = frame.getType(node.localVariableType)
         if (declaredType instanceof Error) return newResult(null, [declaredType])
-        if (variableDeclarator.variableInitializer) {
+        const { variableInitializer } = variableDeclarator
+        if (variableInitializer) {
+          let location = node.location
+          if (!Array.isArray(variableInitializer)) location = variableInitializer.location
           const type = createArrayType(
             declaredType,
-            variableDeclarator.variableInitializer,
+            variableInitializer,
             expression => {
               const result = typeCheckBody(expression, frame)
               if (result.errors.length > 0) return result.errors[0]
               if (!result.currentType)
                 throw new Error('array initializer expression should have a type')
               return result.currentType
-            }
+            },
+            location
           )
           if (type instanceof Error) errors.push(type)
         }
