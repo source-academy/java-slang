@@ -50,9 +50,7 @@ export const functions = {
 A build script has been provided to create a module of the Java standard library as a hashmap of base64 strings.
 
 ```sh
-node dist/jvm/utils/build.js /path/to/classfile/directory
+npx tsx src/jvm/utils/build path/to/classfiles
 ```
 
-It has been configured to only include modules with package name starting with `java`, `sun/misc`, `modules`.
-
-You can then import the strings using `import(java-slang/dist/jvm/utils/classfiles)`.
+Java packages are deployed as a submodule of the Source Academy modules repository ([link](https://github.com/source-academy/java-packages)).
