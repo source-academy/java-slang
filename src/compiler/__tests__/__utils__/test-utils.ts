@@ -1,5 +1,6 @@
 import { inspect } from "util";
-import { Compiler } from "../../compiler";
+//import { Compiler } from "../../compiler";
+import { compile } from "../../index";
 import { BinaryWriter } from "../../binary-writer";
 import { AST } from "../../../ast/types/packages-and-modules";
 import { javaPegGrammar } from "../../grammar"
@@ -19,7 +20,7 @@ const pathToTestDir = "./src/compiler/__tests__/";
 const parser = peggy.generate(javaPegGrammar, {
   allowedStartRules: ["CompilationUnit"],
 });
-const compiler = new Compiler();
+//const compiler = new Compiler();
 const binaryWriter = new BinaryWriter();
 
 export function runTest(program: string, expectedLines: string[]) {
@@ -30,7 +31,7 @@ export function runTest(program: string, expectedLines: string[]) {
     console.log(inspect(ast, false, null, true));
   }
 
-  const classFile = compiler.compile(ast as AST);
+  const classFile = compile(ast as AST);
   binaryWriter.writeBinary(classFile, pathToTestDir);
 
   const prevDir = process.cwd();

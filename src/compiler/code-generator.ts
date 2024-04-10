@@ -181,11 +181,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     cg.symbolTable.extend()
     let maxStack = 0
     let resultType = ''
-    ;(node as Block).blockStatements.forEach(x => {
-      const { stackSize: stackSize, resultType: type } = compile(x, cg)
-      maxStack = Math.max(maxStack, stackSize)
-      resultType = type
-    })
+      ; (node as Block).blockStatements.forEach(x => {
+        const { stackSize: stackSize, resultType: type } = compile(x, cg)
+        maxStack = Math.max(maxStack, stackSize)
+        resultType = type
+      })
     cg.symbolTable.teardown()
 
     return { stackSize: maxStack, resultType }
@@ -418,8 +418,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           literalType: { kind: kind, value: value }
         } = node
         const boolValue = value === 'true'
-        if (kind === 'BooleanLiteral' && onTrue === boolValue) {
-          cg.addBranchInstr(OPCODE.GOTO, targetLabel)
+        if (kind === 'BooleanLiteral') {
+          if (onTrue === boolValue) {
+            cg.addBranchInstr(OPCODE.GOTO, targetLabel)
+          }
           return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
         }
       }
@@ -470,20 +472,20 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         } else if (op in reverseLogicalOp) {
           if (isNullLiteral(left)) {
             // still use l to represent the first argument pushed onto stack
-            l = f(right, targetLabel, onTrue)
+            l = compile(right, cg)
             cg.addBranchInstr(
               onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL,
               targetLabel
             )
           } else if (isNullLiteral(right)) {
-            l = f(left, targetLabel, onTrue)
+            l = compile(left, cg)
             cg.addBranchInstr(
               onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL,
               targetLabel
             )
           } else {
-            l = f(left, targetLabel, onTrue)
-            r = f(right, targetLabel, onTrue)
+            l = compile(left, cg)
+            r = compile(right, cg)
             cg.addBranchInstr(onTrue ? logicalOp[op] : reverseLogicalOp[op], targetLabel)
           }
           return {
@@ -496,7 +498,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         }
       }
 
-      return compile(node, cg)
+      const res = compile(node, cg)
+      cg.addBranchInstr(onTrue ? OPCODE.IFNE : OPCODE.IFEQ, cg.labels[cg.labels.length - 1])
+      return res
     }
     return f(node, cg.labels[cg.labels.length - 1], false)
   },
@@ -799,9 +803,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           field
         )
       }
+      const fetchedFieldTypeDescriptor = (fieldInfos[fieldInfos.length - 1] as FieldInfo).typeDescriptor
       return {
-        stackSize: 1,
-        resultType: (fieldInfos[fieldInfos.length - 1] as FieldInfo).typeDescriptor
+        stackSize: 1 + (['D', 'J'].includes(fetchedFieldTypeDescriptor) ? 1 : 0),
+        resultType: fetchedFieldTypeDescriptor
       }
     } else {
       cg.code.push(
@@ -917,14 +922,19 @@ class CodeGenerator {
     }
 
     methodNode.methodHeader.formalParameterList.forEach(p => {
-      this.symbolTable.insertVariableInfo({
+      const paramInfo = {
         name: p.identifier,
         accessFlags: 0,
         index: this.maxLocals,
         typeName: p.unannType,
         typeDescriptor: this.symbolTable.generateFieldDescriptor(p.unannType)
-      })
-      this.maxLocals++
+      }
+      this.symbolTable.insertVariableInfo(paramInfo)
+      if (['D', 'J'].includes(paramInfo.typeDescriptor)) {
+        this.maxLocals += 2
+      } else {
+        this.maxLocals++
+      }
     })
 
     if (methodNode.methodHeader.identifier === '<init>') {

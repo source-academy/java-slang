@@ -44,9 +44,15 @@ export class BinaryWriter {
   }
 
   writeBinary(classFile: ClassFile, filepath: string) {
-    const filename = filepath + 'Main.class'
+    const filename = filepath + this.getClassName(classFile) + '.class'
     const binary = this.toBinary(classFile)
     fs.writeFileSync(filename, binary)
+  }
+
+  private getClassName(classFile: ClassFile) {
+    const classInfo = classFile.constantPool[classFile.thisClass - 1] as ConstantClassInfo;
+    const classNameInfo = classFile.constantPool[classInfo.nameIndex - 1] as ConstantUtf8Info;
+    return classNameInfo.value;
   }
 
   private toBinary(classFile: ClassFile) {

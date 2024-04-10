@@ -43,6 +43,43 @@ const testCases: testCase[] = [
     expectedLines: ["ok", "done"],
   },
   {
+    comment: "if and else, single variable conditional expression",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          boolean b = true;
+          if (b) {
+            System.out.println("This is expected");
+          } else {
+            System.out.println("This is incorrect");
+          }
+
+          boolean c = false;
+          if (c) {
+            System.out.println("Incorrect");
+          } else {
+            System.out.println("Correct");
+          }
+
+          boolean g = false;
+          if (!g) {
+            System.out.println("This is expected");
+          } else {
+            System.out.println("This is incorrect");
+          }
+
+          boolean h = true;
+          if (!h) {
+            System.out.println("Incorrect");
+          } else {
+            System.out.println("Correct");
+          }
+        }
+      }
+    `,
+    expectedLines: ["This is expected", "Correct", "This is expected", "Correct"],
+  },
+  {
     comment: "if and else",
     program: `
       public class Main {
@@ -200,10 +237,22 @@ const testCases: testCase[] = [
           } else {
             System.out.println("Yes2");
           }
+
+          boolean b = true;
+          boolean c = !b;
+
+          if (!(!(!(!c)))) {
+            System.out.println("Hmm");
+          } else {
+            System.out.println("Yes3");
+          }
+
+          boolean d = !(!(!(b == c)));
+          System.out.println(d);
         }
       }
     `,
-    expectedLines: ["Yes1", "Yes2"],
+    expectedLines: ["Yes1", "Yes2", "Yes3", "true"],
   },
   {
     comment: "complex conditional expression",
