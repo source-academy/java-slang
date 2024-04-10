@@ -1,7 +1,7 @@
 import {
   runTest,
   testCase,
-} from "../test-utils";
+} from "../__utils__/test-utils";
 
 const testCases: testCase[] = [
   {
