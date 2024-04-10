@@ -396,22 +396,30 @@ export const resOverload = (
 ): Closure => {
   // Identify potentially applicable methods.
   const appClosures: Closure[] = [];
-  for (const [closureName, closure] of classToSearchIn.frame.frame.entries()) {
-    // Methods contains parantheses and must have return type.
-    if (closureName.includes(mtdName + "(") && closureName[closureName.length - 1] !== ")") {
-      const params = ((closure as Closure).mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
-      
-      if (argTypes.length != params.length) continue;
-      
-      let match = true;
-      for (let i = 0; i < argTypes.length; i++) {
-        match &&= (argTypes[i].type === params[i].unannType
-          || isSubtype(argTypes[i].type, params[i].unannType, classStore));
-        if (!match) break; // short circuit
+  let c: Class | undefined = classToSearchIn;
+  while (c) {
+    for (const [closureName, closure] of c.frame.frame.entries()) {
+      // Methods contains parantheses and must have return type.
+      if (closureName.includes(mtdName + "(") && closureName[closureName.length - 1] !== ")") {
+        const params = ((closure as Closure).mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
+        
+        if (argTypes.length != params.length) continue;
+        
+        let match = true;
+        for (let i = 0; i < argTypes.length; i++) {
+          match &&= (argTypes[i].type === params[i].unannType
+            || isSubtype(argTypes[i].type, params[i].unannType, classStore));
+          if (!match) break; // short circuit
+        }
+        
+        match && appClosures.push(closure as Closure);
       }
-      
-      match && appClosures.push(closure as Closure);
     }
+
+    if (appClosures.length > 0) break;
+
+    // Search recursively.
+    c = c.superclass;
   }
   
   if (appClosures.length === 0) {
