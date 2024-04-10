@@ -43,7 +43,3 @@ export function runTest(program: string, expectedLines: string[]) {
 
   expect(actualLines).toStrictEqual(expectedLines);
 }
-
-//describe("compiler's test utils", () => {
-//  it("Prevent jest from complaining", () => { });
-//});
