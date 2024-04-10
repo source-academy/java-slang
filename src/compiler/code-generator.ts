@@ -550,6 +550,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   ExpressionStatement: (node: Node, cg: CodeGenerator) => {
     const { stmtExp } = node as ExpressionStatement
+    if (stmtExp.kind === 'PrefixExpression' || stmtExp.kind === 'PostfixExpression') {
+      return codeGenerators['IncrementDecrementExpression'](stmtExp, cg)
+    }
     return compile(stmtExp, cg)
   },
 
@@ -706,6 +709,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       stackSize: Math.max(size1, 1 + (['D', 'J'].includes(type) ? 1 : 0) + size2),
       resultType: type
     }
+  },
+
+  IncrementDecrementExpression: (node: Node, cg: CodeGenerator) => {
+    // handle cases of ++x, x++, x--, --x that do not add object to operand stack
+    if (node.kind === 'PrefixExpression' || node.kind === 'PostfixExpression') {
+      const { name } = node.expression as ExpressionName
+      const info = cg.symbolTable.queryVariable(name)
+      if (!Array.isArray(info)) {
+        cg.code.push(OPCODE.IINC, info.index, node.operator === '++' ? 1 : -1)
+      }
+    }
+    return { stackSize: 0, resultType: EMPTY_TYPE }
   },
 
   PrefixExpression: (node: Node, cg: CodeGenerator) => {

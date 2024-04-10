@@ -79,7 +79,7 @@ export interface ExpressionStatement extends BaseNode {
   stmtExp: StatementExpression;
 }
 
-export type StatementExpression = MethodInvocation | Assignment;
+export type StatementExpression = MethodInvocation | Assignment | UnaryExpression;
 
 export interface MethodInvocation extends BaseNode {
   kind: "MethodInvocation";
@@ -142,13 +142,13 @@ export interface ClassInstanceCreationExpression extends BaseNode {
 export interface Literal extends BaseNode {
   kind: "Literal";
   literalType:
-    | IntegerLiteral
-    | FloatingPointLiteral
-    | BooleanLiteral
-    | CharacterLiteral
-    | TextBlockLiteral
-    | StringLiteral
-    | NullLiteral;
+  | IntegerLiteral
+  | FloatingPointLiteral
+  | BooleanLiteral
+  | CharacterLiteral
+  | TextBlockLiteral
+  | StringLiteral
+  | NullLiteral;
 }
 
 export type IntegerLiteral =
@@ -243,18 +243,18 @@ export interface Assignment extends BaseNode {
   kind: "Assignment";
   left: LeftHandSide;
   operator:
-    | "="
-    | "+="
-    | "-="
-    | "*="
-    | "/="
-    | "%="
-    | "|="
-    | "&="
-    | "^="
-    | "<<="
-    | ">>="
-    | ">>>=";
+  | "="
+  | "+="
+  | "-="
+  | "*="
+  | "/="
+  | "%="
+  | "|="
+  | "&="
+  | "^="
+  | "<<="
+  | ">>="
+  | ">>>=";
   right: Expression;
 }
 

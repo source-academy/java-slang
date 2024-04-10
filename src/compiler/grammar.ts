@@ -864,11 +864,20 @@ ForUpdate
 
 StatementExpressionList
   = head:StatementExpression tail:(comma @StatementExpression)* {
-    return [head, ...tail];
+    return [head, ...tail].map(s => {
+      return {
+        kind: "ExpressionStatement", stmtExp: s
+      }
+    });
   }
 
 ExpressionStatement
-  = @StatementExpression semicolon
+  = se:StatementExpression semicolon {
+    return {
+      kind: "ExpressionStatement",
+      stmtExp: se,
+    }
+  }
 
 StatementExpression
   = Assignment

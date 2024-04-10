@@ -34,7 +34,25 @@ export const rawLibInfo = {
             "public void println(float)",
             "public void println(double)",
             "public void println(char)",
-            "public void println(boolean)"
+            "public void println(boolean)",
+            "public void print(java.lang.String)",
+            "public void print(int)",
+            "public void print(long)",
+            "public void print(float)",
+            "public void print(double)",
+            "public void print(char)",
+            "public void print(boolean)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "java.util",
+      "classes": [
+        {
+          "name": "public java.util.Arrays",
+          "methods": [
+            "public static java.lang.String toString(int[])"
           ]
         }
       ]
