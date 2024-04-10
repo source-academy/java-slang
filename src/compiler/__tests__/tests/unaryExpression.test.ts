@@ -5,6 +5,27 @@ import {
 
 const testCases: testCase[] = [
   {
+    comment: "single increment/decrement statement",
+    program: `
+    public class Main {
+      public static void main(String[] args) {
+        int a = 1;
+        int b = 2;
+
+        ++a;
+        b++;
+        System.out.println(a);
+        System.out.println(b);
+
+        a--;
+        --b;
+        System.out.println(a);
+        System.out.println(b);
+      }
+    }`,
+    expectedLines: ["2", "3", "1", "2"],
+  },
+  {
     comment: "postfix increment/decrement",
     program: `
     public class Main {

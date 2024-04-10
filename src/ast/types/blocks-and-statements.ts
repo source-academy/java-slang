@@ -79,7 +79,7 @@ export interface ExpressionStatement extends BaseNode {
   stmtExp: StatementExpression;
 }
 
-export type StatementExpression = MethodInvocation | Assignment;
+export type StatementExpression = MethodInvocation | Assignment | UnaryExpression;
 
 export interface MethodInvocation extends BaseNode {
   kind: "MethodInvocation";
