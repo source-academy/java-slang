@@ -34,7 +34,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: main
           submodules: recursive
       - name: Setup Node.js
         uses: actions/setup-node@v4

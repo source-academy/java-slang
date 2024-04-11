@@ -33,7 +33,7 @@ export class ConstructorExtractor extends BaseJavaCstVisitorWithDefaults {
   private location: Location
 
   extract(cst: ConstructorDeclarationCstNode): ConstructorDeclaration {
-    this.location = cst.location
+    this.location = cst.location as Location
     this.visit(cst)
     return {
       kind: 'ConstructorDeclaration',
