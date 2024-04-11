@@ -8,9 +8,9 @@ import {
 
 import { Expression } from '../types/blocks-and-statements'
 import { Identifier, FieldDeclaration, FieldModifier } from '../types/classes'
+import { Location } from '../types'
 import { ExpressionExtractor } from './expression-extractor'
 import { TypeExtractor } from './type-extractor'
-import { Location } from '../types'
 
 export class FieldExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<FieldModifier> = []

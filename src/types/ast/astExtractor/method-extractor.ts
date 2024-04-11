@@ -19,9 +19,9 @@ import {
   Result
 } from '../types/classes'
 import { BlockStatement } from '../types/blocks-and-statements'
+import { Location } from '../types'
 import { BlockStatementExtractor } from './block-statement-extractor'
 import { TypeExtractor } from './type-extractor'
-import { Location } from '../types'
 
 export class MethodExtractor extends BaseJavaCstVisitorWithDefaults {
   private modifier: Array<MethodModifier> = []
