@@ -27,7 +27,7 @@ import {
 } from '../ast/types/blocks-and-statements'
 import { MethodDeclaration, UnannType } from '../ast/types/classes'
 import { ConstantPoolManager } from './constant-pool-manager'
-import { ConstructNotSupportedError } from './error'
+import { ConstructNotSupportedError, InvalidMethodCallError } from './error'
 import { FieldInfo, MethodInfos, SymbolInfo, SymbolTable, VariableInfo } from './symbol-table'
 
 type Label = {
@@ -591,6 +591,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     })
     const argDescriptor = '(' + argTypes.join('') + ')'
 
+    let foundMethod = false
     const methodInfos = symbolInfos[symbolInfos.length - 1] as MethodInfos
     for (let i = 0; i < methodInfos.length; i++) {
       const methodInfo = methodInfos[i]
@@ -615,10 +616,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           method
         )
         resultType = methodInfo.typeDescriptor.slice(argDescriptor.length)
+        foundMethod = true
         break
       }
     }
 
+    if (!foundMethod) {
+      throw new InvalidMethodCallError(n.identifier)
+    }
     return { stackSize: maxStack, resultType: resultType }
   },
 
