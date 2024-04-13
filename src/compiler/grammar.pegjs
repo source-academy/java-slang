@@ -1,15 +1,26 @@
-{{
+{
   function buildBinaryExpression(head, tail) {
     return tail.reduce((result, element) => {
-      return {
+      return addLocInfo({
         kind: "BinaryExpression",
         operator: element[0],
         left: result,
         right: element[1]
-      };
+      });
     }, head);
   }
-}}
+
+  /**
+   * Helper function to create and return a Node with location information
+   */
+  function addLocInfo(node) {
+    const loc = location();
+    return {
+      ...node,
+      location: loc,
+    };
+  }
+}
 
 /*
   Productions from §3 (Lexical Structure)
@@ -50,10 +61,10 @@ Literal
     / StringLiteral
     / NullLiteral
   ) _ {
-    return {
+    return addLocInfo({
       kind: "Literal",
       literalType: l,
-    }
+    })
   }
 
 IntegerLiteral
@@ -431,10 +442,10 @@ TypeName
 
 ExpressionName
   = t:(this dot)? n:Name {
-    return {
+    return addLocInfo({
       kind: "ExpressionName",
       name: (t ? "this." : "") + n,
-    }
+    })
   }
 
 MethodName
@@ -461,11 +472,11 @@ CompilationUnit
 
 OrdinaryCompilationUnit
   = PackageDeclaration? ids:ImportDeclaration* tld:TopLevelClassOrInterfaceDeclaration* {
-    return {
-      kind: "OrdinaryCompilationUnit",
+    return addLocInfo({
+      kind: "CompilationUnit",
       importDeclarations: ids,
       topLevelClassOrInterfaceDeclarations: tld,
-    }
+    })
   }
 
 PackageDeclaration
@@ -503,12 +514,22 @@ ClassDeclaration
   = NormalClassDeclaration
 
 NormalClassDeclaration
-  = cm:ClassModifier* class tm:TypeIdentifier TypeParameters? ClassExtends? ClassImplements? ClassPermits? cb:ClassBody {
-    return {
-      kind: "NormalClassDeclaration",
-      classModifier: cm,
-      typeIdentifier: tm,
-      classBody: cb,
+  = cm:ClassModifier* class tm:TypeIdentifier TypeParameters? ce:ClassExtends? ClassImplements? ClassPermits? cb:ClassBody {
+    if (ce) {
+      return addLocInfo({
+        kind: "NormalClassDeclaration",
+        classModifier: cm,
+        typeIdentifier: tm,
+        sclass: ce,
+        classBody: cb,
+      })
+    } else {
+      return addLocInfo({
+        kind: "NormalClassDeclaration",
+        classModifier: cm,
+        typeIdentifier: tm,
+        classBody: cb,
+      })
     }
   }
 
@@ -530,7 +551,7 @@ TypeParameterList
   = TO_BE_ADDED
 
 ClassExtends
-  = TO_BE_ADDED
+  = extends @ClassType
 
 ClassImplements
   = TO_BE_ADDED
@@ -559,12 +580,12 @@ ClassMemberDeclaration
 
 FieldDeclaration
   = fm:FieldModifier* ut:UnannType vdl:VariableDeclaratorList semicolon {
-    return {
+    return addLocInfo({
       kind: "FieldDeclaration",
       fieldModifier: fm,
       fieldType: ut,
       variableDeclaratorList: vdl,
-    }
+    })
   }
 
 FieldModifier
@@ -588,11 +609,10 @@ VariableDeclarator
   }
 
 VariableDeclaratorId
-  = id:Identifier d:Dims? {
+  = id:Identifier Dims? {
     return {
       kind: "VariableDeclarator",
       variableDeclaratorId: id,
-      dims: d ?? "",
     }
   }
 
@@ -605,12 +625,12 @@ UnannType
 
 MethodDeclaration
   = mm:MethodModifier* mh:MethodHeader mb:MethodBody {
-    return {
+    return addLocInfo({
       kind: "MethodDeclaration",
       methodModifier: mm,
       methodHeader: mh,
       methodBody: mb,
-    }
+    })
   }
 
 MethodModifier
@@ -651,11 +671,10 @@ FormalParameterList
   }
 
 FormalParameter
-  = vm:VariableModifier* ut:UnannType vdid:VariableDeclaratorId {
+  = VariableModifier* ut:UnannType vdid:VariableDeclaratorId {
     return {
       kind: "FormalParameter",
-      variableModifier: vm,
-      unannType: ut + vdid.dims,
+      unannType: ut + (vdid.dims ?? ""),
       identifier: vdid.variableDeclaratorId,
     }
   }
@@ -668,12 +687,12 @@ Throws
 
 ConstructorDeclaration
   = cm:ConstructorModifier* cd:ConstructorDeclarator Throws? cb:ConstructorBody {
-    return {
+    return addLocInfo({
       kind: "ConstructorDeclaration",
       constructorModifier: cm,
       constructorDeclarator: cd,
       constructorBody: cb,
-    }
+    })
   }
 
 ConstructorModifier
@@ -690,15 +709,21 @@ ConstructorDeclarator
   }
 
 ConstructorBody
-  = lcurly ExplicitConstructorInvocation? bs:(@BlockStatement*) rcurly {
-    return {
+  = lcurly eci:ExplicitConstructorInvocation? bs:(@BlockStatement*) rcurly {
+    return addLocInfo({
       kind: "Block",
-      blockStatements: bs,
-    }
+      blockStatements: eci === null ? bs : [eci, ...bs],
+    })
   }
 
 ExplicitConstructorInvocation
-  = ((Primary / ExpressionName) dot)? TypeArguments? (this / super) lparen ArgumentList? rparen
+  = ((Primary / ExpressionName) dot)? TypeArguments? ts:(this / super) lparen al:ArgumentList? rparen semicolon {
+    return addLocInfo({
+      argumentList: al ?? [],
+      kind: "ExplicitConstructorInvocation",
+      thisOrSuper: ts,
+    })
+  }
 
 
 /*
@@ -722,10 +747,10 @@ VariableInitializerList
 */
 Block
   = lcurly bs:(@BlockStatement*) rcurly {
-    return {
+    return addLocInfo({
       kind: "Block",
       blockStatements: bs
-    }
+    })
   }
 
 BlockStatement
@@ -740,13 +765,12 @@ LocalVariableDeclarationStatement
   = @LocalVariableDeclaration semicolon
 
 LocalVariableDeclaration
-  = vm:VariableModifier* ut:UnannType vdl:VariableDeclaratorList {
-    return {
+  = VariableModifier* ut:UnannType vdl:VariableDeclaratorList {
+    return addLocInfo({
       kind: "LocalVariableDeclarationStatement",
-      variableModifier: vm,
       localVariableType: ut,
       variableDeclaratorList: vdl,
-    }
+    })
   }
 
 Statement
@@ -778,25 +802,25 @@ SwitchStatement
 
 DoStatement
   = do body:Statement while lparen expr:Expression rparen semicolon {
-    return {
+    return addLocInfo({
       kind: "DoStatement",
       condition: expr,
       body: body,
-    }
+    })
   }
 
 BreakStatement
   = break semicolon {
-    return {
+    return addLocInfo({
       kind: "BreakStatement",
-    }
+    })
   }
 
 ContinueStatement
   = continue semicolon {
-    return {
+    return addLocInfo({
       kind: "ContinueStatement",
-    }
+    })
   }
 
 YieldStatement
@@ -805,12 +829,12 @@ YieldStatement
 ReturnStatement
   = return expr:Expression? semicolon {
     if (!expr) {
-      return {kind: "ReturnStatement"};
+      return addLocInfo({kind: "ReturnStatement"});
     }
-    return {
+    return addLocInfo({
       kind: "ReturnStatement",
       exp: expr,
-    }
+    })
   }
 
 ThrowStatement
@@ -824,32 +848,32 @@ TryStatement
 
 IfStatement
   = if lparen expr:Expression rparen c:Statement a:(else @Statement)? {
-    return {
+    return addLocInfo({
       kind: "IfStatement",
       condition: expr,
       consequent: c,
       alternate: a,
-    }
+    })
   }
 
 WhileStatement
   = while lparen expr:Expression rparen body:Statement {
-    return {
+    return addLocInfo({
       kind: "WhileStatement",
       condition: expr,
       body: body,
-    }
+    })
   }
 
 ForStatement
   = for lparen init:ForInit? semicolon cond:Expression? semicolon upd:ForUpdate? rparen body:Statement {
-    return {
+    return addLocInfo({
       kind: "BasicForStatement",
       forInit: init ?? [],
       condition: cond,
       forUpdate: upd ?? [],
       body: body,
-    }
+    })
   }
   / for lparen LocalVariableDeclaration colon Expression rparen Statement
 
@@ -871,10 +895,10 @@ StatementExpressionList
 
 ExpressionStatement
   = se:StatementExpression semicolon {
-    return {
+    return addLocInfo({
       kind: "ExpressionStatement",
       stmtExp: se,
-    }
+    })
   }
 
 StatementExpression
@@ -903,19 +927,19 @@ ClassInstanceCreationExpression
 
 UnqualifiedClassInstanceCreationExpression
   = new TypeArguments? c:ClassOrInterfaceTypeToInstantiate lparen al:ArgumentList? rparen ClassBody? {
-    return {
+    return addLocInfo({
       kind: "ClassInstanceCreationExpression",
       identifier: c.identifier,
       argumentList: al ?? [],
-    }
+    })
   }
 
 ClassOrInterfaceTypeToInstantiate
   = id:Name TypeArgumentsOrDiamond? {
-    return {
+    return addLocInfo({
       "kind": "ClassOrInterfaceTypeToInstantiate",
 	    "identifier": id,
-    }
+    })
   }
 
 TypeArgumentsOrDiamond
@@ -924,24 +948,24 @@ TypeArgumentsOrDiamond
 
 FieldAccess
   = id:(Identifier / this) dot n:Name {
-    return {
+    return addLocInfo({
       kind: "FieldAccess",
       name: id + '.' +  n,
-    }
+    })
   }
 
 ArrayAccess
   = en:ExpressionName lsquare expr:Expression rsquare {
-    return {
+    return addLocInfo({
       kind: "ArrayAccess",
       primary: en,
       expression: expr,
-    }
+    })
   }
 
 MethodInvocation
-  = n:Name lparen al:ArgumentList? rparen { 
-    return { kind: "MethodInvocation", identifier:  n, argumentList: al ?? [] }
+  = ts:$((this / super) dot)? n:Name lparen al:ArgumentList? rparen { 
+    return addLocInfo({ kind: "MethodInvocation", identifier: (ts ?? "") + n, argumentList: al ?? [] })
   }
 
 ArgumentList
@@ -983,12 +1007,12 @@ LambdaBody
 
 Assignment
   = lhs:LeftHandSide op:AssignmentOperator rhs:Expression {
-    return {
+    return addLocInfo({
       kind: "Assignment",
       left: lhs,
       operator: op,
       right: rhs,
-    }
+    })
   }
 
 LeftHandSide
@@ -1014,11 +1038,11 @@ ConditionalExpression
       if (!tail) {
         return test;
       }
-      return {
+      return addLocInfo({
         kind: "TernaryExpression",
         condition: test,
         ... tail,
-      }
+      })
     }
 
 ConditionalRest
@@ -1081,11 +1105,11 @@ MultiplicativeExpression
 UnaryExpression
   = PostfixExpression
   / op:PrefixOp expr:UnaryExpression {
-    return {
+    return addLocInfo({
       kind: "PrefixExpression",
       operator: op,
       expression: expr,
-    }
+    })
   }
   / CastExpression
   / SwitchExpression
@@ -1099,11 +1123,11 @@ PlusMinus
 PostfixExpression
   = expr:(Primary / @ExpressionName) 
     op:(increment / decrement)? {
-    return op ? {
+    return op ? addLocInfo({
       kind: "PostfixExpression",
       operator: op,
       expression: expr,
-    } : expr;
+    }) : expr;
   }
 
 CastExpression
