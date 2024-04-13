@@ -5,6 +5,11 @@ import { RuntimeError } from "./errors";
 import { evaluate } from "./interpreter";
 import { Context, Error, Finished, Result } from "./types";
 
+export * from './components';
+export * from './errors';
+export * from './types';
+export { isInstr, isNode } from './utils';
+
 export const runECEvaluator = (
   code: string,
   targetStep: number = STEP_LIMIT,
