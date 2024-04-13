@@ -600,7 +600,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           methodInfo.name,
           methodInfo.typeDescriptor
         )
-        if (n.identifier.startsWith('this.') && !(methodInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+        if (
+          n.identifier.startsWith('this.') &&
+          !(methodInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)
+        ) {
           // load "this"
           cg.code.push(OPCODE.ALOAD, 0)
         }
