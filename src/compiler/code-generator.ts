@@ -500,7 +500,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
 
       const res = compile(node, cg)
-      cg.addBranchInstr(onTrue ? OPCODE.IFNE : OPCODE.IFEQ, cg.labels[cg.labels.length - 1])
+      cg.addBranchInstr(onTrue ? OPCODE.IFNE : OPCODE.IFEQ, targetLabel)
       return res
     }
     return f(node, cg.labels[cg.labels.length - 1], false)
