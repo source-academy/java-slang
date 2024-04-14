@@ -1,3 +1,4 @@
+import { IToken } from 'java-parser'
 import { Location } from '../types'
 
 export const getLocation = (object: Location): Location => ({
@@ -7,4 +8,10 @@ export const getLocation = (object: Location): Location => ({
   endLine: object.endLine,
   endOffset: object.endOffset,
   startColumn: object.startColumn
+})
+
+export const getIdentifier = (object: IToken) => ({
+  kind: 'Identifier',
+  identifier: object.image,
+  location: getLocation(object)
 })
