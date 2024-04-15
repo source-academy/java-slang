@@ -1,21 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { BaseJavaCstVisitor, default as JavaParser } from 'java-parser'
 import { getIdentifier, getLocation } from './utils'
-import {
-  ArgumentList,
-  ArrayAccess,
-  ArrayCreationExpression,
-  ArrayCreationExpressionWithInitializer,
-  ArrayCreationExpressionWithoutInitializer,
-  ArrayInitializer,
-  AssertStatement,
-  AssignmentExpression,
-  BasicForStatement,
-  Expression,
-  IntegerLiteral,
-  Literal,
-  UnaryExpression
-} from './specificationTypes'
+import * as AST from './specificationTypes'
 
 const BINARY_OPERATORS = [
   ['||'],
@@ -68,7 +54,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  argumentList(ctx: JavaParser.ArgumentListCtx): ArgumentList {
+  argumentList(ctx: JavaParser.ArgumentListCtx): AST.ArgumentList {
     return {
       kind: 'ArgumentList',
       expressions: ctx.expression.map(expression => this.visit(expression)),
@@ -76,7 +62,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  arrayAccessSuffix(ctx: JavaParser.ArrayAccessSuffixCtx): Omit<ArrayAccess, 'primary'> {
+  arrayAccessSuffix(ctx: JavaParser.ArrayAccessSuffixCtx): Omit<AST.ArrayAccess, 'primary'> {
     return {
       kind: 'ArrayAccess',
       expression: this.visit(ctx.expression),
@@ -86,7 +72,7 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   arrayCreationDefaultInitSuffix(
     ctx: JavaParser.ArrayCreationDefaultInitSuffixCtx
-  ): ArrayCreationExpressionWithoutInitializer {
+  ): AST.ArrayCreationExpressionWithoutInitializer {
     return {
       kind: 'ArrayCreationExpressionWithoutInitializer',
       dimExprs: this.visit(ctx.dimExprs),
@@ -97,7 +83,7 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   arrayCreationExplicitInitSuffix(
     ctx: JavaParser.ArrayCreationExplicitInitSuffixCtx
-  ): ArrayCreationExpressionWithInitializer {
+  ): AST.ArrayCreationExpressionWithInitializer {
     return {
       kind: 'ArrayCreationExpressionWithInitializer',
       arrayInitializer: this.visit(ctx.arrayInitializer),
@@ -106,7 +92,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  arrayCreationExpression(ctx: JavaParser.ArrayCreationExpressionCtx): ArrayCreationExpression {
+  arrayCreationExpression(ctx: JavaParser.ArrayCreationExpressionCtx): AST.ArrayCreationExpression {
     const result: Record<string, any> = { location: getLocation(ctx.New[0]) }
     if (ctx.classOrInterfaceType) result.type = this.visit(ctx.classOrInterfaceType)
     if (ctx.primitiveType) result.type = this.visit(ctx.primitiveType)
@@ -122,7 +108,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  arrayInitializer(ctx: JavaParser.ArrayInitializerCtx): ArrayInitializer {
+  arrayInitializer(ctx: JavaParser.ArrayInitializerCtx): AST.ArrayInitializer {
     return {
       kind: 'ArrayInitializer',
       variableInitializerList: ctx.variableInitializerList
@@ -132,7 +118,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  assertStatement(ctx: JavaParser.AssertStatementCtx): AssertStatement {
+  assertStatement(ctx: JavaParser.AssertStatementCtx): AST.AssertStatement {
     return {
       kind: 'AssertStatement',
       expression1: this.visit(ctx.expression[0]),
@@ -141,7 +127,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  basicForStatement(ctx: JavaParser.BasicForStatementCtx): BasicForStatement {
+  basicForStatement(ctx: JavaParser.BasicForStatementCtx): AST.BasicForStatement {
     return {
       kind: 'BasicForStatement',
       forInit: ctx.forInit ? this.visit(ctx.forInit) : [],
@@ -152,7 +138,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  binaryExpression(ctx: JavaParser.BinaryExpressionCtx): AssignmentExpression {
+  binaryExpression(ctx: JavaParser.BinaryExpressionCtx): AST.AssignmentExpression {
     if (ctx.AssignmentOperator && ctx.expression) {
       return {
         kind: 'Assignment',
@@ -849,7 +835,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     return this.visit(ctx.block)
   }
 
-  integerLiteral(ctx: JavaParser.IntegerLiteralCtx): IntegerLiteral {
+  integerLiteral(ctx: JavaParser.IntegerLiteralCtx): AST.IntegerLiteral {
     if (ctx.BinaryLiteral) {
       return {
         kind: 'BinaryLiteral',
@@ -1099,7 +1085,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  literal(ctx: JavaParser.LiteralCtx): Literal {
+  literal(ctx: JavaParser.LiteralCtx): AST.Literal {
     if (ctx.integerLiteral) return this.visit(ctx.integerLiteral)
     if (ctx.floatingPointLiteral) return this.visit(ctx.floatingPointLiteral)
     if (ctx.booleanLiteral) return this.visit(ctx.booleanLiteral)
@@ -1688,7 +1674,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  ternaryExpression(ctx: JavaParser.TernaryExpressionCtx): Expression {
+  ternaryExpression(ctx: JavaParser.TernaryExpressionCtx): AST.Expression {
     const binaryExpression = this.visit(ctx.binaryExpression)
     if (ctx.Colon && ctx.QuestionMark && ctx.expression) {
       return {
@@ -1867,7 +1853,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     return getIdentifier(ctx.Identifier[0])
   }
 
-  unaryExpression(ctx: JavaParser.UnaryExpressionCtx): UnaryExpression {
+  unaryExpression(ctx: JavaParser.UnaryExpressionCtx): AST.UnaryExpression {
     const primary = this.visit(ctx.primary)
     if (ctx.UnaryPrefixOperator) {
       return {
