@@ -23,7 +23,8 @@ import {
   DoStatement,
   ClassInstanceCreationExpression,
   ExpressionStatement,
-  TernaryExpression
+  TernaryExpression,
+  LeftHandSide
 } from '../ast/types/blocks-and-statements'
 import { MethodDeclaration, UnannType } from '../ast/types/classes'
 import { ConstantPoolManager } from './constant-pool-manager'
@@ -169,6 +170,13 @@ type CompileResult = {
 }
 const EMPTY_TYPE: string = ''
 
+const createIntLiteralNode = (int: number): Literal => {
+  return {
+    kind: 'Literal',
+    literalType: { kind: 'DecimalIntegerLiteral', value: int.toString() }
+  }
+}
+
 function compile(node: Node, cg: CodeGenerator): CompileResult {
   if (!(node.kind in codeGenerators)) {
     throw new ConstructNotSupportedError(node.kind)
@@ -193,12 +201,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   LocalVariableDeclarationStatement: (node: Node, cg: CodeGenerator) => {
-    const createIntLiteralNode = (int: number): Node => {
-      return {
-        kind: 'Literal',
-        literalType: { kind: 'DecimalIntegerLiteral', value: int.toString() }
-      }
-    }
     let maxStack = 0
     const { variableDeclaratorList: lst, localVariableType: type } =
       node as LocalVariableDeclarationStatement
@@ -230,7 +232,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           cg.code.push(
             OPCODE.ANEWARRAY,
             0,
-            cg.constantPoolManager.indexClassInfo(variableInfo.typeName.slice(0, -2))
+            cg.constantPoolManager.indexClassInfo(cg.symbolTable.queryClass(variableInfo.typeName.slice(0, -2)).name)
           )
         }
 
@@ -677,10 +679,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const varIndex = (infos[0] as VariableInfo).index
       if (varIndex !== undefined) {
         cg.code.push(OPCODE.ALOAD, varIndex)
-      } else {
+        maxStack += 1
+      } else if (lhs.name.startsWith('this.')) {
+        // load "this"
         cg.code.push(OPCODE.ALOAD, 0)
+        maxStack += 1
       }
-      maxStack = 1 + compile(right, cg).stackSize
+      maxStack += compile(right, cg).stackSize
       cg.code.push(
         fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC ? OPCODE.PUTSTATIC : OPCODE.PUTFIELD,
         0,
@@ -726,11 +731,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   IncrementDecrementExpression: (node: Node, cg: CodeGenerator) => {
     // handle cases of ++x, x++, x--, --x that do not add object to operand stack
     if (node.kind === 'PrefixExpression' || node.kind === 'PostfixExpression') {
-      const { name } = node.expression as ExpressionName
-      const info = cg.symbolTable.queryVariable(name)
-      if (!Array.isArray(info)) {
-        cg.code.push(OPCODE.IINC, info.index, node.operator === '++' ? 1 : -1)
+      const assignment: Assignment = {
+        kind: "Assignment",
+        left: node.expression as LeftHandSide,
+        operator: '=',
+        right: {
+          kind: "BinaryExpression",
+          left: node.expression,
+          operator: node.operator === '++' ? '+' : '-',
+          right: createIntLiteralNode(1),
+        }
       }
+      return compile(assignment, cg)
     }
     return { stackSize: 0, resultType: EMPTY_TYPE }
   },
@@ -738,15 +750,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   PrefixExpression: (node: Node, cg: CodeGenerator) => {
     const { operator: op, expression: expr } = node as PrefixExpression
     if (op === '++' || op === '--') {
-      const { name: name } = expr as ExpressionName
-      const info = cg.symbolTable.queryVariable(name)
-      if (Array.isArray(info)) {
-        return { stackSize: 1, resultType: EMPTY_TYPE } // TODO
-      } else {
-        cg.code.push(OPCODE.IINC, info.index, op === '++' ? 1 : -1)
-        cg.code.push(OPCODE.ILOAD, info.index)
-        return { stackSize: 1, resultType: info.typeDescriptor }
-      }
+      // increment/decrement then load
+      const res = codeGenerators['IncrementDecrementExpression'](node, cg)
+      const loadRes = compile(expr, cg)
+      res.stackSize = Math.max(res.stackSize, loadRes.stackSize)
+      res.resultType = loadRes.resultType
+      return res
     }
 
     const compileResult = compile(expr, cg)
@@ -769,16 +778,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   PostfixExpression: (node: Node, cg: CodeGenerator) => {
-    const { operator: op, expression: expr } = node as PostfixExpression
-    const { name: name } = expr as ExpressionName
-    const info = cg.symbolTable.queryVariable(name)
-    if (Array.isArray(info)) {
-      return { stackSize: 1, resultType: EMPTY_TYPE } //TODO
-    } else {
-      cg.code.push(OPCODE.ILOAD, info.index)
-      cg.code.push(OPCODE.IINC, info.index, op === '++' ? 1 : -1)
-      return { stackSize: 1, resultType: info.typeDescriptor }
-    }
+    const { expression: expr } = node as PostfixExpression
+    // load then increment/decrement
+    const loadRes = compile(expr, cg)
+    const res = codeGenerators['IncrementDecrementExpression'](node, cg)
+    res.stackSize += loadRes.stackSize
+    res.resultType = loadRes.resultType
+    return res
   },
 
   ExpressionName: (node: Node, cg: CodeGenerator) => {
