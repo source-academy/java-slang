@@ -1,5 +1,5 @@
 import { IToken } from 'java-parser'
-import { Identifier, Location } from './javaSpecTypes'
+import { Identifier, Location } from './specificationTypes'
 
 export const getLocation = (object: Location): Location => ({
   startLine: object.startLine,

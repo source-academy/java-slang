@@ -15,7 +15,7 @@ import {
   IntegerLiteral,
   Literal,
   UnaryExpression
-} from './javaSpecTypes'
+} from './specificationTypes'
 
 const BINARY_OPERATORS = [
   ['||'],
