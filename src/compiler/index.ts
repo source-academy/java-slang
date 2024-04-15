@@ -3,6 +3,7 @@ import { AST } from '../ast/types/packages-and-modules'
 import { ClassFile } from '../ClassFile/types'
 import { Compiler } from './compiler'
 import { javaPegGrammar } from './grammar'
+import { peggyFunctions } from './peggy-functions'
 
 export const compile = (ast: AST): ClassFile => {
   const compiler = new Compiler()
@@ -10,7 +11,7 @@ export const compile = (ast: AST): ClassFile => {
 }
 
 export const compileFromSource = (javaProgram: string): ClassFile => {
-  const parser = peggy.generate(javaPegGrammar, {
+  const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
     allowedStartRules: ['CompilationUnit'],
     cache: true
   })

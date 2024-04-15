@@ -238,7 +238,7 @@ export class SymbolTable {
     this.curTable.set(key, symbolNode)
   }
 
-  private queryClass(name: string): ClassInfo {
+  queryClass(name: string): ClassInfo {
     const root = this.tables[0]
 
     let key = generateSymbol(name, SymbolType.CLASS)

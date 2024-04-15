@@ -3,6 +3,7 @@ import { compile } from "../../index";
 import { BinaryWriter } from "../../binary-writer";
 import { AST } from "../../../ast/types/packages-and-modules";
 import { javaPegGrammar } from "../../grammar"
+import { peggyFunctions } from '../../peggy-functions'
 import { execSync } from "child_process";
 
 import * as peggy from "peggy";
@@ -16,7 +17,7 @@ export type testCase = {
 
 const debug = false;
 const pathToTestDir = "./src/compiler/__tests__/";
-const parser = peggy.generate(javaPegGrammar, {
+const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
   allowedStartRules: ["CompilationUnit"],
 });
 const binaryWriter = new BinaryWriter();
