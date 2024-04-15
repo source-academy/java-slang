@@ -232,7 +232,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           cg.code.push(
             OPCODE.ANEWARRAY,
             0,
-            cg.constantPoolManager.indexClassInfo(cg.symbolTable.queryClass(variableInfo.typeName.slice(0, -2)).name)
+            cg.constantPoolManager.indexClassInfo(
+              cg.symbolTable.queryClass(variableInfo.typeName.slice(0, -2)).name
+            )
           )
         }
 
@@ -732,14 +734,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     // handle cases of ++x, x++, x--, --x that do not add object to operand stack
     if (node.kind === 'PrefixExpression' || node.kind === 'PostfixExpression') {
       const assignment: Assignment = {
-        kind: "Assignment",
+        kind: 'Assignment',
         left: node.expression as LeftHandSide,
         operator: '=',
         right: {
-          kind: "BinaryExpression",
+          kind: 'BinaryExpression',
           left: node.expression,
           operator: node.operator === '++' ? '+' : '-',
-          right: createIntLiteralNode(1),
+          right: createIntLiteralNode(1)
         }
       }
       return compile(assignment, cg)
