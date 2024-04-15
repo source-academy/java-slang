@@ -1,6 +1,6 @@
 public class Main {
+  int class = 1;
   public static void main(String[] args) {
-    throwing();
+    int this = 1;
   }
-  public static void throwing() throws Exception {}
 }

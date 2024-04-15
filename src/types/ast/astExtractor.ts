@@ -1,6 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { BaseJavaCstVisitor, default as JavaParser } from 'java-parser'
 import { getIdentifier, getLocation } from './utils'
+import {
+  ArgumentList,
+  ArrayAccess,
+  ArrayCreationExpression,
+  ArrayCreationExpressionWithInitializer,
+  ArrayCreationExpressionWithoutInitializer,
+  ArrayInitializer,
+  AssertStatement,
+  AssignmentExpression,
+  BasicForStatement,
+  Expression,
+  IntegerLiteral,
+  Literal,
+  UnaryExpression
+} from './javaSpecTypes'
 
 const BINARY_OPERATORS = [
   ['||'],
@@ -53,14 +68,15 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  argumentList(ctx: JavaParser.ArgumentListCtx) {
+  argumentList(ctx: JavaParser.ArgumentListCtx): ArgumentList {
     return {
+      kind: 'ArgumentList',
       expressions: ctx.expression.map(expression => this.visit(expression)),
       location: getLocation(ctx.expression[0].location)
     }
   }
 
-  arrayAccessSuffix(ctx: JavaParser.ArrayAccessSuffixCtx) {
+  arrayAccessSuffix(ctx: JavaParser.ArrayAccessSuffixCtx): Omit<ArrayAccess, 'primary'> {
     return {
       kind: 'ArrayAccess',
       expression: this.visit(ctx.expression),
@@ -68,68 +84,75 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  arrayCreationDefaultInitSuffix(ctx: JavaParser.ArrayCreationDefaultInitSuffixCtx) {
+  arrayCreationDefaultInitSuffix(
+    ctx: JavaParser.ArrayCreationDefaultInitSuffixCtx
+  ): ArrayCreationExpressionWithoutInitializer {
     return {
+      kind: 'ArrayCreationExpressionWithoutInitializer',
       dimExprs: this.visit(ctx.dimExprs),
       dims: ctx.dims ? this.visit(ctx.dims) : undefined,
       location: getLocation(ctx.dimExprs[0].location)
     }
   }
 
-  arrayCreationExplicitInitSuffix(ctx: JavaParser.ArrayCreationExplicitInitSuffixCtx) {
+  arrayCreationExplicitInitSuffix(
+    ctx: JavaParser.ArrayCreationExplicitInitSuffixCtx
+  ): ArrayCreationExpressionWithInitializer {
     return {
+      kind: 'ArrayCreationExpressionWithInitializer',
       arrayInitializer: this.visit(ctx.arrayInitializer),
       dims: this.visit(ctx.dims),
       location: getLocation(ctx.dims[0].location)
     }
   }
 
-  arrayCreationExpression(ctx: JavaParser.ArrayCreationExpressionCtx) {
+  arrayCreationExpression(ctx: JavaParser.ArrayCreationExpressionCtx): ArrayCreationExpression {
     const result: Record<string, any> = { location: getLocation(ctx.New[0]) }
     if (ctx.classOrInterfaceType) result.type = this.visit(ctx.classOrInterfaceType)
     if (ctx.primitiveType) result.type = this.visit(ctx.primitiveType)
-
     if (ctx.arrayCreationDefaultInitSuffix) {
       return {
-        kind: 'ArrayCreationExpressionWithoutInitializer',
         ...result,
         ...this.visit(ctx.arrayCreationDefaultInitSuffix)
       }
-    } else if (ctx.arrayCreationExplicitInitSuffix) {
-      return {
-        kind: 'ArrayCreationExpressionWithoutInitializer',
-        ...result,
-        ...this.visit(ctx.arrayCreationExplicitInitSuffix)
-      }
+    }
+    return {
+      ...result,
+      ...this.visit(ctx.arrayCreationExplicitInitSuffix!)
     }
   }
 
-  arrayInitializer(ctx: JavaParser.ArrayInitializerCtx) {
-    if (ctx.variableInitializerList) {
-      return {
-        variableInitializerList: this.visit(ctx.variableInitializerList),
-        locaton: getLocation(ctx.LCurly[0])
-      }
+  arrayInitializer(ctx: JavaParser.ArrayInitializerCtx): ArrayInitializer {
+    return {
+      kind: 'ArrayInitializer',
+      variableInitializerList: ctx.variableInitializerList
+        ? this.visit(ctx.variableInitializerList)
+        : [],
+      location: getLocation(ctx.LCurly[0])
     }
   }
 
-  assertStatement(ctx: JavaParser.AssertStatementCtx) {
-    throw new Error('Not implemented')
+  assertStatement(ctx: JavaParser.AssertStatementCtx): AssertStatement {
+    return {
+      kind: 'AssertStatement',
+      expression1: this.visit(ctx.expression[0]),
+      expression2: ctx.expression.length > 1 ? this.visit(ctx.expression[1]) : undefined,
+      location: getLocation(ctx.Assert[0])
+    }
   }
 
-  basicForStatement(ctx: JavaParser.BasicForStatementCtx) {
+  basicForStatement(ctx: JavaParser.BasicForStatementCtx): BasicForStatement {
     return {
       kind: 'BasicForStatement',
       forInit: ctx.forInit ? this.visit(ctx.forInit) : [],
-      condition: this.visit(ctx.expression![0]),
+      expression: this.visit(ctx.expression![0]),
       forUpdate: ctx.forUpdate ? this.visit(ctx.forUpdate) : [],
-      body: this.visit(ctx.statement[0]),
+      statement: this.visit(ctx.statement[0]),
       location: getLocation(ctx.For[0])
     }
   }
 
-  // @ts-expect-error ts(7023)
-  binaryExpression(ctx: JavaParser.BinaryExpressionCtx) {
+  binaryExpression(ctx: JavaParser.BinaryExpressionCtx): AssignmentExpression {
     if (ctx.AssignmentOperator && ctx.expression) {
       return {
         kind: 'Assignment',
@@ -826,14 +849,36 @@ class AstExtractor extends BaseJavaCstVisitor {
     return this.visit(ctx.block)
   }
 
-  integerLiteral(ctx: JavaParser.IntegerLiteralCtx) {
-    return [ctx.BinaryLiteral, ctx.DecimalLiteral, ctx.HexLiteral, ctx.OctalLiteral]
-      .filter(integerLiteral => integerLiteral !== undefined)
-      .map(integerLiteral => ({
-        kind: 'IntegerLiteral',
-        identifier: getIdentifier(integerLiteral![0]),
-        location: getLocation(integerLiteral![0])
-      }))[0]
+  integerLiteral(ctx: JavaParser.IntegerLiteralCtx): IntegerLiteral {
+    if (ctx.BinaryLiteral) {
+      return {
+        kind: 'BinaryLiteral',
+        identifier: getIdentifier(ctx.BinaryLiteral[0]),
+        location: getLocation(ctx.BinaryLiteral[0])
+      }
+    }
+
+    if (ctx.DecimalLiteral) {
+      return {
+        kind: 'DecimalLiteral',
+        identifier: getIdentifier(ctx.DecimalLiteral[0]),
+        location: getLocation(ctx.DecimalLiteral[0])
+      }
+    }
+
+    if (ctx.HexLiteral) {
+      return {
+        kind: 'HexLiteral',
+        identifier: getIdentifier(ctx.HexLiteral[0]),
+        location: getLocation(ctx.HexLiteral[0])
+      }
+    }
+
+    return {
+      kind: 'OctalLiteral',
+      identifier: getIdentifier(ctx.OctalLiteral![0]),
+      location: getLocation(ctx.OctalLiteral![0])
+    }
   }
 
   integralType(ctx: JavaParser.IntegralTypeCtx) {
@@ -1054,41 +1099,32 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  literal(ctx: JavaParser.LiteralCtx) {
-    let literalType
-    if (ctx.integerLiteral) literalType = this.visit(ctx.integerLiteral)
-    if (ctx.floatingPointLiteral) literalType = this.visit(ctx.floatingPointLiteral)
-    if (ctx.booleanLiteral) literalType = this.visit(ctx.booleanLiteral)
+  literal(ctx: JavaParser.LiteralCtx): Literal {
+    if (ctx.integerLiteral) return this.visit(ctx.integerLiteral)
+    if (ctx.floatingPointLiteral) return this.visit(ctx.floatingPointLiteral)
+    if (ctx.booleanLiteral) return this.visit(ctx.booleanLiteral)
 
     if (ctx.CharLiteral) {
-      literalType = {
+      return {
         kind: 'CharacterLiteral',
-        value: ctx.CharLiteral[0].image,
+        identifier: getIdentifier(ctx.CharLiteral[0]),
         location: getLocation(ctx.CharLiteral[0])
-      }
-    }
-
-    if (ctx.Null) {
-      literalType = {
-        kind: 'NullLiteral',
-        value: ctx.Null[0].image,
-        location: getLocation(ctx.Null[0])
       }
     }
 
     for (const stringLiteral of [ctx.TextBlock, ctx.StringLiteral]) {
       if (!stringLiteral) continue
-      literalType = {
+      return {
         kind: 'StringLiteral',
-        value: stringLiteral[0].image,
+        identifier: getIdentifier(stringLiteral[0]),
         location: getLocation(stringLiteral[0])
       }
     }
 
     return {
-      kind: 'Literal',
-      literalType,
-      location: literalType.location
+      kind: 'NullLiteral',
+      identifier: getIdentifier(ctx.Null![0]),
+      location: getLocation(ctx.Null![0])
     }
   }
 
@@ -1652,17 +1688,18 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  ternaryExpression(ctx: JavaParser.TernaryExpressionCtx) {
+  ternaryExpression(ctx: JavaParser.TernaryExpressionCtx): Expression {
     const binaryExpression = this.visit(ctx.binaryExpression)
     if (ctx.Colon && ctx.QuestionMark && ctx.expression) {
       return {
         kind: 'ConditionalExpression',
         conditionalExpression: binaryExpression,
         consequentExpression: this.visit(ctx.expression[0]),
-        alternativeExpression: this.visit(ctx.expression[1]),
+        alternateExpression: this.visit(ctx.expression[1]),
         location: getLocation(ctx.binaryExpression[0].location)
       }
     }
+    return binaryExpression
   }
 
   throwStatement(ctx: JavaParser.ThrowStatementCtx) {
@@ -1830,9 +1867,26 @@ class AstExtractor extends BaseJavaCstVisitor {
     return getIdentifier(ctx.Identifier[0])
   }
 
-  unaryExpression(ctx: JavaParser.UnaryExpressionCtx) {
-    if (ctx.UnaryPrefixOperator) return getIdentifier(ctx.UnaryPrefixOperator[0])
-    if (ctx.UnarySuffixOperator) return getIdentifier(ctx.UnarySuffixOperator[0])
+  unaryExpression(ctx: JavaParser.UnaryExpressionCtx): UnaryExpression {
+    const primary = this.visit(ctx.primary)
+    if (ctx.UnaryPrefixOperator) {
+      return {
+        kind: 'UnaryExpression',
+        prefixOperator: getIdentifier(ctx.UnaryPrefixOperator[0]),
+        primary,
+        location: getLocation(ctx.UnaryPrefixOperator[0])
+      }
+    }
+
+    if (ctx.UnarySuffixOperator) {
+      return {
+        kind: 'PostfixExpression',
+        postfixOperator: getIdentifier(ctx.UnarySuffixOperator[0]),
+        primary,
+        location: getLocation(ctx.primary[0].location)
+      }
+    }
+
     return this.visit(ctx.primary)
   }
 

@@ -1,5 +1,5 @@
 import { IToken } from 'java-parser'
-import { Location } from '../types'
+import { Identifier, Location } from './javaSpecTypes'
 
 export const getLocation = (object: Location): Location => ({
   startLine: object.startLine,
@@ -10,7 +10,7 @@ export const getLocation = (object: Location): Location => ({
   startColumn: object.startColumn
 })
 
-export const getIdentifier = (object: IToken) => ({
+export const getIdentifier = (object: IToken): Identifier => ({
   kind: 'Identifier',
   identifier: object.image,
   location: getLocation(object)
