@@ -7,7 +7,7 @@
 // TODO: Implement types for annotation
 // TODO: Implement types for packages and modules
 
-export type Node = Expression | Statement
+export type Node = CompilationUnit | Expression | Statement
 
 export type Location = {
   startOffset: number
@@ -273,6 +273,8 @@ export type ClassType = {
   typeIdentifier: TypeIdentifier
   location: Location
 }
+
+export type CompilationUnit = OrdinaryCompilationUnit
 
 export type ConditionalExpression =
   | BinaryExpression
@@ -720,6 +722,12 @@ export type OctalLiteral = {
   location: Location
 }
 
+export type OrdinaryCompilationUnit = {
+  kind: 'OrdinaryCompilationUnit'
+  topLevelClassOrInterfaceDeclarations: TopLevelClassOrInterfaceDeclaration[]
+  location: Location
+}
+
 export type ParenthesisExpression = {
   kind: 'ParenthesisExpression'
   expression: Expression
@@ -949,6 +957,8 @@ export type ThrowStatement = {
   expression: Expression
   location: Location
 }
+
+export type TopLevelClassOrInterfaceDeclaration = ClassDeclaration | InterfaceDeclaration
 
 export type TryStatement = {
   kind: 'TryStatement'

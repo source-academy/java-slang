@@ -1,6 +1,9 @@
 import { parse as parseToCst } from 'java-parser'
 import { TypeCheckerError } from '../errors'
 import AstExtractor from './extractor'
+import { CompilationUnit } from './specificationTypes'
+
+export * as AST from './specificationTypes'
 
 const JAVA_PARSER_ERROR_PREFIX = 'Sad sad panda'
 const NOT_IMPLEMENTED = 'Not implemented'
@@ -11,7 +14,7 @@ const UNSUPPORTED_JAVA_PARSER_ERROR = 'Trying to parse unsupported Java specific
  * Parse program string into Abstract Syntax Tree (AST).
  * @throws {SyntaxError} Throw error if program is syntactically invalid.
  */
-export const parse = (programStr: string): TypeCheckerError => {
+export const parse = (programStr: string): CompilationUnit | TypeCheckerError => {
   try {
     const cst = parseToCst(programStr)
     const extractor = new AstExtractor()
