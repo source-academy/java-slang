@@ -711,29 +711,23 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       let r: CompileResult = { stackSize: 0, resultType: EMPTY_TYPE }
       const targetLabel = cg.generateNewLabel()
       if (isNullLiteral(left) && isNullLiteral(right)) {
-        cg.code.push(op === '==' ? OPCODE.ICONST_1 : OPCODE.ICONST_0);
+        cg.code.push(op === '==' ? OPCODE.ICONST_1 : OPCODE.ICONST_0)
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
       } else if (isNullLiteral(left)) {
         // still use l to represent the first argument pushed onto stack
         l = compile(right, cg)
-        cg.addBranchInstr(
-          op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL,
-          targetLabel
-        )
+        cg.addBranchInstr(op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
       } else if (isNullLiteral(right)) {
         l = compile(left, cg)
-        cg.addBranchInstr(
-          op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL,
-          targetLabel
-        )
+        cg.addBranchInstr(op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
       } else {
         l = compile(left, cg)
         r = compile(right, cg)
         cg.addBranchInstr(reverseLogicalOp[op], targetLabel)
       }
-      cg.code.push(OPCODE.ICONST_1);
+      cg.code.push(OPCODE.ICONST_1)
       targetLabel.offset = cg.code.length
-      cg.code.push(OPCODE.ICONST_0);
+      cg.code.push(OPCODE.ICONST_0)
       return {
         stackSize: Math.max(
           l.stackSize,
