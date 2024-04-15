@@ -1,6 +1,6 @@
 import { parse as parseToCst } from 'java-parser'
 import { TypeCheckerError } from '../errors'
-import AstExtractor from './astExtractor'
+import AstExtractor from './extractor'
 
 const JAVA_PARSER_ERROR_PREFIX = 'Sad sad panda'
 const NOT_IMPLEMENTED = 'Not implemented'
