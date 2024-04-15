@@ -170,6 +170,10 @@ type CompileResult = {
 }
 const EMPTY_TYPE: string = ''
 
+const isNullLiteral = (node: Node) => {
+  return node.kind === 'Literal' && node.literalType.kind === 'NullLiteral'
+}
+
 const createIntLiteralNode = (int: number): Literal => {
   return {
     kind: 'Literal',
@@ -414,9 +418,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   LogicalExpression: (node: Node, cg: CodeGenerator) => {
-    const isNullLiteral = (node: Node) => {
-      return node.kind === 'Literal' && node.literalType.kind === 'NullLiteral'
-    }
     const f = (node: Node, targetLabel: Label, onTrue: boolean): CompileResult => {
       if (node.kind === 'Literal') {
         const {
@@ -475,7 +476,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             resultType: cg.symbolTable.generateFieldDescriptor('boolean')
           }
         } else if (op in reverseLogicalOp) {
-          if (isNullLiteral(left)) {
+          if (isNullLiteral(left) && isNullLiteral(right)) {
+            if (onTrue === (op === '==')) {
+              cg.addBranchInstr(OPCODE.GOTO, targetLabel)
+            }
+            return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
+          } else if (isNullLiteral(left)) {
             // still use l to represent the first argument pushed onto stack
             l = compile(right, cg)
             cg.addBranchInstr(
@@ -700,6 +706,43 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   BinaryExpression: (node: Node, cg: CodeGenerator) => {
     const { left: left, right: right, operator: op } = node as BinaryExpression
+    if (op in reverseLogicalOp) {
+      let l: CompileResult = { stackSize: 0, resultType: EMPTY_TYPE }
+      let r: CompileResult = { stackSize: 0, resultType: EMPTY_TYPE }
+      const targetLabel = cg.generateNewLabel()
+      if (isNullLiteral(left) && isNullLiteral(right)) {
+        cg.code.push(op === '==' ? OPCODE.ICONST_1 : OPCODE.ICONST_0);
+        return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
+      } else if (isNullLiteral(left)) {
+        // still use l to represent the first argument pushed onto stack
+        l = compile(right, cg)
+        cg.addBranchInstr(
+          op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL,
+          targetLabel
+        )
+      } else if (isNullLiteral(right)) {
+        l = compile(left, cg)
+        cg.addBranchInstr(
+          op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL,
+          targetLabel
+        )
+      } else {
+        l = compile(left, cg)
+        r = compile(right, cg)
+        cg.addBranchInstr(reverseLogicalOp[op], targetLabel)
+      }
+      cg.code.push(OPCODE.ICONST_1);
+      targetLabel.offset = cg.code.length
+      cg.code.push(OPCODE.ICONST_0);
+      return {
+        stackSize: Math.max(
+          l.stackSize,
+          1 + (['D', 'J'].includes(l.resultType) ? 1 : 0) + r.stackSize
+        ),
+        resultType: cg.symbolTable.generateFieldDescriptor('boolean')
+      }
+    }
+
     const { stackSize: size1, resultType: type } = compile(left, cg)
     const { stackSize: size2 } = compile(right, cg)
 
