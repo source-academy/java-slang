@@ -18,18 +18,38 @@ export type Location = {
   endColumn?: number
 }
 
+export type AmbiguousName = {
+  kind: 'AmbiguousName'
+  ambiguousName?: AmbiguousName
+  identifier: Identifier
+  location: Location
+}
+
 export type ArgumentList = {
   kind: 'ArgumentList'
   expressions: Array<Expression>
   location: Location
 }
 
-export type ArrayAccess = {
-  kind: 'ArrayAccess'
-  primary: Primary
-  expression: Expression
-  location: Location
-}
+export type ArrayAccess =
+  | {
+      kind: 'ArrayAccess'
+      expressionName: ExpressionName
+      expression?: Expression
+      location: Location
+    }
+  | {
+      kind: 'ArrayAccess'
+      primaryNoNewArray: PrimaryNoNewArray
+      expression?: Expression
+      location: Location
+    }
+  | {
+      kind: 'ArrayAccess'
+      arrayCreationExpressionWithInitializer: ArrayCreationExpressionWithInitializer
+      expression?: Expression
+      location: Location
+    }
 
 export type ArrayCreationExpression =
   | ArrayCreationExpressionWithInitializer
@@ -44,18 +64,25 @@ export type ArrayCreationExpressionWithInitializer = {
   location: Location
 }
 
-export type ArrayCreationExpressionWithoutInitializer = {
-  kind: 'ArrayCreationExpressionWithoutInitializer'
-  classOrInterfaceType?: ClassOrInterfaceType
-  primitiveType?: PrimitiveType
-  dimExprs: DimExprs
-  dims: Dims
-  location: Location
-}
+export type ArrayCreationExpressionWithoutInitializer =
+  | {
+      kind: 'ArrayCreationExpressionWithoutInitializer'
+      classOrInterfaceType: ClassOrInterfaceType
+      dimExprs: DimExprs
+      dims: Dims
+      location: Location
+    }
+  | {
+      kind: 'ArrayCreationExpressionWithoutInitializer'
+      primitiveType: PrimitiveType
+      dimExprs: DimExprs
+      dims?: Dims
+      location: Location
+    }
 
 export type ArrayInitializer = {
   kind: 'ArrayInitializer'
-  variableInitializerList: Array<VariableInitializer>
+  variableInitializerList?: VariableInitializerList
   location: Location
 }
 
@@ -65,6 +92,7 @@ export type ArrayType = {
   classOrInterfaceType?: ClassOrInterfaceType
   typeVariable?: TypeVariable
   dims: Dims
+  location: Location
 }
 
 export type AssertStatement = {
@@ -242,12 +270,30 @@ export type ClassInstanceCreationExpression =
       location: Location
     }
 
-export type ClassLiteral = {
-  kind: 'ClassLiteral'
-  type: Identifier
-  dims: Dims
-  location: Location
-}
+export type ClassLiteral =
+  | {
+      kind: 'ClassLiteral'
+      typeName: TypeName
+      dims: Dim[]
+      location: Location
+    }
+  | {
+      kind: 'ClassLiteral'
+      numericType: NumericType
+      dims: Dim[]
+      location: Location
+    }
+  | {
+      kind: 'ClassLiteral'
+      boolean: Boolean
+      dims: Dim[]
+      location: Location
+    }
+  | {
+      kind: 'ClassLiteral'
+      void: Void
+      location: Location
+    }
 
 export type ClassMemberDeclaration = FieldDeclaration | MethodDeclaration | ClassDeclaration
 
@@ -269,12 +315,14 @@ export type ClassPermits = {
 
 export type ClassType = {
   kind: 'ClassType'
-  classOrInterfaceType: ClassOrInterfaceType
+  classOrInterfaceType?: ClassOrInterfaceType
   typeIdentifier: TypeIdentifier
   location: Location
 }
 
 export type CompilationUnit = OrdinaryCompilationUnit
+
+export type ConciseLambdaParameter = Identifier
 
 export type ConditionalExpression =
   | BinaryExpression
@@ -300,6 +348,23 @@ export type ConstructorBody = {
   kind: 'ConstructorBody'
   explicitConstructorInvocation?: ExplicitConstructorInvocation
   blockStatements?: BlockStatements
+  location: Location
+}
+
+export type ConstructorDeclaration = {
+  kind: 'ConstructorDeclaration'
+  constructorModifiers: ConstructorModifier[]
+  constructorDeclarator: ConstructorDeclarator
+  throws?: Throws
+  constructorBody: ConstructorBody
+  location: Location
+}
+
+export type ConstructorDeclarator = {
+  kind: 'ConstructorDeclarator'
+  simpleTypeName: SimpleTypeName
+  receiverParameter?: ReceiverParameter
+  formalParameterList?: FormalParameterList
   location: Location
 }
 
@@ -394,6 +459,7 @@ export type EnumBody = {
   kind: 'EnumBody'
   enumConstantList: EnumConstantList
   enumBodyDeclarations: EnumBodyDeclarations
+  location: Location
 }
 
 export type EnumBodyDeclarations = {
@@ -408,6 +474,7 @@ export type EnumConstant = {
   identifier: Identifier
   argumentList?: ArgumentList
   classBody?: ClassBody
+  location: Location
 }
 
 export type EnumConstantList = {
@@ -424,6 +491,7 @@ export type EnumDeclaration = {
   typeIdentifier: TypeIdentifier
   classImplements?: ClassImplements
   enumBody: EnumBody
+  location: Location
 }
 
 export type EmptyStatement = {
@@ -447,11 +515,27 @@ export type Expression = LambdaExpression | AssignmentExpression
 
 export type ExpressionName = {
   kind: 'ExpressionName'
+  ambiguousName?: AmbiguousName
   identifier: Identifier
   location: Location
 }
 
 export type ExpressionStatement = StatementExpression
+
+export type FieldAccess =
+  | {
+      kind: 'FieldAccess'
+      primary: Primary
+      identifier: Identifier
+      location: Location
+    }
+  | {
+      kind: 'FieldAccess'
+      typeName?: TypeName
+      super: Super
+      identifier: Identifier
+      location: Location
+    }
 
 export type FieldDeclaration = {
   kind: 'FieldDeclaration'
@@ -488,6 +572,12 @@ export type FormalParameter =
       variableDeclaratorId: VariableDeclaratorId
       location: Location
     }
+
+export type FormalParameterList = {
+  kind: 'FormalParameterList'
+  formalParameters: FormalParameter[]
+  location: Location
+}
 
 export type ForStatement = BasicForStatement | EnhancedForStatement
 
@@ -542,6 +632,8 @@ export type IfThenStatement = {
   location: Location
 }
 
+export type InstanceInitializer = Block
+
 export type IntegerLiteral = BinaryLiteral | DecimalLiteral | HexLiteral | OctalLiteral
 
 export type IntegralType = {
@@ -572,7 +664,7 @@ export type InterfaceMemberDeclaration =
 
 export type InterfaceMethodDeclaration = {
   kind: 'InterfaceMethodDeclaration'
-  interfaceMethodModifier: InterfaceMethodModifier[]
+  interfaceMethodModifiers: InterfaceMethodModifier[]
   methodHeader: MethodHeader
   methodBody: MethodBody
   location: Location
@@ -610,7 +702,34 @@ export type LabeledStatementNoShortIf = {
   location: Location
 }
 
-export type LambdaExpression = {}
+export type LambdaBody = Expression | Block
+
+export type LambdaExpression = {
+  kind: 'LambdaExpression'
+  lambdaParameters: LambdaParameters
+  lambdaBody: LambdaBody
+  location: Location
+}
+
+export type LambdaParameterList =
+  | {
+      kind: 'LambdaParameterList'
+      normalLambdaParameters: NormalLambdaParameter[]
+      location: Location
+    }
+  | {
+      kind: 'LambdaParameterList'
+      conciseLambdaParameters: ConciseLambdaParameter[]
+      location: Location
+    }
+
+export type LambdaParameters = {
+  kind: 'LambdaParameters'
+  lambdaParameterList?: LambdaParameterList
+  location: Location
+}
+
+export type LambdaParameterType = UnannType | Var
 
 export type Literal =
   | IntegerLiteral
@@ -639,15 +758,14 @@ export type MatchAllPattern = {
   location: Location
 }
 
-export type MethodBody = {
-  kind: 'MethodBody'
-}
+export type MethodBody = Block
 
 export type MethodDeclaration = {
   kind: 'MethodDeclaration'
   methodModifiers: MethodModifier[]
   methodHeader: MethodHeader
   methodBody: MethodBody
+  location: Location
 }
 
 export type MethodDeclarator = {
@@ -655,7 +773,7 @@ export type MethodDeclarator = {
   identifier: Identifier
   receiverParameter?: ReceiverParameter
   formalParameterList: FormalParameter[]
-  dims: Dims
+  dims?: Dims
   location: Location
 }
 
@@ -664,6 +782,7 @@ export type MethodHeader = {
   result: Result
   methodDeclarator: MethodDeclarator
   throws: Throws
+  location: Location
 }
 
 export type MethodInvocation = {
@@ -681,6 +800,56 @@ export type MethodInvocation = {
 export type MethodModifier = Identifier
 
 export type MethodName = UnqualifiedMethodIdentifier
+
+export type MethodReference =
+  | {
+      kind: 'MethodReference'
+      expressionName: ExpressionName
+      identifier: Identifier
+      location: Location
+    }
+  | {
+      kind: 'MethodReference'
+      primary: Primary
+      identifier: Identifier
+      location: Location
+    }
+  | {
+      kind: 'MethodReference'
+      referenceType: ReferenceType
+      identifier: Identifier
+      location: Location
+    }
+  | {
+      kind: 'MethodReference'
+      super: Super
+      identifier: Identifier
+      location: Location
+    }
+  | {
+      kind: 'MethodReference'
+      typeName: TypeName
+      super: Super
+      identifier: Identifier
+      location: Location
+    }
+  | {
+      kind: 'MethodReference'
+      classType: ClassType
+      new: New
+      location: Location
+    }
+  | {
+      kind: 'MethodReference'
+      arrayType: ArrayType
+      new: New
+      location: Location
+    }
+
+export type New = {
+  kind: 'New'
+  location: Location
+}
 
 export type NormalClassDeclaration = {
   kind: 'NormalClassDeclaration'
@@ -702,6 +871,16 @@ export type NormalInterfaceDeclaration = {
   interfaceBody: InterfaceBody
   location: Location
 }
+
+export type NormalLambdaParameter =
+  | {
+      kind: 'NormalLambdaParameter'
+      variableModifiers: VariableModifier[]
+      lambdaParameterType: LambdaParameterType
+      variableDeclaratorId: VariableDeclaratorId
+      location: Location
+    }
+  | VariableArityParameter
 
 export type Null = {
   kind: 'Null'
@@ -768,7 +947,17 @@ export type PreIncrementExpression = {
 
 export type Primary = PrimaryNoNewArray | ArrayCreationExpression
 
-export type PrimaryNoNewArray = Literal | ClassLiteral | This | TypeNameThis | ParenthesisExpression
+export type PrimaryNoNewArray =
+  | Literal
+  | ClassLiteral
+  | This
+  | TypeNameThis
+  | ParenthesisExpression
+  | ClassInstanceCreationExpression
+  | FieldAccess
+  | ArrayAccess
+  | MethodInvocation
+  | MethodReference
 
 export type PrimitiveType = NumericType | Boolean
 
@@ -812,6 +1001,7 @@ export type RecordDeclaration = {
   recordHeader: RecordHeader
   classImplements?: ClassImplements
   recordBody: RecordBody
+  location: Location
 }
 
 export type RecordHeader = {
@@ -829,12 +1019,21 @@ export type RecordPattern = {
 
 export type ReferenceType = ClassOrInterfaceType | TypeVariable | ArrayType
 
-export type Result =
-  | UnannType
-  | {
-      kind: 'Void'
-      location: Location
-    }
+export type Resource = LocalVariableDeclaration | VariableAccess
+
+export type ResourceList = {
+  kind: 'ResourceList'
+  resources: Resource[]
+  location: Location
+}
+
+export type ResourceSpecification = {
+  kind: 'ResourceSpecification'
+  resourceList: ResourceList
+  location: Location
+}
+
+export type Result = UnannType | Void
 
 export type ReturnStatement = {
   kind: 'ReturnStatement'
@@ -889,6 +1088,12 @@ export type StatementWithoutTrailingSubstatement =
   | TryStatement
   | YieldStatement
 
+export type StaticInitializer = {
+  kind: 'StaticInitializer'
+  block: Block
+  location: Location
+}
+
 export type StringLiteral = {
   kind: 'StringLiteral'
   identifier: Identifier
@@ -916,15 +1121,25 @@ export type SwitchBlockStatementGroup = {
 
 export type SwitchExpression = {}
 
-export type SwitchLabel = {
-  kind: 'SwitchLabel'
-  caseConstants?: CaseConstant[]
-  null?: Null
-  default?: Default
-  casePatterns?: CasePattern[]
-  guard?: Guard
-  location: Location
-}
+export type SwitchLabel =
+  | {
+      kind: 'SwitchLabel'
+      caseConstants: CaseConstant[]
+      location: Location
+    }
+  | {
+      kind: 'SwitchLabel'
+      null: Null
+      default?: Default
+      location: Location
+    }
+  | {
+      kind: 'SwitchLabel'
+      casePatterns: CasePattern[]
+      guard?: Guard
+      location: Location
+    }
+  | Default
 
 export type SwitchStatement = {
   kind: 'SwitchStatement'
@@ -960,8 +1175,19 @@ export type ThrowStatement = {
 
 export type TopLevelClassOrInterfaceDeclaration = ClassDeclaration | InterfaceDeclaration
 
-export type TryStatement = {
-  kind: 'TryStatement'
+export type TryStatement =
+  | {
+      kind: 'TryStatement'
+      block: Block
+      catches?: Catches
+      finally?: Finally
+      location: Location
+    }
+  | TryWithResourcesStatement
+
+export type TryWithResourcesStatement = {
+  kind: 'TryWithResourcesStatement'
+  resourceSpecification: ResourceSpecification
   block: Block
   catches?: Catches
   finally?: Finally
@@ -983,14 +1209,25 @@ export type TypePattern = LocalVariableDeclaration
 
 export type TypeVariable = TypeIdentifier
 
-export type UnannArrayType = {
-  kind: 'UnannArrayType'
-  unannPrimitiveType?: UnannPrimitiveType
-  unannClassOrInterfaceType?: UnannClassOrInterfaceType
-  unannTypeVariable?: UnannTypeVariable
-  dims: Dims
-  location: Location
-}
+export type UnannArrayType =
+  | {
+      kind: 'UnannArrayType'
+      unannPrimitiveType: UnannPrimitiveType
+      dims: Dims
+      location: Location
+    }
+  | {
+      kind: 'UnannArrayType'
+      unannClassOrInterfaceType: UnannClassOrInterfaceType
+      dims: Dims
+      location: Location
+    }
+  | {
+      kind: 'UnannArrayType'
+      unannTypeVariable: UnannTypeVariable
+      dims: Dims
+      location: Location
+    }
 
 export type UnannClassOrInterfaceType = UnannClassType | UnannInterfaceType
 
@@ -1048,6 +1285,8 @@ export type Var = {
   location: Location
 }
 
+export type VariableAccess = ExpressionName | FieldAccess
+
 export type VariableArityParameter = {
   kind: 'VariableArityParameter'
   variableModifiers: VariableModifier[]
@@ -1075,6 +1314,7 @@ export type VariableDeclaratorId = {
   kind: 'VariableDeclaratorId'
   identifier: Identifier
   dims: Dims
+  location: Location
 }
 
 export type VariableDeclaratorList = {
@@ -1085,7 +1325,18 @@ export type VariableDeclaratorList = {
 
 export type VariableInitializer = Expression | ArrayInitializer
 
+export type VariableInitializerList = {
+  kind: 'VariableInitializerList'
+  variableInitializers: VariableInitializer[]
+  location: Location
+}
+
 export type VariableModifier = Identifier
+
+export type Void = {
+  kind: 'Void'
+  location: Location
+}
 
 export type WhileStatement = {
   kind: 'WhileStatement'

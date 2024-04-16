@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { BaseJavaCstVisitor, default as JavaParser } from 'java-parser'
-import { getIdentifier, getLocation } from './utils'
+import { getDimArray, getIdentifier, getLocation, getNode, getTypeIdentifier } from './utils'
 import * as AST from './specificationTypes'
 
 const BINARY_OPERATORS = [
@@ -26,8 +26,25 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  ambiguousName(ctx: JavaParser.AmbiguousNameCtx) {
-    throw new Error('Not implemented')
+  ambiguousName(ctx: JavaParser.AmbiguousNameCtx): AST.AmbiguousName {
+    const numIdentifiers = ctx.Identifier.length
+    const lastIdentifier = ctx.Identifier[numIdentifiers - 1]
+    if (!ctx.Dot || ctx.Dot.length === 0) {
+      return {
+        kind: 'AmbiguousName',
+        identifier: getIdentifier(lastIdentifier),
+        location: getLocation(lastIdentifier)
+      }
+    }
+
+    ctx.Dot = ctx.Dot.slice(0, ctx.Dot.length - 1)
+    ctx.Identifier = ctx.Identifier.slice(0, ctx.Identifier.length - 1)
+    return {
+      kind: 'AmbiguousName',
+      ambiguousName: this.ambiguousName(ctx),
+      identifier: getIdentifier(lastIdentifier),
+      location: getLocation(lastIdentifier)
+    }
   }
 
   annotation(ctx: JavaParser.AnnotationCtx) {
@@ -62,7 +79,9 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  arrayAccessSuffix(ctx: JavaParser.ArrayAccessSuffixCtx): Omit<AST.ArrayAccess, 'primary'> {
+  arrayAccessSuffix(
+    ctx: JavaParser.ArrayAccessSuffixCtx
+  ): Pick<AST.ArrayAccess, 'expression' | 'kind' | 'location'> {
     return {
       kind: 'ArrayAccess',
       expression: this.visit(ctx.expression),
@@ -72,40 +91,53 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   arrayCreationDefaultInitSuffix(
     ctx: JavaParser.ArrayCreationDefaultInitSuffixCtx
-  ): AST.ArrayCreationExpressionWithoutInitializer {
+  ): Pick<AST.ArrayCreationExpressionWithoutInitializer, 'dimExprs' | 'dims' | 'kind'> {
     return {
       kind: 'ArrayCreationExpressionWithoutInitializer',
       dimExprs: this.visit(ctx.dimExprs),
-      dims: ctx.dims ? this.visit(ctx.dims) : undefined,
-      location: getLocation(ctx.dimExprs[0].location)
+      dims: ctx.dims ? this.visit(ctx.dims) : undefined
     }
   }
 
   arrayCreationExplicitInitSuffix(
     ctx: JavaParser.ArrayCreationExplicitInitSuffixCtx
-  ): AST.ArrayCreationExpressionWithInitializer {
+  ): Pick<AST.ArrayCreationExpressionWithInitializer, 'arrayInitializer' | 'dims' | 'kind'> {
     return {
       kind: 'ArrayCreationExpressionWithInitializer',
       arrayInitializer: this.visit(ctx.arrayInitializer),
-      dims: this.visit(ctx.dims),
-      location: getLocation(ctx.dims[0].location)
+      dims: this.visit(ctx.dims)
     }
   }
 
   arrayCreationExpression(ctx: JavaParser.ArrayCreationExpressionCtx): AST.ArrayCreationExpression {
-    const result: Record<string, any> = { location: getLocation(ctx.New[0]) }
-    if (ctx.classOrInterfaceType) result.type = this.visit(ctx.classOrInterfaceType)
-    if (ctx.primitiveType) result.type = this.visit(ctx.primitiveType)
-    if (ctx.arrayCreationDefaultInitSuffix) {
+    if (ctx.primitiveType && ctx.arrayCreationDefaultInitSuffix) {
       return {
-        ...result,
-        ...this.visit(ctx.arrayCreationDefaultInitSuffix)
+        ...this.visit(ctx.arrayCreationDefaultInitSuffix),
+        primitiveType: this.visit(ctx.primitiveType),
+        location: getLocation(ctx.New[0])
       }
     }
-    return {
-      ...result,
-      ...this.visit(ctx.arrayCreationExplicitInitSuffix!)
+    if (ctx.classOrInterfaceType && ctx.arrayCreationDefaultInitSuffix) {
+      return {
+        ...this.visit(ctx.arrayCreationDefaultInitSuffix),
+        classOrInterfaceType: this.visit(ctx.classOrInterfaceType),
+        location: getLocation(ctx.New[0])
+      }
     }
+    if (ctx.primitiveType && ctx.arrayCreationExplicitInitSuffix) {
+      return {
+        ...this.visit(ctx.arrayCreationExplicitInitSuffix),
+        primitiveType: this.visit(ctx.primitiveType),
+        location: getLocation(ctx.New[0])
+      }
+    }
+    // if (ctx.classOrInterfaceType && ctx.arrayCreationExplicitInitSuffix) {
+    return {
+      ...this.visit(ctx.arrayCreationExplicitInitSuffix!),
+      classOrInterfaceType: this.visit(ctx.classOrInterfaceType!),
+      location: getLocation(ctx.New[0])
+    }
+    // }
   }
 
   arrayInitializer(ctx: JavaParser.ArrayInitializerCtx): AST.ArrayInitializer {
@@ -113,7 +145,7 @@ class AstExtractor extends BaseJavaCstVisitor {
       kind: 'ArrayInitializer',
       variableInitializerList: ctx.variableInitializerList
         ? this.visit(ctx.variableInitializerList)
-        : [],
+        : undefined,
       location: getLocation(ctx.LCurly[0])
     }
   }
@@ -130,9 +162,9 @@ class AstExtractor extends BaseJavaCstVisitor {
   basicForStatement(ctx: JavaParser.BasicForStatementCtx): AST.BasicForStatement {
     return {
       kind: 'BasicForStatement',
-      forInit: ctx.forInit ? this.visit(ctx.forInit) : [],
-      expression: this.visit(ctx.expression![0]),
-      forUpdate: ctx.forUpdate ? this.visit(ctx.forUpdate) : [],
+      forInit: ctx.forInit ? this.visit(ctx.forInit) : undefined,
+      expression: ctx.expression ? this.visit(ctx.expression) : undefined,
+      forUpdate: ctx.forUpdate ? this.visit(ctx.forUpdate) : undefined,
       statement: this.visit(ctx.statement[0]),
       location: getLocation(ctx.For[0])
     }
@@ -140,13 +172,14 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   binaryExpression(ctx: JavaParser.BinaryExpressionCtx): AST.AssignmentExpression {
     if (ctx.AssignmentOperator && ctx.expression) {
-      return {
+      const assignment: AST.Assignment = {
         kind: 'Assignment',
         leftHandSide: this.visit(ctx.unaryExpression),
         assignmentOperator: getIdentifier(ctx.AssignmentOperator[0]),
         rightHandSide: this.visit(ctx.expression),
         location: getLocation(ctx.unaryExpression[0].location)
       }
+      return assignment
     }
 
     if (ctx.BinaryOperator && ctx.BinaryOperator.length > 0 && ctx.unaryExpression) {
@@ -156,7 +189,7 @@ class AstExtractor extends BaseJavaCstVisitor {
         for (let i = numBinaryOperators - 1; i >= 0; i--) {
           const binaryOperator = ctx.BinaryOperator[i].image
           if (!operatorGroup.includes(binaryOperator)) continue
-          return {
+          const binaryExpression: AST.BinaryExpression = {
             kind: 'BinaryExpression',
             leftHandSide: this.binaryExpression({
               unaryExpression: ctx.unaryExpression.slice(0, i + 1),
@@ -169,6 +202,7 @@ class AstExtractor extends BaseJavaCstVisitor {
             }),
             location: getLocation(ctx.BinaryOperator[i])
           }
+          return binaryExpression
         }
       }
     }
@@ -183,37 +217,42 @@ class AstExtractor extends BaseJavaCstVisitor {
     return this.visit(ctx.unaryExpression)
   }
 
-  block(ctx: JavaParser.BlockCtx) {
+  block(ctx: JavaParser.BlockCtx): AST.Block {
     return {
       kind: 'Block',
-      blockStatements: ctx.blockStatements ? this.visit(ctx.blockStatements) : [],
+      blockStatements: ctx.blockStatements ? this.visit(ctx.blockStatements) : undefined,
       location: getLocation(ctx.LCurly[0])
     }
   }
 
-  blockStatement(ctx: JavaParser.BlockStatementCtx) {
-    if (ctx.interfaceDeclaration) throw new Error('Not implemented')
+  blockStatement(ctx: JavaParser.BlockStatementCtx): AST.BlockStatement {
+    if (ctx.interfaceDeclaration) return this.visit(ctx.interfaceDeclaration)
     if (ctx.classDeclaration) return this.visit(ctx.classDeclaration)
     if (ctx.localVariableDeclarationStatement)
       return this.visit(ctx.localVariableDeclarationStatement)
-    if (ctx.statement) return this.visit(ctx.statement)
+    // if (ctx.statement)
+    return this.visit(ctx.statement!)
   }
 
-  blockStatements(ctx: JavaParser.BlockStatementsCtx) {
-    return ctx.blockStatement.map(blockStatement => this.visit(blockStatement))
+  blockStatements(ctx: JavaParser.BlockStatementsCtx): AST.BlockStatements {
+    return {
+      kind: 'BlockStatements',
+      blockStatements: ctx.blockStatement.map(blockStatement => this.visit(blockStatement)),
+      location: getLocation(ctx.blockStatement[0].location)
+    }
   }
 
-  booleanLiteral(ctx: JavaParser.BooleanLiteralCtx) {
+  booleanLiteral(ctx: JavaParser.BooleanLiteralCtx): AST.BooleanLiteral {
     return [ctx.False, ctx.True]
       .filter(booleanLiteral => booleanLiteral !== undefined)
       .map(booleanLiteral => ({
-        kind: 'BooleanLiteral',
+        kind: 'BooleanLiteral' as const,
         identifier: getIdentifier(booleanLiteral![0]),
         location: getLocation(booleanLiteral![0])
       }))[0]
   }
 
-  breakStatement(ctx: JavaParser.BreakStatementCtx) {
+  breakStatement(ctx: JavaParser.BreakStatementCtx): AST.BreakStatement {
     return {
       kind: 'BreakStatement',
       identifier: ctx.Identifier ? getIdentifier(ctx.Identifier[0]) : undefined,
@@ -221,35 +260,52 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  caseConstant(ctx: JavaParser.CaseConstantCtx) {
+  caseConstant(ctx: JavaParser.CaseConstantCtx): AST.CaseConstant {
     return this.visit(ctx.ternaryExpression)
   }
 
-  caseLabelElement(ctx: JavaParser.CaseLabelElementCtx) {
-    if (ctx.caseConstant) return this.visit(ctx.caseConstant)
-    if (ctx.pattern) return this.visit(ctx.pattern)
-    return [ctx.Default, ctx.Null]
-      .filter(caseLabelElement => caseLabelElement !== undefined)
-      .map(caseLabelElement => getIdentifier(caseLabelElement![0]))[0]
+  caseLabelElement(
+    ctx: JavaParser.CaseLabelElementCtx
+  ): Omit<AST.SwitchLabel, 'kind' | 'location'> {
+    if (ctx.caseConstant)
+      return { caseConstants: ctx.caseConstant.map(caseConstant => this.visit(caseConstant)) }
+    if (ctx.pattern) return { casePatterns: ctx.pattern.map(pattern => this.visit(pattern)) }
+    if (ctx.Default) return { default: getNode(ctx.Default[0]) as AST.Default }
+    // if (ctx.Null)
+    return { null: getNode(ctx.Null![0]) as AST.Null }
   }
 
-  caseOrDefaultLabel(ctx: JavaParser.CaseOrDefaultLabelCtx) {
-    if (ctx.Default) return getIdentifier(ctx.Default[0])
+  caseOrDefaultLabel(ctx: JavaParser.CaseOrDefaultLabelCtx): AST.SwitchLabel {
     if (ctx.Case && ctx.caseLabelElement) {
+      const caseLabelElements = ctx.caseLabelElement
+        .map(caseLabelElement => this.visit(caseLabelElement))
+        .reduce((accumulator, currentObject) => {
+          Object.keys(currentObject).forEach(key => {
+            if (Array.isArray(currentObject[key]) && accumulator[key]) {
+              accumulator[key].push(...currentObject[key])
+              return
+            }
+            accumulator[key] = currentObject[key]
+          })
+          return accumulator
+        }, {})
       return {
         kind: 'SwitchLabel',
-        caseLabels: ctx.caseLabelElement.map(caseLabelElement => this.visit(caseLabelElement)),
+        ...caseLabelElements,
         location: getLocation(ctx.Case[0])
-      }
+      } as AST.SwitchLabel
     }
+    // if (ctx.Default)
+    return getNode(ctx.Default![0]) as AST.Default
   }
 
-  castExpression(ctx: JavaParser.CastExpressionCtx) {
+  castExpression(ctx: JavaParser.CastExpressionCtx): AST.CastExpression {
     if (ctx.primitiveCastExpression) return this.visit(ctx.primitiveCastExpression)
-    if (ctx.referenceTypeCastExpression) return this.visit(ctx.referenceTypeCastExpression)
+    // if (ctx.referenceTypeCastExpression)
+    return this.visit(ctx.referenceTypeCastExpression!)
   }
 
-  catchClause(ctx: JavaParser.CatchClauseCtx) {
+  catchClause(ctx: JavaParser.CatchClauseCtx): AST.CatchClause {
     return {
       kind: 'CatchClause',
       catchFormalParameter: this.visit(ctx.catchFormalParameter),
@@ -258,10 +314,12 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  catchFormalParameter(ctx: JavaParser.CatchFormalParameterCtx, param?: any) {
+  catchFormalParameter(ctx: JavaParser.CatchFormalParameterCtx): AST.CatchFormalParameter {
     return {
       kind: 'CatchFormalParameter',
-      variableModifier: ctx.variableModifier ? this.visit(ctx.variableModifier) : undefined,
+      variableModifiers: ctx.variableModifier
+        ? ctx.variableModifier.map(variableModifier => this.visit(variableModifier))
+        : [],
       catchType: this.visit(ctx.catchType),
       variableDeclaratorId: this.visit(ctx.variableDeclaratorId),
       location: ctx.variableModifier
@@ -270,40 +328,42 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  catchType(ctx: JavaParser.CatchTypeCtx) {
+  catchType(ctx: JavaParser.CatchTypeCtx): AST.CatchType {
     return {
       kind: 'CatchType',
       unannClassType: this.visit(ctx.unannClassType),
-      classTypes: ctx.classType ? ctx.classType.map(classType => this.visit(classType)) : [],
+      classTypes: ctx.classType ? ctx.classType.map(classType => this.visit(classType)) : undefined,
       location: getLocation(ctx.unannClassType[0].location)
     }
   }
 
-  catches(ctx: JavaParser.CatchesCtx) {
-    return ctx.catchClause.map(catchClause => this.visit(catchClause))
+  catches(ctx: JavaParser.CatchesCtx): AST.Catches {
+    return {
+      kind: 'Catches',
+      catchClauses: ctx.catchClause.map(catchClause => this.visit(catchClause)),
+      location: getLocation(ctx.catchClause[0].location)
+    }
   }
 
-  classBody(ctx: JavaParser.ClassBodyCtx) {
-    const result: Record<string, any> = {
+  classBody(ctx: JavaParser.ClassBodyCtx): AST.ClassBody {
+    return {
       kind: 'ClassBody',
+      classBodyDeclarations: ctx.classBodyDeclaration
+        ? ctx.classBodyDeclaration.map(declaration => this.visit(declaration))
+        : [],
       location: getLocation(ctx.LCurly[0])
     }
-    if (ctx.classBodyDeclaration) {
-      result.classBodyDeclarations = ctx.classBodyDeclaration.map(declaration => {
-        return this.visit(declaration)
-      })
-    }
-    return result
   }
 
-  classBodyDeclaration(ctx: JavaParser.ClassBodyDeclarationCtx) {
+  classBodyDeclaration(ctx: JavaParser.ClassBodyDeclarationCtx): AST.ClassBodyDeclaration {
     if (ctx.classMemberDeclaration) return this.visit(ctx.classMemberDeclaration)
     if (ctx.constructorDeclaration) return this.visit(ctx.constructorDeclaration)
     if (ctx.instanceInitializer) return this.visit(ctx.instanceInitializer)
-    if (ctx.staticInitializer) return this.visit(ctx.staticInitializer)
+    // if (ctx.staticInitializer)
+    return this.visit(ctx.staticInitializer!)
   }
 
-  classDeclaration(ctx: JavaParser.ClassDeclarationCtx) {
+  classDeclaration(ctx: JavaParser.ClassDeclarationCtx): AST.ClassDeclaration {
     if (ctx.enumDeclaration) return this.visit(ctx.enumDeclaration)
     const classModifiers = ctx.classModifier ? this.visit(ctx.classModifier) : []
     return [ctx.recordDeclaration, ctx.normalClassDeclaration]
@@ -318,21 +378,19 @@ class AstExtractor extends BaseJavaCstVisitor {
       }))[0]
   }
 
-  classLiteralSuffix(ctx: JavaParser.ClassLiteralSuffixCtx) {
-    return {
-      hasDims: !!ctx.LSquare,
-      identifier: getIdentifier(ctx.Class[0])
-    }
+  classLiteralSuffix(ctx: JavaParser.ClassLiteralSuffixCtx): { dims: AST.Dim[] } {
+    return { dims: ctx.LSquare ? getDimArray(ctx.LSquare) : [] }
   }
 
-  classMemberDeclaration(ctx: JavaParser.ClassMemberDeclarationCtx) {
+  classMemberDeclaration(ctx: JavaParser.ClassMemberDeclarationCtx): AST.ClassMemberDeclaration {
     if (ctx.classDeclaration) return this.visit(ctx.classDeclaration)
     if (ctx.fieldDeclaration) return this.visit(ctx.fieldDeclaration)
     if (ctx.interfaceDeclaration) return this.visit(ctx.interfaceDeclaration)
-    if (ctx.methodDeclaration) return this.visit(ctx.methodDeclaration)
+    // if (ctx.methodDeclaration)
+    return this.visit(ctx.methodDeclaration!)
   }
 
-  classModifier(ctx: JavaParser.ClassModifierCtx) {
+  classModifier(ctx: JavaParser.ClassModifierCtx): AST.ClassModifier {
     if (ctx.annotation) throw new Error('Not implemented')
     return [
       ctx.Abstract,
@@ -346,24 +404,26 @@ class AstExtractor extends BaseJavaCstVisitor {
       ctx.Strictfp
     ]
       .filter(modifier => modifier !== undefined)
-      .map(modifier => ({
-        kind: 'ClassModifier',
-        value: modifier![0].image,
-        location: getLocation(modifier![0])
-      }))
+      .map(modifier => getIdentifier(modifier![0]))[0]
   }
 
-  classOrInterfaceType(ctx: JavaParser.ClassOrInterfaceTypeCtx) {
+  classOrInterfaceType(ctx: JavaParser.ClassOrInterfaceTypeCtx): AST.ClassOrInterfaceType {
     return this.visit(ctx.classType)
   }
 
-  classOrInterfaceTypeToInstantiate(ctx: JavaParser.ClassOrInterfaceTypeToInstantiateCtx) {
+  classOrInterfaceTypeToInstantiate(
+    ctx: JavaParser.ClassOrInterfaceTypeToInstantiateCtx
+  ): AST.ClassOrInterfaceTypeToInstantiate {
     if (ctx.annotation) throw new Error('Not implemented')
     if (ctx.typeArgumentsOrDiamond) throw new Error('Not implemented')
-    return getIdentifier(ctx.Identifier[0])
+    return {
+      kind: 'ClassOrInterfaceTypeToInstantiate',
+      identifiers: ctx.Identifier.map(identifier => getIdentifier(identifier)),
+      location: getLocation(ctx.Identifier[0])
+    }
   }
 
-  classPermits(ctx: JavaParser.ClassPermitsCtx, param?: any) {
+  classPermits(ctx: JavaParser.ClassPermitsCtx): AST.ClassPermits {
     return {
       kind: 'ClassPermits',
       typeNames: ctx.typeName.map(typeName => this.visit(typeName)),
@@ -371,22 +431,25 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  classType(ctx: JavaParser.ClassTypeCtx) {
+  classType(ctx: JavaParser.ClassTypeCtx): AST.ClassType {
     if (ctx.annotation) throw new Error('Not implemented')
     if (ctx.typeArguments) throw new Error('Not implemented')
+    if (ctx.Identifier.length > 1) throw new Error('Not implemented')
     return {
       kind: 'ClassType',
-      identifier: getIdentifier(ctx.Identifier[0]),
+      typeIdentifier: getIdentifier(ctx.Identifier[0]),
       location: getLocation(ctx.Identifier[0])
     }
   }
 
-  compactConstructorDeclaration(ctx: JavaParser.CompactConstructorDeclarationCtx) {
+  compactConstructorDeclaration(
+    ctx: JavaParser.CompactConstructorDeclarationCtx
+  ): AST.CompactConstructorDeclaration {
     return {
       kind: 'CompactConstructorDeclaration',
-      constructorModifier: ctx.constructorModifier
-        ? this.visit(ctx.constructorModifier)
-        : undefined,
+      constructorModifiers: ctx.constructorModifier
+        ? ctx.constructorModifier.map(constructorModifier => this.visit(constructorModifier))
+        : [],
       simpleTypeName: this.visit(ctx.simpleTypeName),
       constructorBody: this.visit(ctx.constructorBody),
       location: ctx.constructorModifier
@@ -395,13 +458,13 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  compilationUnit(ctx: JavaParser.CompilationUnitCtx) {
+  compilationUnit(ctx: JavaParser.CompilationUnitCtx): AST.CompilationUnit {
     // @ts-expect-error ts(2339)
     if (ctx.ordinaryCompilationUnit) return this.visit(ctx.ordinaryCompilationUnit)
     throw new Error('Not implemented')
   }
 
-  continueStatement(ctx: JavaParser.ContinueStatementCtx) {
+  continueStatement(ctx: JavaParser.ContinueStatementCtx): AST.ContinueStatement {
     return {
       kind: 'ContinueStatement',
       identifier: ctx.Identifier ? getIdentifier(ctx.Identifier[0]) : undefined,
@@ -409,50 +472,46 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  constantDeclaration(ctx: JavaParser.ConstantDeclarationCtx) {
+  constantDeclaration(ctx: JavaParser.ConstantDeclarationCtx): AST.ConstantDeclaration {
     return {
       kind: 'ConstantDeclaration',
       constantModifiers: ctx.constantModifier
         ? ctx.constantModifier.map(constantModifier => this.visit(constantModifier))
         : [],
       unannType: this.visit(ctx.unannType),
-      variabledeclaratorList: this.visit(ctx.variableDeclaratorList),
+      variableDeclaratorList: this.visit(ctx.variableDeclaratorList),
       location: ctx.constantModifier
         ? getLocation(ctx.constantModifier[0].location)
         : getLocation(ctx.unannType[0].location)
     }
   }
 
-  constantModifier(ctx: JavaParser.ConstantModifierCtx) {
+  constantModifier(ctx: JavaParser.ConstantModifierCtx): AST.ConstantModifier {
     if (ctx.annotation) throw new Error('Not implemented')
     return [ctx.Final, ctx.Public, ctx.Static]
       .filter(constantModifier => constantModifier !== undefined)
-      .map(constantModifier => ({
-        kind: 'ConstantModifier',
-        identifier: getIdentifier(constantModifier![0]),
-        location: getLocation(constantModifier![0])
-      }))[0]
+      .map(constantModifier => getIdentifier(constantModifier![0]))[0]
   }
 
-  constructorBody(ctx: JavaParser.ConstructorBodyCtx) {
-    const result: Record<string, any> = {
+  constructorBody(ctx: JavaParser.ConstructorBodyCtx): AST.ConstructorBody {
+    return {
       kind: 'ConstructorBody',
+      explicitConstructorInvocation: ctx.explicitConstructorInvocation
+        ? this.visit(ctx.explicitConstructorInvocation)
+        : undefined,
       blockStatements: ctx.blockStatements ? this.visit(ctx.blockStatements) : [],
       location: getLocation(ctx.LCurly[0])
     }
-    if (ctx.explicitConstructorInvocation)
-      result.explicitConstructorInvocation = this.visit(ctx.explicitConstructorInvocation)
-    return result
   }
 
-  constructorDeclaration(ctx: JavaParser.ConstructorDeclarationCtx) {
+  constructorDeclaration(ctx: JavaParser.ConstructorDeclarationCtx): AST.ConstructorDeclaration {
     return {
       kind: 'ConstructorDeclaration',
-      constructorModifier: ctx.constructorModifier
-        ? this.visit(ctx.constructorModifier)
-        : undefined,
+      constructorModifiers: ctx.constructorModifier
+        ? ctx.constructorModifier.map(constructorModifier => this.visit(constructorModifier))
+        : [],
       constructorDeclarator: this.visit(ctx.constructorDeclarator),
-      throws: ctx.throws ? this.visit(ctx.throws) : [],
+      throws: ctx.throws ? this.visit(ctx.throws) : undefined,
       constructorBody: this.visit(ctx.constructorBody),
       location: ctx.constructorModifier
         ? getLocation(ctx.constructorModifier[0].location)
@@ -460,27 +519,24 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  constructorDeclarator(ctx: JavaParser.ConstructorDeclaratorCtx) {
+  constructorDeclarator(ctx: JavaParser.ConstructorDeclaratorCtx): AST.ConstructorDeclarator {
     if (ctx.typeParameters) throw new Error('Not implemented')
-    const result: Record<string, any> = {
+    return {
       kind: 'ConstructorDeclarator',
       simpleTypeName: this.visit(ctx.simpleTypeName),
+      receiverParameter: ctx.receiverParameter ? this.visit(ctx.receiverParameter) : undefined,
+      formalParameterList: ctx.formalParameterList
+        ? this.visit(ctx.formalParameterList)
+        : undefined,
       location: getLocation(ctx.simpleTypeName[0].location)
     }
-    if (ctx.formalParameterList) result.formalParameterList = this.visit(ctx.formalParameterList)
-    if (ctx.receiverParameter) result.receiverParameter = this.visit(ctx.receiverParameter)
-    return result
   }
 
-  constructorModifier(ctx: JavaParser.ConstructorModifierCtx) {
+  constructorModifier(ctx: JavaParser.ConstructorModifierCtx): AST.ConstantModifier {
     if (ctx.annotation) throw new Error('Not implemented')
     return [ctx.Private, ctx.Protected, ctx.Public]
       .filter(constructorModifier => constructorModifier !== undefined)
-      .map(constructorModifier => ({
-        kind: 'ConstructorModifier',
-        identifier: getIdentifier(constructorModifier![0]),
-        location: getLocation(constructorModifier![0])
-      }))[0]
+      .map(constructorModifier => getIdentifier(constructorModifier![0]))[0]
   }
 
   defaultValue(ctx: JavaParser.DefaultValueCtx) {
@@ -491,7 +547,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  dimExpr(ctx: JavaParser.DimExprCtx) {
+  dimExpr(ctx: JavaParser.DimExprCtx): AST.DimExpr {
     if (ctx.annotation) throw new Error('Not implemented')
     return {
       kind: 'DimExpr',
@@ -500,16 +556,24 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  dimExprs(ctx: JavaParser.DimExprsCtx) {
-    return ctx.dimExpr.map(dimExpr => this.visit(dimExpr))
+  dimExprs(ctx: JavaParser.DimExprsCtx): AST.DimExprs {
+    return {
+      kind: 'DimExprs',
+      dimExprs: ctx.dimExpr.map(dimExpr => this.visit(dimExpr)),
+      location: getLocation(ctx.dimExpr[0].location)
+    }
   }
 
-  dims(ctx: JavaParser.DimsCtx) {
+  dims(ctx: JavaParser.DimsCtx): AST.Dims {
     if (ctx.annotation) throw new Error('Not implemented')
-    return { kind: 'Dims', value: ctx.LSquare.length }
+    return {
+      kind: 'Dims',
+      dims: ctx.LSquare.map(lSquare => ({ kind: 'Dim', location: getLocation(lSquare) })),
+      location: getLocation(ctx.LSquare[0])
+    }
   }
 
-  doStatement(ctx: JavaParser.DoStatementCtx) {
+  doStatement(ctx: JavaParser.DoStatementCtx): AST.DoStatement {
     return {
       kind: 'DoStatement',
       statement: this.visit(ctx.statement),
@@ -538,25 +602,40 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  emptyStatement(ctx: JavaParser.EmptyStatementCtx) {
+  emptyStatement(ctx: JavaParser.EmptyStatementCtx): AST.EmptyStatement {
     return {
       kind: 'EmptyStatement',
       location: getLocation(ctx.Semicolon[0])
     }
   }
 
-  enhancedForStatement(ctx: JavaParser.EnhancedForStatementCtx) {
+  enhancedForStatement(ctx: JavaParser.EnhancedForStatementCtx): AST.EnhancedForStatement {
     return {
       kind: 'EnhancedForStatement',
-      localVariableType: this.visit(ctx.localVariableType),
-      variableDeclaratorId: this.visit(ctx.variableDeclaratorId),
+      localVariableDeclaration: {
+        kind: 'LocalVariableDeclaration',
+        variableModifiers: [],
+        localVariableType: this.visit(ctx.localVariableType),
+        variableDeclaratorList: {
+          kind: 'VariableDeclaratorList',
+          variableDeclarators: [
+            {
+              kind: 'VariableDeclarator',
+              variableDeclaratorId: this.visit(ctx.variableDeclaratorId),
+              location: getLocation(ctx.variableDeclaratorId[0].location)
+            }
+          ],
+          location: getLocation(ctx.variableDeclaratorId[0].location)
+        },
+        location: getLocation(ctx.localVariableType[0].location)
+      },
       expression: this.visit(ctx.expression),
       statement: this.visit(ctx.statement),
       location: getLocation(ctx.For[0])
     }
   }
 
-  enumBody(ctx: JavaParser.EnumBodyCtx) {
+  enumBody(ctx: JavaParser.EnumBodyCtx): AST.EnumBody {
     return {
       kind: 'EnumBody',
       enumConstantList: ctx.enumConstantList ? this.visit(ctx.enumConstantList) : [],
@@ -565,22 +644,22 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  enumBodyDeclarations(ctx: JavaParser.EnumBodyDeclarationsCtx) {
+  enumBodyDeclarations(ctx: JavaParser.EnumBodyDeclarationsCtx): AST.EnumBodyDeclarations {
     return {
-      kind: 'EnumBodyDeclaration',
+      kind: 'EnumBodyDeclarations',
       classBodyDeclaration: ctx.classBodyDeclaration
-        ? this.visit(ctx.classBodyDeclaration)
-        : undefined,
+        ? ctx.classBodyDeclaration.map(classBodyDeclaration => this.visit(classBodyDeclaration))
+        : [],
       location: getLocation(ctx.Semicolon[0])
     }
   }
 
-  enumConstant(ctx: JavaParser.EnumConstantCtx) {
+  enumConstant(ctx: JavaParser.EnumConstantCtx): AST.EnumConstant {
     return {
       kind: 'EnumConstant',
-      enumConstantModifier: ctx.enumConstantModifier
-        ? this.visit(ctx.enumConstantModifier)
-        : undefined,
+      enumConstantModifiers: ctx.enumConstantModifier
+        ? ctx.enumConstantModifier.map(enumConstantModifier => this.visit(enumConstantModifier))
+        : [],
       identifier: getIdentifier(ctx.Identifier[0]),
       argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : undefined,
       classBody: ctx.classBody ? this.visit(ctx.classBody) : undefined,
@@ -590,18 +669,24 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  enumConstantList(ctx: JavaParser.EnumConstantListCtx) {
-    return ctx.enumConstant.map(enumConstant => this.visit(enumConstant))
+  enumConstantList(ctx: JavaParser.EnumConstantListCtx): AST.EnumConstantList {
+    return {
+      kind: 'EnumConstantList',
+      enumConstants: ctx.enumConstant.map(enumConstant => this.visit(enumConstant)),
+      location: getLocation(ctx.enumConstant[0].location)
+    }
   }
 
-  enumConstantModifier(ctx: JavaParser.EnumConstantModifierCtx) {
+  enumConstantModifier(ctx: JavaParser.EnumConstantModifierCtx): AST.EnumConstantModifier {
     throw new Error('Not implemented')
   }
 
-  enumDeclaration(ctx: JavaParser.EnumDeclarationCtx) {
+  enumDeclaration(ctx: JavaParser.EnumDeclarationCtx): AST.EnumDeclaration {
     return {
       kind: 'EnumDeclaration',
-      classModifier: ctx.classModifier ? this.visit(ctx.classModifier) : undefined,
+      classModifiers: ctx.classModifier
+        ? ctx.classModifier.map(classModifier => this.visit(classModifier))
+        : [],
       typeIdentifier: this.visit(ctx.typeIdentifier),
       classImplements: ctx.superinterfaces ? this.visit(ctx.superinterfaces) : undefined,
       enumBody: this.visit(ctx.enumBody),
@@ -611,35 +696,46 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  exceptionType(ctx: JavaParser.ExceptionTypeCtx) {
+  exceptionType(ctx: JavaParser.ExceptionTypeCtx): AST.ExceptionType {
     return this.visit(ctx.classType)
   }
 
-  exceptionTypeList(ctx: JavaParser.ExceptionTypeListCtx, param?: any) {
+  exceptionTypeList(ctx: JavaParser.ExceptionTypeListCtx): AST.ExceptionType[] {
     return ctx.exceptionType.map(exceptionType => this.visit(exceptionType))
   }
 
-  explicitConstructorInvocation(ctx: JavaParser.ExplicitConstructorInvocationCtx) {
+  explicitConstructorInvocation(
+    ctx: JavaParser.ExplicitConstructorInvocationCtx
+  ): AST.ExplicitConstructorInvocation {
     if (ctx.qualifiedExplicitConstructorInvocation)
       return this.visit(ctx.qualifiedExplicitConstructorInvocation)
-    if (ctx.unqualifiedExplicitConstructorInvocation)
-      return this.visit(ctx.unqualifiedExplicitConstructorInvocation)
+    // if (ctx.unqualifiedExplicitConstructorInvocation)
+    return this.visit(ctx.unqualifiedExplicitConstructorInvocation!)
   }
 
-  explicitLambdaParameterList(ctx: JavaParser.ExplicitLambdaParameterListCtx) {
-    return ctx.lambdaParameter.map(lambdaParameter => this.visit(lambdaParameter))
+  explicitLambdaParameterList(
+    ctx: JavaParser.ExplicitLambdaParameterListCtx
+  ): AST.LambdaParameterList {
+    return {
+      kind: 'LambdaParameterList',
+      normalLambdaParameters: ctx.lambdaParameter.map(lambdaParameter =>
+        this.visit(lambdaParameter)
+      ),
+      location: getLocation(ctx.lambdaParameter[0].location)
+    }
   }
 
   exportsModuleDirective(ctx: JavaParser.ExportsModuleDirectiveCtx) {
     throw new Error('Not implemented')
   }
 
-  expression(ctx: JavaParser.ExpressionCtx) {
+  expression(ctx: JavaParser.ExpressionCtx): AST.Expression {
     if (ctx.lambdaExpression) return this.visit(ctx.lambdaExpression)
-    if (ctx.ternaryExpression) return this.visit(ctx.ternaryExpression)
+    // if (ctx.ternaryExpression)
+    return this.visit(ctx.ternaryExpression!)
   }
 
-  expressionName(ctx: JavaParser.ExpressionNameCtx) {
+  expressionName(ctx: JavaParser.ExpressionNameCtx): AST.ExpressionName {
     if (ctx.Dot) throw new Error('Not implemented')
     return {
       kind: 'ExpressionName',
@@ -648,11 +744,11 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  expressionStatement(ctx: JavaParser.ExpressionStatementCtx) {
+  expressionStatement(ctx: JavaParser.ExpressionStatementCtx): AST.ExpressionStatement {
     return this.visit(ctx.statementExpression)
   }
 
-  extendsInterfaces(ctx: JavaParser.ExtendsInterfacesCtx) {
+  extendsInterfaces(ctx: JavaParser.ExtendsInterfacesCtx): AST.InterfaceExtends {
     return {
       kind: 'InterfaceExtends',
       interfaceTypeList: this.visit(ctx.interfaceTypeList),
@@ -660,11 +756,12 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  fieldDeclaration(ctx: JavaParser.FieldDeclarationCtx) {
-    const fieldModifiers = ctx.fieldModifier ? this.visit(ctx.fieldModifier) : []
+  fieldDeclaration(ctx: JavaParser.FieldDeclarationCtx): AST.FieldDeclaration {
     return {
       kind: 'FieldDeclaration',
-      fieldModifiers,
+      fieldModifiers: ctx.fieldModifier
+        ? ctx.fieldModifier.map(fieldModifier => this.visit(fieldModifier))
+        : [],
       unannType: this.visit(ctx.unannType),
       variableDeclaratorList: this.visit(ctx.variableDeclaratorList),
       location: ctx.fieldModifier
@@ -673,7 +770,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  fieldModifier(ctx: JavaParser.FieldModifierCtx) {
+  fieldModifier(ctx: JavaParser.FieldModifierCtx): AST.FieldModifier {
     if (ctx.annotation) throw new Error('Not implemented')
     return [
       ctx.Final,
@@ -685,14 +782,10 @@ class AstExtractor extends BaseJavaCstVisitor {
       ctx.Volatile
     ]
       .filter(modifier => modifier !== undefined)
-      .map(modifier => ({
-        kind: 'FieldModifier',
-        value: modifier![0].image,
-        location: getLocation(modifier![0])
-      }))
+      .map(modifier => getIdentifier(modifier![0]))[0]
   }
 
-  finally(ctx: JavaParser.FinallyCtx) {
+  finally(ctx: JavaParser.FinallyCtx): AST.Finally {
     return {
       kind: 'Finally',
       block: this.visit(ctx.block),
@@ -700,49 +793,62 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  floatingPointLiteral(ctx: JavaParser.FloatingPointLiteralCtx) {
-    return [ctx.FloatLiteral, ctx.HexFloatLiteral]
-      .filter(floatingPointLiteral => floatingPointLiteral !== undefined)
-      .map(floatingPointLiteral => ({
-        kind: 'FloatingPointLiteral',
-        identifier: getIdentifier(floatingPointLiteral![0]),
-        location: getLocation(floatingPointLiteral![0])
-      }))[0]
+  floatingPointLiteral(ctx: JavaParser.FloatingPointLiteralCtx): AST.FloatingPointLiteral {
+    if (ctx.FloatLiteral) {
+      return {
+        kind: 'DecimalFloatingPointLiteral',
+        identifier: getIdentifier(ctx.FloatLiteral[0]),
+        location: getLocation(ctx.FloatLiteral[0])
+      }
+    }
+    return {
+      kind: 'HexadecimalFloatingPointLiteral',
+      identifier: getIdentifier(ctx.HexFloatLiteral![0]),
+      location: getLocation(ctx.HexFloatLiteral![0])
+    }
   }
 
-  floatingPointType(ctx: JavaParser.FloatingPointTypeCtx) {
+  floatingPointType(ctx: JavaParser.FloatingPointTypeCtx): AST.FloatingPointType {
     return [ctx.Double, ctx.Float]
       .filter(floatingPointType => floatingPointType !== undefined)
       .map(floatingPointType => ({
-        kind: 'FloatingPointType',
+        kind: 'FloatingPointType' as const,
         identifier: getIdentifier(floatingPointType![0]),
         location: getLocation(floatingPointType![0])
       }))[0]
   }
 
-  forInit(ctx: JavaParser.ForInitCtx) {
+  forInit(ctx: JavaParser.ForInitCtx): AST.ForInit {
     if (ctx.localVariableDeclaration) return this.visit(ctx.localVariableDeclaration)
-    if (ctx.statementExpressionList) return this.visit(ctx.statementExpressionList)
+    // if (ctx.statementExpressionList)
+    return this.visit(ctx.statementExpressionList!)
   }
 
-  formalParameter(ctx: JavaParser.FormalParameterCtx) {
+  formalParameter(ctx: JavaParser.FormalParameterCtx): AST.FormalParameter {
     if (ctx.variableArityParameter) return this.visit(ctx.variableArityParameter)
-    if (ctx.variableParaRegularParameter) return this.visit(ctx.variableParaRegularParameter)
+    // if (ctx.variableParaRegularParameter)
+    return this.visit(ctx.variableParaRegularParameter!)
   }
 
-  formalParameterList(ctx: JavaParser.FormalParameterListCtx) {
-    return ctx.formalParameter.map(formalParameter => this.visit(formalParameter))
+  formalParameterList(ctx: JavaParser.FormalParameterListCtx): AST.FormalParameterList {
+    return {
+      kind: 'FormalParameterList',
+      formalParameters: ctx.formalParameter.map(formalParameter => this.visit(formalParameter)),
+      location: getLocation(ctx.formalParameter[0].location)
+    }
   }
 
-  forStatement(ctx: JavaParser.ForStatementCtx) {
+  forStatement(ctx: JavaParser.ForStatementCtx): AST.ForStatement {
     if (ctx.basicForStatement) return this.visit(ctx.basicForStatement)
-    if (ctx.enhancedForStatement) return this.visit(ctx.enhancedForStatement)
+    // if (ctx.enhancedForStatement)
+    return this.visit(ctx.enhancedForStatement!)
   }
 
-  forUpdate(ctx: JavaParser.ForUpdateCtx) {
+  forUpdate(ctx: JavaParser.ForUpdateCtx): AST.ForUpdate {
     return this.visit(ctx.statementExpressionList)
   }
 
+  // TODO:
   // @ts-expect-error ts(7023)
   fqnOrRefType(ctx: JavaParser.FqnOrRefTypeCtx) {
     if (ctx.Dot && ctx.fqnOrRefTypePartRest && ctx.fqnOrRefTypePartRest.length > 0) {
@@ -758,6 +864,17 @@ class AstExtractor extends BaseJavaCstVisitor {
         location: getLocation(lastDot)
       }
     }
+    if (ctx.fqnOrRefTypePartFirst && ctx.dims) {
+      const fqnOrRefTypePartFirst = this.visit(ctx.fqnOrRefTypePartFirst)
+      if (fqnOrRefTypePartFirst.kind !== 'Identifier') throw new Error('Not implemented')
+      const unannArrayType: AST.UnannArrayType = {
+        kind: 'UnannArrayType',
+        unannTypeVariable: fqnOrRefTypePartFirst,
+        dims: this.visit(ctx.dims),
+        location: getLocation(ctx.fqnOrRefTypePartFirst[0].location)
+      }
+      return unannArrayType
+    }
     if (ctx.Dot && ctx.Dot.length > 0) throw new Error('Not implemented')
     if (ctx.dims) throw new Error('Not implemented')
     if (ctx.fqnOrRefTypePartRest && ctx.fqnOrRefTypePartRest.length > 0)
@@ -767,13 +884,8 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   fqnOrRefTypePartCommon(ctx: JavaParser.FqnOrRefTypePartCommonCtx) {
     if (ctx.typeArguments) throw new Error('Not implemented')
-    return [ctx.Identifier, ctx.Super]
-      .filter(fqnOrRefType => fqnOrRefType !== undefined)
-      .map(fqnOrRefType => ({
-        kind: 'Type',
-        identifier: getIdentifier(fqnOrRefType![0]),
-        location: getLocation(fqnOrRefType![0])
-      }))[0]
+    if (ctx.Identifier) return getTypeIdentifier(ctx.Identifier[0])
+    if (ctx.Super) return getTypeIdentifier(ctx.Super[0])
   }
 
   fqnOrRefTypePartFirst(ctx: JavaParser.FqnOrRefTypePartFirstCtx) {
@@ -803,35 +915,43 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  ifStatement(ctx: JavaParser.IfStatementCtx) {
-    const consequentStatements: JavaParser.StatementCstNode[] = []
-    const alternateStatements: JavaParser.StatementCstNode[] = []
-    ctx.statement.forEach(statement => {
-      if (!ctx.Else) consequentStatements.push(statement)
-      else
-        statement.location.startOffset > ctx.Else[0].endOffset
-          ? alternateStatements.push(statement)
-          : consequentStatements.push(statement)
-    })
-    return {
-      kind: 'IfStatement',
-      expression: this.visit(ctx.expression),
-      consequentStatement:
-        consequentStatements.length > 0 ? this.visit(consequentStatements) : undefined,
-      alternateStatement:
-        alternateStatements.length > 0 ? this.visit(alternateStatements) : undefined
+  // TODO: Might need 2 passes of AST to convert StatementNoShortIf
+  ifStatement(ctx: JavaParser.IfStatementCtx): AST.IfThenStatement | AST.IfThenElseStatement {
+    if (!ctx.Else) {
+      const ifThenStatement: AST.IfThenStatement = {
+        kind: 'IfThenStatement',
+        expression: this.visit(ctx.expression),
+        statement: this.visit(ctx.statement),
+        location: getLocation(ctx.If[0])
+      }
+      return ifThenStatement
     }
+
+    const ifThenElseStatement: AST.IfThenElseStatement = {
+      kind: 'IfThenElseStatement',
+      expression: this.visit(ctx.expression),
+      statementNoShortIf: this.visit(ctx.statement[0]),
+      statement: this.visit(ctx.statement[1]),
+      location: getLocation(ctx.If[0])
+    }
+    return ifThenElseStatement
   }
 
   importDeclaration(ctx: JavaParser.ImportDeclarationCtx) {
     throw new Error('Not implemented')
   }
 
-  inferredLambdaParameterList(ctx: JavaParser.InferredLambdaParameterListCtx) {
-    return ctx.Identifier.map(identifier => getIdentifier(identifier))
+  inferredLambdaParameterList(
+    ctx: JavaParser.InferredLambdaParameterListCtx
+  ): AST.LambdaParameterList {
+    return {
+      kind: 'LambdaParameterList',
+      conciseLambdaParameters: ctx.Identifier.map(identifier => getIdentifier(identifier)),
+      location: getLocation(ctx.Identifier[0])
+    }
   }
 
-  instanceInitializer(ctx: JavaParser.InstanceInitializerCtx) {
+  instanceInitializer(ctx: JavaParser.InstanceInitializerCtx): AST.InstanceInitializer {
     return this.visit(ctx.block)
   }
 
@@ -867,17 +987,17 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  integralType(ctx: JavaParser.IntegralTypeCtx) {
+  integralType(ctx: JavaParser.IntegralTypeCtx): AST.IntegralType {
     return [ctx.Byte, ctx.Char, ctx.Int, ctx.Long, ctx.Short]
       .filter(integralType => integralType !== undefined)
       .map(integralType => ({
-        kind: 'IntegralType',
+        kind: 'IntegralType' as const,
         identifier: getIdentifier(integralType![0]),
         location: getLocation(integralType![0])
       }))[0]
   }
 
-  interfaceBody(ctx: JavaParser.InterfaceBodyCtx) {
+  interfaceBody(ctx: JavaParser.InterfaceBodyCtx): AST.InterfaceBody {
     ctx.interfaceMemberDeclaration
     return {
       kind: 'InterfaceBody',
@@ -890,29 +1010,34 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  interfaceDeclaration(ctx: JavaParser.InterfaceDeclarationCtx) {
+  interfaceDeclaration(ctx: JavaParser.InterfaceDeclarationCtx): AST.InterfaceDeclaration {
     if (ctx.annotationTypeDeclaration) throw new Error('Not implemented')
-    if (ctx.normalInterfaceDeclaration) {
-      return {
-        ...this.visit(ctx.normalInterfaceDeclaration),
-        interfaceModifiers: ctx.interfaceModifier
-          ? ctx.interfaceModifier.map(interfaceModifier => this.visit(interfaceModifier))
-          : [],
-        location: ctx.interfaceModifier
-          ? getLocation(ctx.interfaceModifier[0].location)
-          : getLocation(ctx.normalInterfaceDeclaration[0].location)
-      }
+    // if (ctx.normalInterfaceDeclaration) {
+    return {
+      ...this.visit(ctx.normalInterfaceDeclaration!),
+      interfaceModifiers: ctx.interfaceModifier
+        ? ctx.interfaceModifier.map(interfaceModifier => this.visit(interfaceModifier))
+        : [],
+      location: ctx.interfaceModifier
+        ? getLocation(ctx.interfaceModifier[0].location)
+        : getLocation(ctx.normalInterfaceDeclaration![0].location)
     }
+    // }
   }
 
-  interfaceMemberDeclaration(ctx: JavaParser.InterfaceMemberDeclarationCtx) {
+  interfaceMemberDeclaration(
+    ctx: JavaParser.InterfaceMemberDeclarationCtx
+  ): AST.InterfaceMemberDeclaration {
     if (ctx.classDeclaration) return this.visit(ctx.classDeclaration)
     if (ctx.constantDeclaration) return this.visit(ctx.constantDeclaration)
     if (ctx.interfaceDeclaration) return this.visit(ctx.interfaceDeclaration)
-    if (ctx.interfaceMethodDeclaration) return this.visit(ctx.interfaceMethodDeclaration)
+    // if (ctx.interfaceMethodDeclaration)
+    return this.visit(ctx.interfaceMethodDeclaration!)
   }
 
-  interfaceMethodDeclaration(ctx: JavaParser.InterfaceMethodDeclarationCtx) {
+  interfaceMethodDeclaration(
+    ctx: JavaParser.InterfaceMethodDeclarationCtx
+  ): AST.InterfaceMethodDeclaration {
     return {
       kind: 'InterfaceMethodDeclaration',
       interfaceMethodModifiers: ctx.interfaceMethodModifier
@@ -928,18 +1053,14 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  interfaceMethodModifier(ctx: JavaParser.InterfaceMethodModifierCtx) {
+  interfaceMethodModifier(ctx: JavaParser.InterfaceMethodModifierCtx): AST.InterfaceMethodModifier {
     if (ctx.annotation) throw new Error('Not implemented')
     return [ctx.Abstract, ctx.Default, ctx.Private, ctx.Public, ctx.Static, ctx.Strictfp]
       .filter(interfaceModifier => interfaceModifier !== undefined)
-      .map(interfaceModifier => ({
-        kind: 'InterfaceMethodModifier',
-        identifier: getIdentifier(interfaceModifier![0]),
-        location: getLocation(interfaceModifier![0])
-      }))[0]
+      .map(interfaceModifier => getIdentifier(interfaceModifier![0]))[0]
   }
 
-  interfaceModifier(ctx: JavaParser.InterfaceModifierCtx) {
+  interfaceModifier(ctx: JavaParser.InterfaceModifierCtx): AST.InterfaceModifier {
     if (ctx.annotation) throw new Error('Not implemented')
     return [
       ctx.Abstract,
@@ -952,14 +1073,10 @@ class AstExtractor extends BaseJavaCstVisitor {
       ctx.Strictfp
     ]
       .filter(interfaceModifier => interfaceModifier !== undefined)
-      .map(interfaceModifier => ({
-        kind: 'InterfaceModifier',
-        identifier: getIdentifier(interfaceModifier![0]),
-        location: getLocation(interfaceModifier![0])
-      }))[0]
+      .map(interfaceModifier => getIdentifier(interfaceModifier![0]))[0]
   }
 
-  interfacePermits(ctx: JavaParser.InterfacePermitsCtx) {
+  interfacePermits(ctx: JavaParser.InterfacePermitsCtx): AST.InterfacePermits {
     return {
       kind: 'InterfacePermits',
       typeNames: ctx.typeName.map(typeName => this.visit(typeName)),
@@ -967,12 +1084,16 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  interfaceType(ctx: JavaParser.InterfaceTypeCtx) {
+  interfaceType(ctx: JavaParser.InterfaceTypeCtx): AST.InterfaceType {
     return this.visit(ctx.classType)
   }
 
-  interfaceTypeList(ctx: JavaParser.InterfaceTypeListCtx) {
-    return ctx.interfaceType.map(interfaceType => this.visit(interfaceType))
+  interfaceTypeList(ctx: JavaParser.InterfaceTypeListCtx): AST.InterfaceTypeList {
+    return {
+      kind: 'InterfaceTypeList',
+      interfaceTypes: ctx.interfaceType.map(interfaceType => this.visit(interfaceType)),
+      location: getLocation(ctx.interfaceType[0].location)
+    }
   }
 
   isBasicForStatement(ctx: JavaParser.IsBasicForStatementCtx) {
@@ -1027,7 +1148,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  labeledStatement(ctx: JavaParser.LabeledStatementCtx) {
+  labeledStatement(ctx: JavaParser.LabeledStatementCtx): AST.LabeledStatement {
     return {
       kind: 'LabeledStatement',
       identifier: getIdentifier(ctx.Identifier[0]),
@@ -1036,12 +1157,13 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  lambdaBody(ctx: JavaParser.LambdaBodyCtx) {
+  lambdaBody(ctx: JavaParser.LambdaBodyCtx): AST.LambdaBody {
     if (ctx.block) return this.visit(ctx.block)
-    if (ctx.expression) return this.visit(ctx.expression)
+    // if (ctx.expression)
+    return this.visit(ctx.expression!)
   }
 
-  lambdaExpression(ctx: JavaParser.LambdaExpressionCtx, param?: any) {
+  lambdaExpression(ctx: JavaParser.LambdaExpressionCtx): AST.LambdaExpression {
     return {
       kind: 'LambdaExpression',
       lambdaParameters: this.visit(ctx.lambdaParameters),
@@ -1050,32 +1172,40 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  lambdaParameter(ctx: JavaParser.LambdaParameterCtx) {
+  lambdaParameter(ctx: JavaParser.LambdaParameterCtx): AST.NormalLambdaParameter {
     if (ctx.regularLambdaParameter) return this.visit(ctx.regularLambdaParameter)
-    if (ctx.variableArityParameter) return this.visit(ctx.variableArityParameter)
+    // if (ctx.variableArityParameter)
+    return this.visit(ctx.variableArityParameter!)
   }
 
-  lambdaParameterList(ctx: JavaParser.LambdaParameterListCtx) {
+  lambdaParameterList(ctx: JavaParser.LambdaParameterListCtx): AST.LambdaParameterList {
     if (ctx.explicitLambdaParameterList) return this.visit(ctx.explicitLambdaParameterList)
-    if (ctx.inferredLambdaParameterList) return this.visit(ctx.inferredLambdaParameterList)
+    // if (ctx.inferredLambdaParameterList)
+    return this.visit(ctx.inferredLambdaParameterList!)
   }
 
-  lambdaParameterType(ctx: JavaParser.LambdaParameterTypeCtx) {
+  lambdaParameterType(ctx: JavaParser.LambdaParameterTypeCtx): AST.LambdaParameterType {
     if (ctx.Var) return getIdentifier(ctx.Var[0])
-    if (ctx.unannType) return this.visit(ctx.unannType)
+    // if (ctx.unannType)
+    return this.visit(ctx.unannType!)
   }
 
-  lambdaParameters(ctx: JavaParser.LambdaParametersCtx, param?: any) {
+  lambdaParameters(ctx: JavaParser.LambdaParametersCtx): AST.LambdaParameters {
     if (ctx.lambdaParametersWithBraces) return this.visit(ctx.lambdaParametersWithBraces)
-    if (ctx.Identifier)
-      return {
-        kind: 'ConciseLambdaParameter',
-        identifier: getIdentifier(ctx.Identifier[0]),
-        location: getLocation(ctx.Identifier[0])
-      }
+    // if (ctx.Identifier) {
+    return {
+      kind: 'LambdaParameters',
+      lambdaParameterList: {
+        kind: 'LambdaParameterList',
+        conciseLambdaParameters: [getIdentifier(ctx.Identifier![0])],
+        location: getLocation(ctx.Identifier![0])
+      },
+      location: getLocation(ctx.Identifier![0])
+    }
+    // }
   }
 
-  lambdaParametersWithBraces(ctx: JavaParser.LambdaParametersWithBracesCtx) {
+  lambdaParametersWithBraces(ctx: JavaParser.LambdaParametersWithBracesCtx): AST.LambdaParameters {
     return {
       kind: 'LambdaParameters',
       lambdaParameterList: ctx.lambdaParameterList
@@ -1114,10 +1244,14 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  localVariableDeclaration(ctx: JavaParser.LocalVariableDeclarationCtx) {
+  localVariableDeclaration(
+    ctx: JavaParser.LocalVariableDeclarationCtx
+  ): AST.LocalVariableDeclaration {
     return {
       kind: 'LocalVariableDeclaration',
-      variableModifier: ctx.variableModifier ? this.visit(ctx.variableModifier) : undefined,
+      variableModifiers: ctx.variableModifier
+        ? ctx.variableModifier.map(variableModifier => this.visit(variableModifier))
+        : [],
       localVariableType: this.visit(ctx.localVariableType),
       variableDeclaratorList: this.visit(ctx.variableDeclaratorList),
       location: ctx.variableModifier
@@ -1126,31 +1260,35 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  localVariableDeclarationStatement(ctx: JavaParser.LocalVariableDeclarationStatementCtx) {
+  localVariableDeclarationStatement(
+    ctx: JavaParser.LocalVariableDeclarationStatementCtx
+  ): AST.LocalVariableDeclarationStatement {
     return this.visit(ctx.localVariableDeclaration)
   }
 
-  localVariableType(ctx: JavaParser.LocalVariableTypeCtx) {
+  localVariableType(ctx: JavaParser.LocalVariableTypeCtx): AST.LocalVariableType {
     if (ctx.Var) return { kind: 'Var', location: getLocation(ctx.Var[0]) }
-    if (ctx.unannType) return this.visit(ctx.unannType)
+    // if (ctx.unannType)
+    return this.visit(ctx.unannType!)
   }
 
-  methodName(ctx: JavaParser.MethodNameCtx) {
+  methodName(ctx: JavaParser.MethodNameCtx): AST.MethodName {
     return getIdentifier(ctx.Identifier[0])
   }
 
-  methodReferenceSuffix(ctx: JavaParser.MethodReferenceSuffixCtx) {
+  methodReferenceSuffix(ctx: JavaParser.MethodReferenceSuffixCtx): AST.New | AST.Identifier {
     if (ctx.typeArguments) throw new Error('Not implemented')
     if (ctx.New) return getIdentifier(ctx.New[0])
-    if (ctx.Identifier) return getIdentifier(ctx.Identifier[0])
+    // if (ctx.Identifier)
+    return getIdentifier(ctx.Identifier![0])
   }
 
-  methodBody(ctx: JavaParser.MethodBodyCtx) {
+  methodBody(ctx: JavaParser.MethodBodyCtx): AST.MethodBody {
     if (ctx.block) return this.visit(ctx.block)
     throw new Error('Not implemented')
   }
 
-  methodDeclaration(ctx: JavaParser.MethodDeclarationCtx) {
+  methodDeclaration(ctx: JavaParser.MethodDeclarationCtx): AST.MethodDeclaration {
     const methodModifiers = ctx.methodModifier ? this.visit(ctx.methodModifier) : []
     return {
       kind: 'MethodDeclaration',
@@ -1163,17 +1301,17 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  methodDeclarator(ctx: JavaParser.MethodDeclaratorCtx) {
-    if (ctx.dims) throw new Error('Not implemented')
+  methodDeclarator(ctx: JavaParser.MethodDeclaratorCtx): AST.MethodDeclarator {
     return {
       kind: 'MethodDeclarator',
       identifier: getIdentifier(ctx.Identifier[0]),
       formalParameterList: ctx.formalParameterList ? this.visit(ctx.formalParameterList) : [],
+      dims: ctx.dims ? this.visit(ctx.dims) : undefined,
       location: getLocation(ctx.Identifier[0])
     }
   }
 
-  methodHeader(ctx: JavaParser.MethodHeaderCtx) {
+  methodHeader(ctx: JavaParser.MethodHeaderCtx): AST.MethodHeader {
     if (ctx.annotation) throw new Error('Not implemented')
     if (ctx.typeParameters) throw new Error('Not implemented')
     return {
@@ -1185,15 +1323,15 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  methodInvocationSuffix(ctx: JavaParser.MethodInvocationSuffixCtx) {
+  methodInvocationSuffix(ctx: JavaParser.MethodInvocationSuffixCtx): AST.MethodInvocation {
     return {
       kind: 'MethodInvocation',
-      argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : [],
+      argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : undefined,
       location: getLocation(ctx.LBrace[0])
     }
   }
 
-  methodModifier(ctx: JavaParser.MethodModifierCtx) {
+  methodModifier(ctx: JavaParser.MethodModifierCtx): AST.MethodModifier {
     if (ctx.annotation) throw new Error('Not implemented')
     return [
       ctx.Abstract,
@@ -1207,11 +1345,7 @@ class AstExtractor extends BaseJavaCstVisitor {
       ctx.Synchronized
     ]
       .filter(modifier => modifier !== undefined)
-      .map(modifier => ({
-        kind: 'MethodModifier',
-        value: modifier![0].image,
-        location: getLocation(modifier![0])
-      }))
+      .map(modifier => getIdentifier(modifier![0]))[0]
   }
 
   modularCompilationUnit(ctx: JavaParser.ModularCompilationUnitCtx) {
@@ -1230,54 +1364,65 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  newExpression(ctx: JavaParser.NewExpressionCtx) {
+  newExpression(
+    ctx: JavaParser.NewExpressionCtx
+  ): AST.ArrayCreationExpression | AST.UnqualifiedClassInstanceCreationExpression {
     if (ctx.arrayCreationExpression) return this.visit(ctx.arrayCreationExpression)
-    if (ctx.unqualifiedClassInstanceCreationExpression)
-      return this.visit(ctx.unqualifiedClassInstanceCreationExpression)
+    // if (ctx.unqualifiedClassInstanceCreationExpression)
+    return this.visit(ctx.unqualifiedClassInstanceCreationExpression!)
   }
 
-  normalClassDeclaration(ctx: JavaParser.NormalClassDeclarationCtx) {
+  normalClassDeclaration(ctx: JavaParser.NormalClassDeclarationCtx): AST.NormalClassDeclaration {
     if (ctx.typeParameters) throw new Error('Not implemented')
     return {
       kind: 'NormalClassDeclaration',
+      classModifiers: [],
       classBody: this.visit(ctx.classBody),
       typeIdentifier: this.visit(ctx.typeIdentifier),
       classExtends: ctx.superclass ? this.visit(ctx.superclass) : undefined,
       classImplements: ctx.superinterfaces ? this.visit(ctx.superinterfaces) : undefined,
-      classPermits: ctx.classPermits ? this.visit(ctx.classPermits) : undefined
+      classPermits: ctx.classPermits ? this.visit(ctx.classPermits) : undefined,
+      location: getLocation(ctx.Class[0])
     }
   }
 
-  normalInterfaceDeclaration(ctx: JavaParser.NormalInterfaceDeclarationCtx) {
+  normalInterfaceDeclaration(
+    ctx: JavaParser.NormalInterfaceDeclarationCtx
+  ): AST.NormalInterfaceDeclaration {
     if (ctx.typeParameters) throw new Error('Not implemented')
     return {
       kind: 'NormalInterfaceDeclaration',
+      interfaceModifiers: [],
       typeIdentifier: this.visit(ctx.typeIdentifier),
       interfaceExtends: ctx.extendsInterfaces ? this.visit(ctx.extendsInterfaces) : undefined,
       interfacePermits: ctx.interfacePermits ? this.visit(ctx.interfacePermits) : undefined,
-      interfaceBody: this.visit(ctx.interfaceBody)
+      interfaceBody: this.visit(ctx.interfaceBody),
+      location: getLocation(ctx.Interface[0])
     }
   }
 
-  numericType(ctx: JavaParser.NumericTypeCtx) {
+  numericType(ctx: JavaParser.NumericTypeCtx): AST.NumericType {
     if (ctx.floatingPointType) return this.visit(ctx.floatingPointType)
-    if (ctx.integralType) return this.visit(ctx.integralType)
+    // if (ctx.integralType)
+    return this.visit(ctx.integralType!)
   }
 
   opensModuleDirective(ctx: JavaParser.OpensModuleDirectiveCtx) {
     throw new Error('Not implemented')
   }
 
-  ordinaryCompilationUnit(ctx: JavaParser.OrdinaryCompilationUnitCtx) {
+  ordinaryCompilationUnit(ctx: JavaParser.OrdinaryCompilationUnitCtx): AST.OrdinaryCompilationUnit {
     if (ctx.importDeclaration) throw new Error('Not implemented')
     if (ctx.packageDeclaration) throw new Error('Not implemented')
-    if (ctx.typeDeclaration) {
-      return {
-        kind: 'OrdinaryCompilationUnit',
-        topLevelClassOrInterfaceDeclaration: this.visit(ctx.typeDeclaration),
-        location: getLocation(ctx.typeDeclaration[0].location)
-      }
+    // if (ctx.typeDeclaration) {
+    return {
+      kind: 'OrdinaryCompilationUnit',
+      topLevelClassOrInterfaceDeclarations: ctx.typeDeclaration!.map(typeDeclaration => {
+        return this.visit(typeDeclaration)
+      }),
+      location: getLocation(ctx.typeDeclaration![0].location)
     }
+    // }
   }
 
   packageDeclaration(ctx: JavaParser.PackageDeclarationCtx) {
@@ -1296,7 +1441,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  parenthesisExpression(ctx: JavaParser.ParenthesisExpressionCtx) {
+  parenthesisExpression(ctx: JavaParser.ParenthesisExpressionCtx): AST.ParenthesisExpression {
     return {
       kind: 'ParenthesisExpression',
       expression: this.visit(ctx.expression),
@@ -1304,48 +1449,93 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  pattern(ctx: JavaParser.PatternCtx) {
+  pattern(ctx: JavaParser.PatternCtx): AST.Pattern {
     if (ctx.AndAnd) throw new Error('Not implemented')
     if (ctx.binaryExpression) throw new Error('Not implemneted')
     return this.visit(ctx.primaryPattern)
   }
 
-  // TODO:
-  // @ts-expect-error ts(7023)
-  primary(ctx: JavaParser.PrimaryCtx) {
-    if (ctx.primarySuffix && ctx.primarySuffix.length > 0) {
-      const lastSuffix = ctx.primarySuffix[ctx.primarySuffix.length - 1]
-      ctx.primarySuffix = ctx.primarySuffix.slice(0, ctx.primarySuffix.length - 1)
-      // @ts-expect-error ts(7022)
-      const primary = this.primary(ctx)
-      const primarySuffix = this.visit(lastSuffix)
-
-      const isMethodInvocation =
-        primarySuffix.kind === 'MethodInvocation' && primary.kind === 'FieldAccess'
-      if (isMethodInvocation) {
+  primary(ctx: JavaParser.PrimaryCtx): AST.Primary {
+    const prefix = this.visit(ctx.primaryPrefix)
+    const suffixes = ctx.primarySuffix ? ctx.primarySuffix.map(suffix => this.visit(suffix)) : []
+    if (suffixes.length === 0) {
+      if (prefix.kind === 'ExpressionName' && prefix.identifier.identifier === 'this') {
         return {
-          ...primarySuffix,
-          identifier: primary.identifier,
-          location: primary.location,
-          primary: primary.primary
+          kind: 'This',
+          location: prefix.identifier.location
         }
       }
-
-      if (primary.kind === 'ExpressionName') {
-        return {
-          ...primarySuffix,
-          identifier: primary.identifier,
-          location: primary.location
-        }
-      }
-
-      return { ...primarySuffix, primary }
+      return prefix
     }
-    return this.visit(ctx.primaryPrefix)
+    const firstSuffix = suffixes[0]
+    if (firstSuffix.kind === 'ClassLiteral') {
+      const classLiteral = { ...firstSuffix, location: prefix.location }
+      if (prefix.kind === 'Identifier') classLiteral.typeName = prefix
+      else if (prefix.kind === 'IntegralType' || prefix.kind === 'FloatingPointType')
+        classLiteral.numericType = prefix
+      else if (prefix.kind === 'Boolean') classLiteral.boolean = prefix
+      else if (prefix.kind === 'UnannArrayType') {
+        firstSuffix.dims.push(...prefix.dims.dims)
+        if ('unannTypeVariable' in prefix) classLiteral.typeName = prefix.unannTypeVariable
+        if ('unannPrimitiveType' in prefix) {
+          if (prefix.unannPrimitiveType.kind === 'Boolean')
+            classLiteral.boolean = prefix.unannPrimitiveType
+          else classLiteral.numericType = prefix.unannPrimitiveType
+        }
+      } else classLiteral.void = { kind: 'Void', location: prefix.location }
+      return classLiteral
+    }
+    if (firstSuffix.kind === 'TypeNameThis') {
+      return {
+        ...firstSuffix,
+        typeName: prefix
+      }
+    }
+    if (firstSuffix.kind === 'ClassInstanceCreationExpression') {
+      if (prefix.kind === 'ExpressionName') firstSuffix.expressionName = prefix
+      else firstSuffix.primary = prefix
+      return firstSuffix
+    }
+    if (firstSuffix.kind === 'ArrayAccess') {
+      let currentPrefix = prefix
+      for (const suffix of suffixes) {
+        if (currentPrefix.kind === 'ArrayCreationExpressionWithInitializer')
+          suffix.arrayCreationExpressionWithInitializer = currentPrefix
+        else if (currentPrefix.kind === 'ExpressionName') suffix.expressionName = currentPrefix
+        else suffix.primaryNoNewArray = currentPrefix
+        currentPrefix = suffix
+      }
+      return currentPrefix
+    }
+    if (firstSuffix.kind === 'MethodInvocation') {
+      let currentPrefix = prefix
+      for (const suffix of suffixes) {
+        if (currentPrefix.kind === 'Identifier') suffix.methodName = currentPrefix
+        else if (currentPrefix.kind === 'FieldAccess') {
+          suffix.primary = currentPrefix.primary
+          suffix.identifier = currentPrefix.identifier
+        } else suffix.primary = currentPrefix
+        currentPrefix = suffix
+      }
+      return currentPrefix
+    }
+    if (firstSuffix.kind === 'MethodReference') {
+      let currentPrefix = prefix
+      for (const suffix of suffixes) {
+        suffix.primary = currentPrefix
+        currentPrefix = suffix
+      }
+      return currentPrefix
+    }
+
+    throw new Error('Not implemented')
   }
 
   primaryPattern(ctx: JavaParser.PrimaryPatternCtx) {
-    throw new Error('Not implemented')
+    if (ctx.LBrace) throw new Error('Not implemented')
+    if (ctx.RBrace) throw new Error('Not implemented')
+    if (ctx.pattern) throw new Error('Not implemented')
+    if (ctx.typePattern) return this.visit(ctx.typePattern)
   }
 
   primaryPrefix(ctx: JavaParser.PrimaryPrefixCtx) {
@@ -1368,7 +1558,26 @@ class AstExtractor extends BaseJavaCstVisitor {
   }
 
   primarySuffix(ctx: JavaParser.PrimarySuffixCtx) {
+    if (ctx.classLiteralSuffix) {
+      return {
+        kind: 'ClassLiteral',
+        ...this.visit(ctx.classLiteralSuffix)
+      }
+    }
     if (ctx.methodInvocationSuffix) return this.visit(ctx.methodInvocationSuffix)
+    if (ctx.methodReferenceSuffix) {
+      const suffix = this.visit(ctx.methodReferenceSuffix)
+      if (suffix.kind === 'New') {
+        return {
+          kind: 'MethodReference',
+          new: suffix
+        }
+      }
+      return {
+        kind: 'MethodReference',
+        identifier: suffix
+      }
+    }
     if (ctx.arrayAccessSuffix) return this.visit(ctx.arrayAccessSuffix)
     if (ctx.Dot && ctx.Identifier) {
       return {
@@ -1377,10 +1586,26 @@ class AstExtractor extends BaseJavaCstVisitor {
         location: getLocation(ctx.Identifier[0])
       }
     }
+    if (ctx.Dot && ctx.This) {
+      return {
+        kind: 'TypeNameThis',
+        this: getNode(ctx.This[0]) as AST.This,
+        location: getLocation(ctx.Dot[0])
+      }
+    }
+    if (ctx.Dot && ctx.unqualifiedClassInstanceCreationExpression) {
+      return {
+        kind: 'ClassInstanceCreationExpression',
+        unqualifiedClassInstanceCreationExpression: this.visit(
+          ctx.unqualifiedClassInstanceCreationExpression
+        ),
+        location: getLocation(ctx.Dot[0])
+      }
+    }
     throw new Error('Not implemented')
   }
 
-  primitiveCastExpression(ctx: JavaParser.PrimitiveCastExpressionCtx) {
+  primitiveCastExpression(ctx: JavaParser.PrimitiveCastExpressionCtx): AST.CastExpression {
     return {
       kind: 'CastExpression',
       primitiveType: this.visit(ctx.primitiveType),
@@ -1389,10 +1614,11 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  primitiveType(ctx: JavaParser.PrimitiveTypeCtx) {
+  primitiveType(ctx: JavaParser.PrimitiveTypeCtx): AST.PrimitiveType {
     if (ctx.annotation) throw new Error('Not implemented')
-    if (ctx.Boolean) return getIdentifier(ctx.Boolean[0])
-    if (ctx.numericType) return this.visit(ctx.numericType)
+    if (ctx.Boolean) return getNode(ctx.Boolean[0]) as AST.Boolean
+    // if (ctx.numericType)
+    return this.visit(ctx.numericType!)
   }
 
   providesModuleDirective(ctx: JavaParser.ProvidesModuleDirectiveCtx) {
@@ -1401,64 +1627,98 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   qualifiedExplicitConstructorInvocation(
     ctx: JavaParser.QualifiedExplicitConstructorInvocationCtx
-  ) {
+  ): AST.ExplicitConstructorInvocation {
     if (ctx.typeArguments) throw new Error('Not implemented')
     return {
-      kind: 'QualifiedExplicitConstructorInvocation',
-      primary: this.visit(ctx.expressionName),
-      super: getIdentifier(ctx.Super[0]),
+      kind: 'ExplicitConstructorInvocation',
+      expressionName: this.visit(ctx.expressionName),
+      super: getNode(ctx.Super[0]) as AST.Super,
       argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : [],
       location: getLocation(ctx.expressionName[0].location)
     }
   }
 
-  receiverParameter(ctx: JavaParser.ReceiverParameterCtx) {
-    throw new Error('Not implemented')
+  receiverParameter(ctx: JavaParser.ReceiverParameterCtx): AST.ReceiverParameter {
+    return {
+      kind: 'ReceiverParameter',
+      unannType: this.visit(ctx.unannType),
+      identifier: ctx.Identifier ? getIdentifier(ctx.Identifier[0]) : undefined,
+      location: getLocation(ctx.unannType[0].location)
+    }
   }
 
-  recordBody(ctx: JavaParser.RecordBodyCtx) {}
+  recordBody(ctx: JavaParser.RecordBodyCtx): AST.RecordBody {
+    return {
+      kind: 'RecordBody',
+      recordBodyDeclarations: ctx.recordBodyDeclaration
+        ? ctx.recordBodyDeclaration.map(recordBodyDeclaration => this.visit(recordBodyDeclaration))
+        : [],
+      location: getLocation(ctx.LCurly[0])
+    }
+  }
 
-  recordBodyDeclaration(ctx: JavaParser.RecordBodyDeclarationCtx) {}
+  recordBodyDeclaration(ctx: JavaParser.RecordBodyDeclarationCtx): AST.RecordBodyDeclaration {
+    if (ctx.classBodyDeclaration) return this.visit(ctx.classBodyDeclaration)
+    return this.visit(ctx.compactConstructorDeclaration!)
+  }
 
-  recordComponent(ctx: JavaParser.RecordComponentCtx) {
-    const result: Record<string, any> = {
-      recordComponentModifier: ctx.recordComponentModifier
-        ? this.visit(ctx.recordComponentModifier)
-        : undefined,
+  recordComponent(ctx: JavaParser.RecordComponentCtx): AST.RecordComponent {
+    if (ctx.variableArityRecordComponent) {
+      return {
+        ...this.visit(ctx.variableArityRecordComponent),
+        recordComponentModifiers: ctx.recordComponentModifier
+          ? ctx.recordComponentModifier.map(recordComponentModifier =>
+              this.visit(recordComponentModifier)
+            )
+          : [],
+        unannType: this.visit(ctx.unannType),
+        location: ctx.recordComponentModifier
+          ? getLocation(ctx.recordComponentModifier[0].location)
+          : getLocation(ctx.unannType[0].location)
+      }
+    }
+
+    return {
+      kind: 'RecordComponent',
+      recordComponentModifiers: ctx.recordComponentModifier
+        ? ctx.recordComponentModifier.map(recordComponentModifier =>
+            this.visit(recordComponentModifier)
+          )
+        : [],
       unannType: this.visit(ctx.unannType),
+      identifier: getIdentifier(ctx.Identifier![0]),
       location: ctx.recordComponentModifier
         ? getLocation(ctx.recordComponentModifier[0].location)
         : getLocation(ctx.unannType[0].location)
     }
-    if (ctx.variableArityRecordComponent)
-      return { ...this.visit(ctx.variableArityRecordComponent), ...result }
+  }
+
+  recordComponentList(ctx: JavaParser.RecordComponentListCtx): AST.RecordComponentList {
     return {
-      kind: 'RecordComponent',
-      identifier: ctx.Identifier ? getIdentifier(ctx.Identifier[0]) : undefined,
-      ...result
+      kind: 'RecordComponentList',
+      recordComponents: ctx.recordComponent.map(recordComponent => this.visit(recordComponent)),
+      location: getLocation(ctx.recordComponent[0].location)
     }
   }
 
-  recordComponentList(ctx: JavaParser.RecordComponentListCtx) {
-    return ctx.recordComponent.map(recordComponent => this.visit(recordComponent))
-  }
-
-  recordComponentModifier(ctx: JavaParser.RecordComponentModifierCtx) {
+  recordComponentModifier(ctx: JavaParser.RecordComponentModifierCtx): AST.RecordComponentModifier {
     throw new Error('Not implemented')
   }
 
-  recordDeclaration(ctx: JavaParser.RecordDeclarationCtx) {
+  recordDeclaration(ctx: JavaParser.RecordDeclarationCtx): AST.RecordDeclaration {
     if (ctx.typeParameters) throw new Error('Not implemented')
     return {
       kind: 'RecordDeclaration',
+      classModifier: [],
       typeIdentifier: this.visit(ctx.typeIdentifier),
       recordHeader: this.visit(ctx.recordHeader),
       classImplements: ctx.superinterfaces ? this.visit(ctx.superinterfaces) : undefined,
-      recordBody: this.visit(ctx.recordBody)
+      recordBody: this.visit(ctx.recordBody),
+      location: getLocation(ctx.Record[0])
     }
   }
 
-  recordHeader(ctx: JavaParser.RecordHeaderCtx) {
+  recordHeader(ctx: JavaParser.RecordHeaderCtx): AST.RecordHeader {
     return {
       kind: 'RecordHeader',
       recordComponentList: ctx.recordComponentList
@@ -1468,23 +1728,43 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  // @ts-expect-error ts(7023)
-  referenceType(ctx: JavaParser.ReferenceTypeCtx) {
+  referenceType(ctx: JavaParser.ReferenceTypeCtx): AST.ReferenceType {
     if (ctx.annotation) throw new Error('Not implemented')
-    if (ctx.dims && ctx.dims.length > 0) {
-      const lastDims = ctx.dims[ctx.dims.length - 1]
-      ctx.dims = ctx.dims.slice(0, ctx.dims.length - 1)
-      return {
-        kind: 'ArrayType',
-        dims: this.visit(lastDims),
-        type: this.referenceType(ctx)
-      }
-    }
-    if (ctx.classOrInterfaceType) return this.visit(ctx.classOrInterfaceType)
-    if (ctx.primitiveType) return this.visit(ctx.primitiveType)
+    throw new Error('Not implemented')
+    // const classOrInterfaceType = ctx.classOrInterfaceType
+    //   ? this.visit(ctx.classOrInterfaceType)
+    //   : undefined
+    // const primitiveType: AST.PrimitiveType | undefined = ctx.primitiveType
+    //   ? this.visit(ctx.primitiveType)
+    //   : undefined
+    // if (!ctx.dims) {
+    //   if (classOrInterfaceType) return classOrInterfaceType
+    //   if (primitiveType!.kind === 'Boolean') {
+    //     return {
+    //       kind: 'Identifier',
+    //       identifier: 'boolean',
+    //       location: primitiveType!.location
+    //     }
+    //   }
+    //   return primitiveType!.identifier
+    // }
+
+    // if (ctx.dims) {
+    //   const lastDims = ctx.dims[ctx.dims.length - 1]
+    //   ctx.dims = ctx.dims.slice(0, ctx.dims.length - 1)
+    //   const referenceType = this.referenceType(ctx)
+    //   const arrayType: AST.ArrayType = {
+    //     kind: 'ArrayType',
+
+    //     classOrInterfaceType: referenceType.kind === 'ClassType' ? referenceType : undefined,
+    //     dims: this.visit(lastDims),
+    //     location: referenceType.location
+    //   }
+    //   return arrayType
+    // }
   }
 
-  referenceTypeCastExpression(ctx: JavaParser.ReferenceTypeCastExpressionCtx) {
+  referenceTypeCastExpression(ctx: JavaParser.ReferenceTypeCastExpressionCtx): AST.CastExpression {
     return {
       kind: 'CastExpression',
       referenceType: this.visit(ctx.referenceType),
@@ -1496,10 +1776,12 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  regularLambdaParameter(ctx: JavaParser.RegularLambdaParameterCtx) {
+  regularLambdaParameter(ctx: JavaParser.RegularLambdaParameterCtx): AST.NormalLambdaParameter {
     return {
       kind: 'NormalLambdaParameter',
-      variableModifier: ctx.variableModifier ? this.visit(ctx.variableModifier) : undefined,
+      variableModifiers: ctx.variableModifier
+        ? ctx.variableModifier.map(variableModifier => this.visit(variableModifier))
+        : [],
       lambdaParameterType: this.visit(ctx.lambdaParameterType),
       variableDeclaratorId: this.visit(ctx.variableDeclaratorId),
       location: ctx.variableModifier
@@ -1516,39 +1798,55 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  resource(ctx: JavaParser.ResourceCtx, param?: any) {
+  resource(ctx: JavaParser.ResourceCtx): AST.Resource {
     if (ctx.resourceInit) return this.visit(ctx.resourceInit)
-    if (ctx.variableAccess) return this.visit(ctx.variableAccess)
+    // if (ctx.variableAccess)
+    return this.visit(ctx.variableAccess!)
   }
 
-  resourceInit(ctx: JavaParser.ResourceInitCtx, param?: any) {
+  resourceInit(ctx: JavaParser.ResourceInitCtx): AST.LocalVariableDeclaration {
     return {
       kind: 'LocalVariableDeclaration',
-      variableModifier: ctx.variableModifier ? this.visit(ctx.variableModifier) : undefined,
+      variableModifiers: ctx.variableModifier
+        ? ctx.variableModifier.map(variableModifier => this.visit(variableModifier))
+        : [],
       localVariableType: this.visit(ctx.localVariableType),
-      variableDeclaratorList: [
-        {
-          kind: 'VariableDeclarator',
-          variableDeclaratorId: {
-            kind: 'VariableDeclaratorId',
-            identifier: getIdentifier(ctx.Identifier[0]),
+      variableDeclaratorList: {
+        kind: 'VariableDeclaratorList',
+        variableDeclarators: [
+          {
+            kind: 'VariableDeclarator',
+            variableDeclaratorId: {
+              kind: 'VariableDeclaratorId',
+              identifier: getIdentifier(ctx.Identifier[0]),
+              dims: {
+                kind: 'Dims',
+                dims: [],
+                location: getLocation(ctx.Identifier[0])
+              },
+              location: getLocation(ctx.Identifier[0])
+            },
+            variableInitializer: this.visit(ctx.expression),
             location: getLocation(ctx.Identifier[0])
-          },
-          variableInitializer: this.visit(ctx.expression),
-          location: getLocation(ctx.Identifier[0])
-        }
-      ],
+          }
+        ],
+        location: getLocation(ctx.Identifier[0])
+      },
       location: ctx.variableModifier
         ? getLocation(ctx.variableModifier[0].location)
         : getLocation(ctx.localVariableType[0].location)
     }
   }
 
-  resourceList(ctx: JavaParser.ResourceListCtx, param?: any) {
-    return ctx.resource.map(resource => this.visit(resource))
+  resourceList(ctx: JavaParser.ResourceListCtx): AST.ResourceList {
+    return {
+      kind: 'ResourceList',
+      resources: ctx.resource.map(resource => this.visit(resource)),
+      location: getLocation(ctx.resource[0].location)
+    }
   }
 
-  resourceSpecification(ctx: JavaParser.ResourceSpecificationCtx, param?: any) {
+  resourceSpecification(ctx: JavaParser.ResourceSpecificationCtx): AST.ResourceSpecification {
     return {
       kind: 'ResourceSpecification',
       resourceList: this.visit(ctx.resourceList),
@@ -1556,12 +1854,13 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  result(ctx: JavaParser.ResultCtx) {
+  result(ctx: JavaParser.ResultCtx): AST.Result {
     if (ctx.unannType) return this.visit(ctx.unannType)
-    if (ctx.Void) return getIdentifier(ctx.Void[0])
+    // if (ctx.Void)
+    return getNode(ctx.Void![0]) as AST.Void
   }
 
-  returnStatement(ctx: JavaParser.ReturnStatementCtx) {
+  returnStatement(ctx: JavaParser.ReturnStatementCtx): AST.ReturnStatement {
     return {
       kind: 'ReturnStatement',
       expression: ctx.expression ? this.visit(ctx.expression) : undefined,
@@ -1569,28 +1868,37 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  simpleTypeName(ctx: JavaParser.SimpleTypeNameCtx) {
+  simpleTypeName(ctx: JavaParser.SimpleTypeNameCtx): AST.SimpleTypeName {
     return getIdentifier(ctx.Identifier[0])
   }
 
-  statement(ctx: JavaParser.StatementCtx) {
+  statement(ctx: JavaParser.StatementCtx): AST.Statement {
     if (ctx.forStatement) return this.visit(ctx.forStatement)
     if (ctx.ifStatement) return this.visit(ctx.ifStatement)
     if (ctx.labeledStatement) return this.visit(ctx.labeledStatement)
     if (ctx.statementWithoutTrailingSubstatement)
       return this.visit(ctx.statementWithoutTrailingSubstatement)
-    if (ctx.whileStatement) return this.visit(ctx.whileStatement)
+    // if (ctx.whileStatement)
+    return this.visit(ctx.whileStatement!)
   }
 
-  statementExpression(ctx: JavaParser.StatementExpressionCtx) {
+  statementExpression(ctx: JavaParser.StatementExpressionCtx): AST.StatementExpression {
     return this.visit(ctx.expression)
   }
 
-  statementExpressionList(ctx: JavaParser.StatementExpressionListCtx) {
-    return ctx.statementExpression.map(statementExpression => this.visit(statementExpression))
+  statementExpressionList(ctx: JavaParser.StatementExpressionListCtx): AST.StatementExpressionList {
+    return {
+      kind: 'StatementExpressionList',
+      statementExpressions: ctx.statementExpression.map(statementExpression =>
+        this.visit(statementExpression)
+      ),
+      location: getLocation(ctx.statementExpression[0].location)
+    }
   }
 
-  statementWithoutTrailingSubstatement(ctx: JavaParser.StatementWithoutTrailingSubstatementCtx) {
+  statementWithoutTrailingSubstatement(
+    ctx: JavaParser.StatementWithoutTrailingSubstatementCtx
+  ): AST.StatementWithoutTrailingSubstatement {
     if (ctx.assertStatement) return this.visit(ctx.assertStatement)
     if (ctx.block) return this.visit(ctx.block)
     if (ctx.breakStatement) return this.visit(ctx.breakStatement)
@@ -1603,10 +1911,11 @@ class AstExtractor extends BaseJavaCstVisitor {
     if (ctx.synchronizedStatement) return this.visit(ctx.synchronizedStatement)
     if (ctx.throwStatement) return this.visit(ctx.throwStatement)
     if (ctx.tryStatement) return this.visit(ctx.tryStatement)
-    if (ctx.yieldStatement) return this.visit(ctx.yieldStatement)
+    // if (ctx.yieldStatement)
+    return this.visit(ctx.yieldStatement!)
   }
 
-  staticInitializer(ctx: JavaParser.StaticInitializerCtx) {
+  staticInitializer(ctx: JavaParser.StaticInitializerCtx): AST.StaticInitializer {
     return {
       kind: 'StaticInitializer',
       block: this.visit(ctx.block),
@@ -1614,7 +1923,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  superclass(ctx: JavaParser.SuperclassCtx) {
+  superclass(ctx: JavaParser.SuperclassCtx): AST.ClassExtends {
     return {
       kind: 'ClassExtends',
       classType: this.visit(ctx.classType),
@@ -1622,11 +1931,15 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  superinterfaces(ctx: JavaParser.SuperinterfacesCtx) {
-    throw new Error('Not implemented')
+  superinterfaces(ctx: JavaParser.SuperinterfacesCtx): AST.ClassImplements {
+    return {
+      kind: 'ClassImplements',
+      interfaceTypeList: this.visit(ctx.interfaceTypeList),
+      location: getLocation(ctx.Implements[0])
+    }
   }
 
-  switchBlock(ctx: JavaParser.SwitchBlockCtx) {
+  switchBlock(ctx: JavaParser.SwitchBlockCtx): AST.SwitchBlock {
     if (ctx.switchRule) throw new Error('Not implemented')
     return {
       kind: 'SwitchBlock',
@@ -1635,11 +1948,14 @@ class AstExtractor extends BaseJavaCstVisitor {
             this.visit(switchBlockStatementGroup)
           )
         : [],
+      switchLabels: [],
       location: getLocation(ctx.LCurly[0])
     }
   }
 
-  switchBlockStatementGroup(ctx: JavaParser.SwitchBlockStatementGroupCtx) {
+  switchBlockStatementGroup(
+    ctx: JavaParser.SwitchBlockStatementGroupCtx
+  ): AST.SwitchBlockStatementGroup {
     return {
       kind: 'SwitchBlockStatementGroup',
       switchLabels: ctx.switchLabel.map(switchLabel => this.visit(switchLabel)),
@@ -1648,7 +1964,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  switchLabel(ctx: JavaParser.SwitchLabelCtx) {
+  switchLabel(ctx: JavaParser.SwitchLabelCtx): AST.SwitchLabel {
     return this.visit(ctx.caseOrDefaultLabel)
   }
 
@@ -1656,7 +1972,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  switchStatement(ctx: JavaParser.SwitchStatementCtx) {
+  switchStatement(ctx: JavaParser.SwitchStatementCtx): AST.SwitchStatement {
     return {
       kind: 'SwitchStatement',
       expression: this.visit(ctx.expression),
@@ -1665,7 +1981,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  synchronizedStatement(ctx: JavaParser.SynchronizedStatementCtx) {
+  synchronizedStatement(ctx: JavaParser.SynchronizedStatementCtx): AST.SynchronizedStatement {
     return {
       kind: 'SynchronizedStatement',
       expression: this.visit(ctx.expression),
@@ -1674,7 +1990,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  ternaryExpression(ctx: JavaParser.TernaryExpressionCtx): AST.Expression {
+  ternaryExpression(ctx: JavaParser.TernaryExpressionCtx): AST.ConditionalExpression {
     const binaryExpression = this.visit(ctx.binaryExpression)
     if (ctx.Colon && ctx.QuestionMark && ctx.expression) {
       return {
@@ -1688,7 +2004,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     return binaryExpression
   }
 
-  throwStatement(ctx: JavaParser.ThrowStatementCtx) {
+  throwStatement(ctx: JavaParser.ThrowStatementCtx): AST.ThrowStatement {
     return {
       kind: 'ThrowStatement',
       expression: this.visit(ctx.expression),
@@ -1696,7 +2012,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  throws(ctx: JavaParser.ThrowsCtx) {
+  throws(ctx: JavaParser.ThrowsCtx): AST.Throws {
     return {
       kind: 'Throws',
       exceptionTypeList: this.visit(ctx.exceptionTypeList),
@@ -1704,7 +2020,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  tryStatement(ctx: JavaParser.TryStatementCtx) {
+  tryStatement(ctx: JavaParser.TryStatementCtx): AST.TryStatement {
     if (ctx.tryWithResourcesStatement) return this.visit(ctx.tryWithResourcesStatement)
     return {
       kind: 'TryStatement',
@@ -1715,7 +2031,9 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  tryWithResourcesStatement(ctx: JavaParser.TryWithResourcesStatementCtx) {
+  tryWithResourcesStatement(
+    ctx: JavaParser.TryWithResourcesStatementCtx
+  ): AST.TryWithResourcesStatement {
     return {
       kind: 'TryWithResourcesStatement',
       resourceSpecification: this.visit(ctx.resourceSpecification),
@@ -1746,22 +2064,25 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  typeDeclaration(ctx: JavaParser.TypeDeclarationCtx) {
+  typeDeclaration(
+    ctx: JavaParser.TypeDeclarationCtx
+  ): AST.InterfaceDeclaration | AST.ClassDeclaration {
     if (ctx.interfaceDeclaration) return this.visit(ctx.interfaceDeclaration)
-    if (ctx.classDeclaration) return this.visit(ctx.classDeclaration)
+    // if (ctx.classDeclaration)
+    return this.visit(ctx.classDeclaration!)
   }
 
-  typeIdentifier(ctx: JavaParser.TypeIdentifierCtx) {
+  typeIdentifier(ctx: JavaParser.TypeIdentifierCtx): AST.TypeIdentifier {
     return getIdentifier(ctx.Identifier[0])
   }
 
-  typeName(ctx: JavaParser.TypeNameCtx) {
+  typeName(ctx: JavaParser.TypeNameCtx): AST.TypeName {
     if (ctx.Dot) throw new Error('Not implemented')
     return getIdentifier(ctx.Identifier[0])
   }
 
-  typePattern(ctx: JavaParser.TypePatternCtx) {
-    throw new Error('Not implemented')
+  typePattern(ctx: JavaParser.TypePatternCtx): AST.TypePattern {
+    return this.visit(ctx.localVariableDeclaration)
   }
 
   typeParameter(ctx: JavaParser.TypeParameterCtx) {
@@ -1780,76 +2101,83 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  typeVariable(ctx: JavaParser.TypeVariableCtx) {
+  typeVariable(ctx: JavaParser.TypeVariableCtx): AST.TypeVariable {
     if (ctx.annotation) throw new Error('Not implemented')
     return getIdentifier(ctx.Identifier[0])
   }
 
-  unannClassType(ctx: JavaParser.UnannClassTypeCtx) {
+  unannClassType(ctx: JavaParser.UnannClassTypeCtx): AST.UnannClassType {
     if (ctx.annotation) throw new Error('Not implemented')
     if (ctx.Dot) throw new Error('Not implemented')
     if (ctx.typeArguments) throw new Error('Not implemented')
     return {
-      kind: 'UnannType',
-      identifier: getIdentifier(ctx.Identifier[0]),
+      kind: 'UnannClassType',
+      typeIdentifier: getIdentifier(ctx.Identifier[0]),
       location: getLocation(ctx.Identifier[0])
     }
   }
 
-  unannClassOrInterfaceType(ctx: JavaParser.UnannClassOrInterfaceTypeCtx) {
+  unannClassOrInterfaceType(
+    ctx: JavaParser.UnannClassOrInterfaceTypeCtx
+  ): AST.UnannClassOrInterfaceType {
     return this.visit(ctx.unannClassType)
   }
 
-  unannInterfaceType(ctx: JavaParser.UnannInterfaceTypeCtx) {
-    throw new Error('Not implemented')
+  unannInterfaceType(ctx: JavaParser.UnannInterfaceTypeCtx): AST.UnannInterfaceType {
+    return this.visit(ctx.unannClassType)
   }
 
-  unannPrimitiveType(ctx: JavaParser.UnannPrimitiveTypeCtx) {
+  unannPrimitiveType(ctx: JavaParser.UnannPrimitiveTypeCtx): AST.UnannPrimitiveType {
     if (ctx.numericType) return this.visit(ctx.numericType)
-    if (ctx.Boolean) {
-      return {
-        kind: 'UnannType',
-        identifier: getIdentifier(ctx.Boolean[0]),
-        location: getLocation(ctx.Boolean[0])
-      }
+    // if (ctx.Boolean) {
+    return {
+      kind: 'Boolean',
+      location: getLocation(ctx.Boolean![0])
     }
+    // }
   }
 
   unannPrimitiveTypeWithOptionalDimsSuffix(
     ctx: JavaParser.UnannPrimitiveTypeWithOptionalDimsSuffixCtx
-  ) {
+  ): AST.UnannArrayType | AST.UnannPrimitiveType {
     const unannPrimitiveType = this.visit(ctx.unannPrimitiveType)
     if (ctx.dims) {
-      return {
+      const unannArrayType: AST.UnannArrayType = {
         kind: 'UnannArrayType',
-        unannType: unannPrimitiveType,
+        unannPrimitiveType,
         dims: this.visit(ctx.dims),
         location: getLocation(ctx.unannPrimitiveType[0].location)
       }
+      return unannArrayType
     }
     return unannPrimitiveType
   }
 
-  unannReferenceType(ctx: JavaParser.UnannReferenceTypeCtx) {
-    const unannType = this.visit(ctx.unannClassOrInterfaceType)
+  unannReferenceType(
+    ctx: JavaParser.UnannReferenceTypeCtx
+  ): AST.UnannArrayType | AST.UnannClassOrInterfaceType {
+    const unannClassOrInterfaceType = this.visit(
+      ctx.unannClassOrInterfaceType
+    ) as AST.UnannClassOrInterfaceType
     if (ctx.dims) {
       return {
         kind: 'UnannArrayType',
         dims: this.visit(ctx.dims),
-        unannType,
+        unannClassOrInterfaceType,
         location: getLocation(ctx.unannClassOrInterfaceType[0].location)
       }
     }
-    return unannType
+    return unannClassOrInterfaceType
   }
 
-  unannType(ctx: JavaParser.UnannTypeCtx) {
+  unannType(ctx: JavaParser.UnannTypeCtx): AST.UnannType {
     if (ctx.unannPrimitiveTypeWithOptionalDimsSuffix)
       return this.visit(ctx.unannPrimitiveTypeWithOptionalDimsSuffix)
-    if (ctx.unannReferenceType) return this.visit(ctx.unannReferenceType)
+    // if (ctx.unannReferenceType)
+    return this.visit(ctx.unannReferenceType!)
   }
 
-  unannTypeVariable(ctx: JavaParser.UnannTypeVariableCtx) {
+  unannTypeVariable(ctx: JavaParser.UnannTypeVariableCtx): AST.UnannTypeVariable {
     return getIdentifier(ctx.Identifier[0])
   }
 
@@ -1873,10 +2201,12 @@ class AstExtractor extends BaseJavaCstVisitor {
       }
     }
 
-    return this.visit(ctx.primary)
+    return primary
   }
 
-  unaryExpressionNotPlusMinus(ctx: JavaParser.UnaryExpressionNotPlusMinusCtx) {
+  unaryExpressionNotPlusMinus(
+    ctx: JavaParser.UnaryExpressionNotPlusMinusCtx
+  ): AST.UnaryExpressionNotPlusMinus {
     const primary = this.visit(ctx.primary)
     if (ctx.UnaryPrefixOperatorNotPlusMinus) {
       return {
@@ -1899,27 +2229,27 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   unqualifiedClassInstanceCreationExpression(
     ctx: JavaParser.UnqualifiedClassInstanceCreationExpressionCtx
-  ) {
+  ): AST.UnqualifiedClassInstanceCreationExpression {
     if (ctx.typeArguments) throw new Error('Not implemented')
+    return {
+      kind: 'UnqualifiedClassInstanceCreationExpression',
+      classOrInterfaceTypeToInstantiate: this.visit(ctx.classOrInterfaceTypeToInstantiate),
+      argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : undefined,
+      classBody: ctx.classBody ? this.visit(ctx.classBody) : undefined,
+      location: getLocation(ctx.New[0])
+    }
   }
 
   unqualifiedExplicitConstructorInvocation(
     ctx: JavaParser.UnqualifiedExplicitConstructorInvocationCtx
-  ) {
+  ): AST.ExplicitConstructorInvocation {
     if (ctx.typeArguments) throw new Error('Not implemented')
     return {
-      kind: 'UnqualifiedExplicitConstructorInvocation',
-      identifier: ctx.Super
-        ? getIdentifier(ctx.Super[0])
-        : ctx.This
-          ? getIdentifier(ctx.This[0])
-          : undefined,
+      kind: 'ExplicitConstructorInvocation',
+      super: ctx.Super ? (getNode(ctx.Super[0]) as AST.Super) : undefined,
+      this: ctx.This ? (getNode(ctx.This[0]) as AST.This) : undefined,
       argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : [],
-      location: ctx.Super
-        ? getLocation(ctx.Super[0])
-        : ctx.This
-          ? getLocation(ctx.This[0])
-          : undefined
+      location: getLocation(ctx.LBrace[0])
     }
   }
 
@@ -1927,11 +2257,11 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  variableAccess(ctx: JavaParser.VariableAccessCtx) {
+  variableAccess(ctx: JavaParser.VariableAccessCtx): AST.VariableAccess {
     return this.visit(ctx.primary)
   }
 
-  variableArityParameter(ctx: JavaParser.VariableArityParameterCtx) {
+  variableArityParameter(ctx: JavaParser.VariableArityParameterCtx): AST.VariableArityParameter {
     if (ctx.annotation) throw new Error('Not implemented')
     const variableModifiers = ctx.variableModifier ? this.visit(ctx.variableModifier) : []
     return {
@@ -1945,14 +2275,17 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  variableArityRecordComponent(ctx: JavaParser.VariableArityRecordComponentCtx) {
+  variableArityRecordComponent(
+    ctx: JavaParser.VariableArityRecordComponentCtx
+  ): Pick<AST.VariableArityRecordComponent, 'kind' | 'identifier' | 'location'> {
     return {
       kind: 'VariableArityRecordComponent',
-      identifier: getIdentifier(ctx.Identifier[0])
+      identifier: getIdentifier(ctx.Identifier[0]),
+      location: getLocation(ctx.DotDotDot[0])
     }
   }
 
-  variableDeclarator(ctx: JavaParser.VariableDeclaratorCtx) {
+  variableDeclarator(ctx: JavaParser.VariableDeclaratorCtx): AST.VariableDeclarator {
     return {
       kind: 'VariableDeclarator',
       variableDeclaratorId: this.visit(ctx.variableDeclaratorId),
@@ -1963,7 +2296,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  variableDeclaratorId(ctx: JavaParser.VariableDeclaratorIdCtx) {
+  variableDeclaratorId(ctx: JavaParser.VariableDeclaratorIdCtx): AST.VariableDeclaratorId {
     return {
       kind: 'VariableDeclaratorId',
       identifier: getIdentifier(ctx.Identifier[0]),
@@ -1972,31 +2305,39 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  variableDeclaratorList(ctx: JavaParser.VariableDeclaratorListCtx) {
-    return ctx.variableDeclarator.map(declarator => this.visit(declarator))
-  }
-
-  variableInitializer(ctx: JavaParser.VariableInitializerCtx) {
-    if (ctx.arrayInitializer) return this.visit(ctx.arrayInitializer)
-    if (ctx.expression) return this.visit(ctx.expression)
-  }
-
-  variableInitializerList(ctx: JavaParser.VariableInitializerListCtx) {
-    return ctx.variableInitializer.map(variableInitializer => this.visit(variableInitializer))
-  }
-
-  variableModifier(ctx: JavaParser.VariableModifierCtx) {
-    if (ctx.annotation) throw new Error('Not implemented')
-    if (ctx.Final) {
-      return {
-        kind: 'VariableModifier',
-        identifier: getIdentifier(ctx.Final[0]),
-        location: getLocation(ctx.Final[0])
-      }
+  variableDeclaratorList(ctx: JavaParser.VariableDeclaratorListCtx): AST.VariableDeclaratorList {
+    return {
+      kind: 'VariableDeclaratorList',
+      variableDeclarators: ctx.variableDeclarator.map(declarator => this.visit(declarator)),
+      location: getLocation(ctx.variableDeclarator[0].location)
     }
   }
 
-  variableParaRegularParameter(ctx: JavaParser.VariableParaRegularParameterCtx) {
+  variableInitializer(ctx: JavaParser.VariableInitializerCtx): AST.VariableInitializer {
+    if (ctx.arrayInitializer) return this.visit(ctx.arrayInitializer)
+    // if (ctx.expression)
+    return this.visit(ctx.expression!)
+  }
+
+  variableInitializerList(ctx: JavaParser.VariableInitializerListCtx): AST.VariableInitializerList {
+    return {
+      kind: 'VariableInitializerList',
+      variableInitializers: ctx.variableInitializer.map(variableInitializer =>
+        this.visit(variableInitializer)
+      ),
+      location: getLocation(ctx.variableInitializer[0].location)
+    }
+  }
+
+  variableModifier(ctx: JavaParser.VariableModifierCtx): AST.VariableModifier {
+    if (ctx.annotation) throw new Error('Not implemented')
+    // if (ctx.Final)
+    return getIdentifier(ctx.Final![0])
+  }
+
+  variableParaRegularParameter(
+    ctx: JavaParser.VariableParaRegularParameterCtx
+  ): AST.FormalParameter {
     const variableModifiers = ctx.variableModifier ? this.visit(ctx.variableModifier) : []
     return {
       kind: 'FormalParameter',
@@ -2009,11 +2350,11 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  whileStatement(ctx: JavaParser.WhileStatementCtx) {
+  whileStatement(ctx: JavaParser.WhileStatementCtx): AST.WhileStatement {
     return {
       kind: 'WhileStatement',
-      condition: this.visit(ctx.expression),
-      body: this.visit(ctx.statement),
+      expression: this.visit(ctx.expression),
+      statement: this.visit(ctx.statement),
       location: getLocation(ctx.While[0])
     }
   }
@@ -2026,10 +2367,10 @@ class AstExtractor extends BaseJavaCstVisitor {
     throw new Error('Not implemented')
   }
 
-  yieldStatement(ctx: JavaParser.YieldStatementCtx) {
+  yieldStatement(ctx: JavaParser.YieldStatementCtx): AST.YieldStatement {
     return {
       kind: 'YieldStatement',
-      expresssion: this.visit(ctx.expression),
+      expression: this.visit(ctx.expression),
       location: getLocation(ctx.Yield[0])
     }
   }

@@ -21,6 +21,7 @@ export const parse = (programStr: string): CompilationUnit | TypeCheckerError =>
     return extractor.visit(cst)
   } catch (error: unknown) {
     if (error instanceof Error) {
+      console.log(error)
       if (error.message === NOT_IMPLEMENTED)
         return new TypeCheckerError(UNSUPPORTED_JAVA_PARSER_ERROR)
       if (error.message.startsWith(JAVA_PARSER_ERROR_PREFIX)) {
