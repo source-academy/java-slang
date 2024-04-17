@@ -4,7 +4,7 @@ export class TypeCheckerError extends Error {
   private location?: Location
 
   constructor(message: string, location?: Location) {
-    super('Error: ' + message)
+    super('TypeCheckError: ' + message)
     this.location = location
   }
 
