@@ -1,4 +1,5 @@
-import { CannotBeDereferencedError } from '../errors'
+import { Location } from '../ast/specificationTypes'
+import { CannotBeDereferencedError, TypeCheckerError } from '../errors'
 import { Method } from './methods'
 
 // TODO: Change Type to an interface
@@ -8,12 +9,12 @@ export abstract class Type {
     this.name = name
   }
 
-  public accessField(_name: string): Type | Error {
-    return new CannotBeDereferencedError()
+  public accessField(_name: string, location: Location): Type | TypeCheckerError {
+    return new CannotBeDereferencedError(location)
   }
 
-  public accessMethod(_name: string): Method | Error {
-    return new CannotBeDereferencedError()
+  public accessMethod(_name: string, location: Location): Method | TypeCheckerError {
+    return new CannotBeDereferencedError(location)
   }
 
   abstract canBeAssigned(type: Type): boolean

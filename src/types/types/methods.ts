@@ -1,7 +1,9 @@
+import { Location } from '../ast/specificationTypes'
 import {
   IncompatibleTypesError,
   MethodAlreadyDefinedError,
-  MethodCannotBeAppliedError
+  MethodCannotBeAppliedError,
+  TypeCheckerError
 } from '../errors'
 import { Type } from './type'
 
@@ -106,8 +108,8 @@ export class MethodSignature extends Type {
     super('method signature')
   }
 
-  public accessField(_name: string): Error | Type {
-    return new Error('not impemented')
+  public accessField(_name: string, _location: Location): TypeCheckerError | Type {
+    throw new Error('not impemented')
   }
 
   public canBeAssigned(type: Type): boolean {
@@ -164,17 +166,21 @@ export class Method extends Type {
     this.methodSignatures.push(methodSignature)
   }
 
-  public accessField(_name: string): Error | Type {
-    return new Error('not impemented')
+  public accessField(_name: string, _location: Location): TypeCheckerError | Type {
+    throw new Error('not impemented')
   }
 
   public canBeAssigned(_type: Type): boolean {
     throw new Error('Not implemented yet')
   }
 
-  public addOverload(methodSignature: MethodSignature): null | Error {
+  public addOverload(
+    methodSignature: MethodSignature,
+    location: Location
+  ): null | TypeCheckerError {
     for (let i = 0; i < this.methodSignatures.length; i++)
-      if (this.methodSignatures[i].equals(methodSignature)) return new MethodAlreadyDefinedError()
+      if (this.methodSignatures[i].equals(methodSignature))
+        return new MethodAlreadyDefinedError(location)
     this.methodSignatures.push(methodSignature)
     return null
   }
@@ -183,13 +189,15 @@ export class Method extends Type {
     return this.methodSignatures[index]
   }
 
-  public invoke(args: ArgumentList): Type | Error {
+  public invoke(args: ArgumentList, location: Location): Type | TypeCheckerError {
     let hasSameLengthParamList = false
     for (const signature of this.methodSignatures) {
       if (signature.parameterSize() === args.length()) hasSameLengthParamList = true
       if (signature.canInvoke(args)) return signature.getReturnType()
     }
-    return hasSameLengthParamList ? new IncompatibleTypesError() : new MethodCannotBeAppliedError()
+    return hasSameLengthParamList
+      ? new IncompatibleTypesError(location)
+      : new MethodCannotBeAppliedError(location)
   }
 }
 

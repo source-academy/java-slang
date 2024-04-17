@@ -1,28 +1,47 @@
 import { Class, ClassImpl, ObjectClass } from '../types/classes'
-import { ConstructorDeclaration, MethodDeclaration } from '../ast/types/classes'
+import { ConstructorDeclaration, MethodDeclaration, Node } from '../ast/specificationTypes'
 import { createClassFieldsAndMethods } from '../typeFactories/classFactory'
 import { createMethodSignature } from '../typeFactories/methodFactory'
-import { CyclicInheritanceError } from '../errors'
+import { CyclicInheritanceError, DuplicateClassError, TypeCheckerError } from '../errors'
 import { MethodSignature } from '../types/methods'
-import { Node } from '../ast/types'
 import { Frame } from './environment'
 import { newResult, OK_RESULT, Result } from '.'
 
+// const TOP_LEVEL_DECLARATION_MODIFIER_BLACKLIST = ['protected', 'private', 'static']
+
 export const addClasses = (node: Node, frame: Frame): Result => {
   switch (node.kind) {
-    case 'CompilationUnit': {
-      const errors: Error[] = []
-      for (const classDeclaration of node.topLevelClassOrInterfaceDeclarations) {
-        const result = addClasses(classDeclaration, frame)
-        if (result.errors.length > 0) errors.push(...result.errors)
-      }
-      if (errors.length > 0) return newResult(null, errors)
-      return OK_RESULT
+    case 'OrdinaryCompilationUnit': {
+      const typeCheckErrors = node.topLevelClassOrInterfaceDeclarations
+        .map(declaration => addClasses(declaration, frame))
+        .reduce((errors, result) => (result.hasErrors ? [...errors, ...result.errors] : errors), [])
+      return newResult(null, typeCheckErrors)
     }
     case 'NormalClassDeclaration': {
-      const classType = new ClassImpl(node.typeIdentifier)
-      frame.setType(node.typeIdentifier, classType)
+      const classType = new ClassImpl(node.typeIdentifier.identifier)
+      const errors: TypeCheckerError[] = []
+      // node.classModifiers.forEach(modifier => {
+      //   if (!TOP_LEVEL_DECLARATION_MODIFIER_BLACKLIST.includes(modifier.identifier))
+      //     classType.setModifier(modifier.identifier)
+      //   errors.push(new ModifierNotAllowedHereError(modifier.location))
+      // })
+      if (errors.length > 0) return newResult(null, errors)
+      const error = frame.setType(
+        node.typeIdentifier.identifier,
+        classType,
+        node.typeIdentifier.location
+      )
+      if (error instanceof Error) return newResult(null, [new DuplicateClassError(node.location)])
       return newResult(classType)
+    }
+    case 'EnumDeclaration': {
+      throw new Error('Not implemented')
+    }
+    case 'RecordDeclaration': {
+      throw new Error('Not implemented')
+    }
+    case 'NormalInterfaceDeclaration': {
+      throw new Error('Not implemented')
     }
     default:
       return OK_RESULT
@@ -31,30 +50,28 @@ export const addClasses = (node: Node, frame: Frame): Result => {
 
 export const addClassMethods = (node: Node, frame: Frame): Result => {
   switch (node.kind) {
-    case 'CompilationUnit': {
-      const errors: Error[] = []
-      for (const classDeclaration of node.topLevelClassOrInterfaceDeclarations) {
-        const result = addClassMethods(classDeclaration, frame)
-        if (result.errors.length > 0) errors.push(...result.errors)
-      }
-      if (errors.length > 0) return newResult(null, errors)
-      return OK_RESULT
+    case 'OrdinaryCompilationUnit': {
+      const typeCheckErrors = node.topLevelClassOrInterfaceDeclarations
+        .map(declaration => addClassMethods(declaration, frame))
+        .reduce((errors, result) => (result.hasErrors ? [...errors, ...result.errors] : errors), [])
+      return newResult(null, typeCheckErrors)
     }
     case 'ConstructorDeclaration':
     case 'MethodDeclaration': {
       const methodSignature = createMethodSignature(frame, node)
-      if (methodSignature instanceof Error) return newResult(null, [methodSignature])
+      if (methodSignature instanceof TypeCheckerError) return newResult(null, [methodSignature])
       return newResult(methodSignature)
     }
     case 'NormalClassDeclaration': {
-      const createMethod = (node: ConstructorDeclaration | MethodDeclaration) => {
+      const createMethod = (
+        node: ConstructorDeclaration | MethodDeclaration
+      ): MethodSignature | TypeCheckerError => {
         const result = addClassMethods(node, frame)
         if (result.errors.length > 0) return result.errors[0]
         return result.currentType as MethodSignature
       }
-
       const classType = createClassFieldsAndMethods(node, frame, createMethod, createMethod)
-      if (classType instanceof Error) return newResult(null, [classType])
+      if (classType instanceof TypeCheckerError) return newResult(null, [classType])
       return newResult(classType)
     }
     default:
@@ -64,27 +81,30 @@ export const addClassMethods = (node: Node, frame: Frame): Result => {
 
 export const addClassParents = (node: Node, frame: Frame): Result => {
   switch (node.kind) {
-    case 'CompilationUnit': {
-      const errors: Error[] = []
-      for (const classDeclaration of node.topLevelClassOrInterfaceDeclarations) {
-        const result = addClassParents(classDeclaration, frame)
-        if (result.errors.length > 0) errors.push(...result.errors)
-      }
-      if (errors.length > 0) return newResult(null, errors)
-      return OK_RESULT
+    case 'OrdinaryCompilationUnit': {
+      const typeCheckErrors = node.topLevelClassOrInterfaceDeclarations
+        .map(declaration => addClassParents(declaration, frame))
+        .reduce((errors, result) => (result.hasErrors ? [...errors, ...result.errors] : errors), [])
+      return newResult(null, typeCheckErrors)
     }
     case 'NormalClassDeclaration': {
-      const classType = frame.getType(node.typeIdentifier)
+      const classType = frame.getType(node.typeIdentifier.identifier, node.typeIdentifier.location)
       if (classType instanceof Error) return newResult(null, [classType])
       if (!(classType instanceof ClassImpl)) throw new Error('class type should be a ClassImpl')
-      if (node.extendsTypeIdentifier) {
-        const extendsType = frame.getType(node.extendsTypeIdentifier)
+      if (node.classExtends) {
+        const extendsType = frame.getType(
+          node.classExtends.classType.typeIdentifier.identifier,
+          node.classExtends.classType.typeIdentifier.location
+        )
         if (extendsType instanceof Error) return newResult(null, [extendsType])
         if (!(extendsType instanceof ClassImpl))
           throw new Error('class can only extend another class')
         let type: Class = extendsType
         while (!(type instanceof ObjectClass)) {
-          if (type === classType) return newResult(null, [new CyclicInheritanceError()])
+          if (type === classType)
+            return newResult(null, [
+              new CyclicInheritanceError(node.classExtends.classType.location)
+            ])
           type = type.getParentClass()
         }
         classType.setParentClass(extendsType)

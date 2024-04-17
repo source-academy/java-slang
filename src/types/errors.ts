@@ -1,4 +1,4 @@
-import { Location } from './ast/types'
+import { Location } from './ast/specificationTypes'
 
 export class TypeCheckerError extends Error {
   private location?: Location
@@ -16,6 +16,16 @@ export class TypeCheckerError extends Error {
     const errorPointer = `${' '.repeat(this.location.startColumn - 1)}^`
     return this.message + '\n' + errorLine + '\n' + errorPointer + '\n'
   }
+}
+
+export class TypeCheckerInternalError extends Error {
+  constructor(message: string) {
+    super(`TypeCheckerInternalError: ${message}`)
+  }
+}
+
+export const isTypeCheckerError = (object: unknown): object is TypeCheckerError => {
+  return object instanceof TypeCheckerError
 }
 
 export class ArrayRequiredError extends TypeCheckerError {
@@ -48,6 +58,12 @@ export class CyclicInheritanceError extends TypeCheckerError {
   }
 }
 
+export class DuplicateClassError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('duplicate class', location)
+  }
+}
+
 export class FloatTooLargeError extends TypeCheckerError {
   constructor(location?: Location) {
     super('floating-point number too large', location)
@@ -57,12 +73,6 @@ export class FloatTooLargeError extends TypeCheckerError {
 export class FloatTooSmallError extends TypeCheckerError {
   constructor(location?: Location) {
     super('floating-point number too small', location)
-  }
-}
-
-export class NotApplicableToExpressionTypeError extends TypeCheckerError {
-  constructor(location?: Location) {
-    super('not applicable to expression type', location)
   }
 }
 
@@ -93,6 +103,18 @@ export class MethodAlreadyDefinedError extends TypeCheckerError {
 export class MethodCannotBeAppliedError extends TypeCheckerError {
   constructor(location?: Location) {
     super('method cannot be applied', location)
+  }
+}
+
+export class ModifierNotAllowedHereError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('modifier not allowed here', location)
+  }
+}
+
+export class NotApplicableToExpressionTypeError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('not applicable to expression type', location)
   }
 }
 

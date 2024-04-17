@@ -81,10 +81,10 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   arrayAccessSuffix(
     ctx: JavaParser.ArrayAccessSuffixCtx
-  ): Pick<AST.ArrayAccess, 'expression' | 'kind' | 'location'> {
+  ): Pick<AST.ArrayAccess, 'indexExpression' | 'kind' | 'location'> {
     return {
       kind: 'ArrayAccess',
-      expression: this.visit(ctx.expression),
+      indexExpression: this.visit(ctx.expression),
       location: getLocation(ctx.LSquare[0])
     }
   }
@@ -113,28 +113,28 @@ class AstExtractor extends BaseJavaCstVisitor {
     if (ctx.primitiveType && ctx.arrayCreationDefaultInitSuffix) {
       return {
         ...this.visit(ctx.arrayCreationDefaultInitSuffix),
-        primitiveType: this.visit(ctx.primitiveType),
+        type: this.visit(ctx.primitiveType),
         location: getLocation(ctx.New[0])
       }
     }
     if (ctx.classOrInterfaceType && ctx.arrayCreationDefaultInitSuffix) {
       return {
         ...this.visit(ctx.arrayCreationDefaultInitSuffix),
-        classOrInterfaceType: this.visit(ctx.classOrInterfaceType),
+        type: this.visit(ctx.classOrInterfaceType),
         location: getLocation(ctx.New[0])
       }
     }
     if (ctx.primitiveType && ctx.arrayCreationExplicitInitSuffix) {
       return {
         ...this.visit(ctx.arrayCreationExplicitInitSuffix),
-        primitiveType: this.visit(ctx.primitiveType),
+        type: this.visit(ctx.primitiveType),
         location: getLocation(ctx.New[0])
       }
     }
     // if (ctx.classOrInterfaceType && ctx.arrayCreationExplicitInitSuffix) {
     return {
       ...this.visit(ctx.arrayCreationExplicitInitSuffix!),
-      classOrInterfaceType: this.visit(ctx.classOrInterfaceType!),
+      type: this.visit(ctx.classOrInterfaceType!),
       location: getLocation(ctx.New[0])
     }
     // }
@@ -365,7 +365,9 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   classDeclaration(ctx: JavaParser.ClassDeclarationCtx): AST.ClassDeclaration {
     if (ctx.enumDeclaration) return this.visit(ctx.enumDeclaration)
-    const classModifiers = ctx.classModifier ? this.visit(ctx.classModifier) : []
+    const classModifiers = ctx.classModifier
+      ? ctx.classModifier.map(modifier => this.visit(modifier))
+      : []
     return [ctx.recordDeclaration, ctx.normalClassDeclaration]
       .filter(classDeclaration => classDeclaration !== undefined)
       .map(classDeclaration => ({
@@ -499,7 +501,7 @@ class AstExtractor extends BaseJavaCstVisitor {
       explicitConstructorInvocation: ctx.explicitConstructorInvocation
         ? this.visit(ctx.explicitConstructorInvocation)
         : undefined,
-      blockStatements: ctx.blockStatements ? this.visit(ctx.blockStatements) : [],
+      blockStatements: ctx.blockStatements ? this.visit(ctx.blockStatements) : undefined,
       location: getLocation(ctx.LCurly[0])
     }
   }
@@ -869,7 +871,7 @@ class AstExtractor extends BaseJavaCstVisitor {
       if (fqnOrRefTypePartFirst.kind !== 'Identifier') throw new Error('Not implemented')
       const unannArrayType: AST.UnannArrayType = {
         kind: 'UnannArrayType',
-        unannTypeVariable: fqnOrRefTypePartFirst,
+        type: fqnOrRefTypePartFirst,
         dims: this.visit(ctx.dims),
         location: getLocation(ctx.fqnOrRefTypePartFirst[0].location)
       }
@@ -1289,10 +1291,11 @@ class AstExtractor extends BaseJavaCstVisitor {
   }
 
   methodDeclaration(ctx: JavaParser.MethodDeclarationCtx): AST.MethodDeclaration {
-    const methodModifiers = ctx.methodModifier ? this.visit(ctx.methodModifier) : []
     return {
       kind: 'MethodDeclaration',
-      methodModifiers,
+      methodModifiers: ctx.methodModifier
+        ? ctx.methodModifier.map(modifier => this.visit(modifier))
+        : [],
       methodHeader: this.visit(ctx.methodHeader),
       methodBody: this.visit(ctx.methodBody),
       location: ctx.methodModifier
@@ -1323,7 +1326,9 @@ class AstExtractor extends BaseJavaCstVisitor {
     }
   }
 
-  methodInvocationSuffix(ctx: JavaParser.MethodInvocationSuffixCtx): AST.MethodInvocation {
+  methodInvocationSuffix(
+    ctx: JavaParser.MethodInvocationSuffixCtx
+  ): Omit<AST.MethodInvocation, 'methodName'> {
     return {
       kind: 'MethodInvocation',
       argumentList: ctx.argumentList ? this.visit(ctx.argumentList) : undefined,
@@ -1470,19 +1475,14 @@ class AstExtractor extends BaseJavaCstVisitor {
     const firstSuffix = suffixes[0]
     if (firstSuffix.kind === 'ClassLiteral') {
       const classLiteral = { ...firstSuffix, location: prefix.location }
-      if (prefix.kind === 'Identifier') classLiteral.typeName = prefix
+      if (prefix.kind === 'Identifier') classLiteral.type = prefix
       else if (prefix.kind === 'IntegralType' || prefix.kind === 'FloatingPointType')
-        classLiteral.numericType = prefix
-      else if (prefix.kind === 'Boolean') classLiteral.boolean = prefix
+        classLiteral.type = prefix
+      else if (prefix.kind === 'Boolean') classLiteral.type = prefix
       else if (prefix.kind === 'UnannArrayType') {
         firstSuffix.dims.push(...prefix.dims.dims)
-        if ('unannTypeVariable' in prefix) classLiteral.typeName = prefix.unannTypeVariable
-        if ('unannPrimitiveType' in prefix) {
-          if (prefix.unannPrimitiveType.kind === 'Boolean')
-            classLiteral.boolean = prefix.unannPrimitiveType
-          else classLiteral.numericType = prefix.unannPrimitiveType
-        }
-      } else classLiteral.void = { kind: 'Void', location: prefix.location }
+        classLiteral.type = prefix.type
+      } else classLiteral.type = { kind: 'Void', location: prefix.location }
       return classLiteral
     }
     if (firstSuffix.kind === 'TypeNameThis') {
@@ -1499,10 +1499,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     if (firstSuffix.kind === 'ArrayAccess') {
       let currentPrefix = prefix
       for (const suffix of suffixes) {
-        if (currentPrefix.kind === 'ArrayCreationExpressionWithInitializer')
-          suffix.arrayCreationExpressionWithInitializer = currentPrefix
-        else if (currentPrefix.kind === 'ExpressionName') suffix.expressionName = currentPrefix
-        else suffix.primaryNoNewArray = currentPrefix
+        suffix.arrayReferenceExpression = currentPrefix
         currentPrefix = suffix
       }
       return currentPrefix
@@ -1513,7 +1510,7 @@ class AstExtractor extends BaseJavaCstVisitor {
         if (currentPrefix.kind === 'Identifier') suffix.methodName = currentPrefix
         else if (currentPrefix.kind === 'FieldAccess') {
           suffix.primary = currentPrefix.primary
-          suffix.identifier = currentPrefix.identifier
+          suffix.methodName = currentPrefix.identifier
         } else suffix.primary = currentPrefix
         currentPrefix = suffix
       }
@@ -1709,7 +1706,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     if (ctx.typeParameters) throw new Error('Not implemented')
     return {
       kind: 'RecordDeclaration',
-      classModifier: [],
+      classModifiers: [],
       typeIdentifier: this.visit(ctx.typeIdentifier),
       recordHeader: this.visit(ctx.recordHeader),
       classImplements: ctx.superinterfaces ? this.visit(ctx.superinterfaces) : undefined,
@@ -2144,7 +2141,7 @@ class AstExtractor extends BaseJavaCstVisitor {
     if (ctx.dims) {
       const unannArrayType: AST.UnannArrayType = {
         kind: 'UnannArrayType',
-        unannPrimitiveType,
+        type: unannPrimitiveType,
         dims: this.visit(ctx.dims),
         location: getLocation(ctx.unannPrimitiveType[0].location)
       }
@@ -2163,7 +2160,7 @@ class AstExtractor extends BaseJavaCstVisitor {
       return {
         kind: 'UnannArrayType',
         dims: this.visit(ctx.dims),
-        unannClassOrInterfaceType,
+        type: unannClassOrInterfaceType,
         location: getLocation(ctx.unannClassOrInterfaceType[0].location)
       }
     }
@@ -2187,7 +2184,7 @@ class AstExtractor extends BaseJavaCstVisitor {
       return {
         kind: 'UnaryExpression',
         prefixOperator: getIdentifier(ctx.UnaryPrefixOperator[0]),
-        primary,
+        unaryExpression: primary,
         location: getLocation(ctx.UnaryPrefixOperator[0])
       }
     }
@@ -2196,7 +2193,7 @@ class AstExtractor extends BaseJavaCstVisitor {
       return {
         kind: 'PostfixExpression',
         postfixOperator: getIdentifier(ctx.UnarySuffixOperator[0]),
-        primary,
+        postfixExpression: primary,
         location: getLocation(ctx.primary[0].location)
       }
     }
@@ -2212,7 +2209,7 @@ class AstExtractor extends BaseJavaCstVisitor {
       return {
         kind: 'UnaryExpressionNotPlusMinus',
         prefixOperator: getIdentifier(ctx.UnaryPrefixOperatorNotPlusMinus[0]),
-        primary,
+        unaryExpression: primary,
         location: getLocation(ctx.UnaryPrefixOperatorNotPlusMinus[0])
       }
     }
@@ -2220,7 +2217,7 @@ class AstExtractor extends BaseJavaCstVisitor {
       return {
         kind: 'PostfixExpression',
         postfixOperator: getIdentifier(ctx.UnarySuffixOperator[0]),
-        primary,
+        postfixExpression: primary,
         location: getLocation(ctx.primary[0].location)
       }
     }

@@ -6,12 +6,21 @@ import {
   Parameter,
   ParameterList
 } from '../types/methods'
-import { ConstructorDeclaration, FormalParameter, MethodDeclaration } from '../ast/types/classes'
+import {
+  ConstructorDeclaration,
+  FormalParameter,
+  MethodDeclaration
+} from '../ast/specificationTypes'
 import { Frame } from '../checker/environment'
 import { Type } from '../types/type'
-import { VarargsParameterMustBeLastParameter, VariableAlreadyDefinedError } from '../errors'
+import {
+  TypeCheckerError,
+  VarargsParameterMustBeLastParameter,
+  VariableAlreadyDefinedError
+} from '../errors'
+import { unannTypeToString } from '../ast/utils'
 
-export const createArgumentList = (...argumentTypes: Type[]): ArgumentList | Error => {
+export const createArgumentList = (...argumentTypes: Type[]): ArgumentList | TypeCheckerError => {
   const argumentList = new ArgumentList()
   argumentTypes.forEach(argumentType => {
     argumentList.addArgument(argumentType)
@@ -22,21 +31,31 @@ export const createArgumentList = (...argumentTypes: Type[]): ArgumentList | Err
 const createParameterList = (
   frame: Frame,
   ...parameterDeclarations: FormalParameter[]
-): ParameterList | Error => {
+): ParameterList | TypeCheckerError => {
   const identifiers = new Set<string>()
   const parameters: ParameterList = new ParameterList()
   for (let i = 0; i < parameterDeclarations.length; i++) {
     const parameterDeclaration = parameterDeclarations[i]
-    if (parameterDeclaration.isVariableArityParameter && i + 1 !== parameterDeclarations.length)
-      return new VarargsParameterMustBeLastParameter()
-    const parameterType = frame.getType(parameterDeclaration.unannType)
-    if (parameterType instanceof Error) return parameterType
-    if (identifiers.has(parameterDeclaration.identifier)) return new VariableAlreadyDefinedError()
-    identifiers.add(parameterDeclaration.identifier)
+    if (
+      parameterDeclaration.kind === 'VariableArityParameter' &&
+      i + 1 !== parameterDeclarations.length
+    )
+      return new VarargsParameterMustBeLastParameter(parameterDeclaration.location)
+    const parameterType = frame.getType(
+      unannTypeToString(parameterDeclaration.unannType),
+      parameterDeclaration.unannType.location
+    )
+    if (parameterType instanceof TypeCheckerError) return parameterType
+    const identifier =
+      parameterDeclaration.kind === 'FormalParameter'
+        ? parameterDeclaration.variableDeclaratorId.identifier.identifier
+        : parameterDeclaration.identifier.identifier
+    if (identifiers.has(identifier)) return new VariableAlreadyDefinedError()
+    identifiers.add(identifier)
     const parameter = new Parameter(
-      parameterDeclaration.identifier,
+      identifier,
       parameterType,
-      parameterDeclaration.isVariableArityParameter
+      parameterDeclaration.kind === 'VariableArityParameter'
     )
     parameters.addParameter(parameter)
   }
@@ -46,22 +65,27 @@ const createParameterList = (
 export const createMethodSignature = (
   frame: Frame,
   node: MethodDeclaration | ConstructorDeclaration
-): MethodSignature | Error => {
+): MethodSignature | TypeCheckerError => {
   const methodSignature = new ClassMethod()
   const returnType = frame.getType(
     node.kind === 'MethodDeclaration'
-      ? node.methodHeader.result
-      : node.constructorDeclarator.identifier
+      ? unannTypeToString(node.methodHeader.result)
+      : node.constructorDeclarator.simpleTypeName.identifier,
+    node.kind === 'MethodDeclaration'
+      ? node.methodHeader.result.location
+      : node.constructorDeclarator.simpleTypeName.location
   )
-  if (returnType instanceof Error) return returnType
+  if (returnType instanceof TypeCheckerError) return returnType
   const parameterList =
     node.kind === 'MethodDeclaration'
-      ? node.methodHeader.formalParameterList
-      : node.constructorDeclarator.formalParameterList
+      ? node.methodHeader.methodDeclarator.formalParameterList?.formalParameters || []
+      : node.constructorDeclarator.formalParameterList?.formalParameters || []
   const parameters = createParameterList(frame, ...parameterList)
-  if (parameters instanceof Error) return parameters
+  if (parameters instanceof TypeCheckerError) return parameters
   const modifier: string[] =
-    node.kind === 'MethodDeclaration' ? node.methodModifier : node.constructorModifier
+    node.kind === 'MethodDeclaration'
+      ? node.methodModifiers.map(modifier => modifier.identifier)
+      : node.constructorModifiers.map(modifier => modifier.identifier)
   methodSignature.modifiers.push(...modifier)
   methodSignature.parameters = parameters
   methodSignature.returnType = returnType
@@ -72,8 +96,8 @@ export const createMethodSignature = (
 export const createMethod = (
   frame: Frame,
   node: MethodDeclaration | ConstructorDeclaration
-): Method | Error => {
+): Method | TypeCheckerError => {
   const methodSignature = createMethodSignature(frame, node)
-  if (methodSignature instanceof Error) return methodSignature
+  if (methodSignature instanceof TypeCheckerError) return methodSignature
   return new Method(methodSignature)
 }

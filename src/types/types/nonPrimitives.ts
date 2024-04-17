@@ -1,3 +1,4 @@
+import { Location } from '../ast/specificationTypes'
 import { ClassImpl } from './classes'
 import * as Primitives from './primitives'
 import { Type } from './type'
@@ -91,7 +92,7 @@ export class String extends ClassImpl {
     super('String')
   }
 
-  public static from(value: string): String {
+  public static from(value: string, _location: Location): String {
     if (value.charAt(0) !== '"') throw new Error(`Unrecognized string ${value}.`)
     if (value.charAt(value.length - 1) !== '"') throw new Error(`Unrecognized string ${value}.`)
     if (

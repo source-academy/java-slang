@@ -1,6 +1,8 @@
 public class Main {
-  int class = 1;
   public static void main(String[] args) {
-    int this = 1;
+    String[] test = new String[]{"A", "B", "C"};
+    System.out.println(test["Hi"]);
   }
 }
+
+public record Main(int id, String firstName, String lastName){}

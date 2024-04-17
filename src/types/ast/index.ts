@@ -1,7 +1,7 @@
 import { parse as parseToCst } from 'java-parser'
 import { TypeCheckerError } from '../errors'
 import AstExtractor from './extractor'
-import { CompilationUnit } from './specificationTypes'
+import { CompilationUnit, Node } from './specificationTypes'
 
 export * as AST from './specificationTypes'
 
@@ -9,6 +9,17 @@ const JAVA_PARSER_ERROR_PREFIX = 'Sad sad panda'
 const NOT_IMPLEMENTED = 'Not implemented'
 const GENERAL_AST_PARSER_ERROR = 'Error caught in ast parser'
 const UNSUPPORTED_JAVA_PARSER_ERROR = 'Trying to parse unsupported Java specification'
+
+export interface AstGenerator {
+  parse(program: string): Node | TypeCheckerError
+}
+
+export class AstGeneratorImpl implements AstGenerator {
+  public constructor() {}
+  public parse(program: string): Node | TypeCheckerError {
+    return parse(program)
+  }
+}
 
 /**
  * Parse program string into Abstract Syntax Tree (AST).

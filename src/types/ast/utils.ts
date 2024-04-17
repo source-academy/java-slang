@@ -1,5 +1,14 @@
 import { IToken } from 'java-parser'
-import { Dim, Identifier, Location, NumericType, TypeName } from './specificationTypes'
+import {
+  ClassOrInterfaceType,
+  Dim,
+  Identifier,
+  LocalVariableType,
+  Location,
+  NumericType,
+  Result,
+  TypeName
+} from './specificationTypes'
 
 export const getDimArray = (tokens: IToken[]): Dim[] => {
   return tokens.map(token => ({
@@ -52,4 +61,32 @@ export const getTypeIdentifier = (object: IToken): GetableTypeIdentifier => {
 
 export const isIdentifier = (object: Record<string, any>): boolean => {
   return object['kind'] && object['kind'] === 'Identifier'
+}
+
+/**
+ * @deprecated
+ */
+export const unannTypeToString = (
+  type: LocalVariableType | ClassOrInterfaceType | Result
+): string => {
+  switch (type.kind) {
+    case 'Boolean':
+      return 'boolean'
+    case 'FloatingPointType':
+      return type.identifier.identifier
+    case 'Identifier':
+      return type.identifier
+    case 'IntegralType':
+      return type.identifier.identifier
+    case 'UnannArrayType':
+      return unannTypeToString(type.type) + '[]'.repeat(type.dims.dims.length)
+    case 'UnannClassType':
+      return type.typeIdentifier.identifier
+    case 'ClassType':
+      return type.typeIdentifier.identifier
+    case 'Var':
+      return 'var'
+    case 'Void':
+      return 'void'
+  }
 }

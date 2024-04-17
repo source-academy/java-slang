@@ -7,7 +7,17 @@
 // TODO: Implement types for annotation
 // TODO: Implement types for packages and modules
 
-export type Node = CompilationUnit | Expression | Statement
+export type Node =
+  | BlockStatement
+  | ClassBodyDeclaration
+  | CompilationUnit
+  | ConstructorBody
+  | Expression
+  | Identifier
+  | Literal
+  | StatementExpressionList
+  | StatementNoShortIf
+  | TopLevelClassOrInterfaceDeclaration
 
 export type Location = {
   startOffset: number
@@ -31,25 +41,15 @@ export type ArgumentList = {
   location: Location
 }
 
-export type ArrayAccess =
-  | {
-      kind: 'ArrayAccess'
-      expressionName: ExpressionName
-      expression?: Expression
-      location: Location
-    }
-  | {
-      kind: 'ArrayAccess'
-      primaryNoNewArray: PrimaryNoNewArray
-      expression?: Expression
-      location: Location
-    }
-  | {
-      kind: 'ArrayAccess'
-      arrayCreationExpressionWithInitializer: ArrayCreationExpressionWithInitializer
-      expression?: Expression
-      location: Location
-    }
+export type ArrayAccess = {
+  kind: 'ArrayAccess'
+  arrayReferenceExpression:
+    | ExpressionName
+    | PrimaryNoNewArray
+    | ArrayCreationExpressionWithInitializer
+  indexExpression: Expression
+  location: Location
+}
 
 export type ArrayCreationExpression =
   | ArrayCreationExpressionWithInitializer
@@ -57,28 +57,19 @@ export type ArrayCreationExpression =
 
 export type ArrayCreationExpressionWithInitializer = {
   kind: 'ArrayCreationExpressionWithInitializer'
-  classOrInterfaceType?: ClassOrInterfaceType
-  primitiveType?: PrimitiveType
+  type: ClassOrInterfaceType | PrimitiveType
   dims: Dims
   arrayInitializer: ArrayInitializer
   location: Location
 }
 
-export type ArrayCreationExpressionWithoutInitializer =
-  | {
-      kind: 'ArrayCreationExpressionWithoutInitializer'
-      classOrInterfaceType: ClassOrInterfaceType
-      dimExprs: DimExprs
-      dims: Dims
-      location: Location
-    }
-  | {
-      kind: 'ArrayCreationExpressionWithoutInitializer'
-      primitiveType: PrimitiveType
-      dimExprs: DimExprs
-      dims?: Dims
-      location: Location
-    }
+export type ArrayCreationExpressionWithoutInitializer = {
+  kind: 'ArrayCreationExpressionWithoutInitializer'
+  type: ClassOrInterfaceType | PrimitiveType
+  dimExprs: DimExprs
+  dims?: Dims
+  location: Location
+}
 
 export type ArrayInitializer = {
   kind: 'ArrayInitializer'
@@ -244,7 +235,11 @@ export type ClassBody = {
   location: Location
 }
 
-export type ClassBodyDeclaration = ClassMemberDeclaration
+export type ClassBodyDeclaration =
+  | ClassMemberDeclaration
+  | InstanceInitializer
+  | StaticInitializer
+  | ConstructorDeclaration
 
 export type ClassDeclaration = NormalClassDeclaration | EnumDeclaration | RecordDeclaration
 
@@ -270,30 +265,12 @@ export type ClassInstanceCreationExpression =
       location: Location
     }
 
-export type ClassLiteral =
-  | {
-      kind: 'ClassLiteral'
-      typeName: TypeName
-      dims: Dim[]
-      location: Location
-    }
-  | {
-      kind: 'ClassLiteral'
-      numericType: NumericType
-      dims: Dim[]
-      location: Location
-    }
-  | {
-      kind: 'ClassLiteral'
-      boolean: Boolean
-      dims: Dim[]
-      location: Location
-    }
-  | {
-      kind: 'ClassLiteral'
-      void: Void
-      location: Location
-    }
+export type ClassLiteral = {
+  kind: 'ClassLiteral'
+  type: TypeName | NumericType | Boolean | Void
+  dims: Dim[]
+  location: Location
+}
 
 export type ClassMemberDeclaration = FieldDeclaration | MethodDeclaration | ClassDeclaration
 
@@ -522,20 +499,13 @@ export type ExpressionName = {
 
 export type ExpressionStatement = StatementExpression
 
-export type FieldAccess =
-  | {
-      kind: 'FieldAccess'
-      primary: Primary
-      identifier: Identifier
-      location: Location
-    }
-  | {
-      kind: 'FieldAccess'
-      typeName?: TypeName
-      super: Super
-      identifier: Identifier
-      location: Location
-    }
+// TODO:
+export type FieldAccess = {
+  kind: 'FieldAccess'
+  primary: Primary
+  identifier: Identifier
+  location: Location
+}
 
 export type FieldDeclaration = {
   kind: 'FieldDeclaration'
@@ -772,7 +742,7 @@ export type MethodDeclarator = {
   kind: 'MethodDeclarator'
   identifier: Identifier
   receiverParameter?: ReceiverParameter
-  formalParameterList: FormalParameter[]
+  formalParameterList?: FormalParameterList
   dims?: Dims
   location: Location
 }
@@ -787,12 +757,8 @@ export type MethodHeader = {
 
 export type MethodInvocation = {
   kind: 'MethodInvocation'
-  methodName?: MethodName
-  typeName?: TypeName
-  expressionName?: ExpressionName
+  methodName: MethodName
   primary?: Primary
-  super?: Super
-  identifier?: Identifier
   argumentList?: ArgumentList
   location: Location
 }
@@ -924,8 +890,12 @@ export type PostDecrementExpression = {
 export type PostfixExpression =
   | Primary
   | ExpressionName
-  | PostIncrementExpression
-  | PostDecrementExpression
+  | {
+      kind: 'PostfixExpression'
+      postfixOperator: Identifier
+      postfixExpression: PostfixExpression
+      location: Location
+    }
 
 export type PostIncrementExpression = {
   kind: 'PostIncrementExpression'
@@ -996,7 +966,7 @@ export type RecordComponentModifier = {}
 
 export type RecordDeclaration = {
   kind: 'RecordDeclaration'
-  classModifier: ClassModifier[]
+  classModifiers: ClassModifier[]
   typeIdentifier: TypeIdentifier
   recordHeader: RecordHeader
   classImplements?: ClassImplements
@@ -1119,7 +1089,12 @@ export type SwitchBlockStatementGroup = {
   location: Location
 }
 
-export type SwitchExpression = {}
+export type SwitchExpression = {
+  kind: 'SwitchExpression'
+  expression: Expression
+  switchBlock: SwitchBlock
+  location: Location
+}
 
 export type SwitchLabel =
   | {
@@ -1209,25 +1184,12 @@ export type TypePattern = LocalVariableDeclaration
 
 export type TypeVariable = TypeIdentifier
 
-export type UnannArrayType =
-  | {
-      kind: 'UnannArrayType'
-      unannPrimitiveType: UnannPrimitiveType
-      dims: Dims
-      location: Location
-    }
-  | {
-      kind: 'UnannArrayType'
-      unannClassOrInterfaceType: UnannClassOrInterfaceType
-      dims: Dims
-      location: Location
-    }
-  | {
-      kind: 'UnannArrayType'
-      unannTypeVariable: UnannTypeVariable
-      dims: Dims
-      location: Location
-    }
+export type UnannArrayType = {
+  kind: 'UnannArrayType'
+  type: UnannPrimitiveType | UnannClassOrInterfaceType | UnannTypeVariable
+  dims: Dims
+  location: Location
+}
 
 export type UnannClassOrInterfaceType = UnannClassType | UnannInterfaceType
 

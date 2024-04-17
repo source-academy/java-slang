@@ -2,9 +2,10 @@ import * as NonPrimitives from '../types/nonPrimitives'
 import * as Primitives from '../types/primitives'
 import { Method, MethodSignature, Parameter } from '../types/methods'
 import { Type } from '../types/type'
-import { CannotFindSymbolError, VariableAlreadyDefinedError } from '../errors'
+import { CannotFindSymbolError, TypeCheckerError, VariableAlreadyDefinedError } from '../errors'
 import { Array } from '../types/arrays'
 import { ClassImpl } from '../types/classes'
+import { Location } from '../ast/specificationTypes'
 import { isArrayType, removeArraySuffix } from './arrays'
 
 const SYSTEM_CLASS = new ClassImpl('System')
@@ -53,38 +54,38 @@ export class Frame {
 
   private constructor() {}
 
-  public getMethod(name: string): Method | Error {
+  public getMethod(name: string, location: Location): Method | TypeCheckerError {
     const method = this._methods.get(name)
     if (method) return method
-    if (this._parentFrame) return this._parentFrame.getMethod(name)
-    return new CannotFindSymbolError()
+    if (this._parentFrame) return this._parentFrame.getMethod(name, location)
+    return new CannotFindSymbolError(location)
   }
 
-  public getReturn(): Type | Error {
+  public getReturn(): Type | TypeCheckerError {
     if (this._returnType) return this._returnType
     if (this._parentFrame) return this._parentFrame.getReturn()
-    return new Error('cannot find return type')
+    throw new Error('cannot find return type')
   }
 
-  public getType(name: string): Type | Error {
+  public getType(name: string, location: Location): Type | TypeCheckerError {
     if (isArrayType(name)) {
       const typePrefix = removeArraySuffix(name)
-      const prefixType = this.getType(typePrefix)
-      if (prefixType instanceof Error) return prefixType
+      const prefixType = this.getType(typePrefix, location)
+      if (prefixType instanceof TypeCheckerError) return prefixType
       return new Array(prefixType)
     }
 
     const type = this._types.get(name)
     if (type) return type
-    if (this._parentFrame) return this._parentFrame.getType(name)
-    return new CannotFindSymbolError()
+    if (this._parentFrame) return this._parentFrame.getType(name, location)
+    return new CannotFindSymbolError(location)
   }
 
-  public getVariable(name: string): Type | Error {
+  public getVariable(name: string, location: Location): Type | TypeCheckerError {
     const variable = this._variables.get(name)
     if (variable) return variable
-    if (this._parentFrame) return this._parentFrame.getVariable(name)
-    return new CannotFindSymbolError()
+    if (this._parentFrame) return this._parentFrame.getVariable(name, location)
+    return new CannotFindSymbolError(location)
   }
 
   public isMethodInFrame(name: string): boolean {
@@ -102,9 +103,9 @@ export class Frame {
     return childFrame
   }
 
-  public setMethod(name: string, method: Method): null | Error {
+  public setMethod(name: string, method: Method, location: Location): null | TypeCheckerError {
     const existingMethod = this._methods.get(name)
-    if (existingMethod) return new VariableAlreadyDefinedError()
+    if (existingMethod) return new VariableAlreadyDefinedError(location)
     this._methods.set(name, method)
     return null
   }
@@ -113,16 +114,16 @@ export class Frame {
     this._returnType = type
   }
 
-  public setType(name: string, type: Type): null | Error {
+  public setType(name: string, type: Type, location: Location): null | TypeCheckerError {
     const existingType = this._types.get(name)
-    if (existingType) return new VariableAlreadyDefinedError()
+    if (existingType) return new VariableAlreadyDefinedError(location)
     this._types.set(name, type)
     return null
   }
 
-  public setVariable(name: string, type: Type): null | Error {
+  public setVariable(name: string, type: Type, location: Location): null | TypeCheckerError {
     const existingVariable = this._types.get(name)
-    if (existingVariable) return new VariableAlreadyDefinedError()
+    if (existingVariable) return new VariableAlreadyDefinedError(location)
     this._variables.set(name, type)
     return null
   }
@@ -138,7 +139,7 @@ export class Frame {
   public static globalFrame(): Frame {
     const globalFrame = new Frame()
     Object.keys(GLOBAL_TYPE_ENVIRONMENT).forEach(key => {
-      globalFrame.setType(key, GLOBAL_TYPE_ENVIRONMENT[key])
+      globalFrame.setType(key, GLOBAL_TYPE_ENVIRONMENT[key], { startLine: -1, startOffset: -1 })
     })
     return globalFrame
   }
