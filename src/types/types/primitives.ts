@@ -1,8 +1,8 @@
 import { Location } from '../ast/specificationTypes'
 import { IntegerTooLargeError, TypeCheckerError } from '../errors'
-import { Type } from './type'
+import { Type, TypeImpl } from './type'
 
-export class Boolean extends Type {
+export class Boolean extends TypeImpl {
   constructor() {
     super('boolean')
   }
@@ -17,7 +17,7 @@ export class Boolean extends Type {
   }
 }
 
-export class Byte extends Type {
+export class Byte extends TypeImpl {
   private static BYTE_MAX = 127
   private static BYTE_MIN = -128
   constructor() {
@@ -42,7 +42,7 @@ export class Byte extends Type {
   }
 }
 
-export class Char extends Type {
+export class Char extends TypeImpl {
   constructor() {
     super('char')
   }
@@ -58,7 +58,7 @@ export class Char extends Type {
   }
 }
 
-export class Double extends Type {
+export class Double extends TypeImpl {
   constructor() {
     super('double')
   }
@@ -88,7 +88,7 @@ export class Double extends Type {
   }
 }
 
-export class Float extends Type {
+export class Float extends TypeImpl {
   constructor() {
     super('float')
   }
@@ -117,7 +117,7 @@ export class Float extends Type {
   }
 }
 
-export class Int extends Type {
+export class Int extends TypeImpl {
   private static INTEGER_MAX = 2147483647
   private static INTEGER_MIN = -2147483648
   constructor() {
@@ -148,7 +148,7 @@ export class Int extends Type {
   }
 }
 
-export class Long extends Type {
+export class Long extends TypeImpl {
   private static LONG_MAX = BigInt('9223372036854775807')
   private static LONG_MIN = BigInt('-9223372036854775808')
   constructor() {
@@ -177,7 +177,7 @@ export class Long extends Type {
   }
 }
 
-export class Null extends Type {
+export class Null extends TypeImpl {
   constructor() {
     super('null')
   }
@@ -192,7 +192,7 @@ export class Null extends Type {
   }
 }
 
-export class Short extends Type {
+export class Short extends TypeImpl {
   private static SHORT_MAX = 32767
   private static SHORT_MIN = -32768
   constructor() {

@@ -1,7 +1,7 @@
 import { Location } from '../ast/specificationTypes'
 import { ClassImpl } from './classes'
 import * as Primitives from './primitives'
-import { Type } from './type'
+import { Type, TypeImpl } from './type'
 
 export class Boolean extends ClassImpl {
   constructor() {
@@ -105,7 +105,7 @@ export class String extends ClassImpl {
   }
 }
 
-export class Void extends Type {
+export class Void extends TypeImpl {
   constructor() {
     super('void')
   }

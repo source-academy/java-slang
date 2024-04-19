@@ -2,9 +2,9 @@ import { Location } from '../ast/specificationTypes'
 import { CannotFindSymbolError, TypeCheckerError, VariableAlreadyDefinedError } from '../errors'
 import { Method, MethodSignature } from './methods'
 import { Null } from './primitives'
-import { Type } from './type'
+import { Type, TypeImpl } from './type'
 
-export interface Class extends Type {
+export interface Class extends TypeImpl {
   accessConstructor(): Method
   getParentClass(): Class
   setConstructor(method: Method): void
@@ -14,7 +14,7 @@ export interface Class extends Type {
   setParentClass(parentClass: Class): void
 }
 
-export class ClassImpl extends Type implements Class {
+export class ClassImpl extends TypeImpl implements Class {
   private _constructor: Method
   private _fields = new Map<string, Type>()
   private _methods = new Map<string, Method>()
@@ -99,7 +99,7 @@ export class ClassImpl extends Type implements Class {
   }
 }
 
-export class ObjectClass extends Type implements Class {
+export class ObjectClass extends TypeImpl implements Class {
   public constructor() {
     super('Class: Object')
   }

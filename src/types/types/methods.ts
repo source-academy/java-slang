@@ -5,7 +5,7 @@ import {
   MethodCannotBeAppliedError,
   TypeCheckerError
 } from '../errors'
-import { Type } from './type'
+import { Type, TypeImpl } from './type'
 
 export class ArgumentList {
   private argumentTypes: Type[] = []
@@ -99,7 +99,7 @@ export class ParameterList {
   }
 }
 
-export class MethodSignature extends Type {
+export class MethodSignature extends TypeImpl {
   public returnType: Type
   public parameters: ParameterList = new ParameterList()
   public exceptions: object[] = []
@@ -158,7 +158,7 @@ export class MethodSignature extends Type {
   }
 }
 
-export class Method extends Type {
+export class Method extends TypeImpl {
   private methodSignatures: MethodSignature[] = []
 
   constructor(methodSignature: MethodSignature) {
