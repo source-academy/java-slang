@@ -39,7 +39,9 @@ const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   String: new NonPrimitives.String(),
 
   // Hard coded variables
-  System: SYSTEM_CLASS
+  System: SYSTEM_CLASS,
+  Throwable: new NonPrimitives.Throwable(),
+  Exception: new NonPrimitives.Exception()
 }
 
 export class Frame {

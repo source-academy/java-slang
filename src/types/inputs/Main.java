@@ -1,5 +1,8 @@
 public class Main {
   public static void main(String[] args) {
-    do {} while(1);
+    try {}
+    catch( Main test) {}
+    catch (Throwable throwable) {}
+    catch (Exception exception) {}
   }
 }

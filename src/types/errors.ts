@@ -64,6 +64,12 @@ export class DuplicateClassError extends TypeCheckerError {
   }
 }
 
+export class ExceptionHasAlreadyBeenCaughtError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('exception has already been caught', location)
+  }
+}
+
 export class FloatTooLargeError extends TypeCheckerError {
   constructor(location?: Location) {
     super('floating-point number too large', location)

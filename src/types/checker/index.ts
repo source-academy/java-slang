@@ -31,7 +31,7 @@ import { unannTypeToString } from '../ast/utils'
 import { Frame } from './environment'
 import { addClasses, addClassMethods, addClassParents } from './prechecks'
 import { checkBinaryOperation, checkPostfixOperation, checkUnaryOperation } from './operations'
-import { checkDoExpression, checkSwitchExpression } from './statements'
+import { checkDoExpression, checkSwitchExpression, checkTryCatchType } from './statements'
 
 const PRIMITIVE_INT_TYPE = new Int()
 const INTEGER_TYPE = new Integer()
@@ -624,6 +624,54 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
         }
       }
       return OK_RESULT
+    }
+    case 'TryStatement': {
+      const checkBlockStatements = typeCheckBody(node.block, frame)
+      if (checkBlockStatements.hasErrors) return checkBlockStatements
+      const errors: TypeCheckerError[] = []
+      if (node.catches) {
+        const catchParameters: Type[] = []
+        node.catches.catchClauses.forEach(catchClause => {
+          const catchTypeNode = catchClause.catchFormalParameter.catchType
+          const catchType = frame.getType(
+            unannTypeToString(catchTypeNode.unannClassType),
+            catchTypeNode.location
+          )
+          if (catchType instanceof TypeCheckerError) {
+            errors.push(catchType)
+            return
+          }
+          const checkCatchTypeError = checkTryCatchType(
+            catchType,
+            catchParameters,
+            catchTypeNode.location
+          )
+          if (checkCatchTypeError instanceof TypeCheckerError) {
+            errors.push(checkCatchTypeError)
+            return
+          }
+          catchParameters.push(catchType)
+          const catchFrame = frame.newChildFrame()
+          const catchTypeParameter =
+            catchClause.catchFormalParameter.variableDeclaratorId.identifier
+          const error = catchFrame.setVariable(
+            catchTypeParameter.identifier,
+            catchType,
+            catchTypeParameter.location
+          )
+          if (error instanceof TypeCheckerError) {
+            errors.push(error)
+            return
+          }
+          const catchBlockCheck = typeCheckBody(catchClause.block, catchFrame)
+          if (catchBlockCheck.hasErrors) errors.push(...catchBlockCheck.errors)
+        })
+      }
+      if (node.finally) {
+        const finallyBlockCheck = typeCheckBody(node.finally.block, frame)
+        if (finallyBlockCheck.hasErrors) errors.push(...finallyBlockCheck.errors)
+      }
+      return newResult(null, errors)
     }
     case 'UnaryExpression': {
       if (node.prefixOperator.identifier === '-') {

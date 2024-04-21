@@ -1,5 +1,6 @@
 import { Location } from '../ast/specificationTypes'
 import { ClassImpl } from './classes'
+import { Method, MethodSignature, Parameter } from './methods'
 import * as Primitives from './primitives'
 import { Type, PrimitiveType } from './type'
 
@@ -107,6 +108,35 @@ export class String extends ClassImpl {
   public canBeAssigned(type: Type): boolean {
     if (type instanceof Primitives.Null) return true
     return type instanceof String
+  }
+}
+
+export class Throwable extends ClassImpl {
+  constructor() {
+    super('Throwable')
+  }
+}
+
+export class Exception extends ClassImpl {
+  constructor() {
+    super('Exception')
+    this.setParentClass(new Throwable())
+    const constructorSignature1 = new MethodSignature()
+    constructorSignature1.setReturnType(this)
+    const constructor = new Method(constructorSignature1)
+    const constructorSignature2 = new MethodSignature()
+    constructorSignature2.setReturnType(this)
+    constructorSignature2.parameters.addParameter(new Parameter('message', new String()))
+    constructor.addOverload(constructorSignature2, { startLine: -1, startOffset: -1 })
+    const constructorSignature3 = new MethodSignature()
+    constructorSignature3.setReturnType(this)
+    constructorSignature3.parameters.addParameter(new Parameter('cause', new Throwable()))
+    constructor.addOverload(constructorSignature3, { startLine: -1, startOffset: -1 })
+    const constructorSignature4 = new MethodSignature()
+    constructorSignature4.setReturnType(this)
+    constructorSignature2.parameters.addParameter(new Parameter('message', new String()))
+    constructorSignature4.parameters.addParameter(new Parameter('cause', new Throwable()))
+    constructor.addOverload(constructorSignature4, { startLine: -1, startOffset: -1 })
   }
 }
 
