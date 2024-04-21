@@ -1,5 +1,5 @@
 import { Array as ArrayType } from '../types/arrays'
-import { Integer, String, Void } from '../types/references'
+import { Integer, String, Throwable, Void } from '../types/references'
 import { CaseConstant, Node } from '../ast/specificationTypes'
 import { Type } from '../types/type'
 import {
@@ -624,6 +624,14 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
         }
       }
       return OK_RESULT
+    }
+    case 'ThrowStatement': {
+      const expressionCheck = typeCheckBody(node.expression, frame)
+      if (expressionCheck.hasErrors) return expressionCheck
+      if (!expressionCheck.currentType)
+        throw new TypeCheckerInternalError('Throw expression should have a type')
+      if (new Throwable().canBeAssigned(expressionCheck.currentType)) return OK_RESULT
+      return newResult(null, [new IncompatibleTypesError(node.expression.location)])
     }
     case 'TryStatement': {
       const checkBlockStatements = typeCheckBody(node.block, frame)
