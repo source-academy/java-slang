@@ -68,6 +68,19 @@ export const isPrimitiveNumericTypeConvertible = (type: Type): boolean => {
   )
 }
 
+export const isPrimitiveType = (type: Type): boolean => {
+  return (
+    type instanceof Primitives.Boolean ||
+    type instanceof Primitives.Byte ||
+    type instanceof Primitives.Char ||
+    type instanceof Primitives.Double ||
+    type instanceof Primitives.Float ||
+    type instanceof Primitives.Int ||
+    type instanceof Primitives.Long ||
+    type instanceof Primitives.Short
+  )
+}
+
 export const isStringType = (type: Type): boolean => {
   return type instanceof References.String
 }

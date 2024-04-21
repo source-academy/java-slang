@@ -1,6 +1,6 @@
 import { Array as ArrayType } from '../types/arrays'
 import { Integer, String, Void } from '../types/references'
-import { Node } from '../ast/specificationTypes'
+import { CaseConstant, Node } from '../ast/specificationTypes'
 import { Type } from '../types/type'
 import {
   ArrayRequiredError,
@@ -31,6 +31,7 @@ import { unannTypeToString } from '../ast/utils'
 import { Frame } from './environment'
 import { addClasses, addClassMethods, addClassParents } from './prechecks'
 import { checkBinaryOperation, checkPostfixOperation, checkUnaryOperation } from './operations'
+import { checkSwitchExpression } from './statements'
 
 const PRIMITIVE_INT_TYPE = new Int()
 const INTEGER_TYPE = new Integer()
@@ -174,9 +175,17 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
         const newFrame = frame.newChildFrame()
         node.blockStatements.blockStatements.forEach(statement => {
           const result = typeCheckBody(statement, newFrame)
-          if (result.errors) errors.push(...result.errors)
+          if (result.hasErrors) errors.push(...result.errors)
         })
       }
+      return newResult(null, errors)
+    }
+    case 'BlockStatements': {
+      const errors: TypeCheckerError[] = []
+      node.blockStatements.forEach(statement => {
+        const result = typeCheckBody(statement, frame)
+        if (result.hasErrors) errors.push(...result.errors)
+      })
       return newResult(null, errors)
     }
     case 'BreakStatement': {
@@ -543,6 +552,20 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
         ? newResult(null, [postfixExpressionCheck])
         : newResult(postfixExpressionCheck)
     }
+    case 'ReturnStatement': {
+      let returnExpressionType: Type = new Void()
+      if (node.expression) {
+        const expressionCheck = typeCheckBody(node.expression, frame)
+        if (expressionCheck.errors.length > 0) return expressionCheck
+        if (!expressionCheck.currentType) throw new Error('Expression check should return a type.')
+        returnExpressionType = expressionCheck.currentType
+      }
+      const returnType = frame.getReturn()
+      if (returnType instanceof Error) return newResult(null, [returnType])
+      if (!returnType.canBeAssigned(returnExpressionType))
+        return newResult(null, [new IncompatibleTypesError()])
+      return OK_RESULT
+    }
     case 'StatementExpressionList': {
       return newResult(
         null,
@@ -553,6 +576,39 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
             []
           )
       )
+    }
+    case 'SwitchStatement': {
+      const expressionCheck = typeCheckBody(node.expression, frame)
+      if (expressionCheck.hasErrors) return expressionCheck
+      if (!expressionCheck.currentType)
+        throw new TypeCheckerInternalError('Switch selector expression should have a type.')
+      const checkExpression = checkSwitchExpression(
+        expressionCheck.currentType,
+        node.expression.location
+      )
+      if (checkExpression instanceof TypeCheckerError) return newResult(null, [checkExpression])
+
+      const switchBlockFrame = frame.newChildFrame()
+      for (const group of node.switchBlock.switchBlockStatementGroups) {
+        for (const switchLabel of group.switchLabels) {
+          if ('caseConstant' in switchLabel) {
+            const checkResult = typeCheckBody(
+              switchLabel.caseConstant as CaseConstant,
+              switchBlockFrame
+            )
+            if (checkResult.hasErrors) return checkResult
+            if (!checkResult.currentType)
+              throw new TypeCheckerInternalError('Switch case constant should have a type.')
+            if (expressionCheck.currentType.canBeAssigned(checkResult.currentType)) continue
+            return newResult(null, [new IncompatibleTypesError(switchLabel.location)])
+          }
+        }
+        if (group.blockStatements) {
+          const checkBlockStatements = typeCheckBody(group.blockStatements, switchBlockFrame)
+          if (checkBlockStatements.hasErrors) return checkBlockStatements
+        }
+      }
+      return OK_RESULT
     }
     case 'UnaryExpression': {
       if (node.prefixOperator.identifier === '-') {
@@ -581,20 +637,6 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       return unaryOperationCheck instanceof TypeCheckerError
         ? newResult(null, [unaryOperationCheck])
         : newResult(unaryOperationCheck)
-    }
-    case 'ReturnStatement': {
-      let returnExpressionType: Type = new Void()
-      if (node.expression) {
-        const expressionCheck = typeCheckBody(node.expression, frame)
-        if (expressionCheck.errors.length > 0) return expressionCheck
-        if (!expressionCheck.currentType) throw new Error('Expression check should return a type.')
-        returnExpressionType = expressionCheck.currentType
-      }
-      const returnType = frame.getReturn()
-      if (returnType instanceof Error) return newResult(null, [returnType])
-      if (!returnType.canBeAssigned(returnExpressionType))
-        return newResult(null, [new IncompatibleTypesError()])
-      return OK_RESULT
     }
     case 'UnqualifiedClassInstanceCreationExpression': {
       const classIdentifier = node.classOrInterfaceTypeToInstantiate.identifiers[0]

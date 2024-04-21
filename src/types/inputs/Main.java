@@ -1,5 +1,10 @@
 public class Main {
   public static void main(String[] args) {
-    String[] names = {1, 2, 3};
+    int selector = 1;
+    switch(selector) {
+      case 1: {}
+      case "Test":
+      default:
+    }
   }
 }

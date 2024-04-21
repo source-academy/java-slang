@@ -9,6 +9,7 @@
 
 export type Node =
   | BlockStatement
+  | BlockStatements
   | ClassBodyDeclaration
   | CompilationUnit
   | ConstructorBody
@@ -17,6 +18,7 @@ export type Node =
   | Literal
   | StatementExpressionList
   | StatementNoShortIf
+  | SwitchBlock
   | TopLevelClassOrInterfaceDeclaration
 
 export type Location = {

@@ -118,6 +118,12 @@ export class NotApplicableToExpressionTypeError extends TypeCheckerError {
   }
 }
 
+export class SelectorTypeNotAllowedError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('selector type is not allowed', location)
+  }
+}
+
 export class UnexpectedTypeError extends TypeCheckerError {
   constructor(location?: Location) {
     super('unexpected type', location)
