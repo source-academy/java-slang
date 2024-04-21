@@ -31,7 +31,7 @@ import { unannTypeToString } from '../ast/utils'
 import { Frame } from './environment'
 import { addClasses, addClassMethods, addClassParents } from './prechecks'
 import { checkBinaryOperation, checkPostfixOperation, checkUnaryOperation } from './operations'
-import { checkSwitchExpression } from './statements'
+import { checkDoExpression, checkSwitchExpression } from './statements'
 
 const PRIMITIVE_INT_TYPE = new Int()
 const INTEGER_TYPE = new Integer()
@@ -240,6 +240,21 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
         })
       }
       return newResult(null, errors)
+    }
+    case 'DoStatement': {
+      const statementCheck = typeCheckBody(node.statement, frame)
+      if (statementCheck.hasErrors) return statementCheck
+      const expressionCheck = typeCheckBody(node.expression, frame)
+      if (expressionCheck.hasErrors) return expressionCheck
+      if (!expressionCheck.currentType)
+        throw new TypeCheckerInternalError('Expression in do statement should have a type')
+      const checkExpressionType = checkDoExpression(
+        expressionCheck.currentType,
+        node.expression.location
+      )
+      return checkExpressionType instanceof TypeCheckerError
+        ? newResult(null, [checkExpressionType])
+        : OK_RESULT
     }
     case 'EmptyStatement': {
       return OK_RESULT
