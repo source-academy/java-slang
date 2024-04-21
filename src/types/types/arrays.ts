@@ -1,9 +1,9 @@
 import { Location } from '../ast/specificationTypes'
 import { CannotFindSymbolError, TypeCheckerError } from '../errors'
 import * as Primitives from './primitives'
-import { Type, TypeImpl } from './type'
+import { Type, PrimitiveType } from './type'
 
-export class Array extends TypeImpl {
+export class Array extends PrimitiveType {
   private static _fields: Record<string, Type> = {
     length: new Primitives.Int()
   }

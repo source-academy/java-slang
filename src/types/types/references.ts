@@ -1,7 +1,7 @@
 import { Location } from '../ast/specificationTypes'
 import { ClassImpl } from './classes'
 import * as Primitives from './primitives'
-import { Type, TypeImpl } from './type'
+import { Type, PrimitiveType } from './type'
 
 export class Boolean extends ClassImpl {
   constructor() {
@@ -103,9 +103,14 @@ export class String extends ClassImpl {
       throw new Error(`Unrecognized string ${value}.`)
     return new String()
   }
+
+  public canBeAssigned(type: Type): boolean {
+    if (type instanceof Primitives.Null) return true
+    return type instanceof String
+  }
 }
 
-export class Void extends TypeImpl {
+export class Void extends PrimitiveType {
   constructor() {
     super('void')
   }

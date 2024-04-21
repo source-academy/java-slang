@@ -1,5 +1,5 @@
 import { Array as ArrayType } from '../types/arrays'
-import { Integer, String, Void } from '../types/nonPrimitives'
+import { Integer, String, Void } from '../types/references'
 import { Node } from '../ast/specificationTypes'
 import { Type } from '../types/type'
 import {
@@ -9,6 +9,7 @@ import {
   IncompatibleTypesError,
   NotApplicableToExpressionTypeError,
   TypeCheckerError,
+  TypeCheckerInternalError,
   VariableAlreadyDefinedError
 } from '../errors'
 import { createArgumentList } from '../typeFactories/methodFactory'
@@ -29,6 +30,7 @@ import { ArgumentList, Method } from '../types/methods'
 import { unannTypeToString } from '../ast/utils'
 import { Frame } from './environment'
 import { addClasses, addClassMethods, addClassParents } from './prechecks'
+import { checkBinaryOperation, checkPostfixOperation, checkUnaryOperation } from './operations'
 
 const PRIMITIVE_INT_TYPE = new Int()
 const INTEGER_TYPE = new Integer()
@@ -161,45 +163,10 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       if (rightErrors.length > 0) return newResult(null, rightErrors)
       if (!leftType || !rightType)
         throw new Error('Left and right of binary expression should have a type.')
-      const doubleType = new Double()
-      switch (binaryOperator.identifier) {
-        case '+':
-          if (leftType instanceof String && rightType instanceof String)
-            return newResult(new String())
-          if (doubleType.canBeAssigned(leftType) && rightType instanceof String)
-            return newResult(new String())
-          if (leftType instanceof String && doubleType.canBeAssigned(rightType))
-            return newResult(new String())
-        case '-':
-        case '*':
-        case '/':
-          if (leftType instanceof String && rightType instanceof String)
-            return newResult(null, [new BadOperandTypesError()])
-          if (leftType.canBeAssigned(rightType)) return newResult(leftType)
-          if (rightType.canBeAssigned(leftType)) return newResult(rightType)
-          return newResult(null, [new BadOperandTypesError()])
-        case '<':
-        case '>':
-        case '<=':
-        case '>=':
-          if (doubleType.canBeAssigned(leftType) && doubleType.canBeAssigned(rightType))
-            return newResult(new Boolean())
-          return newResult(null, [new BadOperandTypesError()])
-        case '&&':
-        case '||':
-          const booleanType = new Boolean()
-          if (booleanType.canBeAssigned(leftType) && booleanType.canBeAssigned(rightType))
-            return newResult(new Boolean())
-          return newResult(null, [new BadOperandTypesError()])
-        case '==':
-          if (leftType.canBeAssigned(rightType) || rightType.canBeAssigned(leftType))
-            return newResult(new Boolean())
-          return newResult(null, [new BadOperandTypesError()])
-        default:
-          throw new Error(
-            `Unrecgonized operator ${binaryOperator.identifier} found in binary expression.`
-          )
-      }
+      const binaryOperationCheck = checkBinaryOperation(leftType, binaryOperator, rightType)
+      if (binaryOperationCheck instanceof TypeCheckerError)
+        return newResult(null, [binaryOperationCheck])
+      return newResult(binaryOperationCheck)
     }
     case 'Block': {
       const errors: TypeCheckerError[] = []
@@ -347,6 +314,10 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       const consequentResult = typeCheckBody(node.statement, newFrame)
       if (consequentResult.errors) errors.push(...consequentResult.errors)
       return newResult(null, errors)
+    }
+    case 'InstanceofExpression': {
+      console.log(node)
+      return OK_RESULT
     }
     case 'BinaryLiteral':
     case 'DecimalLiteral':
@@ -563,11 +534,14 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
     case 'PostfixExpression': {
       const expressionCheck = typeCheckBody(node.postfixExpression, frame)
       if (expressionCheck.errors.length > 0) return expressionCheck
-      const doubleType = new Double()
       if (!expressionCheck.currentType) throw new Error('Expression check did not return a type.')
-      if (!doubleType.canBeAssigned(expressionCheck.currentType))
-        return newResult(null, [new BadOperandTypesError(node.postfixExpression.location)])
-      return expressionCheck
+      const postfixExpressionCheck = checkPostfixOperation(
+        expressionCheck.currentType,
+        node.postfixOperator
+      )
+      return postfixExpressionCheck instanceof TypeCheckerError
+        ? newResult(null, [postfixExpressionCheck])
+        : newResult(postfixExpressionCheck)
     }
     case 'StatementExpressionList': {
       return newResult(
@@ -581,40 +555,32 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       )
     }
     case 'UnaryExpression': {
-      const { prefixOperator: operator, unaryExpression: expression } = node
-      switch (operator.identifier) {
-        case '-': {
-          switch (expression.kind) {
-            case 'BinaryLiteral':
-            case 'DecimalFloatingPointLiteral':
-            case 'DecimalLiteral':
-            case 'HexLiteral':
-            case 'OctalLiteral':
-            case 'HexadecimalFloatingPointLiteral': {
-              expression.identifier.identifier = '-' + expression.identifier.identifier
-              return typeCheckBody(expression, frame)
-            }
-            case 'BooleanLiteral':
-            case 'CharacterLiteral':
-            case 'StringLiteral':
-            case 'NullLiteral':
-              return newResult(null, [new BadOperandTypesError(expression.location)])
+      if (node.prefixOperator.identifier === '-') {
+        switch (node.unaryExpression.kind) {
+          case 'BinaryLiteral':
+          case 'DecimalFloatingPointLiteral':
+          case 'DecimalLiteral':
+          case 'HexLiteral':
+          case 'OctalLiteral':
+          case 'HexadecimalFloatingPointLiteral': {
+            node.unaryExpression.identifier.identifier =
+              '-' + node.unaryExpression.identifier.identifier
           }
+          default:
         }
-        case '+':
-          return typeCheckBody(expression, frame)
-        case '!':
-          const expressionCheck = typeCheckBody(expression, frame)
-          if (expressionCheck.errors.length > 0) return expressionCheck
-          if (!expressionCheck.currentType) throw new Error('Type missing in ! prefix expression.')
-          const booleanType = new Boolean()
-          if (booleanType.canBeAssigned(expressionCheck.currentType)) return newResult(booleanType)
-          return newResult(null, [new BadOperandTypesError(expression.location)])
-        default:
-          throw new Error(
-            `Unrecgonized operator ${operator.identifier} found in prefix expression.`
-          )
       }
+
+      const expressionCheck = typeCheckBody(node.unaryExpression, frame)
+      if (expressionCheck.hasErrors) return expressionCheck
+      if (!expressionCheck.currentType)
+        throw new TypeCheckerInternalError('Type expected from unary expression expression')
+      const unaryOperationCheck = checkUnaryOperation(
+        node.prefixOperator,
+        expressionCheck.currentType
+      )
+      return unaryOperationCheck instanceof TypeCheckerError
+        ? newResult(null, [unaryOperationCheck])
+        : newResult(unaryOperationCheck)
     }
     case 'ReturnStatement': {
       let returnExpressionType: Type = new Void()

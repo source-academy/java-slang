@@ -1,4 +1,4 @@
-import * as NonPrimitives from '../types/nonPrimitives'
+import * as NonPrimitives from '../types/references'
 import * as Primitives from '../types/primitives'
 import { Method, MethodSignature, Parameter } from '../types/methods'
 import { Type } from '../types/type'

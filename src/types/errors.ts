@@ -18,9 +18,9 @@ export class TypeCheckerError extends Error {
   }
 }
 
-export class TypeCheckerInternalError extends Error {
-  constructor(message: string) {
-    super(`TypeCheckerInternalError: ${message}`)
+export class TypeCheckerInternalError extends TypeCheckerError {
+  constructor(message: string, location?: Location) {
+    super(`TypeCheckerInternalError: ${message}`, location)
   }
 }
 
@@ -36,7 +36,7 @@ export class ArrayRequiredError extends TypeCheckerError {
 
 export class BadOperandTypesError extends TypeCheckerError {
   constructor(location?: Location) {
-    super('bad operand', location)
+    super('bad operand types', location)
   }
 }
 
@@ -115,6 +115,12 @@ export class ModifierNotAllowedHereError extends TypeCheckerError {
 export class NotApplicableToExpressionTypeError extends TypeCheckerError {
   constructor(location?: Location) {
     super('not applicable to expression type', location)
+  }
+}
+
+export class UnexpectedTypeError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('unexpected type', location)
   }
 }
 

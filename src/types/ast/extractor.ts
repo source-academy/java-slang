@@ -207,6 +207,15 @@ class AstExtractor extends BaseJavaCstVisitor {
       }
     }
 
+    if (ctx.Instanceof && ctx.referenceType) {
+      return {
+        kind: 'InstanceofExpression',
+        leftOperand: this.visit(ctx.unaryExpression),
+        rightOperand: this.visit(ctx.referenceType),
+        location: getLocation(ctx.Instanceof[0])
+      }
+    }
+
     if (ctx.Greater) throw new Error('Not implemented')
     if (ctx.Instanceof) throw new Error('Not implemented')
     if (ctx.Less) throw new Error('Not implemented')
@@ -1727,38 +1736,20 @@ class AstExtractor extends BaseJavaCstVisitor {
 
   referenceType(ctx: JavaParser.ReferenceTypeCtx): AST.ReferenceType {
     if (ctx.annotation) throw new Error('Not implemented')
-    throw new Error('Not implemented')
-    // const classOrInterfaceType = ctx.classOrInterfaceType
-    //   ? this.visit(ctx.classOrInterfaceType)
-    //   : undefined
-    // const primitiveType: AST.PrimitiveType | undefined = ctx.primitiveType
-    //   ? this.visit(ctx.primitiveType)
-    //   : undefined
-    // if (!ctx.dims) {
-    //   if (classOrInterfaceType) return classOrInterfaceType
-    //   if (primitiveType!.kind === 'Boolean') {
-    //     return {
-    //       kind: 'Identifier',
-    //       identifier: 'boolean',
-    //       location: primitiveType!.location
-    //     }
-    //   }
-    //   return primitiveType!.identifier
-    // }
-
-    // if (ctx.dims) {
-    //   const lastDims = ctx.dims[ctx.dims.length - 1]
-    //   ctx.dims = ctx.dims.slice(0, ctx.dims.length - 1)
-    //   const referenceType = this.referenceType(ctx)
-    //   const arrayType: AST.ArrayType = {
-    //     kind: 'ArrayType',
-
-    //     classOrInterfaceType: referenceType.kind === 'ClassType' ? referenceType : undefined,
-    //     dims: this.visit(lastDims),
-    //     location: referenceType.location
-    //   }
-    //   return arrayType
-    // }
+    if (ctx.dims) {
+      return {
+        kind: 'ArrayType',
+        type: ctx.primitiveType
+          ? this.visit(ctx.primitiveType)
+          : this.visit(ctx.classOrInterfaceType!),
+        dims: this.visit(ctx.dims),
+        location: ctx.primitiveType
+          ? getLocation(ctx.primitiveType[0].location)
+          : getLocation(ctx.classOrInterfaceType![0].location)
+      }
+    }
+    if (ctx.classOrInterfaceType) return this.visit(ctx.classOrInterfaceType)
+    return this.visit(ctx.primitiveType!)
   }
 
   referenceTypeCastExpression(ctx: JavaParser.ReferenceTypeCastExpressionCtx): AST.CastExpression {

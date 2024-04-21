@@ -1,8 +1,8 @@
 import { Location } from '../ast/specificationTypes'
 import { IntegerTooLargeError, TypeCheckerError } from '../errors'
-import { Type, TypeImpl } from './type'
+import { Type, PrimitiveType } from './type'
 
-export class Boolean extends TypeImpl {
+export class Boolean extends PrimitiveType {
   constructor() {
     super('boolean')
   }
@@ -17,7 +17,7 @@ export class Boolean extends TypeImpl {
   }
 }
 
-export class Byte extends TypeImpl {
+export class Byte extends PrimitiveType {
   private static BYTE_MAX = 127
   private static BYTE_MIN = -128
   constructor() {
@@ -42,7 +42,9 @@ export class Byte extends TypeImpl {
   }
 }
 
-export class Char extends TypeImpl {
+export class Char extends PrimitiveType {
+  // private static CHAR_MAX = 65535
+  // private static CHAR_MIN = 0
   constructor() {
     super('char')
   }
@@ -58,7 +60,7 @@ export class Char extends TypeImpl {
   }
 }
 
-export class Double extends TypeImpl {
+export class Double extends PrimitiveType {
   constructor() {
     super('double')
   }
@@ -88,7 +90,7 @@ export class Double extends TypeImpl {
   }
 }
 
-export class Float extends TypeImpl {
+export class Float extends PrimitiveType {
   constructor() {
     super('float')
   }
@@ -117,7 +119,7 @@ export class Float extends TypeImpl {
   }
 }
 
-export class Int extends TypeImpl {
+export class Int extends PrimitiveType {
   private static INTEGER_MAX = 2147483647
   private static INTEGER_MIN = -2147483648
   constructor() {
@@ -148,7 +150,7 @@ export class Int extends TypeImpl {
   }
 }
 
-export class Long extends TypeImpl {
+export class Long extends PrimitiveType {
   private static LONG_MAX = BigInt('9223372036854775807')
   private static LONG_MIN = BigInt('-9223372036854775808')
   constructor() {
@@ -177,7 +179,7 @@ export class Long extends TypeImpl {
   }
 }
 
-export class Null extends TypeImpl {
+export class Null extends PrimitiveType {
   constructor() {
     super('null')
   }
@@ -192,7 +194,7 @@ export class Null extends TypeImpl {
   }
 }
 
-export class Short extends TypeImpl {
+export class Short extends PrimitiveType {
   private static SHORT_MAX = 32767
   private static SHORT_MIN = -32768
   constructor() {

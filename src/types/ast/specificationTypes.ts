@@ -79,9 +79,7 @@ export type ArrayInitializer = {
 
 export type ArrayType = {
   kind: 'ArrayType'
-  primitiveType?: PrimitiveType
-  classOrInterfaceType?: ClassOrInterfaceType
-  typeVariable?: TypeVariable
+  type: PrimitiveType | ClassOrInterfaceType | TypeVariable
   dims: Dims
   location: Location
 }
@@ -303,6 +301,7 @@ export type ConciseLambdaParameter = Identifier
 
 export type ConditionalExpression =
   | BinaryExpression
+  | InstanceofExpression
   | {
       kind: 'ConditionalExpression'
       conditionalExpression: Expression
@@ -604,6 +603,13 @@ export type IfThenStatement = {
 
 export type InstanceInitializer = Block
 
+export type InstanceofExpression = {
+  kind: 'InstanceofExpression'
+  leftOperand: Expression
+  rightOperand: Expression
+  location: Location
+}
+
 export type IntegerLiteral = BinaryLiteral | DecimalLiteral | HexLiteral | OctalLiteral
 
 export type IntegralType = {
@@ -881,12 +887,6 @@ export type ParenthesisExpression = {
 
 export type Pattern = TypePattern | RecordPattern
 
-export type PostDecrementExpression = {
-  kind: 'PostDecrementExpression'
-  postfixExpression: PostfixExpression
-  location: Location
-}
-
 export type PostfixExpression =
   | Primary
   | ExpressionName
@@ -896,24 +896,6 @@ export type PostfixExpression =
       postfixExpression: PostfixExpression
       location: Location
     }
-
-export type PostIncrementExpression = {
-  kind: 'PostIncrementExpression'
-  postfixExpression: PostfixExpression
-  location: Location
-}
-
-export type PreDecrementExpression = {
-  kind: 'PreDecrementExpression'
-  unaryExpression: UnaryExpression
-  location: Location
-}
-
-export type PreIncrementExpression = {
-  kind: 'PreIncrementExpression'
-  unaryExpression: UnaryExpression
-  location: Location
-}
 
 export type Primary = PrimaryNoNewArray | ArrayCreationExpression
 
@@ -1023,10 +1005,8 @@ export type Statement =
 
 export type StatementExpression =
   | Assignment
-  | PreIncrementExpression
-  | PreDecrementExpression
-  | PostIncrementExpression
-  | PostDecrementExpression
+  | UnaryExpression
+  | PostfixExpression
   | MethodInvocation
   | ClassInstanceCreationExpression
 
@@ -1211,8 +1191,6 @@ export type UnannType = UnannPrimitiveType | UnannReferenceType
 export type UnannTypeVariable = TypeIdentifier
 
 export type UnaryExpression =
-  | PreIncrementExpression
-  | PreDecrementExpression
   | {
       kind: 'UnaryExpression'
       prefixOperator: Identifier

@@ -2,9 +2,9 @@ import { Location } from '../ast/specificationTypes'
 import { CannotFindSymbolError, TypeCheckerError, VariableAlreadyDefinedError } from '../errors'
 import { Method, MethodSignature } from './methods'
 import { Null } from './primitives'
-import { Type, TypeImpl } from './type'
+import { Type, PrimitiveType, ClassOrInterfaceType } from './type'
 
-export interface Class extends TypeImpl {
+export interface Class extends PrimitiveType {
   accessConstructor(): Method
   getParentClass(): Class
   setConstructor(method: Method): void
@@ -14,7 +14,8 @@ export interface Class extends TypeImpl {
   setParentClass(parentClass: Class): void
 }
 
-export class ClassImpl extends TypeImpl implements Class {
+export class ClassImpl extends ClassOrInterfaceType implements Class {
+  public readonly name: string
   private _constructor: Method
   private _fields = new Map<string, Type>()
   private _methods = new Map<string, Method>()
@@ -22,7 +23,8 @@ export class ClassImpl extends TypeImpl implements Class {
   private _modifiers: string[] = []
 
   constructor(name: string) {
-    super(`Class: ${name}`)
+    super()
+    this.name = name
     const defaultConstructorSignature = new MethodSignature()
     defaultConstructorSignature.setReturnType(this)
     this._constructor = new Method(defaultConstructorSignature)
@@ -52,6 +54,10 @@ export class ClassImpl extends TypeImpl implements Class {
       type = type.getParentClass()
     }
     return false
+  }
+
+  public equals(object: unknown): boolean {
+    return this === object
   }
 
   public getParentClass(): Class {
@@ -99,9 +105,10 @@ export class ClassImpl extends TypeImpl implements Class {
   }
 }
 
-export class ObjectClass extends TypeImpl implements Class {
+export class ObjectClass extends ClassOrInterfaceType implements Class {
+  public readonly name: string = 'Object'
   public constructor() {
-    super('Class: Object')
+    super()
   }
 
   public accessConstructor(): Method {
@@ -118,6 +125,10 @@ export class ObjectClass extends TypeImpl implements Class {
 
   public canBeAssigned(type: Type): boolean {
     return type instanceof ClassImpl || type instanceof ObjectClass || type instanceof Null
+  }
+
+  public equals(object: unknown): boolean {
+    return this === object
   }
 
   public getParentClass(): Class {
