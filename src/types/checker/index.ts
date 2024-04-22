@@ -104,7 +104,9 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
           !INTEGER_TYPE.equals(dimensionExpressionType) &&
           !PRIMITIVE_INT_TYPE.equals(dimensionExpressionType)
         )
-          return dimensionExpressionErrors.push(new IncompatibleTypesError())
+          return dimensionExpressionErrors.push(
+            new IncompatibleTypesError(dimensionExpression.expression.location)
+          )
         type = new ArrayType(type as Type)
       })
       return newResult(type)
@@ -320,7 +322,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       if (conditionResult.errors) errors.push(...conditionResult.errors)
       const booleanType = new Boolean()
       if (conditionResult.currentType && !booleanType.canBeAssigned(conditionResult.currentType))
-        errors.push(new IncompatibleTypesError())
+        errors.push(new IncompatibleTypesError(node.expression.location))
       const consequentResult = typeCheckBody(node.statementNoShortIf, frame)
       if (consequentResult.errors) errors.push(...consequentResult.errors)
       const alternateResult = typeCheckBody(node.statement, frame)
