@@ -578,7 +578,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       const returnType = frame.getReturn()
       if (returnType instanceof Error) return newResult(null, [returnType])
       if (!returnType.canBeAssigned(returnExpressionType))
-        return newResult(null, [new IncompatibleTypesError()])
+        return newResult(null, [new IncompatibleTypesError(node.expression!.location)])
       return OK_RESULT
     }
     case 'StatementExpressionList': {
