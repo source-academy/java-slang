@@ -1,6 +1,6 @@
 import { check } from '..'
 import { parse } from '../../ast'
-import { CyclicInheritanceError } from '../../errors'
+import { CyclicInheritanceError, TypeCheckerError } from '../../errors'
 import { Type } from '../../types/type'
 
 const testcases: {
@@ -38,7 +38,6 @@ const testcases: {
         }
         
         class Child extends Parent {
-          @Override
           void greet() {}
         }
         
@@ -162,6 +161,7 @@ describe('Type Checker', () => {
       const program = testcase.input
       const ast = parse(program)
       if (!ast) throw new Error('Program parsing returns null.')
+      if (ast instanceof TypeCheckerError) throw new Error('Test case is invalid.')
       const result = check(ast)
       if (result.currentType === null) expect(result.currentType).toBe(testcase.result.type)
       else expect(result.currentType).toBeInstanceOf(testcase.result.type)

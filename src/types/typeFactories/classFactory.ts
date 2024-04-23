@@ -1,54 +1,63 @@
-import { Class, ClassImpl } from '../types/classes'
+import { Class, ClassType } from '../types/classes'
 import { Frame } from '../checker/environment'
 import {
   ConstructorDeclaration,
   MethodDeclaration,
   NormalClassDeclaration
-} from '../ast/types/classes'
-import { Method, MethodSignature } from '../types/methods'
+} from '../ast/specificationTypes'
+import { Method } from '../types/methods'
+import { unannTypeToString } from '../ast/utils'
+import { TypeCheckerError } from '../errors'
 
-type CreateMethod = (node: MethodDeclaration) => MethodSignature | Error
-type CreateConstructor = (node: ConstructorDeclaration) => MethodSignature | Error
+type CreateMethod = (node: MethodDeclaration) => Method | TypeCheckerError
+type CreateConstructor = (node: ConstructorDeclaration) => Method | TypeCheckerError
 
 export const createClassFieldsAndMethods = (
   node: NormalClassDeclaration,
   frame: Frame,
   createConstructor: CreateConstructor,
   createMethod: CreateMethod
-): Class | Error => {
-  const classType = frame.getType(node.typeIdentifier)
-  if (classType instanceof Error) throw new Error('expected class type to be retrieved')
-  if (!(classType instanceof ClassImpl)) throw new Error('expected class type to be retrieved')
+): Class | TypeCheckerError => {
+  const classType = frame.getType(node.typeIdentifier.identifier, node.typeIdentifier.location)
+  if (classType instanceof TypeCheckerError) throw new Error('expected class type to be retrieved')
+  if (!(classType instanceof ClassType)) throw new Error('expected class type to be retrieved')
 
-  for (const bodyNode of node.classBody) {
+  for (const bodyNode of node.classBody.classBodyDeclarations) {
     switch (bodyNode.kind) {
       case 'ConstructorDeclaration': {
-        const methodSignature = createConstructor(bodyNode)
-        if (methodSignature instanceof Error) return methodSignature
-        const constructor = classType.accessConstructor()
-        if (constructor) constructor.addOverload(methodSignature)
-        else classType.setConstructor(new Method(methodSignature))
+        const constructorMethod = createConstructor(bodyNode)
+        if (constructorMethod instanceof TypeCheckerError) return constructorMethod
+        const error = classType.addConstructor(constructorMethod, bodyNode.location)
+        if (error instanceof TypeCheckerError) return error
         break
       }
       case 'FieldDeclaration': {
-        const fieldType = frame.getType(bodyNode.fieldType)
-        if (fieldType instanceof Error) return fieldType
-        for (const declarator of bodyNode.variableDeclaratorList) {
-          const error = classType.setField(declarator.variableDeclaratorId, fieldType)
-          if (error instanceof Error) return error
+        const fieldType = frame.getType(
+          unannTypeToString(bodyNode.unannType),
+          bodyNode.unannType.location
+        )
+        if (fieldType instanceof TypeCheckerError) return fieldType
+        for (const declarator of bodyNode.variableDeclaratorList.variableDeclarators) {
+          const fieldIdentifier = declarator.variableDeclaratorId.identifier
+          const error = classType.addField(
+            fieldIdentifier.identifier,
+            fieldType,
+            fieldIdentifier.location
+          )
+          if (error instanceof TypeCheckerError) return error
         }
         break
       }
       case 'MethodDeclaration': {
         const methodSignature = createMethod(bodyNode)
-        if (methodSignature instanceof Error) return methodSignature
-        if (!classType.hasMethod(bodyNode.methodHeader.identifier)) {
-          classType.setMethod(bodyNode.methodHeader.identifier, new Method(methodSignature))
-          break
-        }
-        const method = classType.accessMethod(bodyNode.methodHeader.identifier)
-        if (method instanceof Error) throw new Error('method here should not be an error')
-        method.addOverload(methodSignature)
+        if (methodSignature instanceof TypeCheckerError) return methodSignature
+        const methodName = bodyNode.methodHeader.methodDeclarator.identifier
+        const error = classType.addMethod(
+          methodName.identifier,
+          methodSignature,
+          methodName.location
+        )
+        if (error instanceof TypeCheckerError) return error
         break
       }
     }

@@ -1,6 +1,6 @@
 import { check } from '..'
 import { parse } from '../../ast'
-import { TypeCheckerError } from '../../errors'
+import { IncompatibleTypesError, TypeCheckerError } from '../../errors'
 import { Type } from '../../types/type'
 
 const createProgram = (statement: string) => `
@@ -17,8 +17,19 @@ const testcases: {
   only?: boolean
 }[] = [
   {
-    input: 'String test = null;',
+    input: `
+      int selector = 1;
+      do {
+        int selector = 2;
+      } while (true);
+    `,
     result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      do {} while(1);
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] }
   }
 ]
 
@@ -26,7 +37,7 @@ describe('Type Checker', () => {
   testcases.map(testcase => {
     let it = test
     if (testcase.only) it = test.only
-    it(`Checking null literals for ${testcase.input}`, () => {
+    it(`Checking do statements for ${testcase.input}`, () => {
       const program = createProgram(testcase.input)
       const ast = parse(program)
       if (!ast) throw new Error('Program parsing returns null.')
@@ -41,7 +52,6 @@ describe('Type Checker', () => {
         })
       } else {
         result.errors.forEach((error, index) => {
-          console.log(error)
           if (!testcase.result.errors[index]) expect(error.message).toBe('')
           expect(error.message).toBe(testcase.result.errors[index].message)
         })

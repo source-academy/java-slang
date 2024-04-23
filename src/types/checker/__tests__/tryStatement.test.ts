@@ -1,6 +1,10 @@
 import { check } from '..'
 import { parse } from '../../ast'
-import { TypeCheckerError } from '../../errors'
+import {
+  ExceptionHasAlreadyBeenCaughtError,
+  IncompatibleTypesError,
+  TypeCheckerError
+} from '../../errors'
 import { Type } from '../../types/type'
 
 const createProgram = (statement: string) => `
@@ -17,8 +21,25 @@ const testcases: {
   only?: boolean
 }[] = [
   {
-    input: 'String test = null;',
+    input: `
+      try {} catch (Exception e) {}
+    `,
     result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      try {} 
+      catch (Throwable e) {}
+      catch (Exception e) {}
+    `,
+    result: { type: null, errors: [new ExceptionHasAlreadyBeenCaughtError()] }
+  },
+  {
+    input: `
+      try {} 
+      catch (String s) {}
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] }
   }
 ]
 
@@ -26,7 +47,7 @@ describe('Type Checker', () => {
   testcases.map(testcase => {
     let it = test
     if (testcase.only) it = test.only
-    it(`Checking null literals for ${testcase.input}`, () => {
+    it(`Checking try statements for ${testcase.input}`, () => {
       const program = createProgram(testcase.input)
       const ast = parse(program)
       if (!ast) throw new Error('Program parsing returns null.')
@@ -41,7 +62,6 @@ describe('Type Checker', () => {
         })
       } else {
         result.errors.forEach((error, index) => {
-          console.log(error)
           if (!testcase.result.errors[index]) expect(error.message).toBe('')
           expect(error.message).toBe(testcase.result.errors[index].message)
         })

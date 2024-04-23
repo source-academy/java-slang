@@ -1,4 +1,4 @@
-import { BadOperandTypesError } from '../../errors'
+import { BadOperandTypesError, TypeCheckerError } from '../../errors'
 import { check } from '..'
 import { parse } from '../../ast'
 import { Type } from '../../types/type'
@@ -126,6 +126,7 @@ describe('Type Checker', () => {
       const program = createProgram(testcase.input)
       const ast = parse(program)
       if (!ast) throw new Error('Program parsing returns null.')
+      if (ast instanceof TypeCheckerError) throw new Error('Test case is invalid.')
       const result = check(ast)
       if (result.currentType === null) expect(result.currentType).toBe(testcase.result.type)
       else expect(result.currentType).toBeInstanceOf(testcase.result.type)

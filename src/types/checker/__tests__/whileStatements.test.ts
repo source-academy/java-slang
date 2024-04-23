@@ -1,6 +1,7 @@
 import { check } from '..'
 // import { BadOperandTypesError, IncompatibleTypesError } from "../../errors";
 import { parse } from '../../ast'
+import { TypeCheckerError } from '../../errors'
 import { Type } from '../../types/type'
 
 const createProgram = (statement: string) => `
@@ -50,6 +51,7 @@ describe('Type Checker', () => {
       const program = createProgram(testcase.input)
       const ast = parse(program)
       if (!ast) throw new Error('Program parsing returns null.')
+      if (ast instanceof TypeCheckerError) throw new Error('Test case is invalid.')
       const result = check(ast)
       if (result.currentType === null) expect(result.currentType).toBe(testcase.result.type)
       else expect(result.currentType).toBeInstanceOf(testcase.result.type)
