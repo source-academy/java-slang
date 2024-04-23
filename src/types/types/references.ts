@@ -1,10 +1,10 @@
 import { Location } from '../ast/specificationTypes'
-import { ClassImpl } from './classes'
-import { Method, MethodSignature, Parameter } from './methods'
+import { ClassType } from './classes'
+import { Method } from './methods'
 import * as Primitives from './primitives'
 import { Type, PrimitiveType } from './type'
 
-export class Boolean extends ClassImpl {
+export class Boolean extends ClassType {
   constructor() {
     super('Boolean')
   }
@@ -14,7 +14,7 @@ export class Boolean extends ClassImpl {
   }
 }
 
-export class Byte extends ClassImpl {
+export class Byte extends ClassType {
   constructor() {
     super('Byte')
   }
@@ -24,7 +24,7 @@ export class Byte extends ClassImpl {
   }
 }
 
-export class Character extends ClassImpl {
+export class Character extends ClassType {
   constructor() {
     super('Character')
   }
@@ -34,7 +34,7 @@ export class Character extends ClassImpl {
   }
 }
 
-export class Double extends ClassImpl {
+export class Double extends ClassType {
   constructor() {
     super('Double')
   }
@@ -44,7 +44,7 @@ export class Double extends ClassImpl {
   }
 }
 
-export class Float extends ClassImpl {
+export class Float extends ClassType {
   constructor() {
     super('Float')
   }
@@ -54,7 +54,7 @@ export class Float extends ClassImpl {
   }
 }
 
-export class Integer extends ClassImpl {
+export class Integer extends ClassType {
   constructor() {
     super('Integer')
   }
@@ -68,7 +68,7 @@ export class Integer extends ClassImpl {
   }
 }
 
-export class Long extends ClassImpl {
+export class Long extends ClassType {
   constructor() {
     super('Long')
   }
@@ -78,7 +78,7 @@ export class Long extends ClassImpl {
   }
 }
 
-export class Short extends ClassImpl {
+export class Short extends ClassType {
   constructor() {
     super('Short')
   }
@@ -88,7 +88,7 @@ export class Short extends ClassImpl {
   }
 }
 
-export class String extends ClassImpl {
+export class String extends ClassType {
   constructor() {
     super('String')
   }
@@ -111,32 +111,18 @@ export class String extends ClassImpl {
   }
 }
 
-export class Throwable extends ClassImpl {
+export class Throwable extends ClassType {
   constructor() {
     super('Throwable')
+    this.addConstructor(new Method('Throwable', this), { startLine: -1, startOffset: -1 })
   }
 }
 
-export class Exception extends ClassImpl {
+export class Exception extends ClassType {
   constructor() {
     super('Exception')
     this.setParentClass(new Throwable())
-    const constructorSignature1 = new MethodSignature()
-    constructorSignature1.setReturnType(this)
-    const constructor = new Method(constructorSignature1)
-    const constructorSignature2 = new MethodSignature()
-    constructorSignature2.setReturnType(this)
-    constructorSignature2.parameters.addParameter(new Parameter('message', new String()))
-    constructor.addOverload(constructorSignature2, { startLine: -1, startOffset: -1 })
-    const constructorSignature3 = new MethodSignature()
-    constructorSignature3.setReturnType(this)
-    constructorSignature3.parameters.addParameter(new Parameter('cause', new Throwable()))
-    constructor.addOverload(constructorSignature3, { startLine: -1, startOffset: -1 })
-    const constructorSignature4 = new MethodSignature()
-    constructorSignature4.setReturnType(this)
-    constructorSignature2.parameters.addParameter(new Parameter('message', new String()))
-    constructorSignature4.parameters.addParameter(new Parameter('cause', new Throwable()))
-    constructor.addOverload(constructorSignature4, { startLine: -1, startOffset: -1 })
+    this.addConstructor(new Method('Exception', this), { startLine: -1, startOffset: -1 })
   }
 }
 

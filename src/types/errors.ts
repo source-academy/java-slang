@@ -82,6 +82,12 @@ export class FloatTooSmallError extends TypeCheckerError {
   }
 }
 
+export class IllegalCombinationOfModifiersError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('illegal combination of modifiers', location)
+  }
+}
+
 export class IllegalUnderscoreError extends TypeCheckerError {
   constructor(location?: Location) {
     super('illegal underscore', location)
@@ -121,6 +127,18 @@ export class ModifierNotAllowedHereError extends TypeCheckerError {
 export class NotApplicableToExpressionTypeError extends TypeCheckerError {
   constructor(location?: Location) {
     super('not applicable to expression type', location)
+  }
+}
+
+export class NotAStatementError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('not a statement', location)
+  }
+}
+
+export class RepeatedModifierError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('repeated modifier', location)
   }
 }
 

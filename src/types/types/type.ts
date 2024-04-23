@@ -5,9 +5,10 @@ import { Method } from './methods'
 export interface Type {
   // TODO: Change to use Identifier Node
   accessField(_name: string, location: Location): Type | TypeCheckerError
-  accessMethod(_name: string, location: Location): Method | TypeCheckerError
+  accessMethod(_name: string, location: Location): Method[] | TypeCheckerError
   canBeAssigned(type: Type): boolean
   equals(object: unknown): boolean
+  toString(): string
 }
 
 // TODO: Change Type to an interface
@@ -21,7 +22,7 @@ export abstract class PrimitiveType implements Type {
     return new CannotBeDereferencedError(location)
   }
 
-  public accessMethod(_name: string, location: Location): Method | TypeCheckerError {
+  public accessMethod(_name: string, location: Location): Method[] | TypeCheckerError {
     return new CannotBeDereferencedError(location)
   }
 
@@ -34,7 +35,7 @@ export abstract class PrimitiveType implements Type {
 
 export abstract class ReferenceType implements Type {
   public abstract accessField(_name: string, _location: Location): Type | TypeCheckerError
-  public abstract accessMethod(_name: string, _location: Location): Method | TypeCheckerError
+  public abstract accessMethod(_name: string, _location: Location): Method[] | TypeCheckerError
   public abstract canBeAssigned(_type: Type): boolean
   public abstract equals(object: unknown): boolean
 }
@@ -44,7 +45,7 @@ export class NullType extends ReferenceType {
     throw new CannotBeDereferencedError(location)
   }
 
-  public accessMethod(_name: string, location: Location): Method | TypeCheckerError {
+  public accessMethod(_name: string, location: Location): Method[] | TypeCheckerError {
     return new CannotBeDereferencedError(location)
   }
 
@@ -74,7 +75,7 @@ export class ClassType extends ClassOrInterfaceType {
     throw new Error('Not implemented')
   }
 
-  public accessMethod(_name: string, _location: Location): TypeCheckerError | Method {
+  public accessMethod(_name: string, _location: Location): Method[] | TypeCheckerError {
     throw new Error('Not implemented')
   }
 
@@ -96,7 +97,7 @@ export class String extends ClassType {
     throw new Error('Not implemented')
   }
 
-  public accessMethod(_name: string, _location: Location): TypeCheckerError | Method {
+  public accessMethod(_name: string, _location: Location): Method[] | TypeCheckerError {
     throw new Error('Not implemented')
   }
 

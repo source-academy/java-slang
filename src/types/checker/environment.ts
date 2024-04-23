@@ -1,22 +1,22 @@
 import * as NonPrimitives from '../types/references'
 import * as Primitives from '../types/primitives'
-import { Method, MethodSignature, Parameter } from '../types/methods'
+import { Method, Parameter } from '../types/methods'
 import { Type } from '../types/type'
 import { CannotFindSymbolError, TypeCheckerError, VariableAlreadyDefinedError } from '../errors'
 import { Array } from '../types/arrays'
-import { ClassImpl } from '../types/classes'
+import { Class, ClassType } from '../types/classes'
 import { Location } from '../ast/specificationTypes'
 import { isArrayType, removeArraySuffix } from './arrays'
 
-const SYSTEM_CLASS = new ClassImpl('System')
-const PRINTSTREAM_CLASS = new ClassImpl('PrintStream')
-SYSTEM_CLASS.setField('out', PRINTSTREAM_CLASS)
-const PRINTLN_METHOD_SIGNATURE = new MethodSignature()
-PRINTLN_METHOD_SIGNATURE.parameters.addParameter(
-  new Parameter('message', new NonPrimitives.String())
-)
-const PRINTLN_METHOD = new Method(PRINTLN_METHOD_SIGNATURE)
-PRINTSTREAM_CLASS.setMethod('println', PRINTLN_METHOD)
+const SYSTEM_CLASS = new ClassType('System')
+const PRINTSTREAM_CLASS = new ClassType('PrintStream')
+SYSTEM_CLASS.addField('out', PRINTSTREAM_CLASS, { startLine: -1, startOffset: -1 })
+const PRINTLN_METHOD_1 = new Method('println')
+PRINTLN_METHOD_1.addParameter(new Parameter('message', new NonPrimitives.String()))
+const PRINTLN_METHOD_2 = new Method('println')
+PRINTLN_METHOD_2.addParameter(new Parameter('message', new Primitives.Int()))
+PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_1, { startLine: -1, startOffset: -1 })
+PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_2, { startLine: -1, startOffset: -1 })
 
 const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   boolean: new Primitives.Boolean(),
@@ -45,6 +45,7 @@ const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
 }
 
 export class Frame {
+  private _currentClass: Class
   private _methods = new Map<string, Method>()
   private _types = new Map<string, Type>()
   private _variables = new Map<string, Type>()
@@ -56,11 +57,12 @@ export class Frame {
 
   private constructor() {}
 
-  public getMethod(name: string, location: Location): Method | TypeCheckerError {
-    const method = this._methods.get(name)
-    if (method) return method
-    if (this._parentFrame) return this._parentFrame.getMethod(name, location)
-    return new CannotFindSymbolError(location)
+  public getMethod(name: string, location: Location): Method[] | TypeCheckerError {
+    return this._currentClass.accessMethod(name, location)
+    // const method = this._methods.get(name)
+    // if (method) return method
+    // if (this._parentFrame) return this._parentFrame.getMethod(name, location)
+    // return new CannotFindSymbolError(location)
   }
 
   public getReturn(): Type | TypeCheckerError {
@@ -84,6 +86,8 @@ export class Frame {
   }
 
   public getVariable(name: string, location: Location): Type | TypeCheckerError {
+    if (name === 'this') return this._currentClass
+    if (name === 'super') return this._currentClass.getParentClass()
     const variable = this._variables.get(name)
     if (variable) return variable
     if (this._parentFrame) return this._parentFrame.getVariable(name, location)
@@ -102,7 +106,12 @@ export class Frame {
     const childFrame = new Frame()
     this._childrenFrames.push(childFrame)
     childFrame._parentFrame = this
+    childFrame._currentClass = this._currentClass
     return childFrame
+  }
+
+  public setClass(classType: Class): void {
+    this._currentClass = classType
   }
 
   public setMethod(name: string, method: Method, location: Location): null | TypeCheckerError {

@@ -1,11 +1,11 @@
-import { Class, ClassImpl, ObjectClass } from '../types/classes'
+import { Class, ClassType, ObjectClass } from '../types/classes'
 import { ConstructorDeclaration, MethodDeclaration, Node } from '../ast/specificationTypes'
 import { createClassFieldsAndMethods } from '../typeFactories/classFactory'
-import { createMethodSignature } from '../typeFactories/methodFactory'
+import { createMethod } from '../typeFactories/methodFactory'
 import { CyclicInheritanceError, DuplicateClassError, TypeCheckerError } from '../errors'
-import { MethodSignature } from '../types/methods'
 import { Frame } from './environment'
 import { newResult, OK_RESULT, Result } from '.'
+import { Method } from '../types/methods'
 
 // const TOP_LEVEL_DECLARATION_MODIFIER_BLACKLIST = ['protected', 'private', 'static']
 
@@ -18,7 +18,7 @@ export const addClasses = (node: Node, frame: Frame): Result => {
       return newResult(null, typeCheckErrors)
     }
     case 'NormalClassDeclaration': {
-      const classType = new ClassImpl(node.typeIdentifier.identifier)
+      const classType = new ClassType(node.typeIdentifier.identifier)
       const errors: TypeCheckerError[] = []
       // node.classModifiers.forEach(modifier => {
       //   if (!TOP_LEVEL_DECLARATION_MODIFIER_BLACKLIST.includes(modifier.identifier))
@@ -58,17 +58,17 @@ export const addClassMethods = (node: Node, frame: Frame): Result => {
     }
     case 'ConstructorDeclaration':
     case 'MethodDeclaration': {
-      const methodSignature = createMethodSignature(frame, node)
-      if (methodSignature instanceof TypeCheckerError) return newResult(null, [methodSignature])
-      return newResult(methodSignature)
+      const method = createMethod(frame, node)
+      if (method instanceof TypeCheckerError) return newResult(null, [method])
+      return newResult(method)
     }
     case 'NormalClassDeclaration': {
       const createMethod = (
         node: ConstructorDeclaration | MethodDeclaration
-      ): MethodSignature | TypeCheckerError => {
+      ): Method | TypeCheckerError => {
         const result = addClassMethods(node, frame)
         if (result.errors.length > 0) return result.errors[0]
-        return result.currentType as MethodSignature
+        return result.currentType as Method
       }
       const classType = createClassFieldsAndMethods(node, frame, createMethod, createMethod)
       if (classType instanceof TypeCheckerError) return newResult(null, [classType])
@@ -90,14 +90,14 @@ export const addClassParents = (node: Node, frame: Frame): Result => {
     case 'NormalClassDeclaration': {
       const classType = frame.getType(node.typeIdentifier.identifier, node.typeIdentifier.location)
       if (classType instanceof Error) return newResult(null, [classType])
-      if (!(classType instanceof ClassImpl)) throw new Error('class type should be a ClassImpl')
+      if (!(classType instanceof ClassType)) throw new Error('class type should be a ClassImpl')
       if (node.classExtends) {
         const extendsType = frame.getType(
           node.classExtends.classType.typeIdentifier.identifier,
           node.classExtends.classType.typeIdentifier.location
         )
         if (extendsType instanceof Error) return newResult(null, [extendsType])
-        if (!(extendsType instanceof ClassImpl))
+        if (!(extendsType instanceof ClassType))
           throw new Error('class can only extend another class')
         let type: Class = extendsType
         while (!(type instanceof ObjectClass)) {
