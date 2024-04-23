@@ -3,9 +3,9 @@ import { ConstructorDeclaration, MethodDeclaration, Node } from '../ast/specific
 import { createClassFieldsAndMethods } from '../typeFactories/classFactory'
 import { createMethod } from '../typeFactories/methodFactory'
 import { CyclicInheritanceError, DuplicateClassError, TypeCheckerError } from '../errors'
+import { Method } from '../types/methods'
 import { Frame } from './environment'
 import { newResult, OK_RESULT, Result } from '.'
-import { Method } from '../types/methods'
 
 // const TOP_LEVEL_DECLARATION_MODIFIER_BLACKLIST = ['protected', 'private', 'static']
 
