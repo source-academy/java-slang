@@ -1,54 +1,102 @@
-import { CannotFindSymbolError, VariableAlreadyDefinedError } from '../errors'
-import { Method, MethodSignature } from './methods'
+import { Identifier, Location } from '../ast/specificationTypes'
+import {
+  CannotFindSymbolError,
+  MethodAlreadyDefinedError,
+  TypeCheckerError,
+  VariableAlreadyDefinedError
+} from '../errors'
+import { Arguments, Method } from './methods'
+import { Modifiers, ModifierType } from './modifiers'
 import { Null } from './primitives'
-import { Type } from './type'
+import { Type, PrimitiveType, ClassOrInterfaceType } from './type'
 
-export interface Class extends Type {
-  accessConstructor(): Method
+export interface Class extends PrimitiveType {
+  addConstructor(method: Method, location: Location): void | TypeCheckerError
+  addField(name: string, type: Type, location: Location): void | TypeCheckerError
+  addMethod(name: string, method: Method, location: Location): void | TypeCheckerError
+  addModifier(identifier: Identifier): void | TypeCheckerError
+  getClassName(): string
   getParentClass(): Class
-  setConstructor(method: Method): void
-  setField(name: string, type: Type): null | Error
-  setMethod(name: string, method: Method): null | Error
+  invokeConstructor(args: Arguments): Type | TypeCheckerError
+  invokeMethod(identifier: Identifier, args: Arguments): Type | TypeCheckerError
   setParentClass(parentClass: Class): void
 }
 
-export class ClassImpl extends Type implements Class {
-  private _constructor: Method
-  private _fields = new Map<string, Type>()
-  private _methods = new Map<string, Method>()
+export class ClassType extends ClassOrInterfaceType implements Class {
+  public readonly name: string
+  private _modifiers = new Modifiers()
   private _parent: Class = new ObjectClass()
 
+  private _constructors: Method[] = []
+  private _fields = new Map<string, Type>()
+  private _methods = new Map<string, Method[]>()
+
   constructor(name: string) {
-    super(`Class: ${name}`)
-    const defaultConstructorSignature = new MethodSignature()
-    defaultConstructorSignature.setReturnType(this)
-    this._constructor = new Method(defaultConstructorSignature)
+    super()
+    this.name = name
   }
 
-  public accessConstructor(): Method {
-    return this._constructor
-  }
-
-  public accessField(_name: string): Type | Error {
+  public accessField(_name: string, location: Location): Type | TypeCheckerError {
     const field = this._fields.get(_name)
     if (field) return field
-    return this._parent.accessField(_name)
+    return this._parent.accessField(_name, location)
   }
 
-  public accessMethod(name: string): Method | Error {
+  public accessMethod(name: string, location: Location): Method[] | TypeCheckerError {
     const method = this._methods.get(name)
     if (method) return method
-    return this._parent.accessMethod(name)
+    return this._parent.accessMethod(name, location)
+  }
+
+  public addConstructor(method: Method, location: Location): void | TypeCheckerError {
+    for (const existingMethod of this._constructors)
+      if (existingMethod.equals(method)) return new MethodAlreadyDefinedError(location)
+    this._constructors.push(method)
+  }
+
+  public addField(name: string, type: Type, location: Location): void | TypeCheckerError {
+    const field = this._fields.get(name)
+    if (field) return new VariableAlreadyDefinedError(location)
+    this._fields.set(name, type)
+  }
+
+  public addMethod(name: string, method: Method, location: Location): void | TypeCheckerError {
+    const methodList = this._methods.get(name)
+    if (methodList) {
+      for (const existingMethod of methodList)
+        if (existingMethod.equals(method)) return new MethodAlreadyDefinedError(location)
+      methodList.push(method)
+    } else this._methods.set(name, [method])
+  }
+
+  public addModifier(identifier: Identifier): void | TypeCheckerError {
+    return this._modifiers.addModifier(ModifierType.CLASS, identifier)
   }
 
   public canBeAssigned(type: Type): boolean {
     if (type instanceof Null) return true
-    if (!(type instanceof ClassImpl)) return false
-    while (type instanceof ClassImpl) {
+    if (!(type instanceof ClassType)) return false
+    while (type instanceof ClassType) {
       if (this.name === type.name) return true
       type = type.getParentClass()
     }
     return false
+  }
+
+  public equals(object: unknown): boolean {
+    return this === object
+  }
+
+  public getClassName(): string {
+    return this.name
+  }
+
+  public getConstructor(index: number): Method {
+    return this._constructors[index]
+  }
+
+  public getMethod(name: string): Method[] {
+    return this._methods.get(name) || []
   }
 
   public getParentClass(): Class {
@@ -60,30 +108,35 @@ export class ClassImpl extends Type implements Class {
     return !!method
   }
 
-  public mapFields(mapper: (name: string, type: Type) => void) {
-    this._fields.forEach((value, key) => mapper(key, value))
+  // TODO: Method overloading resolution (now it returns first match)
+  public invokeConstructor(args: Arguments): Type | TypeCheckerError {
+    if (this._constructors.length === 0) {
+      const constructor = new Method(this.name, this)
+      return constructor.invoke(args)
+    }
+    for (let i = 0; i < this._constructors.length - 1; i++) {
+      const result = this._constructors[i].invoke(args)
+      if (result instanceof TypeCheckerError) continue
+      return result
+    }
+    return this._constructors[this._constructors.length - 1].invoke(args)
   }
 
-  public mapMethods(mapper: (name: string, method: Method) => void) {
-    this._methods.forEach((value, key) => mapper(key, value))
+  // TODO: Method overloading resolution (now it returns first match)
+  public invokeMethod(name: Identifier, args: Arguments): Type | TypeCheckerError {
+    const methods = this._methods.get(name.identifier)
+    if (!methods) return this.getParentClass().invokeMethod(name, args)
+    for (let i = 0; i < methods.length - 1; i++) {
+      const result = methods[i].invoke(args)
+      if (result instanceof TypeCheckerError) continue
+    }
+    return methods[methods.length - 1].invoke(args)
   }
 
-  public setConstructor(method: Method): void {
-    this._constructor = method
-  }
-
-  public setField(name: string, type: Type): null | Error {
-    const field = this._fields.get(name)
-    if (field) return new VariableAlreadyDefinedError()
-    this._fields.set(name, type)
-    return null
-  }
-
-  public setMethod(name: string, type: Method): null | Error {
-    const method = this._methods.get(name)
-    if (method) return new VariableAlreadyDefinedError()
-    this._methods.set(name, type)
-    return null
+  public mapFields(mapper: (name: string, type: Type) => void): void {
+    for (const [name, type] of this._fields.entries()) {
+      mapper(name, type)
+    }
   }
 
   public setParentClass(parentClass: Class): void {
@@ -91,44 +144,65 @@ export class ClassImpl extends Type implements Class {
   }
 }
 
-export class ObjectClass extends Type implements Class {
+export class ObjectClass extends ClassOrInterfaceType implements Class {
+  public readonly name: string = 'Object'
   public constructor() {
-    super('Class: Object')
+    super()
   }
 
   public accessConstructor(): Method {
     throw new Error('Not implemented')
   }
 
-  public accessField(_name: string): Type | Error {
-    return new CannotFindSymbolError()
+  public accessField(_name: string, location: Location): Type | TypeCheckerError {
+    return new CannotFindSymbolError(location)
   }
 
-  public accessMethod(_name: string): Method | Error {
-    return new CannotFindSymbolError()
+  public accessMethod(_name: string, location: Location): Method[] | TypeCheckerError {
+    return new CannotFindSymbolError(location)
+  }
+
+  public addConstructor(_method: Method, _location: Location): void | TypeCheckerError {
+    throw new Error('Method not implemented.')
+  }
+
+  public addField(_name: string, _type: Type, _location: Location): void | TypeCheckerError {
+    throw new Error('Method not implemented.')
+  }
+
+  public addMethod(_name: string, _method: Method, _location: Location): void | TypeCheckerError {
+    throw new Error('Method not implemented.')
+  }
+
+  public addModifier(_identifier: Identifier): void | TypeCheckerError {
+    throw new Error('Method not implemented.')
   }
 
   public canBeAssigned(type: Type): boolean {
-    return type instanceof ClassImpl || type instanceof ObjectClass || type instanceof Null
+    return type instanceof ClassType || type instanceof ObjectClass || type instanceof Null
+  }
+
+  public equals(object: unknown): boolean {
+    return this === object
+  }
+
+  public getClassName(): string {
+    return this.name
   }
 
   public getParentClass(): Class {
     throw new Error('Object is already the parent of all classes')
   }
 
-  public setConstructor(_method: Method): void {
-    throw new Error('cannot set constructor in Object')
+  public invokeConstructor(_args: Arguments): Type | TypeCheckerError {
+    throw new Error('Method not implemented.')
   }
 
-  public setField(_name: string, _type: Type): null | Error {
-    throw new Error('cannot set field in Object')
-  }
-
-  public setMethod(_name: string, _type: Method): null | Error {
-    throw new Error('cannot set method in Object')
+  public invokeMethod(identifier: Identifier, _args: Arguments): Type | TypeCheckerError {
+    return new CannotFindSymbolError(identifier.location)
   }
 
   public setParentClass(_parentClass: Class): void {
-    throw new Error('cannot set parent class in Object')
+    throw new Error('Method not implemented.')
   }
 }

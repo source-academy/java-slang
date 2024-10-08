@@ -13,6 +13,11 @@ const convertErrorsToReadableMsgs = (program: string, errors: Error[]): string[]
 
 export const typeCheck = (program: string): TypeCheckResult => {
   const ast = parse(program)
+  if (ast instanceof TypeCheckerError)
+    return {
+      hasTypeErrors: true,
+      errorMsgs: convertErrorsToReadableMsgs(program, [ast])
+    }
   const result = check(ast)
   return {
     hasTypeErrors: result.errors.length > 0,

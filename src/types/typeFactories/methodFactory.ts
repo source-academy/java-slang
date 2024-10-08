@@ -1,79 +1,71 @@
-import {
-  ArgumentList,
-  ClassMethod,
-  Method,
-  MethodSignature,
-  Parameter,
-  ParameterList
-} from '../types/methods'
-import { ConstructorDeclaration, FormalParameter, MethodDeclaration } from '../ast/types/classes'
+import { Method, Parameter } from '../types/methods'
+import { ConstructorDeclaration, Identifier, MethodDeclaration } from '../ast/specificationTypes'
 import { Frame } from '../checker/environment'
-import { Type } from '../types/type'
-import { VarargsParameterMustBeLastParameter, VariableAlreadyDefinedError } from '../errors'
-
-export const createArgumentList = (...argumentTypes: Type[]): ArgumentList | Error => {
-  const argumentList = new ArgumentList()
-  argumentTypes.forEach(argumentType => {
-    argumentList.addArgument(argumentType)
-  })
-  return argumentList
-}
-
-const createParameterList = (
-  frame: Frame,
-  ...parameterDeclarations: FormalParameter[]
-): ParameterList | Error => {
-  const identifiers = new Set<string>()
-  const parameters: ParameterList = new ParameterList()
-  for (let i = 0; i < parameterDeclarations.length; i++) {
-    const parameterDeclaration = parameterDeclarations[i]
-    if (parameterDeclaration.isVariableArityParameter && i + 1 !== parameterDeclarations.length)
-      return new VarargsParameterMustBeLastParameter()
-    const parameterType = frame.getType(parameterDeclaration.unannType)
-    if (parameterType instanceof Error) return parameterType
-    if (identifiers.has(parameterDeclaration.identifier)) return new VariableAlreadyDefinedError()
-    identifiers.add(parameterDeclaration.identifier)
-    const parameter = new Parameter(
-      parameterDeclaration.identifier,
-      parameterType,
-      parameterDeclaration.isVariableArityParameter
-    )
-    parameters.addParameter(parameter)
-  }
-  return parameters
-}
-
-export const createMethodSignature = (
-  frame: Frame,
-  node: MethodDeclaration | ConstructorDeclaration
-): MethodSignature | Error => {
-  const methodSignature = new ClassMethod()
-  const returnType = frame.getType(
-    node.kind === 'MethodDeclaration'
-      ? node.methodHeader.result
-      : node.constructorDeclarator.identifier
-  )
-  if (returnType instanceof Error) return returnType
-  const parameterList =
-    node.kind === 'MethodDeclaration'
-      ? node.methodHeader.formalParameterList
-      : node.constructorDeclarator.formalParameterList
-  const parameters = createParameterList(frame, ...parameterList)
-  if (parameters instanceof Error) return parameters
-  const modifier: string[] =
-    node.kind === 'MethodDeclaration' ? node.methodModifier : node.constructorModifier
-  methodSignature.modifiers.push(...modifier)
-  methodSignature.parameters = parameters
-  methodSignature.returnType = returnType
-  // TODO: Add exceptions for method signatures
-  return methodSignature
-}
+import {
+  TypeCheckerError,
+  VarargsParameterMustBeLastParameter,
+  VariableAlreadyDefinedError
+} from '../errors'
+import { unannTypeToString } from '../ast/utils'
 
 export const createMethod = (
   frame: Frame,
   node: MethodDeclaration | ConstructorDeclaration
-): Method | Error => {
-  const methodSignature = createMethodSignature(frame, node)
-  if (methodSignature instanceof Error) return methodSignature
-  return new Method(methodSignature)
+): Method | TypeCheckerError => {
+  const methodName =
+    node.kind === 'MethodDeclaration'
+      ? node.methodHeader.methodDeclarator.identifier.identifier
+      : node.constructorDeclarator.simpleTypeName.identifier
+  const returnType = frame.getType(
+    node.kind === 'MethodDeclaration'
+      ? unannTypeToString(node.methodHeader.result)
+      : node.constructorDeclarator.simpleTypeName.identifier,
+    node.kind === 'MethodDeclaration'
+      ? node.methodHeader.result.location
+      : node.constructorDeclarator.simpleTypeName.location
+  )
+  if (returnType instanceof TypeCheckerError) return returnType
+  const method = new Method(methodName, returnType)
+  const modifiers: Identifier[] =
+    node.kind === 'MethodDeclaration' ? node.methodModifiers : node.constructorModifiers
+  for (const modifier of modifiers) {
+    const error = method.addModifier(modifier)
+    if (error instanceof TypeCheckerError) return error
+  }
+
+  const parameterDeclarations =
+    node.kind === 'MethodDeclaration'
+      ? node.methodHeader.methodDeclarator.formalParameterList?.formalParameters || []
+      : node.constructorDeclarator.formalParameterList?.formalParameters || []
+  const identifiers = new Set<string>()
+  for (let i = 0; i < parameterDeclarations.length; i++) {
+    const parameterDeclaration = parameterDeclarations[i]
+    if (
+      parameterDeclaration.kind === 'VariableArityParameter' &&
+      i + 1 !== parameterDeclarations.length
+    )
+      return new VarargsParameterMustBeLastParameter(parameterDeclaration.location)
+    const parameterType = frame.getType(
+      unannTypeToString(parameterDeclaration.unannType),
+      parameterDeclaration.unannType.location
+    )
+    if (parameterType instanceof TypeCheckerError) return parameterType
+    const identifier =
+      parameterDeclaration.kind === 'FormalParameter'
+        ? parameterDeclaration.variableDeclaratorId.identifier
+        : parameterDeclaration.identifier
+    if (identifiers.has(identifier.identifier))
+      return new VariableAlreadyDefinedError(identifier.location)
+    identifiers.add(identifier.identifier)
+    const parameter = new Parameter(
+      identifier.identifier,
+      parameterType,
+      parameterDeclaration.kind === 'VariableArityParameter'
+    )
+    const error = method.addParameter(parameter)
+    if (error instanceof TypeCheckerError) return error
+  }
+
+  // TODO: Add exceptions for method signatures
+  return method
 }

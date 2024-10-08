@@ -1,28 +1,42 @@
-import {
-  IncompatibleTypesError,
-  MethodAlreadyDefinedError,
-  MethodCannotBeAppliedError
-} from '../errors'
+import { Identifier, Location } from '../ast/specificationTypes'
+import { IncompatibleTypesError, MethodCannotBeAppliedError, TypeCheckerError } from '../errors'
+import { Array } from './arrays'
+import { Modifiers, ModifierType } from './modifiers'
+import { Void } from './references'
+import { Throws } from './throws'
 import { Type } from './type'
 
-export class ArgumentList {
-  private argumentTypes: Type[] = []
-  constructor() {}
+export class Argument {
+  public readonly type: Type
+  public readonly location: Location
+  public constructor(type: Type, location: Location) {
+    this.type = type
+    this.location = location
+  }
+}
 
-  public addArgument(argument: Type) {
-    this.argumentTypes.push(argument)
+export class Arguments {
+  private arguments: Argument[] = []
+  public readonly location: Location
+  constructor(location: Location) {
+    this.location = location
+  }
+
+  public addArgument(argument: Argument) {
+    this.arguments.push(argument)
   }
 
   public length(): number {
-    return this.argumentTypes.length
+    return this.arguments.length
   }
 
-  public get(index: number): Type {
-    return this.argumentTypes[index]
+  public get(index: number): Argument {
+    return this.arguments[index]
   }
 }
 
 export class Parameter {
+  private _modifiers = new Modifiers()
   private _name: string
   private _type: Type
   private _isVarargs: boolean
@@ -33,14 +47,16 @@ export class Parameter {
     this._isVarargs = isVarargs
   }
 
-  public canBeAssigned(type: Type): boolean {
-    if (type instanceof Parameter) return this._type.canBeAssigned(type._type)
-    return this._type.canBeAssigned(type)
+  public addModifier(identifier: Identifier): void | TypeCheckerError {
+    return this._modifiers.addModifier(ModifierType.VARIABLE, identifier)
   }
 
   public equals(object: unknown): boolean {
     return (
-      object instanceof Parameter && this._name === object._name && this._type.equals(object._type)
+      object instanceof Parameter &&
+      this._name === object._name &&
+      (this._type.canBeAssigned(object._type) || object._type.canBeAssigned(this._type)) &&
+      this._isVarargs === object._isVarargs
     )
   }
 
@@ -49,15 +65,31 @@ export class Parameter {
   }
 
   public getType(): Type {
+    if (this.isVarargs()) return new Array(this._type)
     return this._type
+  }
+
+  public invoke(argument: Argument): void | TypeCheckerError {
+    if (this._type.canBeAssigned(argument.type)) return
+    return new IncompatibleTypesError(argument.location)
+  }
+
+  public isFinal(): boolean {
+    return this._modifiers.isFinal()
   }
 
   public isVarargs(): boolean {
     return this._isVarargs
   }
+
+  public toString(): string {
+    const modifiers = this._modifiers.isEmpty() ? '' : `${this._modifiers.toString()} `
+    const ellipsis = this.isVarargs() ? '...' : ''
+    return `${modifiers}${this._type.toString()} ${ellipsis}${this._name}`
+  }
 }
 
-export class ParameterList {
+export class Parameters {
   private parameters: Parameter[] = []
   constructor() {}
 
@@ -65,138 +97,111 @@ export class ParameterList {
     this.parameters.push(parameter)
   }
 
-  public length(): number {
-    return this.parameters.length
-  }
-
   public get(index: number): Parameter {
     return this.parameters[index]
   }
 
-  public matchesArguments(args: ArgumentList): boolean {
-    if (this.length() === 0) return args.length() === 0
+  public equals(object: unknown): boolean {
+    if (!(object instanceof Parameters)) return false
+    if (this.parameters.length !== object.parameters.length) return false
+    for (let i = 0; i < this.parameters.length; i++)
+      if (!this.parameters[i].equals(object.parameters[i])) return false
+    return true
+  }
+
+  public invoke(args: Arguments): void | TypeCheckerError {
+    if (this.length() === 0 && args.length() !== 0)
+      return new MethodCannotBeAppliedError(args.location)
+    if (this.length() === 0 && args.length() === 0) return
     const isLastParameterVarargs = this.get(this.length() - 1).isVarargs()
-    if (isLastParameterVarargs && args.length() < this.length() - 1) return false
-    if (!isLastParameterVarargs && args.length() !== this.length()) return false
+    if (isLastParameterVarargs && args.length() < this.length() - 1)
+      return new MethodCannotBeAppliedError(args.location)
+    if (!isLastParameterVarargs && args.length() !== this.length())
+      return new MethodCannotBeAppliedError(args.location)
+
     for (let i = 0; i < this.length(); i++) {
       const parameter = this.get(i)
       if (!parameter.isVarargs()) {
         const argument = args.get(i)
-        if (!parameter.canBeAssigned(argument)) return false
+        const error = parameter.invoke(argument)
+        if (error instanceof TypeCheckerError) return error
         continue
       }
 
       for (let j = i; j < args.length(); j++) {
         const argument = args.get(j)
-        if (!parameter.canBeAssigned(argument)) return false
+        const error = parameter.invoke(argument)
+        if (error instanceof TypeCheckerError) return error
       }
-
       break
     }
-    return true
+  }
+
+  public length(): number {
+    return this.parameters.length
+  }
+
+  public toString(): string {
+    return `(${this.parameters.map(parameter => parameter.toString()).join(', ')})`
   }
 }
 
-export class MethodSignature extends Type {
-  public returnType: Type
-  public parameters: ParameterList = new ParameterList()
-  public exceptions: object[] = []
+export class Method implements Type {
+  private modifiers = new Modifiers()
+  private returnType: Type
+  private methodName: string
+  private parameters = new Parameters()
+  private throws = new Throws()
 
-  constructor() {
-    super('method signature')
+  constructor(methodName: string, returnType?: Type) {
+    this.methodName = methodName
+    if (returnType) this.returnType = returnType
+    else this.returnType = new Void()
   }
 
-  public accessField(_name: string): Error | Type {
-    return new Error('not impemented')
+  public accessField(_name: string, _location: Location): Type | TypeCheckerError {
+    throw new Error('Method not implemented.')
   }
 
-  public canBeAssigned(type: Type): boolean {
-    if (!(type instanceof MethodSignature)) return false
-    if (!this.returnType.canBeAssigned(type.returnType)) return false
-    if (this.parameters.length() !== type.parameters.length()) return false
-    for (let i = 0; i < this.parameters.length(); i++) {}
-    // if (!this.parameters[i].canBeAssigned(type.parameters[i])) return false;
-    // TODO: Check exceptions
-    return true
+  public accessMethod(_name: string, _location: Location): Method[] | TypeCheckerError {
+    throw new Error('Method not implemented.')
+  }
+
+  public addModifier(identifier: Identifier): void | TypeCheckerError {
+    return this.modifiers.addModifier(ModifierType.METHOD, identifier)
+  }
+
+  public addParameter(parameter: Parameter): void | TypeCheckerError {
+    return this.parameters.addParameter(parameter)
+  }
+
+  public canBeAssigned(_type: Type): boolean {
+    throw new Error('Method not implemented.')
   }
 
   public equals(object: unknown): boolean {
-    if (!(object instanceof MethodSignature)) return false
-    if (!this.returnType.equals(object.returnType)) return false
-    if (this.parameters.length() !== object.parameters.length()) return false
-    for (let i = 0; i < this.parameters.length(); i++)
-      if (!this.parameters.get(i).equals(object.parameters.get(i))) return false
-    // TODO: Check exceptions
-    return true
-  }
-
-  public canInvoke(args: ArgumentList): boolean {
-    return this.parameters.matchesArguments(args)
+    if (!(object instanceof Method)) return false
+    return this.parameters.equals(object.parameters)
   }
 
   public getReturnType(): Type {
     return this.returnType
   }
 
-  public parameterSize(): number {
-    return this.parameters.length()
+  public invoke(args: Arguments): Type | TypeCheckerError {
+    const error = this.parameters.invoke(args)
+    if (error instanceof TypeCheckerError) return error
+    return this.returnType
   }
 
-  public mapParameters<T>(mapper: (name: string, type: Type, isVarargs: boolean) => T): T[] {
-    const result: T[] = []
-    for (let i = 0; i < this.parameterSize(); i++) {
-      const parameter = this.parameters.get(i)
-      result.push(mapper(parameter.getName(), parameter.getType(), parameter.isVarargs()))
+  public mapParameters(mapper: (name: string, type: Type, isVarargs: boolean) => void): void {
+    for (let i = 0; i < this.parameters.length(); i++) {
+      const param = this.parameters.get(i)
+      mapper(param.getName(), param.getType(), param.isVarargs())
     }
-    return result
   }
 
-  public setReturnType(type: Type): void {
-    this.returnType = type
-  }
-}
-
-export class Method extends Type {
-  private methodSignatures: MethodSignature[] = []
-
-  constructor(methodSignature: MethodSignature) {
-    super('method')
-    this.methodSignatures.push(methodSignature)
-  }
-
-  public accessField(_name: string): Error | Type {
-    return new Error('not impemented')
-  }
-
-  public canBeAssigned(_type: Type): boolean {
-    throw new Error('Not implemented yet')
-  }
-
-  public addOverload(methodSignature: MethodSignature): null | Error {
-    for (let i = 0; i < this.methodSignatures.length; i++)
-      if (this.methodSignatures[i].equals(methodSignature)) return new MethodAlreadyDefinedError()
-    this.methodSignatures.push(methodSignature)
-    return null
-  }
-
-  public getOverload(index: number): MethodSignature {
-    return this.methodSignatures[index]
-  }
-
-  public invoke(args: ArgumentList): Type | Error {
-    let hasSameLengthParamList = false
-    for (const signature of this.methodSignatures) {
-      if (signature.parameterSize() === args.length()) hasSameLengthParamList = true
-      if (signature.canInvoke(args)) return signature.getReturnType()
-    }
-    return hasSameLengthParamList ? new IncompatibleTypesError() : new MethodCannotBeAppliedError()
-  }
-}
-
-export class ClassMethod extends MethodSignature {
-  public modifiers: string[] = []
-
-  constructor() {
-    super()
+  public toString(): string {
+    return `${this.modifiers.toString()} ${this.returnType.toString()} ${this.methodName}${this.parameters.toString()} ${this.throws.toString()}`
   }
 }
