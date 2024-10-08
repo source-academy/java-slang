@@ -1,10 +1,10 @@
-import { Location } from './ast/types'
+import { Location } from './ast/specificationTypes'
 
 export class TypeCheckerError extends Error {
   private location?: Location
 
   constructor(message: string, location?: Location) {
-    super('Error: ' + message)
+    super('TypeCheckError: ' + message)
     this.location = location
   }
 
@@ -18,6 +18,16 @@ export class TypeCheckerError extends Error {
   }
 }
 
+export class TypeCheckerInternalError extends TypeCheckerError {
+  constructor(message: string, location?: Location) {
+    super(`TypeCheckerInternalError: ${message}`, location)
+  }
+}
+
+export const isTypeCheckerError = (object: unknown): object is TypeCheckerError => {
+  return object instanceof TypeCheckerError
+}
+
 export class ArrayRequiredError extends TypeCheckerError {
   constructor(location?: Location) {
     super('array required', location)
@@ -26,7 +36,7 @@ export class ArrayRequiredError extends TypeCheckerError {
 
 export class BadOperandTypesError extends TypeCheckerError {
   constructor(location?: Location) {
-    super('bad operand', location)
+    super('bad operand types', location)
   }
 }
 
@@ -48,6 +58,18 @@ export class CyclicInheritanceError extends TypeCheckerError {
   }
 }
 
+export class DuplicateClassError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('duplicate class', location)
+  }
+}
+
+export class ExceptionHasAlreadyBeenCaughtError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('exception has already been caught', location)
+  }
+}
+
 export class FloatTooLargeError extends TypeCheckerError {
   constructor(location?: Location) {
     super('floating-point number too large', location)
@@ -60,9 +82,9 @@ export class FloatTooSmallError extends TypeCheckerError {
   }
 }
 
-export class NotApplicableToExpressionTypeError extends TypeCheckerError {
+export class IllegalCombinationOfModifiersError extends TypeCheckerError {
   constructor(location?: Location) {
-    super('not applicable to expression type', location)
+    super('illegal combination of modifiers', location)
   }
 }
 
@@ -93,6 +115,42 @@ export class MethodAlreadyDefinedError extends TypeCheckerError {
 export class MethodCannotBeAppliedError extends TypeCheckerError {
   constructor(location?: Location) {
     super('method cannot be applied', location)
+  }
+}
+
+export class ModifierNotAllowedHereError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('modifier not allowed here', location)
+  }
+}
+
+export class NotApplicableToExpressionTypeError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('not applicable to expression type', location)
+  }
+}
+
+export class NotAStatementError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('not a statement', location)
+  }
+}
+
+export class RepeatedModifierError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('repeated modifier', location)
+  }
+}
+
+export class SelectorTypeNotAllowedError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('selector type is not allowed', location)
+  }
+}
+
+export class UnexpectedTypeError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('unexpected type', location)
   }
 }
 
