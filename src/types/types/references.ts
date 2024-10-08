@@ -1,8 +1,10 @@
-import { ClassImpl } from './classes'
+import { Location } from '../ast/specificationTypes'
+import { ClassType } from './classes'
+import { Method } from './methods'
 import * as Primitives from './primitives'
-import { Type } from './type'
+import { Type, PrimitiveType } from './type'
 
-export class Boolean extends ClassImpl {
+export class Boolean extends ClassType {
   constructor() {
     super('Boolean')
   }
@@ -12,7 +14,7 @@ export class Boolean extends ClassImpl {
   }
 }
 
-export class Byte extends ClassImpl {
+export class Byte extends ClassType {
   constructor() {
     super('Byte')
   }
@@ -22,7 +24,7 @@ export class Byte extends ClassImpl {
   }
 }
 
-export class Character extends ClassImpl {
+export class Character extends ClassType {
   constructor() {
     super('Character')
   }
@@ -32,7 +34,7 @@ export class Character extends ClassImpl {
   }
 }
 
-export class Double extends ClassImpl {
+export class Double extends ClassType {
   constructor() {
     super('Double')
   }
@@ -42,7 +44,7 @@ export class Double extends ClassImpl {
   }
 }
 
-export class Float extends ClassImpl {
+export class Float extends ClassType {
   constructor() {
     super('Float')
   }
@@ -52,7 +54,7 @@ export class Float extends ClassImpl {
   }
 }
 
-export class Integer extends ClassImpl {
+export class Integer extends ClassType {
   constructor() {
     super('Integer')
   }
@@ -66,7 +68,7 @@ export class Integer extends ClassImpl {
   }
 }
 
-export class Long extends ClassImpl {
+export class Long extends ClassType {
   constructor() {
     super('Long')
   }
@@ -76,7 +78,7 @@ export class Long extends ClassImpl {
   }
 }
 
-export class Short extends ClassImpl {
+export class Short extends ClassType {
   constructor() {
     super('Short')
   }
@@ -86,12 +88,12 @@ export class Short extends ClassImpl {
   }
 }
 
-export class String extends ClassImpl {
+export class String extends ClassType {
   constructor() {
     super('String')
   }
 
-  public static from(value: string): String {
+  public static from(value: string, _location: Location): String {
     if (value.charAt(0) !== '"') throw new Error(`Unrecognized string ${value}.`)
     if (value.charAt(value.length - 1) !== '"') throw new Error(`Unrecognized string ${value}.`)
     if (
@@ -102,9 +104,29 @@ export class String extends ClassImpl {
       throw new Error(`Unrecognized string ${value}.`)
     return new String()
   }
+
+  public canBeAssigned(type: Type): boolean {
+    if (type instanceof Primitives.Null) return true
+    return type instanceof String
+  }
 }
 
-export class Void extends Type {
+export class Throwable extends ClassType {
+  constructor() {
+    super('Throwable')
+    this.addConstructor(new Method('Throwable', this), { startLine: -1, startOffset: -1 })
+  }
+}
+
+export class Exception extends ClassType {
+  constructor() {
+    super('Exception')
+    this.setParentClass(new Throwable())
+    this.addConstructor(new Method('Exception', this), { startLine: -1, startOffset: -1 })
+  }
+}
+
+export class Void extends PrimitiveType {
   constructor() {
     super('void')
   }
