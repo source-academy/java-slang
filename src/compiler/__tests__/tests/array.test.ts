@@ -182,6 +182,20 @@ const testCases: testCase[] = [
     expectedLines: ["J", "a", "v", "a"],
   },
   {
+    comment: "array of string",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          String[] sarr = {"asdf", "qwer", "zxcv"};
+          for (int i = 0; i < sarr.length; i++) {
+            System.out.println(sarr[sarr.length - 1 - i]);
+          }
+        }
+      }
+    `,
+    expectedLines: ["zxcv", "qwer", "asdf"],
+  },
+  {
     comment: "array of reference type",
     program: `
       public class Main {
