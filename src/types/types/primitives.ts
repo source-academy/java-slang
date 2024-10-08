@@ -1,12 +1,13 @@
-import { IntegerTooLargeError } from '../errors'
-import { Type } from './type'
+import { Location } from '../ast/specificationTypes'
+import { IntegerTooLargeError, TypeCheckerError } from '../errors'
+import { Type, PrimitiveType } from './type'
 
-export class Boolean extends Type {
+export class Boolean extends PrimitiveType {
   constructor() {
     super('boolean')
   }
 
-  public static from(value: string): Boolean | Error {
+  public static from(value: string, _location: Location): Boolean | TypeCheckerError {
     if (!['true', 'false'].includes(value)) throw new Error(`Unrecognized boolean ${value}.`)
     return new Boolean()
   }
@@ -16,14 +17,14 @@ export class Boolean extends Type {
   }
 }
 
-export class Byte extends Type {
+export class Byte extends PrimitiveType {
   private static BYTE_MAX = 127
   private static BYTE_MIN = -128
   constructor() {
     super('byte')
   }
 
-  public static from(value: string): Byte | Error {
+  public static from(value: string, location: Location): Byte | TypeCheckerError {
     const isNegative = value.startsWith('-')
     if (isNegative) value = value.substring(1)
     value = value.replace(/_/g, '').toLowerCase()
@@ -31,8 +32,8 @@ export class Byte extends Type {
     value = removeNumericBasePrefix(value, base)
     let byte = parseInt(value, base)
     byte = isNegative ? byte * -1 : byte
-    if (byte > this.BYTE_MAX) return new IntegerTooLargeError()
-    if (byte < this.BYTE_MIN) return new IntegerTooLargeError()
+    if (byte > this.BYTE_MAX) return new IntegerTooLargeError(location)
+    if (byte < this.BYTE_MIN) return new IntegerTooLargeError(location)
     return new Byte()
   }
 
@@ -41,12 +42,14 @@ export class Byte extends Type {
   }
 }
 
-export class Char extends Type {
+export class Char extends PrimitiveType {
+  // private static CHAR_MAX = 65535
+  // private static CHAR_MIN = 0
   constructor() {
     super('char')
   }
 
-  public static from(value: string): Char | Error {
+  public static from(value: string, _location: Location): Char | TypeCheckerError {
     if (value.charAt(0) !== "'") throw new Error(`Unrecognized character ${value}.`)
     if (value.charAt(value.length - 1) !== "'") throw new Error(`Unrecognized character ${value}.`)
     return new Char()
@@ -57,12 +60,12 @@ export class Char extends Type {
   }
 }
 
-export class Double extends Type {
+export class Double extends PrimitiveType {
   constructor() {
     super('double')
   }
 
-  public static from(value: number | string): Double | Error {
+  public static from(value: number | string, _location: Location): Double | TypeCheckerError {
     if (typeof value === 'string') {
       value = removeFloatTypeSuffix(value)
       const isNegative = value.startsWith('-')
@@ -87,12 +90,12 @@ export class Double extends Type {
   }
 }
 
-export class Float extends Type {
+export class Float extends PrimitiveType {
   constructor() {
     super('float')
   }
 
-  public static from(value: number | string): Float | Error {
+  public static from(value: number | string, _location: Location): Float | TypeCheckerError {
     if (typeof value === 'string') {
       value = removeFloatTypeSuffix(value)
       const isNegative = value.startsWith('-')
@@ -116,14 +119,14 @@ export class Float extends Type {
   }
 }
 
-export class Int extends Type {
+export class Int extends PrimitiveType {
   private static INTEGER_MAX = 2147483647
   private static INTEGER_MIN = -2147483648
   constructor() {
     super('int')
   }
 
-  public static from(value: string): Int | Error {
+  public static from(value: string, location: Location): Int | TypeCheckerError {
     const isNegative = value.startsWith('-')
     if (isNegative) value = value.substring(1)
     value = value.replace(/_/g, '').toLowerCase()
@@ -131,8 +134,8 @@ export class Int extends Type {
     value = removeNumericBasePrefix(value, base)
     let int = parseInt(value, base)
     int = isNegative ? int * -1 : int
-    if (int > this.INTEGER_MAX) return new IntegerTooLargeError()
-    if (int < this.INTEGER_MIN) return new IntegerTooLargeError()
+    if (int > this.INTEGER_MAX) return new IntegerTooLargeError(location)
+    if (int < this.INTEGER_MIN) return new IntegerTooLargeError(location)
     return new Int()
   }
 
@@ -147,21 +150,21 @@ export class Int extends Type {
   }
 }
 
-export class Long extends Type {
+export class Long extends PrimitiveType {
   private static LONG_MAX = BigInt('9223372036854775807')
   private static LONG_MIN = BigInt('-9223372036854775808')
   constructor() {
     super('long')
   }
 
-  public static from(value: string): Long | Error {
+  public static from(value: string, location: Location): Long | TypeCheckerError {
     const isNegative = value.startsWith('-')
     if (isNegative) value = value.substring(1)
     value = value.replace(/(_|l|L)/g, '').toLowerCase()
     if (getNumericBase(value) === 8) value = '0o' + removeNumericBasePrefix(value, 8)
     const long = BigInt(value) * BigInt(isNegative ? -1 : 1)
-    if (long > this.LONG_MAX) return new IntegerTooLargeError()
-    if (long < this.LONG_MIN) return new IntegerTooLargeError()
+    if (long > this.LONG_MAX) return new IntegerTooLargeError(location)
+    if (long < this.LONG_MIN) return new IntegerTooLargeError(location)
     return new Long()
   }
 
@@ -176,12 +179,12 @@ export class Long extends Type {
   }
 }
 
-export class Null extends Type {
+export class Null extends PrimitiveType {
   constructor() {
     super('null')
   }
 
-  public static from(value: string): Null {
+  public static from(value: string, _location: Location): Null {
     if (value !== 'null') throw new Error(`Unrecognized null ${value}.`)
     return new Null()
   }
@@ -191,14 +194,14 @@ export class Null extends Type {
   }
 }
 
-export class Short extends Type {
+export class Short extends PrimitiveType {
   private static SHORT_MAX = 32767
   private static SHORT_MIN = -32768
   constructor() {
     super('short')
   }
 
-  public static from(value: string): Short | Error {
+  public static from(value: string, location: Location): Short | TypeCheckerError {
     const isNegative = value.startsWith('-')
     if (isNegative) value = value.substring(1)
     value = value.replace(/_/g, '').toLowerCase()
@@ -206,8 +209,8 @@ export class Short extends Type {
     value = removeNumericBasePrefix(value, base)
     let short = parseInt(value, base)
     short = isNegative ? short * -1 : short
-    if (short > this.SHORT_MAX) return new IntegerTooLargeError()
-    if (short < this.SHORT_MIN) return new IntegerTooLargeError()
+    if (short > this.SHORT_MAX) return new IntegerTooLargeError(location)
+    if (short < this.SHORT_MIN) return new IntegerTooLargeError(location)
     return new Short()
   }
 
