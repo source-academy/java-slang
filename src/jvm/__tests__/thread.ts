@@ -1,10 +1,10 @@
 import { ThreadStatus } from '../constants'
-import { RoundRobinThreadPool, ThreadPool } from '../threadpool'
+import { ThreadPool } from '../threadpool'
 import { ReferenceClassData } from '../types/class/ClassData'
 import { JvmObject } from '../types/reference/Object'
 import Thread from '../../jvm/thread'
 import JVM from '../../jvm/jvm'
-import { setupTest } from './__utils__/test-utils'
+import { setupTest, TestThreadPool } from './__utils__/test-utils'
 
 let thread: Thread
 let threadClass: ReferenceClassData
@@ -17,7 +17,7 @@ beforeEach(() => {
   thread = setup.thread
   threadClass = setup.classes.threadClass
   // testLoader = setup.testLoader
-  threadPool = new RoundRobinThreadPool(() => {})
+  threadPool = new TestThreadPool(() => {})
 })
 
 describe('Thread', () => {
