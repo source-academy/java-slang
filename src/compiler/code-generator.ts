@@ -189,7 +189,7 @@ const typeConversionsImplicit: { [key: string]: OPCODE } = {
   'F->D': OPCODE.F2D,
   'L->F': OPCODE.L2F,
   'L->D': OPCODE.L2D
-};
+}
 
 type CompileResult = {
   stackSize: number
@@ -198,29 +198,29 @@ type CompileResult = {
 const EMPTY_TYPE: string = ''
 
 function areClassTypesCompatible(fromType: string, toType: string): boolean {
-  const cleanFrom = fromType.replace(/^L|;$/g, '');
-  const cleanTo = toType.replace(/^L|;$/g, '');
-  return cleanFrom === cleanTo;
+  const cleanFrom = fromType.replace(/^L|;$/g, '')
+  const cleanTo = toType.replace(/^L|;$/g, '')
+  return cleanFrom === cleanTo
 }
 
 function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator) {
-  console.debug(`Converting from: ${fromType}, to: ${toType}`);
+  console.debug(`Converting from: ${fromType}, to: ${toType}`)
   if (fromType === toType || toType.replace(/^L|;$/g, '') === 'java/lang/String') {
-    return;
+    return
   }
 
   if (fromType.startsWith('L') || toType.startsWith('L')) {
-    if (areClassTypesCompatible(fromType, toType) || fromType === "") {
-      return;
+    if (areClassTypesCompatible(fromType, toType) || fromType === '') {
+      return
     }
-    throw new Error(`Unsupported class type conversion: ${fromType} -> ${toType}`);
+    throw new Error(`Unsupported class type conversion: ${fromType} -> ${toType}`)
   }
 
-  const conversionKey = `${fromType}->${toType}`;
+  const conversionKey = `${fromType}->${toType}`
   if (conversionKey in typeConversionsImplicit) {
-    cg.code.push(typeConversionsImplicit[conversionKey]);
+    cg.code.push(typeConversionsImplicit[conversionKey])
   } else {
-    throw new Error(`Unsupported implicit type conversion: ${conversionKey}`);
+    throw new Error(`Unsupported implicit type conversion: ${conversionKey}`)
   }
 }
 
@@ -235,7 +235,6 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
 //     throw new Error(`Unsupported explicit type conversion: ${conversionKey}`);
 //   }
 // }
-
 
 const isNullLiteral = (node: Node) => {
   return node.kind === 'Literal' && node.literalType.kind === 'NullLiteral'
@@ -312,16 +311,16 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         vi.forEach((val, i) => {
           cg.code.push(OPCODE.DUP)
           const size1 = compile(createIntLiteralNode(i), cg).stackSize
-          const { stackSize: size2, resultType } = compile(val as Expression, cg);
-          handleImplicitTypeConversion(resultType, arrayElemType, cg);
+          const { stackSize: size2, resultType } = compile(val as Expression, cg)
+          handleImplicitTypeConversion(resultType, arrayElemType, cg)
           cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE)
           maxStack = Math.max(maxStack, 2 + size1 + size2)
         })
         cg.code.push(OPCODE.ASTORE, curIdx)
       } else {
-        const { stackSize: initializerStackSize, resultType: initializerType } = compile(vi, cg);
-        handleImplicitTypeConversion(initializerType, variableInfo.typeDescriptor, cg);
-        maxStack = Math.max(maxStack, initializerStackSize);
+        const { stackSize: initializerStackSize, resultType: initializerType } = compile(vi, cg)
+        handleImplicitTypeConversion(initializerType, variableInfo.typeDescriptor, cg)
+        maxStack = Math.max(maxStack, initializerStackSize)
         cg.code.push(
           variableInfo.typeDescriptor in normalStoreOp
             ? normalStoreOp[variableInfo.typeDescriptor]
@@ -643,7 +642,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     const symbolInfos = cg.symbolTable.queryMethod(n.identifier)
     if (!symbolInfos || symbolInfos.length === 0) {
-      throw new Error(`Method not found: ${n.identifier}`);
+      throw new Error(`Method not found: ${n.identifier}`)
     }
 
     for (let i = 0; i < symbolInfos.length - 1; i++) {
@@ -669,30 +668,30 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     const argTypes: Array<UnannType> = []
 
-    const methodInfo = symbolInfos[symbolInfos.length - 1] as MethodInfos;
+    const methodInfo = symbolInfos[symbolInfos.length - 1] as MethodInfos
     if (!methodInfo || methodInfo.length === 0) {
-      throw new Error(`No method information found for ${n.identifier}`);
+      throw new Error(`No method information found for ${n.identifier}`)
     }
 
-    const fullDescriptor = methodInfo[0].typeDescriptor; // Full descriptor, e.g., "(Ljava/lang/String;C)V"
-    const paramDescriptor = fullDescriptor.slice(1, fullDescriptor.indexOf(')')); // Extract "Ljava/lang/String;C"
-    const params = paramDescriptor.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g);
+    const fullDescriptor = methodInfo[0].typeDescriptor // Full descriptor, e.g., "(Ljava/lang/String;C)V"
+    const paramDescriptor = fullDescriptor.slice(1, fullDescriptor.indexOf(')')) // Extract "Ljava/lang/String;C"
+    const params = paramDescriptor.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g)
 
     // Parse individual parameter types
     if (params && params.length !== n.argumentList.length) {
       throw new Error(
         `Parameter mismatch: expected ${params?.length || 0}, got ${n.argumentList.length}`
-      );
+      )
     }
 
     n.argumentList.forEach((x, i) => {
-      const argCompileResult = compile(x, cg);
-      maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize);
+      const argCompileResult = compile(x, cg)
+      maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize)
 
-      const expectedType = params?.[i]; // Expected parameter type
-      handleImplicitTypeConversion(argCompileResult.resultType, expectedType ?? '', cg);
+      const expectedType = params?.[i] // Expected parameter type
+      handleImplicitTypeConversion(argCompileResult.resultType, expectedType ?? '', cg)
 
-      argTypes.push(argCompileResult.resultType);
+      argTypes.push(argCompileResult.resultType)
     })
     const argDescriptor = '(' + argTypes.join('') + ')'
 
@@ -729,7 +728,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     if (!foundMethod) {
       throw new InvalidMethodCallError(
         `No method matching signature ${n.identifier}${argDescriptor} found.`
-      );
+      )
     }
     return { stackSize: maxStack, resultType: resultType }
   },
@@ -759,19 +758,19 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     if (lhs.kind === 'ArrayAccess') {
       const { stackSize: size1, resultType: arrayType } = compile(lhs.primary, cg)
       const size2 = compile(lhs.expression, cg).stackSize
-      const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg);
+      const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
       maxStack = size1 + size2 + rhsSize
 
       const arrayElemType = arrayType.slice(1)
-      handleImplicitTypeConversion(rhsType, arrayElemType, cg);
+      handleImplicitTypeConversion(rhsType, arrayElemType, cg)
       cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE)
     } else if (
       lhs.kind === 'ExpressionName' &&
       !Array.isArray(cg.symbolTable.queryVariable(lhs.name))
     ) {
       const info = cg.symbolTable.queryVariable(lhs.name) as VariableInfo
-      const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg);
-      handleImplicitTypeConversion(rhsType, info.typeDescriptor, cg);
+      const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
+      handleImplicitTypeConversion(rhsType, info.typeDescriptor, cg)
       maxStack = 1 + rhsSize
       cg.code.push(
         info.typeDescriptor in normalStoreOp ? normalStoreOp[info.typeDescriptor] : OPCODE.ASTORE,
@@ -796,8 +795,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         maxStack += 1
       }
 
-      const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg);
-      handleImplicitTypeConversion(rhsType, fieldInfo.typeDescriptor, cg);
+      const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
+      handleImplicitTypeConversion(rhsType, fieldInfo.typeDescriptor, cg)
 
       maxStack += rhsSize
       cg.code.push(
