@@ -203,15 +203,15 @@ function areClassTypesCompatible(fromType: string, toType: string): boolean {
   return cleanFrom === cleanTo
 }
 
-function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator) {
+function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator): number {
   console.debug(`Converting from: ${fromType}, to: ${toType}`)
   if (fromType === toType || toType.replace(/^L|;$/g, '') === 'java/lang/String') {
-    return
+    return 0;
   }
 
   if (fromType.startsWith('L') || toType.startsWith('L')) {
     if (areClassTypesCompatible(fromType, toType) || fromType === '') {
-      return
+      return 0;
     }
     throw new Error(`Unsupported class type conversion: ${fromType} -> ${toType}`)
   }
@@ -219,6 +219,13 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
   const conversionKey = `${fromType}->${toType}`
   if (conversionKey in typeConversionsImplicit) {
     cg.code.push(typeConversionsImplicit[conversionKey])
+    if (!(fromType in ['L', 'D']) && toType in ['L', 'D']) {
+      return 1;
+    } else if (!(toType in ['L', 'D']) && fromType in ['L', 'D']) {
+      return -1;
+    } else {
+      return 0;
+    }
   } else {
     throw new Error(`Unsupported implicit type conversion: ${conversionKey}`)
   }
@@ -312,15 +319,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           cg.code.push(OPCODE.DUP)
           const size1 = compile(createIntLiteralNode(i), cg).stackSize
           const { stackSize: size2, resultType } = compile(val as Expression, cg)
-          handleImplicitTypeConversion(resultType, arrayElemType, cg)
+          const stackSizeChange = handleImplicitTypeConversion(resultType, arrayElemType, cg)
           cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE)
-          maxStack = Math.max(maxStack, 2 + size1 + size2)
+          maxStack = Math.max(maxStack, 2 + size1 + size2 + stackSizeChange)
         })
         cg.code.push(OPCODE.ASTORE, curIdx)
       } else {
         const { stackSize: initializerStackSize, resultType: initializerType } = compile(vi, cg)
-        handleImplicitTypeConversion(initializerType, variableInfo.typeDescriptor, cg)
-        maxStack = Math.max(maxStack, initializerStackSize)
+        const stackSizeChange = handleImplicitTypeConversion(initializerType, variableInfo.typeDescriptor, cg)
+        maxStack = Math.max(maxStack, initializerStackSize + stackSizeChange)
         cg.code.push(
           variableInfo.typeDescriptor in normalStoreOp
             ? normalStoreOp[variableInfo.typeDescriptor]
@@ -686,10 +693,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     n.argumentList.forEach((x, i) => {
       const argCompileResult = compile(x, cg)
-      maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize)
 
       const expectedType = params?.[i] // Expected parameter type
-      handleImplicitTypeConversion(argCompileResult.resultType, expectedType ?? '', cg)
+      const stackSizeChange = handleImplicitTypeConversion(argCompileResult.resultType, expectedType ?? '', cg)
+      maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize + stackSizeChange)
 
       argTypes.push(argCompileResult.resultType)
     })
@@ -759,10 +766,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const { stackSize: size1, resultType: arrayType } = compile(lhs.primary, cg)
       const size2 = compile(lhs.expression, cg).stackSize
       const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
-      maxStack = size1 + size2 + rhsSize
 
       const arrayElemType = arrayType.slice(1)
-      handleImplicitTypeConversion(rhsType, arrayElemType, cg)
+      const stackSizeChange = handleImplicitTypeConversion(rhsType, arrayElemType, cg)
+      maxStack = Math.max(maxStack, size1 + size2 + rhsSize + stackSizeChange)
       cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE)
     } else if (
       lhs.kind === 'ExpressionName' &&
@@ -770,8 +777,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     ) {
       const info = cg.symbolTable.queryVariable(lhs.name) as VariableInfo
       const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
-      handleImplicitTypeConversion(rhsType, info.typeDescriptor, cg)
-      maxStack = 1 + rhsSize
+      const stackSizeChange = handleImplicitTypeConversion(rhsType, info.typeDescriptor, cg)
+      maxStack = Math.max(maxStack, 1 + rhsSize + stackSizeChange)
       cg.code.push(
         info.typeDescriptor in normalStoreOp ? normalStoreOp[info.typeDescriptor] : OPCODE.ASTORE,
         info.index
@@ -796,9 +803,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
 
       const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
-      handleImplicitTypeConversion(rhsType, fieldInfo.typeDescriptor, cg)
+      const stackSizeChange = handleImplicitTypeConversion(rhsType, fieldInfo.typeDescriptor, cg)
 
-      maxStack += rhsSize
+      maxStack = Math.max(maxStack, maxStack + rhsSize + stackSizeChange)
       cg.code.push(
         fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC ? OPCODE.PUTSTATIC : OPCODE.PUTFIELD,
         0,
