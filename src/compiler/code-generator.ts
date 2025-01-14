@@ -197,10 +197,25 @@ type CompileResult = {
 }
 const EMPTY_TYPE: string = ''
 
+function areClassTypesCompatible(fromType: string, toType: string): boolean {
+  const cleanFrom = fromType.replace(/^L|;$/g, '');
+  const cleanTo = toType.replace(/^L|;$/g, '');
+  return cleanFrom === cleanTo;
+}
+
 function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator) {
-  if (fromType === toType) {
+  console.debug(`Converting from: ${fromType}, to: ${toType}`);
+  if (fromType === toType || toType.replace(/^L|;$/g, '') === 'java/lang/String') {
     return;
   }
+
+  if (fromType.startsWith('L') || toType.startsWith('L')) {
+    if (areClassTypesCompatible(fromType, toType) || fromType === "") {
+      return;
+    }
+    throw new Error(`Unsupported class type conversion: ${fromType} -> ${toType}`);
+  }
+
   const conversionKey = `${fromType}->${toType}`;
   if (conversionKey in typeConversionsImplicit) {
     cg.code.push(typeConversionsImplicit[conversionKey]);
@@ -627,6 +642,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let resultType = EMPTY_TYPE
 
     const symbolInfos = cg.symbolTable.queryMethod(n.identifier)
+    if (!symbolInfos || symbolInfos.length === 0) {
+      throw new Error(`Method not found: ${n.identifier}`);
+    }
+
     for (let i = 0; i < symbolInfos.length - 1; i++) {
       if (i === 0) {
         const varInfo = symbolInfos[i] as VariableInfo
@@ -649,10 +668,31 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     const argTypes: Array<UnannType> = []
+
+    const methodInfo = symbolInfos[symbolInfos.length - 1] as MethodInfos;
+    if (!methodInfo || methodInfo.length === 0) {
+      throw new Error(`No method information found for ${n.identifier}`);
+    }
+
+    const fullDescriptor = methodInfo[0].typeDescriptor; // Full descriptor, e.g., "(Ljava/lang/String;C)V"
+    const paramDescriptor = fullDescriptor.slice(1, fullDescriptor.indexOf(')')); // Extract "Ljava/lang/String;C"
+    const params = paramDescriptor.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g);
+
+    // Parse individual parameter types
+    if (params && params.length !== n.argumentList.length) {
+      throw new Error(
+        `Parameter mismatch: expected ${params?.length || 0}, got ${n.argumentList.length}`
+      );
+    }
+
     n.argumentList.forEach((x, i) => {
-      const argCompileResult = compile(x, cg)
-      maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize)
-      argTypes.push(argCompileResult.resultType)
+      const argCompileResult = compile(x, cg);
+      maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize);
+
+      const expectedType = params?.[i]; // Expected parameter type
+      handleImplicitTypeConversion(argCompileResult.resultType, expectedType ?? '', cg);
+
+      argTypes.push(argCompileResult.resultType);
     })
     const argDescriptor = '(' + argTypes.join('') + ')'
 
@@ -687,7 +727,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     if (!foundMethod) {
-      throw new InvalidMethodCallError(n.identifier)
+      throw new InvalidMethodCallError(
+        `No method matching signature ${n.identifier}${argDescriptor} found.`
+      );
     }
     return { stackSize: maxStack, resultType: resultType }
   },
