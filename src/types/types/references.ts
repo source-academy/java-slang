@@ -106,7 +106,7 @@ export class String extends ClassType {
   }
 
   public canBeAssigned(type: Type): boolean {
-    if (type instanceof Primitives.Null) return true
+    if (type instanceof PrimitiveType) return true
     return type instanceof String
   }
 }

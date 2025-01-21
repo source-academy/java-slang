@@ -213,7 +213,7 @@ export function getField(ref: any, fieldName: string, type: JavaType) {
 }
 
 export function asDouble(value: number): number {
-  return Number(value)
+  return value;
 }
 
 export function asFloat(value: number): number {

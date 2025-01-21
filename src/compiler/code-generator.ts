@@ -167,16 +167,16 @@ const normalStoreOp: { [type: string]: OPCODE } = {
 // const typeConversions: { [key: string]: OPCODE } = {
 //   'I->F': OPCODE.I2F,
 //   'I->D': OPCODE.I2D,
-//   'I->L': OPCODE.I2L,
+//   'I->J': OPCODE.I2L,
 //   'I->B': OPCODE.I2B,
 //   'I->C': OPCODE.I2C,
 //   'I->S': OPCODE.I2S,
 //   'F->D': OPCODE.F2D,
 //   'F->I': OPCODE.F2I,
-//   'F->L': OPCODE.F2L,
+//   'F->J': OPCODE.F2L,
 //   'D->F': OPCODE.D2F,
 //   'D->I': OPCODE.D2I,
-//   'D->L': OPCODE.D2L,
+//   'D->J': OPCODE.D2L,
 //   'J->I': OPCODE.L2I,
 //   'J->F': OPCODE.L2F,
 //   'J->D': OPCODE.L2D
@@ -185,7 +185,7 @@ const normalStoreOp: { [type: string]: OPCODE } = {
 const typeConversionsImplicit: { [key: string]: OPCODE } = {
   'I->F': OPCODE.I2F,
   'I->D': OPCODE.I2D,
-  'I->L': OPCODE.I2L,
+  'I->J': OPCODE.I2L,
   'F->D': OPCODE.F2D,
   'J->F': OPCODE.L2F,
   'J->D': OPCODE.L2D
@@ -904,7 +904,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       cg.code.push(OPCODE.INVOKEVIRTUAL, 0, concatMethodIndex);
 
       return {
-        stackSize: Math.max(size1, size2 + 1), // Max stack size plus one for the concatenation
+        stackSize: Math.max(size1 + 1, size2 + 1), // Max stack size plus one for the concatenation
         resultType: 'Ljava/lang/String;'
       };
     }
