@@ -177,9 +177,9 @@ const normalStoreOp: { [type: string]: OPCODE } = {
 //   'D->F': OPCODE.D2F,
 //   'D->I': OPCODE.D2I,
 //   'D->L': OPCODE.D2L,
-//   'L->I': OPCODE.L2I,
-//   'L->F': OPCODE.L2F,
-//   'L->D': OPCODE.L2D
+//   'J->I': OPCODE.L2I,
+//   'J->F': OPCODE.L2F,
+//   'J->D': OPCODE.L2D
 // };
 
 const typeConversionsImplicit: { [key: string]: OPCODE } = {
@@ -187,8 +187,8 @@ const typeConversionsImplicit: { [key: string]: OPCODE } = {
   'I->D': OPCODE.I2D,
   'I->L': OPCODE.I2L,
   'F->D': OPCODE.F2D,
-  'L->F': OPCODE.L2F,
-  'L->D': OPCODE.L2D
+  'J->F': OPCODE.L2F,
+  'J->D': OPCODE.L2D
 }
 
 type CompileResult = {
@@ -219,9 +219,9 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
   const conversionKey = `${fromType}->${toType}`
   if (conversionKey in typeConversionsImplicit) {
     cg.code.push(typeConversionsImplicit[conversionKey])
-    if (!(fromType in ['L', 'D']) && toType in ['L', 'D']) {
+    if (!(fromType in ['J', 'D']) && toType in ['J', 'D']) {
       return 1;
-    } else if (!(toType in ['L', 'D']) && fromType in ['L', 'D']) {
+    } else if (!(toType in ['J', 'D']) && fromType in ['J', 'D']) {
       return -1;
     } else {
       return 0;
