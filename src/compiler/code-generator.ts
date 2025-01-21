@@ -243,6 +243,36 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
 //   }
 // }
 
+function generateStringConversion(valueType: string, cg: CodeGenerator): void {
+  const stringClass = 'java/lang/String';
+
+  // Map primitive types to `String.valueOf()` method descriptors
+  const valueOfDescriptors: { [key: string]: string } = {
+    I: '(I)Ljava/lang/String;', // int
+    J: '(J)Ljava/lang/String;', // long
+    F: '(F)Ljava/lang/String;', // float
+    D: '(D)Ljava/lang/String;', // double
+    Z: '(Z)Ljava/lang/String;', // boolean
+    B: '(B)Ljava/lang/String;', // byte
+    S: '(S)Ljava/lang/String;', // short
+    C: '(C)Ljava/lang/String;'  // char
+  };
+
+  const descriptor = valueOfDescriptors[valueType];
+  if (!descriptor) {
+    throw new Error(`Unsupported primitive type for String conversion: ${valueType}`);
+  }
+
+  const methodIndex = cg.constantPoolManager.indexMethodrefInfo(
+    stringClass,
+    'valueOf',
+    descriptor
+  );
+
+  cg.code.push(OPCODE.INVOKESTATIC, 0, methodIndex);
+}
+
+
 const isNullLiteral = (node: Node) => {
   return node.kind === 'Literal' && node.literalType.kind === 'NullLiteral'
 }
@@ -849,33 +879,95 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     }
 
-    const { stackSize: size1, resultType: type } = compile(left, cg)
-    const { stackSize: size2 } = compile(right, cg)
+    const { stackSize: size1, resultType: leftType } = compile(left, cg)
+    const { stackSize: size2, resultType: rightType } = compile(right, cg)
 
-    switch (type) {
+    if (op === '+' &&
+      (leftType === 'Ljava/lang/String;'
+        || rightType === 'Ljava/lang/String;')) {
+      console.debug(`String concatenation detected: ${leftType} ${op} ${rightType}`)
+
+      if (leftType !== 'Ljava/lang/String;') {
+        generateStringConversion(leftType, cg);
+      }
+
+      if (rightType !== 'Ljava/lang/String;') {
+        generateStringConversion(rightType, cg);
+      }
+
+      // Invoke `String.concat` for concatenation
+      const concatMethodIndex = cg.constantPoolManager.indexMethodrefInfo(
+        'java/lang/String',
+        'concat',
+        '(Ljava/lang/String;)Ljava/lang/String;'
+      );
+      cg.code.push(OPCODE.INVOKEVIRTUAL, 0, concatMethodIndex);
+
+      return {
+        stackSize: Math.max(size1, size2 + 1), // Max stack size plus one for the concatenation
+        resultType: 'Ljava/lang/String;'
+      };
+    }
+
+    if (leftType !== rightType) {
+      console.debug(
+        `Type mismatch detected: leftType=${leftType}, rightType=${rightType}. Applying implicit conversions.`
+      );
+
+      if (['D', 'F'].includes(leftType) || ['D', 'F'].includes(rightType)) {
+        // Promote both to double if one is double, or to float otherwise
+        if (leftType !== 'D' && rightType === 'D') {
+          handleImplicitTypeConversion(leftType, 'D', cg);
+        } else if (leftType === 'D' && rightType !== 'D') {
+          handleImplicitTypeConversion(rightType, 'D', cg);
+        } else if (leftType !== 'F' && rightType === 'F') {
+          handleImplicitTypeConversion(leftType, 'F', cg);
+        } else if (leftType === 'F' && rightType !== 'F') {
+          handleImplicitTypeConversion(rightType, 'F', cg);
+        }
+      } else if (['J'].includes(leftType) || ['J'].includes(rightType)) {
+        // Promote both to long if one is long
+        if (leftType !== 'J' && rightType === 'J') {
+          handleImplicitTypeConversion(leftType, 'J', cg);
+        } else if (leftType === 'J' && rightType !== 'J') {
+          handleImplicitTypeConversion(rightType, 'J', cg);
+        }
+      } else {
+        // Promote both to int as the common type for smaller types like byte, short, char
+        if (leftType !== 'I') {
+          handleImplicitTypeConversion(leftType, 'I', cg);
+        }
+        if (rightType !== 'I') {
+          handleImplicitTypeConversion(rightType, 'I', cg);
+        }
+      }
+    }
+
+    // Perform the operation
+    switch (leftType) {
       case 'B':
-        cg.code.push(intBinaryOp[op], OPCODE.I2B)
-        break
+        cg.code.push(intBinaryOp[op], OPCODE.I2B);
+        break;
       case 'D':
-        cg.code.push(doubleBinaryOp[op])
-        break
+        cg.code.push(doubleBinaryOp[op]);
+        break;
       case 'F':
-        cg.code.push(floatBinaryOp[op])
-        break
+        cg.code.push(floatBinaryOp[op]);
+        break;
       case 'I':
-        cg.code.push(intBinaryOp[op])
-        break
+        cg.code.push(intBinaryOp[op]);
+        break;
       case 'J':
-        cg.code.push(longBinaryOp[op])
-        break
+        cg.code.push(longBinaryOp[op]);
+        break;
       case 'S':
-        cg.code.push(intBinaryOp[op], OPCODE.I2S)
-        break
+        cg.code.push(intBinaryOp[op], OPCODE.I2S);
+        break;
     }
 
     return {
-      stackSize: Math.max(size1, 1 + (['D', 'J'].includes(type) ? 1 : 0) + size2),
-      resultType: type
+      stackSize: Math.max(size1, 1 + (['D', 'J'].includes(leftType) ? 1 : 0) + size2),
+      resultType: leftType
     }
   },
 
