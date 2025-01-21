@@ -45,6 +45,75 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["6.0"],
   },
+  {
+    comment: "int to long",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          int a = 123;
+          long b = a;
+          System.out.println(b);
+        }
+      }
+    `,
+    expectedLines: ["123"],
+  },
+  {
+    comment: "int to float",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          int a = 123;
+          float b = a;
+          System.out.println(b);
+        }
+      }
+    `,
+    expectedLines: ["123.0"],
+  },
+
+  // long -> other types
+  {
+    comment: "long to float",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          long a = 9223372036854775807L;
+          float b = a;
+          System.out.println(b);
+        }
+      }
+    `,
+    expectedLines: ["9.223372E18"],
+  },
+  {
+    comment: "long to double",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          long a = 9223372036854775807L;
+          double b = a;
+          System.out.println(b);
+        }
+      }
+    `,
+    expectedLines: ["9.223372036854776E18"],
+  },
+
+  // float -> other types
+  {
+    comment: "float to double",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          float a = 3.0f;
+          double b = a;
+          System.out.println(b);
+        }
+      }
+    `,
+    expectedLines: ["3.0"],
+  },
 ];
 
 export const assignmentExpressionTest = () => describe("assignment expression", () => {

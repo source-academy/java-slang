@@ -1063,7 +1063,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     const compileResult = compile(expr, cg)
     if (op === '-') {
-      cg.code.push(OPCODE.INEG)
+      const negationOpcodes: { [type: string]: OPCODE } = {
+        I: OPCODE.INEG, // Integer negation
+        J: OPCODE.LNEG, // Long negation
+        F: OPCODE.FNEG, // Float negation
+        D: OPCODE.DNEG, // Double negation
+      };
+
+      if (compileResult.resultType in negationOpcodes) {
+        cg.code.push(negationOpcodes[compileResult.resultType]);
+      } else {
+        throw new Error(`Unary '-' not supported for type: ${compileResult.resultType}`);
+      }
     } else if (op === '~') {
       cg.code.push(OPCODE.ICONST_M1, OPCODE.IXOR)
       compileResult.stackSize = Math.max(compileResult.stackSize, 2)
