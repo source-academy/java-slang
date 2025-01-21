@@ -272,6 +272,61 @@ function generateStringConversion(valueType: string, cg: CodeGenerator): void {
   cg.code.push(OPCODE.INVOKESTATIC, 0, methodIndex);
 }
 
+// function generateBooleanConversion(type: string, cg: CodeGenerator): number {
+//   let stackChange = 0; // Tracks changes to the stack size
+//
+//   switch (type) {
+//     case 'I': // int
+//     case 'B': // byte
+//     case 'S': // short
+//     case 'C': // char
+//       // For integer-like types, compare with zero
+//       cg.code.push(OPCODE.ICONST_0); // Push 0
+//       stackChange += 1; // `ICONST_0` pushes a value onto the stack
+//       cg.code.push(OPCODE.IF_ICMPNE); // Compare and branch
+//       stackChange -= 2; // `IF_ICMPNE` consumes two values from the stack
+//       break;
+//
+//     case 'J': // long
+//       // For long, compare with zero
+//       cg.code.push(OPCODE.LCONST_0); // Push 0L
+//       stackChange += 2; // `LCONST_0` pushes two values onto the stack (long takes 2 slots)
+//       cg.code.push(OPCODE.LCMP); // Compare top two longs
+//       stackChange -= 4; // `LCMP` consumes four values (two long operands) and pushes one result
+//       cg.code.push(OPCODE.IFNE); // If not equal, branch
+//       stackChange -= 1; // `IFNE` consumes one value (the comparison result)
+//       break;
+//
+//     case 'F': // float
+//       // For float, compare with zero
+//       cg.code.push(OPCODE.FCONST_0); // Push 0.0f
+//       stackChange += 1; // `FCONST_0` pushes a value onto the stack
+//       cg.code.push(OPCODE.FCMPL); // Compare top two floats
+//       stackChange -= 2; // `FCMPL` consumes two values (float operands) and pushes one result
+//       cg.code.push(OPCODE.IFNE); // If not equal, branch
+//       stackChange -= 1; // `IFNE` consumes one value (the comparison result)
+//       break;
+//
+//     case 'D': // double
+//       // For double, compare with zero
+//       cg.code.push(OPCODE.DCONST_0); // Push 0.0d
+//       stackChange += 2; // `DCONST_0` pushes two values onto the stack (double takes 2 slots)
+//       cg.code.push(OPCODE.DCMPL); // Compare top two doubles
+//       stackChange -= 4; // `DCMPL` consumes four values (two double operands) and pushes one result
+//       cg.code.push(OPCODE.IFNE); // If not equal, branch
+//       stackChange -= 1; // `IFNE` consumes one value (the comparison result)
+//       break;
+//
+//     case 'Z': // boolean
+//       // Already a boolean, no conversion needed
+//       break;
+//
+//     default:
+//       throw new Error(`Cannot convert type ${type} to boolean.`);
+//   }
+//
+//   return stackChange; // Return the net change in stack size
+// }
 
 const isNullLiteral = (node: Node) => {
   return node.kind === 'Literal' && node.literalType.kind === 'NullLiteral'
@@ -532,6 +587,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         const boolValue = value === 'true'
         if (kind === 'BooleanLiteral') {
           if (onTrue === boolValue) {
+            cg.addBranchInstr(OPCODE.GOTO, targetLabel)
+          }
+          return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
+        } else {
+          if (onTrue === (parseInt(value) !== 0)) {
             cg.addBranchInstr(OPCODE.GOTO, targetLabel)
           }
           return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }

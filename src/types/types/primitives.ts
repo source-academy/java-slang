@@ -13,7 +13,7 @@ export class Boolean extends PrimitiveType {
   }
 
   public canBeAssigned(type: Type): boolean {
-    return type instanceof Boolean
+    return type instanceof PrimitiveType && !(type instanceof Null)
   }
 }
 
