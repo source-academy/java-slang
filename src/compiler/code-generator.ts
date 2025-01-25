@@ -940,6 +940,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     const { stackSize: size1, resultType: leftType } = compile(left, cg)
+    const insertConversionIndex = cg.code.length;
+    cg.code.push(OPCODE.NOP);
     const { stackSize: size2, resultType: rightType } = compile(right, cg)
 
     if (op === '+' &&
@@ -969,42 +971,58 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       };
     }
 
+    let finalType = leftType;
+
     if (leftType !== rightType) {
       console.debug(
         `Type mismatch detected: leftType=${leftType}, rightType=${rightType}. Applying implicit conversions.`
       );
 
+      const conversionKeyLeft = `${leftType}->${rightType}`
+      const conversionKeyRight = `${rightType}->${leftType}`
+
       if (['D', 'F'].includes(leftType) || ['D', 'F'].includes(rightType)) {
         // Promote both to double if one is double, or to float otherwise
         if (leftType !== 'D' && rightType === 'D') {
-          handleImplicitTypeConversion(leftType, 'D', cg);
+          cg.code.fill(typeConversionsImplicit[conversionKeyLeft],
+            insertConversionIndex, insertConversionIndex + 1)
+          finalType = 'D';
         } else if (leftType === 'D' && rightType !== 'D') {
-          handleImplicitTypeConversion(rightType, 'D', cg);
+          cg.code.push(typeConversionsImplicit[conversionKeyRight])
+          finalType = 'D';
         } else if (leftType !== 'F' && rightType === 'F') {
-          handleImplicitTypeConversion(leftType, 'F', cg);
+          // handleImplicitTypeConversion(leftType, 'F', cg);
+          cg.code.fill(typeConversionsImplicit[conversionKeyLeft],
+            insertConversionIndex, insertConversionIndex + 1)
+          finalType = 'F';
         } else if (leftType === 'F' && rightType !== 'F') {
-          handleImplicitTypeConversion(rightType, 'F', cg);
+          cg.code.push(typeConversionsImplicit[conversionKeyRight])
+          finalType = 'F';
         }
       } else if (['J'].includes(leftType) || ['J'].includes(rightType)) {
         // Promote both to long if one is long
         if (leftType !== 'J' && rightType === 'J') {
-          handleImplicitTypeConversion(leftType, 'J', cg);
+          cg.code.fill(typeConversionsImplicit[conversionKeyLeft],
+            insertConversionIndex, insertConversionIndex + 1)
         } else if (leftType === 'J' && rightType !== 'J') {
-          handleImplicitTypeConversion(rightType, 'J', cg);
+          cg.code.push(typeConversionsImplicit[conversionKeyRight])
         }
+        finalType = 'J';
       } else {
         // Promote both to int as the common type for smaller types like byte, short, char
         if (leftType !== 'I') {
-          handleImplicitTypeConversion(leftType, 'I', cg);
+          cg.code.fill(typeConversionsImplicit[conversionKeyLeft],
+            insertConversionIndex, insertConversionIndex + 1)
         }
         if (rightType !== 'I') {
-          handleImplicitTypeConversion(rightType, 'I', cg);
+          cg.code.push(typeConversionsImplicit[conversionKeyRight])
         }
+        finalType = 'I';
       }
     }
 
     // Perform the operation
-    switch (leftType) {
+    switch (finalType) {
       case 'B':
         cg.code.push(intBinaryOp[op], OPCODE.I2B);
         break;
@@ -1026,8 +1044,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     return {
-      stackSize: Math.max(size1, 1 + (['D', 'J'].includes(leftType) ? 1 : 0) + size2),
-      resultType: leftType
+      stackSize: Math.max(size1, 1 + (['D', 'J'].includes(finalType) ? 1 : 0) + size2),
+      resultType: finalType
     }
   },
 
