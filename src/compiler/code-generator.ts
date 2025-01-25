@@ -24,7 +24,7 @@ import {
   ClassInstanceCreationExpression,
   ExpressionStatement,
   TernaryExpression,
-  LeftHandSide
+  LeftHandSide, CastExpression
 } from '../ast/types/blocks-and-statements'
 import { MethodDeclaration, UnannType } from '../ast/types/classes'
 import { ConstantPoolManager } from './constant-pool-manager'
@@ -164,23 +164,23 @@ const normalStoreOp: { [type: string]: OPCODE } = {
   Z: OPCODE.ISTORE
 }
 
-// const typeConversions: { [key: string]: OPCODE } = {
-//   'I->F': OPCODE.I2F,
-//   'I->D': OPCODE.I2D,
-//   'I->J': OPCODE.I2L,
-//   'I->B': OPCODE.I2B,
-//   'I->C': OPCODE.I2C,
-//   'I->S': OPCODE.I2S,
-//   'F->D': OPCODE.F2D,
-//   'F->I': OPCODE.F2I,
-//   'F->J': OPCODE.F2L,
-//   'D->F': OPCODE.D2F,
-//   'D->I': OPCODE.D2I,
-//   'D->J': OPCODE.D2L,
-//   'J->I': OPCODE.L2I,
-//   'J->F': OPCODE.L2F,
-//   'J->D': OPCODE.L2D
-// };
+const typeConversions: { [key: string]: OPCODE } = {
+  'I->F': OPCODE.I2F,
+  'I->D': OPCODE.I2D,
+  'I->J': OPCODE.I2L,
+  'I->B': OPCODE.I2B,
+  'I->C': OPCODE.I2C,
+  'I->S': OPCODE.I2S,
+  'F->D': OPCODE.F2D,
+  'F->I': OPCODE.F2I,
+  'F->J': OPCODE.F2L,
+  'D->F': OPCODE.D2F,
+  'D->I': OPCODE.D2I,
+  'D->J': OPCODE.D2L,
+  'J->I': OPCODE.L2I,
+  'J->F': OPCODE.L2F,
+  'J->D': OPCODE.L2D
+};
 
 const typeConversionsImplicit: { [key: string]: OPCODE } = {
   'I->F': OPCODE.I2F,
@@ -231,17 +231,17 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
   }
 }
 
-// function handleExplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator) {
-//   if (fromType === toType) {
-//     return;
-//   }
-//   const conversionKey = `${fromType}->${toType}`;
-//   if (conversionKey in typeConversions) {
-//     cg.code.push(typeConversions[conversionKey]);
-//   } else {
-//     throw new Error(`Unsupported explicit type conversion: ${conversionKey}`);
-//   }
-// }
+function handleExplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator) {
+  if (fromType === toType) {
+    return;
+  }
+  const conversionKey = `${fromType}->${toType}`;
+  if (conversionKey in typeConversions) {
+    cg.code.push(typeConversions[conversionKey]);
+  } else {
+    throw new Error(`Unsupported explicit type conversion: ${conversionKey}`);
+  }
+}
 
 function generateStringConversion(valueType: string, cg: CodeGenerator): void {
   const stringClass = 'java/lang/String';
@@ -784,11 +784,16 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     n.argumentList.forEach((x, i) => {
       const argCompileResult = compile(x, cg)
 
+      let normalizedType = argCompileResult.resultType;
+      if (normalizedType === 'B' || normalizedType === 'S') {
+        normalizedType = 'I'
+      }
+
       const expectedType = params?.[i] // Expected parameter type
-      const stackSizeChange = handleImplicitTypeConversion(argCompileResult.resultType, expectedType ?? '', cg)
+      const stackSizeChange = handleImplicitTypeConversion(normalizedType, expectedType ?? '', cg)
       maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize + stackSizeChange)
 
-      argTypes.push(argCompileResult.resultType)
+      argTypes.push(normalizedType)
     })
     const argDescriptor = '(' + argTypes.join('') + ')'
 
@@ -1241,7 +1246,41 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     return { stackSize: 1, resultType: EMPTY_TYPE }
-  }
+  },
+
+  CastExpression: (node: Node, cg: CodeGenerator) => {
+    const { expression, type } = node as CastExpression; // CastExpression node structure
+    const { stackSize, resultType } = compile(expression, cg);
+
+    if ((type == 'byte' || type == 'short') && resultType != 'I') {
+      handleExplicitTypeConversion(resultType, 'I', cg);
+      handleExplicitTypeConversion('I', cg.symbolTable.generateFieldDescriptor(type), cg);
+    } else if (resultType == 'C') {
+      if (type == 'int') {
+        return {
+          stackSize,
+          resultType: cg.symbolTable.generateFieldDescriptor('int'),
+        };
+      } else {
+        throw new Error(`Unsupported class type conversion: 
+          ${'C'} -> ${cg.symbolTable.generateFieldDescriptor(type)}`)
+      }
+    } else if (type == 'char') {
+      if (resultType == 'I') {
+        handleExplicitTypeConversion('I', 'C', cg)
+      } else {
+        throw new Error(`Unsupported class type conversion: 
+          ${resultType} -> ${cg.symbolTable.generateFieldDescriptor(type)}`)
+      }
+    } else {
+      handleExplicitTypeConversion(resultType, cg.symbolTable.generateFieldDescriptor(type), cg);
+    }
+
+    return {
+      stackSize,
+      resultType: cg.symbolTable.generateFieldDescriptor(type),
+    }
+}
 }
 
 class CodeGenerator {

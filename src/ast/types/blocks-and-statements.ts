@@ -119,6 +119,7 @@ export type Expression =
   | BinaryExpression
   | UnaryExpression
   | TernaryExpression
+  | CastExpression
   | Void;
 
 export interface Void extends BaseNode {
@@ -288,4 +289,10 @@ export interface TernaryExpression extends BaseNode {
   condition: Expression;
   consequent: Expression;
   alternate: Expression;
+}
+
+export interface CastExpression extends BaseNode {
+  kind: "CastExpression";
+  type: UnannType;
+  expression: Expression;
 }

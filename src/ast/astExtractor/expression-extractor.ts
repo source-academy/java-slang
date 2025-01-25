@@ -2,6 +2,7 @@ import {
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
   BinaryExpressionCtx,
+  CastExpressionCtx,
   ClassOrInterfaceTypeToInstantiateCtx,
   BooleanLiteralCtx,
   ExpressionCstNode,
@@ -85,6 +86,35 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       return this.visit(ctx.unaryExpression[0]);
     }
   }
+
+  castExpression(ctx: CastExpressionCtx) {
+    // Handle primitive cast expressions
+    if (ctx.primitiveCastExpression && ctx.primitiveCastExpression?.length > 0) {
+      const primitiveCast = ctx.primitiveCastExpression[0];
+      const type = this.extractType(primitiveCast.children.primitiveType[0]);
+      const expression = this.visit(primitiveCast.children.unaryExpression[0]);
+      console.debug({primitiveCast, type, expression});
+      return {
+        kind: "CastExpression",
+        castType: type,
+        expression: expression,
+        location: this.location,
+      };
+    }
+
+    throw new Error("Invalid CastExpression format.");
+  }
+
+  private extractType(typeCtx: any) {
+    if (typeCtx.Identifier) {
+      return typeCtx.Identifier[0].image;
+    }
+    if (typeCtx.unannPrimitiveType) {
+      return this.visit(typeCtx.unannPrimitiveType);
+    }
+    throw new Error("Invalid type context in cast expression.");
+  }
+
 
   private makeBinaryExpression(
     operators: IToken[],
