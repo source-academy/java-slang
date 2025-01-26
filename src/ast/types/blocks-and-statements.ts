@@ -119,7 +119,6 @@ export type Expression =
   | BinaryExpression
   | UnaryExpression
   | TernaryExpression
-  | CastExpression
   | Void;
 
 export interface Void extends BaseNode {
@@ -260,7 +259,7 @@ export interface Assignment extends BaseNode {
 }
 
 export type LeftHandSide = ExpressionName | ArrayAccess;
-export type UnaryExpression = PrefixExpression | PostfixExpression;
+export type UnaryExpression = PrefixExpression | PostfixExpression | CastExpression;
 
 export interface PrefixExpression extends BaseNode {
   kind: "PrefixExpression";

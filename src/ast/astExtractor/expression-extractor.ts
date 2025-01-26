@@ -93,10 +93,9 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       const primitiveCast = ctx.primitiveCastExpression[0];
       const type = this.extractType(primitiveCast.children.primitiveType[0]);
       const expression = this.visit(primitiveCast.children.unaryExpression[0]);
-      console.debug({primitiveCast, type, expression});
       return {
         kind: "CastExpression",
-        castType: type,
+        type: type,
         expression: expression,
         location: this.location,
       };
@@ -105,13 +104,41 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
     throw new Error("Invalid CastExpression format.");
   }
 
-  private extractType(typeCtx: any) {
-    if (typeCtx.Identifier) {
-      return typeCtx.Identifier[0].image;
+  private extractType(typeCtx: any): string {
+    // Check for the 'primitiveType' node
+    if (typeCtx.name === "primitiveType" && typeCtx.children) {
+      const { children } = typeCtx;
+
+      // Handle 'numericType' (e.g., int, char, float, double)
+      if (children.numericType) {
+        const numericTypeCtx = children.numericType[0];
+
+        if (numericTypeCtx.children.integralType) {
+          // Handle integral types (e.g., char, int)
+          const integralTypeCtx = numericTypeCtx.children.integralType[0];
+
+          // Extract the specific type (e.g., 'char', 'int')
+          for (const key in integralTypeCtx.children) {
+            if (integralTypeCtx.children[key][0].image) {
+              return integralTypeCtx.children[key][0].image;
+            }
+          }
+        }
+
+        if (numericTypeCtx.children.floatingPointType) {
+          // Handle floating-point types (e.g., float, double)
+          const floatingPointTypeCtx = numericTypeCtx.children.floatingPointType[0];
+
+          // Extract the specific type (e.g., 'float', 'double')
+          for (const key in floatingPointTypeCtx.children) {
+            if (floatingPointTypeCtx.children[key][0].image) {
+              return floatingPointTypeCtx.children[key][0].image;
+            }
+          }
+        }
+      }
     }
-    if (typeCtx.unannPrimitiveType) {
-      return this.visit(typeCtx.unannPrimitiveType);
-    }
+
     throw new Error("Invalid type context in cast expression.");
   }
 
@@ -204,6 +231,10 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   unaryExpression(ctx: UnaryExpressionCtx) {
+    if (ctx.primary[0].children.primaryPrefix[0].children.castExpression) {
+      return this.visit(ctx.primary[0].children.primaryPrefix[0].children.castExpression);
+    }
+
     const node = this.visit(ctx.primary);
     if (ctx.UnaryPrefixOperator) {
       return {
