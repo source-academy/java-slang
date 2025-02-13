@@ -1,5 +1,5 @@
 import { Node } from "../ast/types/ast";
-import { Expression, Literal, Void } from "../ast/types/blocks-and-statements";
+import { Expression, Literal, Void, MethodDescriptor } from "../ast/types/blocks-and-statements";
 import {
   ConstructorDeclaration,
   FieldDeclaration,
@@ -121,7 +121,7 @@ export type Instr =
  * Components
  */
 export type ControlItem = Node | Instr;
-export type StashItem = Primitive | Reference | Value | Void | Type;
+export type StashItem = Primitive | Reference | Value | Void | Type | MethodDescriptor;
 
 export type Name = string;
 export type Value = Variable | Closure | Class;

@@ -7,6 +7,7 @@ import {
   Literal,
   MethodInvocation,
   ReturnStatement,
+  MethodDescriptor,
 } from "../ast/types/blocks-and-statements";
 import {
   ConstructorDeclaration,
@@ -453,11 +454,11 @@ export const resOverload = (
 
 export const resOverride = (
   classToSearchIn: Class,
-  overloadResolvedClosure: Closure,
+  overloadResolvedMethodDescriptor: MethodDescriptor,
 ): Closure => {
-  const overloadResolvedMtd = overloadResolvedClosure.mtdOrCon as MethodDeclaration;
-  const name = overloadResolvedMtd.methodHeader.identifier;
-  const overloadResolvedClosureParams = overloadResolvedMtd.methodHeader.formalParameterList;
+  // const overloadResolvedMtd = overloadResolvedClosure.mtdOrCon as MethodDeclaration;
+  const name = overloadResolvedMethodDescriptor.identifier;
+  const overloadResolvedClosureParams = overloadResolvedMethodDescriptor.formalParameterTypes;
 
   const closures: Closure[] = [];
   for (const [closureName, closure] of classToSearchIn.frame.frame.entries()) {
@@ -467,7 +468,7 @@ export const resOverride = (
     }
   }
 
-  let overrideResolvedClosure = overloadResolvedClosure;
+  let overrideResolvedClosure = overloadResolvedMethodDescriptor.closure;
   for (const closure of closures) {
     const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList;
       
@@ -475,7 +476,7 @@ export const resOverride = (
     
     let match = true;
     for (let i = 0; i < overloadResolvedClosureParams.length; i++) {
-      match &&= (params[i].unannType === overloadResolvedClosureParams[i].unannType);
+      match &&= (params[i].unannType === overloadResolvedClosureParams[i]);
       if (!match) break; // short circuit
     }
     

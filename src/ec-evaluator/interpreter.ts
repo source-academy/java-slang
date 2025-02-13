@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, } from "lodash";
 
 import { 
   Assignment,
@@ -13,6 +13,7 @@ import {
   LocalVariableDeclarationStatement,
   LocalVariableType,
   MethodInvocation,
+  MethodDescriptor,
   ReturnStatement,
   VariableDeclarator,
   Void,
@@ -23,6 +24,7 @@ import {
   FormalParameter,
   Identifier,
   MethodDeclaration,
+  MethodHeader,
   NormalClassDeclaration,
   UnannType,
 } from "../ast/types/classes";
@@ -773,7 +775,35 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Method overloading resolution.
     const classStore: EnvNode = environment.global;
     const closure: Closure = resOverload(classToSearchIn, command.name, argTypes, classStore);
-    stash.push(closure);
+
+    if (closure.mtdOrCon.kind == "MethodDeclaration") {
+      const methodIsStatic: boolean = isStatic(closure.mtdOrCon);
+
+      const header: MethodHeader = (closure.mtdOrCon).methodHeader;
+
+      const params: string[] = header.formalParameterList
+        .map(fp => fp.unannType);
+
+      const methodDescriptor: MethodDescriptor = methodIsStatic ? {
+        kind: "Descriptor",
+        value: `${header.result} ${targetType.type}::${header.identifier}(${params.length === 0 ? "" : params.reduce((x, y) => x + ", " + y)})`,
+        returnType: header.result,
+        identifier: header.identifier,
+        formalParameterTypes: params,
+        closure: closure,
+        isStatic: true,
+      } : {
+        kind: "Descriptor",
+        value: `${header.result} ${header.identifier}(${params.length === 0 ? "" : params.reduce((x, y) => x + ", " + y)})`,
+        returnType: header.result,
+        identifier: header.identifier,
+        formalParameterTypes: params,
+        closure: closure,
+        isStatic: false,
+      }
+      
+      stash.push(methodDescriptor);
+    }
 
     // Post-processing required if overload resolved method is instance method.
     if (isInstance(closure.mtdOrCon as MethodDeclaration)) {
@@ -793,11 +823,11 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash: Stash,
   ) => {
     const target = stash.pop()!;
-    const overloadResolvedClosure = stash.pop()! as Closure;
+    const overloadResolvedClosure = stash.pop()! as MethodDescriptor;
 
-    if (isStatic(overloadResolvedClosure.mtdOrCon as MethodDeclaration)) {
+    if (overloadResolvedClosure.isStatic) {
       // No method overriding resolution is required if resolved method is a static method.
-      stash.push(overloadResolvedClosure);
+      stash.push(overloadResolvedClosure.closure);
       return;
     }
 
