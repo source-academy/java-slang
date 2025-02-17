@@ -24,7 +24,7 @@ import {
   ClassInstanceCreationExpression,
   ExpressionStatement,
   TernaryExpression,
-  LeftHandSide, CastExpression
+  LeftHandSide, CastExpression, SwitchStatement, SwitchCase, CaseLabel
 } from '../ast/types/blocks-and-statements'
 import { MethodDeclaration, UnannType } from '../ast/types/classes'
 import { ConstantPoolManager } from './constant-pool-manager'
@@ -272,6 +272,14 @@ function generateStringConversion(valueType: string, cg: CodeGenerator): void {
   cg.code.push(OPCODE.INVOKESTATIC, 0, methodIndex);
 }
 
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) | 0; // Simulate Java's overflow behavior
+  }
+  return hash;
+}
+
 // function generateBooleanConversion(type: string, cg: CodeGenerator): number {
 //   let stackChange = 0; // Tracks changes to the stack size
 //
@@ -437,8 +445,16 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   BreakStatement: (node: Node, cg: CodeGenerator) => {
-    cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][1])
-    return { stackSize: 0, resultType: EMPTY_TYPE }
+    if (cg.loopLabels.length > 0) {
+      // If inside a loop, break jumps to the end of the loop
+      cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][1]);
+    } else if (cg.switchLabels.length > 0) {
+      // If inside a switch, break jumps to the switch's end label
+      cg.addBranchInstr(OPCODE.GOTO, cg.switchLabels[cg.switchLabels.length - 1]);
+    } else {
+      throw new Error("Break statement not inside a loop or switch statement");
+    }
+    return { stackSize: 0, resultType: EMPTY_TYPE };
   },
 
   ContinueStatement: (node: Node, cg: CodeGenerator) => {
@@ -1280,7 +1296,230 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       stackSize,
       resultType: cg.symbolTable.generateFieldDescriptor(type),
     }
-}
+  },
+
+  SwitchStatement: (node: Node, cg: CodeGenerator) => {
+    const { expression, cases } = node as SwitchStatement;
+
+    // Compile the switch expression
+    const { stackSize: exprStackSize, resultType } = compile(expression, cg);
+    let maxStack = exprStackSize;
+
+    const caseLabels: Label[] = cases.map(() => cg.generateNewLabel());
+    const defaultLabel = cg.generateNewLabel();
+    const endLabel = cg.generateNewLabel();
+
+    // Track the switch statement's end label
+    cg.switchLabels.push(endLabel);
+
+    if (["I", "B", "S", "C"].includes(resultType)) {
+      const caseValues: number[] = [];
+      const caseLabelMap: Map<number, Label> = new Map();
+      let hasDefault = false;
+
+      cases.forEach((caseGroup, index) => {
+        caseGroup.labels.forEach((label) => {
+          if (label.kind === "CaseLabel") {
+            const value = parseInt((label.expression as Literal).literalType.value);
+            caseValues.push(value);
+            caseLabelMap.set(value, caseLabels[index]);
+          } else if (label.kind === "DefaultLabel") {
+            caseLabels[index] = defaultLabel;
+            hasDefault = true;
+          }
+        });
+      });
+
+      const [minValue, maxValue] = [Math.min(...caseValues), Math.max(...caseValues)];
+      const useTableSwitch = maxValue - minValue < caseValues.length * 2;
+
+      if (useTableSwitch) {
+        cg.code.push(OPCODE.TABLESWITCH);
+
+        // Ensure 4-byte alignment for TABLESWITCH
+        while (cg.code.length % 4 !== 0) {
+          cg.code.push(0);  // Padding bytes (JVM requires alignment)
+        }
+
+        // Add default branch (jump to default label)
+        cg.code.push(0, 0, 0, defaultLabel.offset);
+
+        // Push low and high values (min and max case values)
+        cg.code.push(minValue >> 24, (minValue >> 16) & 0xff, (minValue >> 8) & 0xff, minValue & 0xff);
+        cg.code.push(maxValue >> 24, (maxValue >> 16) & 0xff, (maxValue >> 8) & 0xff, maxValue & 0xff);
+
+        // Generate branch table (map each value to a case label)
+        for (let i = minValue; i <= maxValue; i++) {
+          const caseIndex = caseValues.indexOf(i);
+          cg.code.push(0, 0, 0, caseIndex !== -1 ? caseLabels[caseIndex].offset
+            : defaultLabel.offset);
+        }
+      } else {
+        cg.code.push(OPCODE.LOOKUPSWITCH);
+
+        // Ensure 4-byte alignment for LOOKUPSWITCH
+        while (cg.code.length % 4 !== 0) {
+          cg.code.push(0);
+        }
+
+        // Add default branch (jump to default label)
+        cg.code.push(0, 0, 0, defaultLabel.offset);
+
+        // Push the number of case-value pairs
+        cg.code.push((caseValues.length >> 24) & 0xff, (caseValues.length >> 16) & 0xff,
+          (caseValues.length >> 8) & 0xff, caseValues.length & 0xff);
+
+        // Generate lookup table (pairs of case values and corresponding labels)
+        caseValues.forEach((value, index) => {
+          cg.code.push(value >> 24, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
+          cg.code.push(0, 0, 0, caseLabels[index].offset);
+        });
+      }
+
+      // **Process case bodies with proper fallthrough handling**
+      let previousCase: SwitchCase | null = null;
+
+      cases.forEach((caseGroup, index) => {
+        caseLabels[index].offset = cg.code.length;
+
+        // Ensure statements array is always defined
+        caseGroup.statements = caseGroup.statements || [];
+
+        // If previous case had no statements, merge labels (fallthrough)
+        if (previousCase && (previousCase.statements?.length ?? 0) === 0) {
+          previousCase.labels.push(...caseGroup.labels);
+        }
+
+        // Compile case statements
+        caseGroup.statements.forEach((statement) => {
+          const { stackSize } = compile(statement, cg);
+          maxStack = Math.max(maxStack, stackSize);
+        });
+
+        // Add jump to the end label if the case has statements
+        if (caseGroup.statements.length > 0) {
+          cg.addBranchInstr(OPCODE.GOTO, endLabel);
+        }
+
+        previousCase = caseGroup;
+      });
+
+      // **Process default case**
+      defaultLabel.offset = cg.code.length;
+      if (hasDefault) {
+        const defaultCase = cases.find((caseGroup) =>
+          caseGroup.labels.some((label) => label.kind === "DefaultLabel")
+        );
+        if (defaultCase) {
+          defaultCase.statements = defaultCase.statements || [];
+          defaultCase.statements.forEach((statement) => {
+            const { stackSize } = compile(statement, cg);
+            maxStack = Math.max(maxStack, stackSize);
+          });
+        }
+      }
+
+      endLabel.offset = cg.code.length;
+
+    } else if (resultType === "Ljava/lang/String;") {
+      // **String cases**
+      const hashCaseMap: Map<number, Label> = new Map();
+      const hashCodeVarIndex = cg.maxLocals++;
+
+      // Generate `hashCode()` call
+      cg.code.push(
+        OPCODE.INVOKEVIRTUAL,
+        0,
+        cg.constantPoolManager.indexMethodrefInfo("java/lang/String", "hashCode", "()I")
+      );
+      cg.code.push(OPCODE.ISTORE, hashCodeVarIndex);
+
+      cases.forEach((caseGroup, index) => {
+        caseGroup.labels.forEach((label) => {
+          if (label.kind === "CaseLabel") {
+            const caseValue = (label.expression as Literal).literalType.value;
+            const hashCodeValue = hashCode(caseValue);
+            if (!hashCaseMap.has(hashCodeValue)) {
+              hashCaseMap.set(hashCodeValue, caseLabels[index]);
+            }
+          } else if (label.kind === "DefaultLabel") {
+            caseLabels[index] = defaultLabel;
+          }
+        });
+      });
+
+      // **Compare hashCodes**
+      hashCaseMap.forEach((label, hashCode) => {
+        cg.code.push(OPCODE.ILOAD, hashCodeVarIndex);
+        cg.code.push(OPCODE.BIPUSH, hashCode);
+        cg.addBranchInstr(OPCODE.IF_ICMPEQ, label);
+      });
+
+      cg.addBranchInstr(OPCODE.GOTO, defaultLabel);
+
+      // **Process case bodies**
+      let previousCase: SwitchCase | null = null;
+
+      cases.forEach((caseGroup, index) => {
+        caseLabels[index].offset = cg.code.length;
+
+        // Ensure statements array is always defined
+        caseGroup.statements = caseGroup.statements || [];
+
+        // Handle fallthrough
+        if (previousCase && (previousCase.statements?.length ?? 0) === 0) {
+          previousCase.labels.push(...caseGroup.labels);
+        }
+
+        // Generate string comparison
+        const caseValue = caseGroup.labels.find((label): label is CaseLabel => label.kind === "CaseLabel");
+        if (caseValue) {
+          const caseStr = (caseValue.expression as Literal).literalType.value;
+          const caseStrIndex = cg.constantPoolManager.indexStringInfo(caseStr);
+          cg.code.push(OPCODE.LDC, caseStrIndex);
+          cg.code.push(
+            OPCODE.INVOKEVIRTUAL,
+            0,
+            cg.constantPoolManager.indexMethodrefInfo("java/lang/String", "equals", "(Ljava/lang/Object;)Z")
+          );
+          const caseEndLabel = cg.generateNewLabel();
+          cg.addBranchInstr(OPCODE.IFEQ, caseEndLabel);
+
+          // Compile case statements
+          caseGroup.statements.forEach((statement) => {
+            const { stackSize } = compile(statement, cg);
+            maxStack = Math.max(maxStack, stackSize);
+          });
+
+          cg.addBranchInstr(OPCODE.GOTO, endLabel);
+          caseEndLabel.offset = cg.code.length;
+        }
+
+        previousCase = caseGroup;
+      });
+
+      // **Process default case**
+      defaultLabel.offset = cg.code.length;
+      const defaultCase = cases.find((caseGroup) =>
+        caseGroup.labels.some((label) => label.kind === "DefaultLabel")
+      );
+      if (defaultCase) {
+        defaultCase.statements = defaultCase.statements || [];
+        defaultCase.statements.forEach((statement) => {
+          const { stackSize } = compile(statement, cg);
+          maxStack = Math.max(maxStack, stackSize);
+        });
+      }
+
+      endLabel.offset = cg.code.length;
+    } else {
+      throw new Error(`Switch statements only support byte, short, int, char, or String types. Found: ${resultType}`);
+    }
+
+    cg.switchLabels.pop();
+
+    return { stackSize: maxStack, resultType: EMPTY_TYPE };
+  }
 }
 
 class CodeGenerator {
@@ -1290,6 +1529,7 @@ class CodeGenerator {
   stackSize: number = 0
   labels: Label[] = []
   loopLabels: Label[][] = []
+  switchLabels: Label[] = []
   code: number[] = []
 
   constructor(symbolTable: SymbolTable, constantPoolManager: ConstantPoolManager) {

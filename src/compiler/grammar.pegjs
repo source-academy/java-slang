@@ -774,7 +774,42 @@ AssertStatement
   = assert Expression (colon Expression) semicolon
 
 SwitchStatement
-  = TO_BE_ADDED
+  = switch lparen expr:Expression rparen lcurly
+      cases:SwitchBlock?
+    rcurly {
+      return addLocInfo({
+        kind: "SwitchStatement",
+        expression: expr,
+        cases: cases ?? [],
+      });
+    }
+
+SwitchBlock
+  = cases:SwitchBlockStatementGroup* {
+      return cases;
+    }
+
+SwitchBlockStatementGroup
+  = labels:SwitchLabel+ stmts:BlockStatement* {
+      return {
+        kind: "SwitchBlockStatementGroup",
+        labels: labels,
+        statements: stmts,
+      };
+    }
+
+SwitchLabel
+  = case expr:Expression colon {
+      return {
+        kind: "CaseLabel",
+        expression: expr,
+      };
+    }
+  / default colon {
+      return {
+        kind: "DefaultLabel",
+      };
+    }
 
 DoStatement
   = do body:Statement while lparen expr:Expression rparen semicolon {
