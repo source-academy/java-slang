@@ -218,7 +218,7 @@ describe("evaluate instance fields with inheritance", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -247,7 +247,7 @@ describe("evaluate instance fields with inheritance", () => {
       "Object", // Deref
       "Object", // Assign
       "Parent", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "p", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -488,7 +488,7 @@ describe("evaluate instance fields with inheritance", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -521,7 +521,7 @@ describe("evaluate instance fields with inheritance", () => {
       "Object", // Deref
       "Object", // Assign
       "Parent", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "p", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -718,7 +718,7 @@ describe("evaluate instance fields with inheritance", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -949,7 +949,7 @@ describe("evaluate instance fields with inheritance", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -1184,7 +1184,7 @@ describe("evaluate instance fields with inheritance", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride

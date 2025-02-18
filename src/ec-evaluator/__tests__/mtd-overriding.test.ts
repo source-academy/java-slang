@@ -213,7 +213,7 @@ describe("evaluate method overriding correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -242,7 +242,7 @@ describe("evaluate method overriding correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Parent", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "p", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -463,7 +463,7 @@ describe("evaluate method overriding correctly", () => {
       "0", // Assign
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -488,7 +488,7 @@ describe("evaluate method overriding correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Parent", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "p", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -808,7 +808,7 @@ describe("evaluate method overriding correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -861,7 +861,7 @@ describe("evaluate method overriding correctly", () => {
       "Object", // Assign
       "Parent", // ResType
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "p", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -1184,7 +1184,7 @@ describe("evaluate method overriding correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -1237,7 +1237,7 @@ describe("evaluate method overriding correctly", () => {
       "Object", // Assign
       "Parent", // ResType
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "p", // EvalVariable
       "Object", // Deref
       "test", // ResOverride

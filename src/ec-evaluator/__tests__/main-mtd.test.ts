@@ -107,7 +107,7 @@ describe("evaluate main method correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -313,7 +313,7 @@ describe("evaluate main method correctly", () => {
     const expectedStashTrace = [
       "test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "test", // Deref
       "main", // ResOverride
@@ -343,7 +343,7 @@ describe("evaluate main method correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
