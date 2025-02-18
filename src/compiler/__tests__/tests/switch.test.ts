@@ -4,7 +4,7 @@ const testCases: testCase[] = [
   {
     comment: 'More basic switch case',
     program: `
-      public class Basic {
+      public class Main {
         public static void main(String[] args) {
           int x = 1;
           switch (x) {

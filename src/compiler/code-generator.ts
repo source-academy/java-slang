@@ -204,7 +204,6 @@ function areClassTypesCompatible(fromType: string, toType: string): boolean {
 }
 
 function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator): number {
-  console.debug(`Converting from: ${fromType}, to: ${toType}`)
   if (fromType === toType || toType.replace(/^L|;$/g, '') === 'java/lang/String') {
     return 0;
   }
@@ -968,8 +967,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     if (op === '+' &&
       (leftType === 'Ljava/lang/String;'
         || rightType === 'Ljava/lang/String;')) {
-      console.debug(`String concatenation detected: ${leftType} ${op} ${rightType}`)
-
       if (leftType !== 'Ljava/lang/String;') {
         generateStringConversion(leftType, cg);
       }
@@ -995,10 +992,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let finalType = leftType;
 
     if (leftType !== rightType) {
-      console.debug(
-        `Type mismatch detected: leftType=${leftType}, rightType=${rightType}. Applying implicit conversions.`
-      );
-
       const conversionKeyLeft = `${leftType}->${rightType}`
       const conversionKeyRight = `${rightType}->${leftType}`
 
@@ -1308,6 +1301,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const caseLabels: Label[] = cases.map(() => cg.generateNewLabel());
     const defaultLabel = cg.generateNewLabel();
     const endLabel = cg.generateNewLabel();
+    const positionOffset = cg.code.length;
 
     // Track the switch statement's end label
     cg.switchLabels.push(endLabel);
@@ -1332,54 +1326,73 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
       const [minValue, maxValue] = [Math.min(...caseValues), Math.max(...caseValues)];
       const useTableSwitch = maxValue - minValue < caseValues.length * 2;
+      const caseLabelIndex: number[] = []
+      let indexTracker = cg.code.length;
 
       if (useTableSwitch) {
         cg.code.push(OPCODE.TABLESWITCH);
+        indexTracker++
 
         // Ensure 4-byte alignment for TABLESWITCH
         while (cg.code.length % 4 !== 0) {
           cg.code.push(0);  // Padding bytes (JVM requires alignment)
+          indexTracker++
         }
 
         // Add default branch (jump to default label)
         cg.code.push(0, 0, 0, defaultLabel.offset);
+        caseLabelIndex.push(indexTracker + 3);
+        indexTracker += 4
 
         // Push low and high values (min and max case values)
         cg.code.push(minValue >> 24, (minValue >> 16) & 0xff, (minValue >> 8) & 0xff, minValue & 0xff);
         cg.code.push(maxValue >> 24, (maxValue >> 16) & 0xff, (maxValue >> 8) & 0xff, maxValue & 0xff);
+        indexTracker += 8
 
         // Generate branch table (map each value to a case label)
         for (let i = minValue; i <= maxValue; i++) {
           const caseIndex = caseValues.indexOf(i);
           cg.code.push(0, 0, 0, caseIndex !== -1 ? caseLabels[caseIndex].offset
             : defaultLabel.offset);
+          caseLabelIndex.push(indexTracker + 3);
+          indexTracker += 4;
         }
       } else {
         cg.code.push(OPCODE.LOOKUPSWITCH);
+        indexTracker++;
 
         // Ensure 4-byte alignment for LOOKUPSWITCH
         while (cg.code.length % 4 !== 0) {
           cg.code.push(0);
+          indexTracker++
         }
 
         // Add default branch (jump to default label)
         cg.code.push(0, 0, 0, defaultLabel.offset);
+        caseLabelIndex.push(indexTracker + 3);
+        indexTracker += 4
 
         // Push the number of case-value pairs
         cg.code.push((caseValues.length >> 24) & 0xff, (caseValues.length >> 16) & 0xff,
           (caseValues.length >> 8) & 0xff, caseValues.length & 0xff);
+        indexTracker += 4
 
         // Generate lookup table (pairs of case values and corresponding labels)
         caseValues.forEach((value, index) => {
           cg.code.push(value >> 24, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
           cg.code.push(0, 0, 0, caseLabels[index].offset);
+          caseLabelIndex.push(indexTracker + 7);
+          indexTracker += 8;
         });
       }
 
       // **Process case bodies with proper fallthrough handling**
       let previousCase: SwitchCase | null = null;
 
-      cases.forEach((caseGroup, index) => {
+      const nonDefaultCases = cases.filter((caseGroup) =>
+        caseGroup.labels.some((label) => label.kind === "CaseLabel"))
+
+      nonDefaultCases.forEach((caseGroup, index) => {
         caseLabels[index].offset = cg.code.length;
 
         // Ensure statements array is always defined
@@ -1395,11 +1408,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           const { stackSize } = compile(statement, cg);
           maxStack = Math.max(maxStack, stackSize);
         });
-
-        // Add jump to the end label if the case has statements
-        if (caseGroup.statements.length > 0) {
-          cg.addBranchInstr(OPCODE.GOTO, endLabel);
-        }
 
         previousCase = caseGroup;
       });
@@ -1419,6 +1427,17 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         }
       }
 
+      cg.code[caseLabelIndex[0]] = caseLabels[caseLabels.length - 1].offset - positionOffset;
+
+      for (let i = 1; i < caseLabelIndex.length; i++) {
+        cg.code[caseLabelIndex[i]] = caseLabels[i - 1].offset - positionOffset
+      }
+
+      console.debug(cg.code)
+
+      console.debug(caseLabels[caseLabels.length - 1])
+      console.debug(caseLabels.splice(0, caseLabels.length - 1))
+
       endLabel.offset = cg.code.length;
 
     } else if (resultType === "Ljava/lang/String;") {
@@ -1432,6 +1451,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         0,
         cg.constantPoolManager.indexMethodrefInfo("java/lang/String", "hashCode", "()I")
       );
+
+      // const switchCaseExpressionHash = hashCode();
       cg.code.push(OPCODE.ISTORE, hashCodeVarIndex);
 
       cases.forEach((caseGroup, index) => {
@@ -1460,7 +1481,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       // **Process case bodies**
       let previousCase: SwitchCase | null = null;
 
-      cases.forEach((caseGroup, index) => {
+      const nonDefaultCases = cases.filter((caseGroup) =>
+        caseGroup.labels.some((label) => label.kind === "CaseLabel"))
+
+      nonDefaultCases.forEach((caseGroup, index) => {
         caseLabels[index].offset = cg.code.length;
 
         // Ensure statements array is always defined
@@ -1491,7 +1515,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             maxStack = Math.max(maxStack, stackSize);
           });
 
-          cg.addBranchInstr(OPCODE.GOTO, endLabel);
           caseEndLabel.offset = cg.code.length;
         }
 
