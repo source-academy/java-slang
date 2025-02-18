@@ -121,7 +121,7 @@ describe("evaluate method overloading correctly", () => {
       "x", // EvalVariable
       "Test", // ResType
       "int", // ResType
-      "test", // ResOverlaod
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "test", // ResOverride
