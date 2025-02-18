@@ -166,6 +166,31 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ['Outer Two, Inner One']
+  },
+
+  {
+    comment: 'Switch with far apart cases',
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          int x = 1331;
+          switch (x) {
+            case 1:
+              System.out.println("No");
+              break;
+            case 1331:
+              System.out.println("Yes");
+              break;
+            case 999999999:
+              System.out.println("No");
+              break;
+            default:
+              System.out.println("Default");
+          }
+        }
+      }
+    `,
+    expectedLines: ['Yes']
   }
 ]
 

@@ -274,7 +274,7 @@ function generateStringConversion(valueType: string, cg: CodeGenerator): void {
 function hashCode(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
-    hash = (hash * 31 + str.charCodeAt(i)) | 0; // Simulate Java's overflow behavior
+    hash = ((hash * 31) + str.charCodeAt(i)); // Simulate Java's overflow behavior
   }
   return hash;
 }
@@ -1301,7 +1301,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const caseLabels: Label[] = cases.map(() => cg.generateNewLabel());
     const defaultLabel = cg.generateNewLabel();
     const endLabel = cg.generateNewLabel();
-    const positionOffset = cg.code.length;
 
     // Track the switch statement's end label
     cg.switchLabels.push(endLabel);
@@ -1310,6 +1309,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const caseValues: number[] = [];
       const caseLabelMap: Map<number, Label> = new Map();
       let hasDefault = false;
+      const positionOffset = cg.code.length;
 
       cases.forEach((caseGroup, index) => {
         caseGroup.labels.forEach((label) => {
@@ -1433,33 +1433,25 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         cg.code[caseLabelIndex[i]] = caseLabels[i - 1].offset - positionOffset
       }
 
-      console.debug(cg.code)
-
-      console.debug(caseLabels[caseLabels.length - 1])
-      console.debug(caseLabels.splice(0, caseLabels.length - 1))
-
       endLabel.offset = cg.code.length;
 
     } else if (resultType === "Ljava/lang/String;") {
-      // **String cases**
+      // **String Switch Handling**
       const hashCaseMap: Map<number, Label> = new Map();
-      const hashCodeVarIndex = cg.maxLocals++;
 
-      // Generate `hashCode()` call
+      // Compute and store hashCode()
       cg.code.push(
         OPCODE.INVOKEVIRTUAL,
         0,
         cg.constantPoolManager.indexMethodrefInfo("java/lang/String", "hashCode", "()I")
       );
 
-      // const switchCaseExpressionHash = hashCode();
-      cg.code.push(OPCODE.ISTORE, hashCodeVarIndex);
-
+      // Create lookup table for hashCodes
       cases.forEach((caseGroup, index) => {
         caseGroup.labels.forEach((label) => {
           if (label.kind === "CaseLabel") {
             const caseValue = (label.expression as Literal).literalType.value;
-            const hashCodeValue = hashCode(caseValue);
+            const hashCodeValue = hashCode(caseValue.slice(1, caseValue.length - 1));
             if (!hashCaseMap.has(hashCodeValue)) {
               hashCaseMap.set(hashCodeValue, caseLabels[index]);
             }
@@ -1469,63 +1461,91 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         });
       });
 
-      // **Compare hashCodes**
+      const caseLabelIndex: number[] = []
+      let indexTracker = cg.code.length;
+      const positionOffset = cg.code.length;
+
+      // **LOOKUPSWITCH Implementation**
+      cg.code.push(OPCODE.LOOKUPSWITCH);
+      indexTracker++
+
+      // Ensure 4-byte alignment
+      while (cg.code.length % 4 !== 0) {
+        cg.code.push(0);
+        indexTracker++
+      }
+
+      // Default jump target
+      cg.code.push(0, 0, 0, defaultLabel.offset);
+      caseLabelIndex.push(indexTracker + 3);
+      indexTracker += 4;
+
+
+      // Number of case-value pairs
+      cg.code.push((hashCaseMap.size >> 24) & 0xff, (hashCaseMap.size >> 16) & 0xff,
+        (hashCaseMap.size >> 8) & 0xff, hashCaseMap.size & 0xff);
+      indexTracker += 4;
+
+      // Populate LOOKUPSWITCH
       hashCaseMap.forEach((label, hashCode) => {
-        cg.code.push(OPCODE.ILOAD, hashCodeVarIndex);
-        cg.code.push(OPCODE.BIPUSH, hashCode);
-        cg.addBranchInstr(OPCODE.IF_ICMPEQ, label);
+        cg.code.push(hashCode >> 24, (hashCode >> 16) & 0xff, (hashCode >> 8) & 0xff, hashCode & 0xff);
+        cg.code.push(0, 0, 0, label.offset);
+        caseLabelIndex.push(indexTracker + 7);
+        indexTracker += 8;
       });
 
-      cg.addBranchInstr(OPCODE.GOTO, defaultLabel);
-
-      // **Process case bodies**
+      // **Case Handling**
       let previousCase: SwitchCase | null = null;
 
-      const nonDefaultCases = cases.filter((caseGroup) =>
+      cases.filter((caseGroup) =>
         caseGroup.labels.some((label) => label.kind === "CaseLabel"))
+        .forEach((caseGroup, index) => {
+          caseLabels[index].offset = cg.code.length;
 
-      nonDefaultCases.forEach((caseGroup, index) => {
-        caseLabels[index].offset = cg.code.length;
+          // Ensure statements exist
+          caseGroup.statements = caseGroup.statements || [];
 
-        // Ensure statements array is always defined
-        caseGroup.statements = caseGroup.statements || [];
+          // Handle fallthrough
+          if (previousCase && (previousCase.statements?.length ?? 0) === 0) {
+            previousCase.labels.push(...caseGroup.labels);
+          }
 
-        // Handle fallthrough
-        if (previousCase && (previousCase.statements?.length ?? 0) === 0) {
-          previousCase.labels.push(...caseGroup.labels);
-        }
+          // **String Comparison for Collisions**
+          const caseValue = caseGroup.labels.find((label): label is CaseLabel => label.kind === "CaseLabel");
+          if (caseValue) {
+            // TODO: check for actual String equality instead of just rely on hashCode equality
+            //  (see the commented out code below)
 
-        // Generate string comparison
-        const caseValue = caseGroup.labels.find((label): label is CaseLabel => label.kind === "CaseLabel");
-        if (caseValue) {
-          const caseStr = (caseValue.expression as Literal).literalType.value;
-          const caseStrIndex = cg.constantPoolManager.indexStringInfo(caseStr);
-          cg.code.push(OPCODE.LDC, caseStrIndex);
-          cg.code.push(
-            OPCODE.INVOKEVIRTUAL,
-            0,
-            cg.constantPoolManager.indexMethodrefInfo("java/lang/String", "equals", "(Ljava/lang/Object;)Z")
-          );
-          const caseEndLabel = cg.generateNewLabel();
-          cg.addBranchInstr(OPCODE.IFEQ, caseEndLabel);
+            // const caseStr = (caseValue.expression as Literal).literalType.value;
+            // const caseStrIndex = cg.constantPoolManager.indexStringInfo(caseStr);
 
-          // Compile case statements
-          caseGroup.statements.forEach((statement) => {
-            const { stackSize } = compile(statement, cg);
-            maxStack = Math.max(maxStack, stackSize);
-          });
+            // cg.code.push(OPCODE.LDC, caseStrIndex);
+            // cg.code.push(
+            //   OPCODE.INVOKEVIRTUAL,
+            //   0,
+            //   cg.constantPoolManager.indexMethodrefInfo("java/lang/String", "equals", "(Ljava/lang/Object;)Z")
+            // );
+            //
+            const caseEndLabel = cg.generateNewLabel();
+            // cg.addBranchInstr(OPCODE.IFEQ, caseEndLabel);
 
-          caseEndLabel.offset = cg.code.length;
-        }
+            // Compile case statements
+            caseGroup.statements.forEach((statement) => {
+              const { stackSize } = compile(statement, cg);
+              maxStack = Math.max(maxStack, stackSize);
+            });
 
-        previousCase = caseGroup;
-      });
+            caseEndLabel.offset = cg.code.length;
+          }
 
-      // **Process default case**
+          previousCase = caseGroup;
+        });
+
+      // **Default Case Handling**
       defaultLabel.offset = cg.code.length;
       const defaultCase = cases.find((caseGroup) =>
-        caseGroup.labels.some((label) => label.kind === "DefaultLabel")
-      );
+        caseGroup.labels.some((label) => label.kind === "DefaultLabel"));
+
       if (defaultCase) {
         defaultCase.statements = defaultCase.statements || [];
         defaultCase.statements.forEach((statement) => {
@@ -1534,7 +1554,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         });
       }
 
+      cg.code[caseLabelIndex[0]] = caseLabels[caseLabels.length - 1].offset - positionOffset;
+
+      for (let i = 1; i < caseLabelIndex.length; i++) {
+        cg.code[caseLabelIndex[i]] = caseLabels[i - 1].offset - positionOffset
+      }
+
       endLabel.offset = cg.code.length;
+
     } else {
       throw new Error(`Switch statements only support byte, short, int, char, or String types. Found: ${resultType}`);
     }
