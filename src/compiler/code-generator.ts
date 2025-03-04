@@ -335,6 +335,16 @@ function hashCode(str: string): number {
 //   return stackChange; // Return the net change in stack size
 // }
 
+function getExpressionType(node: Node, cg: CodeGenerator): string {
+  if (!(node.kind in codeGenerators)) {
+    throw new ConstructNotSupportedError(node.kind);
+  }
+  const originalCode = [...cg.code]; // Preserve the original code state
+  const resultType = codeGenerators[node.kind](node, cg).resultType;
+  cg.code = originalCode; // Restore the original code state
+  return resultType;
+}
+
 const isNullLiteral = (node: Node) => {
   return node.kind === 'Literal' && node.literalType.kind === 'NullLiteral'
 }
@@ -778,23 +788,50 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       )
     }
 
-    const argTypes: Array<UnannType> = []
-
-    const methodInfo = symbolInfos[symbolInfos.length - 1] as MethodInfos
-    if (!methodInfo || methodInfo.length === 0) {
+    const methodInfos = symbolInfos[symbolInfos.length - 1] as MethodInfos
+    if (!methodInfos || methodInfos.length === 0) {
       throw new Error(`No method information found for ${n.identifier}`)
     }
 
-    const fullDescriptor = methodInfo[0].typeDescriptor // Full descriptor, e.g., "(Ljava/lang/String;C)V"
-    const paramDescriptor = fullDescriptor.slice(1, fullDescriptor.indexOf(')')) // Extract "Ljava/lang/String;C"
-    const params = paramDescriptor.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g)
+    const methodMatches: MethodInfos = [];
+    const argumentDescriptors = n.argumentList.map(arg => getExpressionType(arg, cg));
 
-    // Parse individual parameter types
-    if (params && params.length !== n.argumentList.length) {
-      throw new Error(
-        `Parameter mismatch: expected ${params?.length || 0}, got ${n.argumentList.length}`
-      )
+    for (const methodInfo of methodInfos) {
+      const paramDescriptor = methodInfo.typeDescriptor.slice(1, methodInfo.typeDescriptor.indexOf(')'));
+      const params = paramDescriptor.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || [];
+
+      if (params && params.length === argumentDescriptors.length) {
+        let match = true;
+
+        for (let i = 0; i < params.length; i++) {
+          if ((argumentDescriptors[i] == 'B' || argumentDescriptors[i] == 'S')
+            && paramDescriptor[i] == 'I') {
+            continue
+          }
+
+          if ((params[i] !== argumentDescriptors[i]) &&
+            (typeConversionsImplicit[`${argumentDescriptors[i]}->${params[i]}`] === undefined) &&
+            (!areClassTypesCompatible(argumentDescriptors[i], params[i]))) {
+            match = false;
+            break;
+          }
+        }
+        if (match) {
+          methodMatches.push(methodInfo);
+        }
+      }
     }
+
+    if (methodMatches.length === 0) {
+      throw new InvalidMethodCallError(
+        `No method matching signature ${n.identifier}(${argumentDescriptors.join(',')}) found.`
+      );
+    }
+
+    const selectedMethod = methodMatches[0];
+    const fullDescriptor = selectedMethod.typeDescriptor // Full descriptor, e.g., "(Ljava/lang/String;C)V"
+    const paramDescriptor = fullDescriptor.slice(1, fullDescriptor.indexOf(')')) // Extract "Ljava/lang/String;C"
+    const params = paramDescriptor.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
 
     n.argumentList.forEach((x, i) => {
       const argCompileResult = compile(x, cg)
@@ -807,47 +844,29 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const expectedType = params?.[i] // Expected parameter type
       const stackSizeChange = handleImplicitTypeConversion(normalizedType, expectedType ?? '', cg)
       maxStack = Math.max(maxStack, i + 1 + argCompileResult.stackSize + stackSizeChange)
-
-      argTypes.push(normalizedType)
     })
-    const argDescriptor = '(' + argTypes.join('') + ')'
 
-    let foundMethod = false
-    const methodInfos = symbolInfos[symbolInfos.length - 1] as MethodInfos
-    for (let i = 0; i < methodInfos.length; i++) {
-      const methodInfo = methodInfos[i]
-      if (methodInfo.typeDescriptor.includes(argDescriptor)) {
-        const method = cg.constantPoolManager.indexMethodrefInfo(
-          methodInfo.parentClassName,
-          methodInfo.name,
-          methodInfo.typeDescriptor
-        )
-        if (
-          n.identifier.startsWith('this.') &&
-          !(methodInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)
-        ) {
-          // load "this"
-          cg.code.push(OPCODE.ALOAD, 0)
-        }
-        cg.code.push(
-          methodInfo.accessFlags & METHOD_FLAGS.ACC_STATIC
-            ? OPCODE.INVOKESTATIC
-            : OPCODE.INVOKEVIRTUAL,
-          0,
-          method
-        )
-        resultType = methodInfo.typeDescriptor.slice(argDescriptor.length)
-        foundMethod = true
-        break
-      }
+    const method = cg.constantPoolManager.indexMethodrefInfo(
+      selectedMethod.parentClassName,
+      selectedMethod.name,
+      selectedMethod.typeDescriptor
+    );
+    if (
+      n.identifier.startsWith('this.') &&
+      !(selectedMethod.accessFlags & FIELD_FLAGS.ACC_STATIC)
+    ) {
+      cg.code.push(OPCODE.ALOAD, 0);
     }
+    cg.code.push(
+      selectedMethod.accessFlags & METHOD_FLAGS.ACC_STATIC
+        ? OPCODE.INVOKESTATIC
+        : OPCODE.INVOKEVIRTUAL,
+      0,
+      method
+    );
+    resultType = selectedMethod.typeDescriptor.slice(selectedMethod.typeDescriptor.indexOf(')') + 1);
 
-    if (!foundMethod) {
-      throw new InvalidMethodCallError(
-        `No method matching signature ${n.identifier}${argDescriptor} found.`
-      )
-    }
-    return { stackSize: maxStack, resultType: resultType }
+    return { stackSize: maxStack, resultType: resultType };
   },
 
   Assignment: (node: Node, cg: CodeGenerator) => {

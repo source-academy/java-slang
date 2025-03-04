@@ -12,8 +12,10 @@ import { classTest } from './tests/class.test'
 import { assignmentExpressionTest } from './tests/assignmentExpression.test'
 import { castExpressionTest } from './tests/castExpression.test'
 import { switchTest } from './tests/switch.test'
+import { methodOverloadingTest } from './tests/methodOverloading.test'
 
 describe('compiler tests', () => {
+  methodOverloadingTest()
   switchTest()
   castExpressionTest()
   printlnTest()
