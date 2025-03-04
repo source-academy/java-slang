@@ -345,6 +345,12 @@ function getExpressionType(node: Node, cg: CodeGenerator): string {
   return resultType;
 }
 
+function isSubtype(fromType: string, toType: string): boolean {
+  return (fromType === toType) ||
+    (typeConversionsImplicit[`${fromType}->${toType}`] !== undefined) ||
+    (areClassTypesCompatible(fromType, toType))
+}
+
 const isNullLiteral = (node: Node) => {
   return node.kind === 'Literal' && node.literalType.kind === 'NullLiteral'
 }
@@ -809,9 +815,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             continue
           }
 
-          if ((params[i] !== argumentDescriptors[i]) &&
-            (typeConversionsImplicit[`${argumentDescriptors[i]}->${params[i]}`] === undefined) &&
-            (!areClassTypesCompatible(argumentDescriptors[i], params[i]))) {
+          if (!isSubtype(argumentDescriptors[i], params[i])) {
             match = false;
             break;
           }
@@ -828,7 +832,33 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       );
     }
 
-    const selectedMethod = methodMatches[0];
+    console.log(methodMatches)
+
+    let selectedMethod = methodMatches[0]
+
+    if (methodMatches.length > 1) {
+      for (let i = 1; i < methodMatches.length; i++) {
+        const paramDescriptor = methodMatches[i].typeDescriptor.slice(1, methodMatches[i].typeDescriptor.indexOf(')'));
+        const params = paramDescriptor.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || [];
+
+        const paramDescriptorCurrent = selectedMethod.typeDescriptor.slice(1, selectedMethod.typeDescriptor.indexOf(')'));
+        const paramsCurrent = paramDescriptorCurrent.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || [];
+
+        if (params.map((param, index) => isSubtype(param, paramsCurrent[index])).reduce((a, b) => a && b)) {
+          selectedMethod = methodMatches[i];
+          console.debug('This')
+        } else if (paramsCurrent.map((param, index) => isSubtype(param, params[index])).reduce((a, b) => a && b)) {
+          // do nothing
+          console.debug('Other')
+        } else {
+          console.debug('Ambiguous')
+          throw new InvalidMethodCallError(
+            `Ambiguous method call: ${n.identifier}(${argumentDescriptors.join(',')})`
+          )
+        }
+      }
+    }
+
     const fullDescriptor = selectedMethod.typeDescriptor // Full descriptor, e.g., "(Ljava/lang/String;C)V"
     const paramDescriptor = fullDescriptor.slice(1, fullDescriptor.indexOf(')')) // Extract "Ljava/lang/String;C"
     const params = paramDescriptor.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
