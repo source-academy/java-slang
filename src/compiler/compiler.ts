@@ -31,35 +31,55 @@ export class Compiler {
   private methods: Array<MethodInfo>
   private attributes: Array<AttributeInfo>
   private className: string
+  private parentClassName: string
 
   constructor() {
     this.setup()
   }
 
   private setup() {
+    this.symbolTable = new SymbolTable()
     this.constantPoolManager = new ConstantPoolManager()
+  }
+
+  private resetClassFileState() {
     this.interfaces = []
     this.fields = []
     this.methods = []
     this.attributes = []
-    this.symbolTable = new SymbolTable()
   }
 
   compile(ast: AST) {
     this.setup()
     this.symbolTable.handleImports(ast.importDeclarations)
     const classFiles: Array<ClassFile> = []
-    ast.topLevelClassOrInterfaceDeclarations.forEach(x => classFiles.push(this.compileClass(x)))
-    return classFiles[0]
+
+    ast.topLevelClassOrInterfaceDeclarations.forEach((decl, index) => {
+      const className = decl.typeIdentifier
+      const parentClassName = decl.sclass ? decl.sclass : 'java/lang/Object'
+      const accessFlags = generateClassAccessFlags(decl.classModifier)
+      this.symbolTable.insertClassInfo(
+        { name: className, accessFlags: accessFlags, parentClassName: parentClassName },
+        true
+      )
+    })
+
+    ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
+      this.resetClassFileState()
+      const classFile = this.compileClass(decl)
+      classFiles.push(classFile)
+    })
+
+    return classFiles
   }
 
   private compileClass(classNode: ClassDeclaration): ClassFile {
-    const parentClassName = 'java/lang/Object'
     this.className = classNode.typeIdentifier
+    this.parentClassName = classNode.sclass ? classNode.sclass : 'java/lang/Object'
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
-    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
+    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags }, false)
 
-    const superClassIndex = this.constantPoolManager.indexClassInfo(parentClassName)
+    const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
     this.constantPoolManager.indexUtf8Info('Code')
     this.handleClassBody(classNode.classBody)
@@ -153,7 +173,7 @@ export class Compiler {
       this.symbolTable.insertFieldInfo({
         name: v.variableDeclaratorId,
         accessFlags: accessFlags,
-        parentClassName: this.className,
+        parentClassName: this.parentClassName,
         typeName: fullType,
         typeDescriptor: typeDescriptor
       })
@@ -170,8 +190,9 @@ export class Compiler {
     this.symbolTable.insertMethodInfo({
       name: methodName,
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
-      parentClassName: this.className,
-      typeDescriptor: descriptor
+      parentClassName: this.parentClassName,
+      typeDescriptor: descriptor,
+      className: this.className
     })
   }
 
@@ -183,8 +204,9 @@ export class Compiler {
     this.symbolTable.insertMethodInfo({
       name: '<init>',
       accessFlags: generateMethodAccessFlags(constructor.constructorModifier),
-      parentClassName: this.className,
-      typeDescriptor: descriptor
+      parentClassName: this.parentClassName,
+      typeDescriptor: descriptor,
+      className: this.className
     })
   }
 
@@ -199,7 +221,9 @@ export class Compiler {
     const descriptorIndex = this.constantPoolManager.indexUtf8Info(descriptor)
 
     const attributes: Array<AttributeInfo> = []
-    attributes.push(generateCode(this.symbolTable, this.constantPoolManager, methodNode))
+    attributes.push(
+      generateCode(this.symbolTable, this.constantPoolManager, this.className, methodNode)
+    )
 
     this.methods.push({
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
