@@ -107,9 +107,7 @@ export class SymbolTable {
           {
             name: c.className,
             accessFlags: generateClassAccessFlags(c.accessFlags)
-          },
-          true
-        )
+          })
         c.fields.forEach(f =>
           this.insertFieldInfo({
             name: f.fieldName,
@@ -137,7 +135,7 @@ export class SymbolTable {
     return new Map<Symbol, SymbolNode>()
   }
 
-  private returnToRoot() {
+  public returnToRoot() {
     this.tables = [this.tables[0]]
     this.curTable = this.tables[0]
     this.curIdx = 0
@@ -174,7 +172,7 @@ export class SymbolTable {
     this.curTable = this.tables[this.curIdx]
   }
 
-  insertClassInfo(info: ClassInfo, atRoot: boolean) {
+  insertClassInfo(info: ClassInfo) {
     const key = generateSymbol(info.name, SymbolType.CLASS)
 
     if (this.curTable.has(key)) {
@@ -187,12 +185,7 @@ export class SymbolTable {
     }
     this.curTable.set(key, symbolNode)
 
-    // this logic will need to be modified for inner classes
-    if (atRoot) {
-      this.tables[++this.curIdx] = symbolNode.children
-    } else {
-      this.tables[++this.curIdx] = this.getNewTable()
-    }
+    this.tables[++this.curIdx] = symbolNode.children
     this.curTable = this.tables[this.curIdx]
     this.curClassIdx = this.curIdx
   }
@@ -282,7 +275,7 @@ export class SymbolTable {
 
   private getClassTable(name: string): Table {
     let key = generateSymbol(name, SymbolType.CLASS)
-    for (let i = this.curIdx; i > 0; i--) {
+    for (let i = this.curIdx; i >= 0; i--) {
       const table = this.tables[i]
       if (table.has(key)) {
         return table.get(key)!.children

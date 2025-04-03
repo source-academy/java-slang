@@ -35,7 +35,6 @@ import { ConstantPoolManager } from './constant-pool-manager'
 import {
   AmbiguousMethodCallError,
   ConstructNotSupportedError,
-  MethodNotFoundError,
   NoMethodMatchingSignatureError
 } from './error'
 import { FieldInfo, MethodInfos, SymbolInfo, SymbolTable, VariableInfo } from './symbol-table'
@@ -206,10 +205,22 @@ type CompileResult = {
 }
 const EMPTY_TYPE: string = ''
 
-function areClassTypesCompatible(fromType: string, toType: string): boolean {
+function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGenerator): boolean {
   const cleanFrom = fromType.replace(/^L|;$/g, '')
   const cleanTo = toType.replace(/^L|;$/g, '')
-  return cleanFrom === cleanTo
+  if (cleanFrom === cleanTo) return true;
+
+  try {
+    let current = cg.symbolTable.queryClass(cleanFrom);
+    while (current.parentClassName) {
+      const parentClean = current.parentClassName;
+      if (parentClean === cleanTo) return true;
+      current = cg.symbolTable.queryClass(parentClean);
+    }
+  } catch (e) {
+    return false;
+  }
+  return false;
 }
 
 function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator): number {
@@ -218,7 +229,7 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
   }
 
   if (fromType.startsWith('L') || toType.startsWith('L')) {
-    if (areClassTypesCompatible(fromType, toType) || fromType === '') {
+    if (areClassTypesCompatible(fromType, toType, cg) || fromType === '') {
       return 0
     }
     throw new Error(`Unsupported class type conversion: ${fromType} -> ${toType}`)
@@ -350,11 +361,11 @@ function getExpressionType(node: Node, cg: CodeGenerator): string {
   return resultType
 }
 
-function isSubtype(fromType: string, toType: string): boolean {
+function isSubtype(fromType: string, toType: string, cg: CodeGenerator): boolean {
   return (
     fromType === toType ||
     typeConversionsImplicit[`${fromType}->${toType}`] !== undefined ||
-    areClassTypesCompatible(fromType, toType)
+    areClassTypesCompatible(fromType, toType, cg)
   )
 }
 
@@ -738,13 +749,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     })
     const argDescriptor = '(' + argTypes.join('') + ')'
 
-    const symbolInfos = cg.symbolTable.queryMethod('<init>')
-    const methodInfos = symbolInfos[symbolInfos.length - 1] as MethodInfos
+    const methodInfos = cg.symbolTable.queryMethod('<init>') as MethodInfos
     for (let i = 0; i < methodInfos.length; i++) {
       const methodInfo = methodInfos[i]
-      if (methodInfo.typeDescriptor.includes(argDescriptor)) {
+      if (methodInfo.typeDescriptor.includes(argDescriptor) && methodInfo.className == id) {
         const method = cg.constantPoolManager.indexMethodrefInfo(
-          methodInfo.parentClassName,
+          methodInfo.className,
           methodInfo.name,
           methodInfo.typeDescriptor
         )
@@ -778,22 +788,31 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const n = node as MethodInvocation
     let maxStack = 1
     let resultType = EMPTY_TYPE
-    const candidateMethods: MethodInfos = []
+    let candidateMethods: MethodInfos = []
+    let unqualifiedCall = false
 
-    // TODO: Write logic to get candidateMethods
     // --- Handle super. calls ---
     if (n.identifier.startsWith('super.')) {
+      candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(6)).pop() as MethodInfos
+      candidateMethods.filter(method =>
+        method.className == cg.symbolTable.queryClass(cg.currentClass).parentClassName)
+      cg.code.push(OPCODE.ALOAD, 0);
     }
     // --- Handle qualified calls (e.g. System.out.println or p.show) ---
     else if (n.identifier.includes('.')) {
+      // TODO: Load target object before method call
+      candidateMethods = cg.symbolTable.queryMethod(n.identifier).pop() as MethodInfos
     }
-    // --- Handle unqualified calls (including this.method()) ---
+    // --- Handle unqualified calls ---
     else {
+      candidateMethods = cg.symbolTable.queryMethod(n.identifier) as MethodInfos
+      unqualifiedCall = true;
     }
 
     // Filter candidate methods by matching the argument list.
     const argDescs = n.argumentList.map(arg => getExpressionType(arg, cg))
     const methodMatches: MethodInfos = []
+
     for (let i = 0; i < candidateMethods.length; i++) {
       const m = candidateMethods[i]
       const fullDesc = m.typeDescriptor // e.g., "(Ljava/lang/String;C)V"
@@ -805,7 +824,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         const argType = argDescs[i]
         // Allow B/S to match int.
         if ((argType === 'B' || argType === 'S') && params[i] === 'I') continue
-        if (!isSubtype(argType, params[i])) {
+        if (!isSubtype(argType, params[i], cg)) {
           match = false
           break
         }
@@ -829,15 +848,19 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             .slice(1, methodMatches[i].typeDescriptor.indexOf(')'))
             .match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
         if (
-          candParams.map((p, idx) => isSubtype(p, currParams[idx])).reduce((a, b) => a && b, true)
+          candParams.map((p, idx) => isSubtype(p, currParams[idx], cg)).reduce((a, b) => a && b, true)
         ) {
           selectedMethod = methodMatches[i]
         } else if (
-          !currParams.map((p, idx) => isSubtype(p, candParams[idx])).reduce((a, b) => a && b, true)
+          !currParams.map((p, idx) => isSubtype(p, candParams[idx], cg)).reduce((a, b) => a && b, true)
         ) {
           throw new AmbiguousMethodCallError(n.identifier + argDescs.join(','))
         }
       }
+    }
+
+    if (unqualifiedCall && !(selectedMethod.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+      cg.code.push(OPCODE.ALOAD, 0)
     }
 
     // Compile each argument.

@@ -4,23 +4,23 @@ const testCases: testCase[] = [
   {
     comment: 'Basic method overriding',
     program: `
-      class Parent1 {
+      class Parent {
         public void show() {
           System.out.println("Parent show");
         }
       }
-      class Child1 extends Parent1 {
+      class Child extends Parent {
         public void show() {
           System.out.println("Child show");
         }
       }
-      public class Main1 {
+      public class Main {
         public static void main(String[] args) {
-          Parent1 p = new Parent1();
+          Parent p = new Parent();
           p.show(); // Parent show
-          Child1 c = new Child1();
+          Child c = new Child();
           c.show(); // Child show
-          Parent1 ref = new Child1();
+          Parent ref = new Child();
           ref.show(); // Child show (dynamic dispatch)
         }
       }

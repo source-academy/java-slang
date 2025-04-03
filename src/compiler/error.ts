@@ -34,12 +34,6 @@ export class ConstructNotSupportedError extends CompileError {
   }
 }
 
-export class MethodNotFoundError extends CompileError {
-  constructor(methodName: string, className: string) {
-    super(`Method ${methodName} not found in inheritance chain of ${className}`)
-  }
-}
-
 export class NoMethodMatchingSignatureError extends CompileError {
   constructor(signature: string) {
     super(`No method matching signature ${signature}) found.`)

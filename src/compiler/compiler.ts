@@ -39,10 +39,10 @@ export class Compiler {
 
   private setup() {
     this.symbolTable = new SymbolTable()
-    this.constantPoolManager = new ConstantPoolManager()
   }
 
   private resetClassFileState() {
+    this.constantPoolManager = new ConstantPoolManager()
     this.interfaces = []
     this.fields = []
     this.methods = []
@@ -54,14 +54,13 @@ export class Compiler {
     this.symbolTable.handleImports(ast.importDeclarations)
     const classFiles: Array<ClassFile> = []
 
-    ast.topLevelClassOrInterfaceDeclarations.forEach((decl, index) => {
+    ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
       const className = decl.typeIdentifier
       const parentClassName = decl.sclass ? decl.sclass : 'java/lang/Object'
       const accessFlags = generateClassAccessFlags(decl.classModifier)
       this.symbolTable.insertClassInfo(
-        { name: className, accessFlags: accessFlags, parentClassName: parentClassName },
-        true
-      )
+        { name: className, accessFlags: accessFlags, parentClassName: parentClassName })
+      this.symbolTable.returnToRoot()
     })
 
     ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
@@ -77,7 +76,8 @@ export class Compiler {
     this.className = classNode.typeIdentifier
     this.parentClassName = classNode.sclass ? classNode.sclass : 'java/lang/Object'
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
-    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags }, false)
+    this.symbolTable.extend()
+    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
