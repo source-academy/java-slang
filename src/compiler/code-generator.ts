@@ -800,7 +800,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
     // --- Handle qualified calls (e.g. System.out.println or p.show) ---
     else if (n.identifier.includes('.')) {
-      // TODO: Load target object before method call
+      const lastDot = n.identifier.lastIndexOf('.');
+      const receiverStr = n.identifier.slice(0, lastDot);
+      const recvRes = compile({ kind: 'ExpressionName', name: receiverStr }, cg);
+      maxStack = Math.max(maxStack, recvRes.stackSize);
       candidateMethods = cg.symbolTable.queryMethod(n.identifier).pop() as MethodInfos
     }
     // --- Handle unqualified calls ---
@@ -1220,7 +1223,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         }
         const fieldInfo = fieldInfos[i] as FieldInfo
         const field = cg.constantPoolManager.indexFieldrefInfo(
-          fieldInfo.parentClassName,
+          fieldInfo.typeName,
           fieldInfo.name,
           fieldInfo.typeDescriptor
         )
