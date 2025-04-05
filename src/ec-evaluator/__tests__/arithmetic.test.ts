@@ -207,6 +207,102 @@ it("evaluate LocalVariableDeclarationStatement to a complex arithmetic operation
   expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
   // TODO test env
 });
+it("evaluate LocalVariableDeclarationStatement with prefix increment operation correctly", () => {
+  const programStr = `
+    public class Test {
+      public static void main(String[] args) {
+        int a = 5;
+        int b = ++a;
+      }
+    }
+    `;
+
+  const compilationUnit = parse(programStr);
+  expect(compilationUnit).toBeTruthy();
+
+  const context = createContextStub();
+  context.control.push(compilationUnit!);
+
+  const result = evaluate(context);
+
+  const expectedControlTrace = [
+    "CompilationUnit",
+
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
+
+    "Env", // from NormalClassDeclaration
+    "MethodDeclaration", // public static void main(String[] args) {...}
+    "ConstructorDeclaration", // Test() {...}
+
+    "Pop",
+    "MethodInvocation", // Test.main([""])
+
+    "Invocation", // ()
+    "Literal", // [""]
+    "ResOverride",
+    "ExpressionName", // Test
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
+
+    "Env", // from Invocation
+    "Marker",
+    "Block", // {...}
+
+    "Env", // from Block
+    "ReturnStatement", // return;
+    "LocalVariableDeclarationStatement", // int a = 5;
+
+    "ExpressionStatement", // b = ++a;
+    "LocalVariableDeclarationStatement", // int b;
+
+    "Pop",
+    "Assignment", // b = ++a
+    "Assign", // =
+    "UnaryOperation", // ++a
+    "EvalVariable", // a
+
+    "UnaryOperation", // +
+    "Literal", // 5
+    "EvalVariable", // a
+
+    "Pop",
+    "MethodInvocation", // Test.main([""])
+
+    "Reset", // return
+    "Void",
+
+    "Reset", // skip Env from Invocation
+  ];
+
+  const expectedStashTrace = [
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
+    "main", // ResOverride
+    `[""]`, // Literal
+    "a", // EvalVariable
+    "5", // Literal
+    "6", // UnaryOperation
+    "b", // EvalVariable
+    "6", // Assign
+    "Void", // Void
+  ];
+
+  expect(result).toEqual(undefined);
+  expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
+  expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
+});
 
 it("evaluate FieldDeclaration to a basic arithmetic expression without brackets to enforce precedence correctly", () => {
   const programStr = `
@@ -300,6 +396,104 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
   expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
   expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
   // TODO test env
+});
+it("evaluate LocalVariableDeclarationStatement with postfix increment operation correctly", () => {
+  const programStr = `
+    public class Test {
+      public static void main(String[] args) {
+        int a = 5;
+        int b = a++;
+      }
+    }
+    `;
+
+  const compilationUnit = parse(programStr);
+  expect(compilationUnit).toBeTruthy();
+
+  const context = createContextStub();
+  context.control.push(compilationUnit!);
+
+  const result = evaluate(context);
+
+  const expectedControlTrace = [
+    "CompilationUnit",
+
+    "ExpressionStatement", // Test.main([""]);
+    "NormalClassDeclaration", // public class Test {...}
+    "NormalClassDeclaration", // class Object {...}
+
+    "Env", // from NormalClassDeclaration
+    "ConstructorDeclaration", // Object() {...}
+
+    "Env", // from NormalClassDeclaration
+    "MethodDeclaration", // public static void main(String[] args) {...}
+    "ConstructorDeclaration", // Test() {...}
+
+    "Pop",
+    "MethodInvocation", // Test.main([""])
+
+    "Invocation", // ()
+    "Literal", // [""]
+    "ResOverride",
+    "ExpressionName", // Test
+    "ResOverload", // main
+    "ResType", // [""]
+    "ResType", // Test
+
+    "Deref",
+    "EvalVariable", // Test
+
+    "Env", // from Invocation
+    "Marker",
+    "Block", // {...}
+
+    "Env", // from Block
+    "ReturnStatement", // return;
+    "LocalVariableDeclarationStatement", // int a = 5;
+
+    "ExpressionStatement", // b = a++;
+    "LocalVariableDeclarationStatement", // int b;
+
+    "Pop",
+    "Assignment", // b = a++
+    "Assign", // =
+    "UnaryOperation", // a++
+    "EvalVariable", // a
+
+    "EvalVariable", // a
+    "Literal", // 5
+
+    "UnaryOperation", // +
+    "Literal", // 5
+
+    "Pop",
+    "MethodInvocation", // Test.main([""])
+
+    "Reset", // return
+    "Void",
+
+    "Reset", // skip Env from Invocation
+  ];
+
+  const expectedStashTrace = [
+    "Test", // ResType
+    "String[]", // ResType
+    "main", // ResOverload
+    "Test", // EvalVariable
+    "Test", // Deref
+    "main", // ResOverride
+    `[""]`, // Literal
+    "a", // EvalVariable
+    "5", // Literal
+    "5", // UnaryOperation
+    "b", // EvalVariable
+    "5", // Assign
+    "Void", // Void
+  ];
+
+  expect(result).toEqual(undefined);
+  expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
+  expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
 });
 
 it("evaluate FieldDeclaration to a complex arithmetic expression without brackets to enforce precedence correctly", () => {

@@ -413,6 +413,31 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(command.left);
   },
 
+  PrefixUnaryExpression: (
+    command: PrefixUnaryExpression,
+    environment: Environment,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const operator = command.operator;  // Prefix operator (e.g., "++" or "--")
+    const operand = command.expression;  // The variable being operated on (e.g., x)
+
+    // Dereference the operand and push instructions to evaluate the operand
+    control.push(instr.derefInstr(operand));
+    // Apply the prefix operation (before using the value)
+    if (operator === '++') {
+      // Prefix increment: evaluate operand, then increment
+      control.push(instr.binOpInstr('+', operand));  // x = x + 1
+    } else if (operator === '--') {
+      // Prefix decrement: evaluate operand, then decrement
+      control.push(instr.binOpInstr('-', operand));  // x = x - 1
+    }
+
+    // Operand has been modified before it's used in the expression
+    },
+
+
+
   [InstrType.POP]: (
     _command: Instr,
     _environment: Environment,
@@ -420,6 +445,31 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash: Stash,
   ) => {
     stash.pop();
+  },
+
+  PostfixUnaryExpression: (
+    command: PostfixUnaryExpression,
+    environment: Environment,
+    control: Control,
+    stash: Stash,
+  ) => {
+    const operator = command.operator;  // Postfix operator (e.g., "++" or "--")
+    const operand = command.expression;  // The variable being operated on (e.g., x)
+
+
+
+    // Apply the postfix operation (after using the value)
+    if (operator === '++') {
+      // Postfix increment: use operand's value first, then increment it
+      control.push(instr.binOpInstr('+', operand));  // x = x + 1
+    } else if (operator === '--') {
+      // Postfix decrement: use operand's value first, then decrement it
+      control.push(instr.binOpInstr('-', operand));  // x = x - 1
+    }
+    // Push instructions to evaluate the operand and use its value
+    control.push(instr.derefInstr(operand));
+
+    // Operand has been used in the expression, then modified afterwards
   },
   
   [InstrType.ASSIGNMENT]: (
@@ -842,3 +892,4 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // No post-processing required for constructor.
   },
 };
+
