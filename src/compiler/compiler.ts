@@ -173,7 +173,7 @@ export class Compiler {
       this.symbolTable.insertFieldInfo({
         name: v.variableDeclaratorId,
         accessFlags: accessFlags,
-        parentClassName: this.parentClassName,
+        parentClassName: this.className,
         typeName: fullType,
         typeDescriptor: typeDescriptor
       })

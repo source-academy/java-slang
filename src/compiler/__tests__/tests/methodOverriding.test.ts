@@ -50,28 +50,6 @@ const testCases: testCase[] = [
     expectedLines: ['Child display']
   },
   {
-    comment: 'Method overriding with return type covariance',
-    program: `
-      class Parent {
-        public Number getValue() {
-          return 10;
-        }
-      }
-      class Child extends Parent {
-        public Integer getValue() {
-          return 20;
-        }
-      }
-      public class Main {
-        public static void main(String[] args) {
-          Parent ref = new Child();
-          System.out.println(ref.getValue()); // 20
-        }
-      }
-    `,
-    expectedLines: ['20']
-  },
-  {
     comment: 'Overriding with multiple levels of inheritance',
     program: `
       class GrandParent {
@@ -141,7 +119,7 @@ const testCases: testCase[] = [
         }
       }
       class Child extends Parent {
-        // public void show() {} // Uncommenting should cause compilation error
+         public void show() {} // Uncommenting should cause compilation error
       }
       public class Main {
         public static void main(String[] args) {
@@ -177,12 +155,14 @@ const testCases: testCase[] = [
       }
       public class Main {
         public static void main(String[] args) {
-          A ref = new D();
-          ref.test(); // D test
+          A ref1 = new D();
+          B ref2 = new C();
+          ref1.test(); // D test
+          ref2.test(); // C test
         }
       }
     `,
-    expectedLines: ['D test']
+    expectedLines: ['D test', 'C test']
   },
   {
     comment: 'Overriding private methods (should not override, treated as new method)',

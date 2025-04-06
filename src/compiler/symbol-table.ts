@@ -231,7 +231,7 @@ export class SymbolTable {
   insertVariableInfo(info: VariableInfo) {
     const key = generateSymbol(info.name, SymbolType.VARIABLE)
 
-    for (let i = this.curIdx; i > this.curClassIdx; i--) {
+    for (let i = this.curIdx; i >= this.curClassIdx; i--) {
       if (this.tables[i].has(key)) {
         throw new SymbolRedeclarationError(info.name)
       }
@@ -312,7 +312,7 @@ export class SymbolTable {
     tokens.forEach((token, i) => {
       if (i === 0) {
         const key1 = generateSymbol(token, SymbolType.VARIABLE)
-        for (let i = this.curIdx; i > this.curClassIdx; i--) {
+        for (let i = this.curIdx; i >= this.curClassIdx; i--) {
           if (this.tables[i].has(key1)) {
             const node = this.tables[i].get(key1)!
             token = (node.info as VariableInfo).typeName
@@ -359,7 +359,7 @@ export class SymbolTable {
     }
 
     const key1 = generateSymbol(name, SymbolType.VARIABLE)
-    for (let i = this.curIdx; i > this.curClassIdx; i--) {
+    for (let i = this.curIdx; i >= this.curClassIdx; i--) {
       if (this.tables[i].has(key1)) {
         throw new InvalidMethodCallError(name)
       }
@@ -391,7 +391,7 @@ export class SymbolTable {
     const key1 = generateSymbol(name, SymbolType.VARIABLE)
     const key2 = generateSymbol(name, SymbolType.FIELD)
 
-    for (let i = this.curIdx; i > this.curClassIdx; i--) {
+    for (let i = this.curIdx; i >= this.curClassIdx; i--) {
       const table = this.tables[i]
       if (table.has(key1)) {
         return (table.get(key1) as SymbolNode).info as VariableInfo

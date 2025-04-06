@@ -793,7 +793,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     // --- Handle super. calls ---
     if (n.identifier.startsWith('super.')) {
-      candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(6)).pop() as MethodInfos
+      candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(6)) as MethodInfos
       candidateMethods.filter(method =>
         method.className == cg.symbolTable.queryClass(cg.currentClass).parentClassName)
       cg.code.push(OPCODE.ALOAD, 0);
@@ -802,9 +802,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     else if (n.identifier.includes('.')) {
       const lastDot = n.identifier.lastIndexOf('.');
       const receiverStr = n.identifier.slice(0, lastDot);
-      const recvRes = compile({ kind: 'ExpressionName', name: receiverStr }, cg);
-      maxStack = Math.max(maxStack, recvRes.stackSize);
-      candidateMethods = cg.symbolTable.queryMethod(n.identifier).pop() as MethodInfos
+
+      if (receiverStr === 'this') {
+        candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(5)) as MethodInfos
+        console.debug(candidateMethods)
+        candidateMethods.filter(method =>
+          method.className == cg.currentClass)
+        cg.code.push(OPCODE.ALOAD, 0);
+      } else {
+        const recvRes = compile({ kind: 'ExpressionName', name: receiverStr }, cg);
+        maxStack = Math.max(maxStack, recvRes.stackSize);
+        candidateMethods = cg.symbolTable.queryMethod(n.identifier).pop() as MethodInfos
+      }
     }
     // --- Handle unqualified calls ---
     else {
@@ -1210,7 +1219,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     }
 
-    const info = cg.symbolTable.queryVariable(name)
+    let info: VariableInfo | SymbolInfo[]
+    try {
+      info = cg.symbolTable.queryVariable(name)
+    } catch (e) {
+      return { stackSize: 1, resultType: 'Ljava/lang/Class;' };
+    }
     if (Array.isArray(info)) {
       const fieldInfos = info
       for (let i = 0; i < fieldInfos.length; i++) {
@@ -1223,7 +1237,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         }
         const fieldInfo = fieldInfos[i] as FieldInfo
         const field = cg.constantPoolManager.indexFieldrefInfo(
-          fieldInfo.typeName,
+          fieldInfo.parentClassName,
           fieldInfo.name,
           fieldInfo.typeDescriptor
         )
