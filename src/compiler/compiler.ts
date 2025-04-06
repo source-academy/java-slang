@@ -1,4 +1,4 @@
-import { ClassFile } from '../ClassFile/types'
+import { Class, ClassFile } from '../ClassFile/types'
 import { AST } from '../ast/types/packages-and-modules'
 import {
   ClassBodyDeclaration,
@@ -52,7 +52,7 @@ export class Compiler {
   compile(ast: AST) {
     this.setup()
     this.symbolTable.handleImports(ast.importDeclarations)
-    const classFiles: Array<ClassFile> = []
+    const classFiles: Array<Class> = []
 
     ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
       const className = decl.typeIdentifier
@@ -66,7 +66,7 @@ export class Compiler {
     ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
       this.resetClassFileState()
       const classFile = this.compileClass(decl)
-      classFiles.push(classFile)
+      classFiles.push({classFile: classFile, className: this.className})
     })
 
     return classFiles
