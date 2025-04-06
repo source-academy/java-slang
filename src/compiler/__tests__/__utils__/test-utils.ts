@@ -30,9 +30,9 @@ export function runTest(program: string, expectedLines: string[]) {
     console.log(inspect(ast, false, null, true))
   }
 
-  const classFiles = compile(ast as AST)
-  for (let classFile of classFiles) {
-    binaryWriter.writeBinary(classFile, pathToTestDir)
+  const classes = compile(ast as AST)
+  for (let c of classes) {
+    binaryWriter.writeBinary(c.classFile, pathToTestDir)
   }
 
   const prevDir = process.cwd()

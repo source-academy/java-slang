@@ -45,3 +45,9 @@ export class AmbiguousMethodCallError extends CompileError {
     super(`Ambiguous method call: ${signature}`)
   }
 }
+
+export class OverrideFinalMethodError extends CompileError {
+  constructor(name: string) {
+    super(`Cannot override final method ${name}`)
+  }
+}

@@ -119,7 +119,7 @@ const testCases: testCase[] = [
         }
       }
       class Child extends Parent {
-         public void show() {} // Uncommenting should cause compilation error
+         // public void show() {} // Uncommenting should cause compilation error
       }
       public class Main {
         public static void main(String[] args) {
@@ -185,6 +185,139 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ['Child secret']
+  },
+  {
+    comment: 'Using this to call an instance method',
+    program: `
+      class Self {
+        public void print() {
+          System.out.println("Self print");
+        }
+        public void callSelf() {
+          this.print();
+        }
+      }
+      public class Main {
+        public static void main(String[] args) {
+          Self s = new Self();
+          s.callSelf(); // Self print
+        }
+      }
+    `,
+    expectedLines: ['Self print']
+  },
+  {
+    comment: 'Using super to invoke parent method',
+    program: `
+      class Base {
+        public void greet() {
+          System.out.println("Hello from Base");
+        }
+      }
+      class Derived extends Base {
+        public void greet() {
+          super.greet();
+          System.out.println("Hello from Derived");
+        }
+      }
+      public class Main {
+        public static void main(String[] args) {
+          Derived d = new Derived();
+          d.greet(); 
+          // Expected:
+          // Hello from Base
+          // Hello from Derived
+        }
+      }
+    `,
+    expectedLines: ['Hello from Base', 'Hello from Derived']
+  },
+  {
+    comment: 'Polymorphic call with dynamic dispatch',
+    program: `
+      class Animal {
+        public void speak() {
+          System.out.println("Animal sound");
+        }
+      }
+      class Dog extends Animal {
+        public void speak() {
+          System.out.println("Bark");
+        }
+        public void callSuper() {
+          super.speak();
+        }
+      }
+      public class Main {
+        public static void main(String[] args) {
+          Dog d = new Dog();
+          d.speak(); // Bark
+          d.callSuper(); // Animal sound
+        }
+      }
+    `,
+    expectedLines: ['Bark', 'Animal sound']
+  },
+  {
+    comment: 'Method overloading resolution',
+    program: `
+      class Overload {
+        public void test(int a) {
+          System.out.println("int");
+        }
+        public void test(double a) {
+          System.out.println("double");
+        }
+      }
+      public class Main {
+        public static void main(String[] args) {
+          Overload o = new Overload();
+          o.test(5);   // int
+          o.test(5.0); // double
+        }
+      }
+    `,
+    expectedLines: ['int', 'double']
+  },
+  {
+    comment: 'Overriding on a superclass reference',
+    program: `
+      class X {
+        public void foo() {
+          System.out.println("X foo");
+        }
+      }
+      class Y extends X {
+        public void foo() {
+          System.out.println("Y foo");
+        }
+      }
+      public class Main {
+        public static void main(String[] args) {
+          X x = new Y();
+          x.foo(); // Y foo
+        }
+      }
+    `,
+    expectedLines: ['Y foo']
+  },
+  {
+    comment: 'Implicit conversion (byte to int)',
+    program: `
+      class Implicit {
+        public void process(int a) {
+          System.out.println("Processed int");
+        }
+      }
+      public class Main {
+        public static void main(String[] args) {
+          Implicit imp = new Implicit();
+          byte b = (byte) 10;
+          imp.process(b); // Processed int
+        }
+      }
+    `,
+    expectedLines: ['Processed int']
   }
 ]
 
