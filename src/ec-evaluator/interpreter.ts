@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
 
-import { 
+import {
   Assignment,
   BinaryExpression,
   Block,
@@ -13,10 +13,10 @@ import {
   LocalVariableDeclarationStatement,
   LocalVariableType,
   MethodInvocation,
-  ReturnStatement,
+  ReturnStatement, TernaryExpression,
   VariableDeclarator,
-  Void,
-} from "../ast/types/blocks-and-statements";
+  Void
+} from '../ast/types/blocks-and-statements'
 import {
   ConstructorDeclaration,
   FieldDeclaration,
@@ -58,8 +58,8 @@ import {
   ResConOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  StructType,
-} from "./types";
+  StructType, CondInstr
+} from './types'
 import { 
   defaultValues,
   evaluateBinaryExpression,
@@ -412,6 +412,17 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(command.right);
     control.push(command.left);
   },
+
+  TernaryExpression: (
+    command: TernaryExpression,
+    _environment: Environment,
+    control: Control,
+    _stash: Stash,
+  ) => {
+    control.push(instr.condInstr(command.consequent, command.alternate, command));
+    control.push(command.condition);
+  },
+
 
   [InstrType.POP]: (
     _command: Instr,
@@ -841,4 +852,26 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // No post-processing required for constructor.
   },
+
+  [InstrType.COND]: (
+    command: CondInstr,
+    _environment: Environment,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Pop the condition result (assumed to be a Literal).
+    const conditionValue = stash.pop() as Literal;
+
+    const isTruthy = (value: Literal): boolean => {
+      return (value.literalType.kind == 'BooleanLiteral' && value.literalType.value == 'true')
+        || (value.literalType.kind != 'BooleanLiteral' && Boolean(value.literalType.value))
+    };
+
+    // Determine truthiness (you may need to adjust this to your language's rules).
+    if (isTruthy(conditionValue)) {
+      control.push(command.trueExpr);
+    } else {
+      control.push(command.falseExpr);
+    }
+  }
 };

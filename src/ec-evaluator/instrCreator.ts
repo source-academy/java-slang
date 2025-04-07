@@ -4,7 +4,7 @@ import { EnvNode } from "./components";
 import {
   AssmtInstr,
   BinOpInstr,
-  Class,
+  Class, CondInstr,
   DerefInstr,
   EnvInstr,
   EvalVarInstr,
@@ -18,8 +18,8 @@ import {
   ResOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  ResTypeInstr,
-} from "./types";
+  ResTypeInstr
+} from './types'
 
 export const assmtInstr = (
   srcNode: Node,
@@ -153,4 +153,15 @@ export const resConOverloadInstr = (
   instrType: InstrType.RES_CON_OVERLOAD,
   srcNode,
   arity,
+});
+
+export const condInstr = (
+  trueExpr: Expression,
+  falseExpr: Expression,
+  srcNode: Node,
+): CondInstr => ({
+  instrType: InstrType.COND,
+  trueExpr,
+  falseExpr,
+  srcNode
 });

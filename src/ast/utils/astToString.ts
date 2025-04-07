@@ -10,8 +10,8 @@ import {
   Literal,
   LocalVariableDeclarationStatement,
   MethodInvocation,
-  ReturnStatement,
-} from '../types/blocks-and-statements';
+  ReturnStatement, TernaryExpression
+} from '../types/blocks-and-statements'
 import {
   ConstructorDeclaration,
   FieldDeclaration,
@@ -113,6 +113,10 @@ export const astToString = (node: Node, indent: number = 0): string => {
     case "BinaryExpression":
       const bin = node as BinaryExpression;
       return `${astToString(bin.left)} ${bin.operator} ${astToString(bin.right)}`;
+
+    case "TernaryExpression":
+      const ter = node as TernaryExpression;
+      return `${astToString(ter.condition)} ? ${astToString(ter.consequent)} : ${astToString(ter.alternate)}`;
 
     case "ExpressionName":
       const exp = node as ExpressionName;

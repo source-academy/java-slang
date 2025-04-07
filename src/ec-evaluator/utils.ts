@@ -1,13 +1,13 @@
 import { Node } from "../ast/types/ast";
 import {
-  BlockStatement,
+  BlockStatement, BooleanLiteral,
   DecimalIntegerLiteral,
   Expression,
   ExpressionStatement,
   Literal,
   MethodInvocation,
-  ReturnStatement,
-} from "../ast/types/blocks-and-statements";
+  ReturnStatement
+} from '../ast/types/blocks-and-statements'
 import {
   ConstructorDeclaration,
   FieldDeclaration,
@@ -143,6 +143,54 @@ export const evaluateBinaryExpression = (operator: string, left: Literal, right:
           value: String(Number(left.literalType.value) / Number(right.literalType.value)),
         } as DecimalIntegerLiteral,
       };
+    case ">":
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "BooleanLiteral",
+          value: left.literalType.value > right.literalType.value ? 'true' : 'false'
+        } as BooleanLiteral
+      };
+    case "<":
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "BooleanLiteral",
+          value: left.literalType.value < right.literalType.value ? 'true' : 'false'
+        } as BooleanLiteral
+      }
+    case ">=":
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "BooleanLiteral",
+          value: left.literalType.value >= right.literalType.value ? 'true' : 'false'
+        } as BooleanLiteral
+      }
+    case "<=":
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "BooleanLiteral",
+          value: left.literalType.value <= right.literalType.value ? 'true' : 'false'
+        } as BooleanLiteral
+      }
+    case "==":
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "BooleanLiteral",
+          value: left.literalType.value == right.literalType.value ? 'true' : 'false'
+        } as BooleanLiteral
+      }
+    case "!=":
+      return {
+        kind: "Literal",
+        literalType: {
+          kind: "BooleanLiteral",
+          value: left.literalType.value != right.literalType.value ? 'true' : 'false'
+        } as BooleanLiteral
+      }
     default /* case "%" */:
       return {
         kind: "Literal",
