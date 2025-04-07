@@ -1,5 +1,5 @@
 import { Node } from "../ast/types/ast";
-import { Expression } from "../ast/types/blocks-and-statements";
+import { Expression, SwitchCase } from '../ast/types/blocks-and-statements'
 import { EnvNode } from "./components";
 import {
   AssmtInstr,
@@ -18,7 +18,7 @@ import {
   ResOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  ResTypeInstr
+  ResTypeInstr, SwitchInstr
 } from './types'
 
 export const assmtInstr = (
@@ -164,4 +164,15 @@ export const condInstr = (
   trueExpr,
   falseExpr,
   srcNode
+});
+
+export const switchInstr = (
+  cases: Array<SwitchCase>,
+  expr: Expression,
+  srcNode: Node
+): SwitchInstr => ({
+  instrType: InstrType.SWITCH,
+  cases,
+  expr,
+  srcNode,
 });

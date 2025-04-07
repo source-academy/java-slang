@@ -13,7 +13,7 @@ import {
   LocalVariableDeclarationStatement,
   LocalVariableType,
   MethodInvocation,
-  ReturnStatement, TernaryExpression,
+  ReturnStatement, SwitchCase, SwitchStatement, TernaryExpression,
   VariableDeclarator,
   Void
 } from '../ast/types/blocks-and-statements'
@@ -58,7 +58,7 @@ import {
   ResConOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  StructType, CondInstr
+  StructType, CondInstr, SwitchInstr
 } from './types'
 import { 
   defaultValues,
@@ -421,6 +421,16 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   ) => {
     control.push(instr.condInstr(command.consequent, command.alternate, command));
     control.push(command.condition);
+  },
+
+  SwitchStatement: (
+    command: SwitchStatement,
+    _environment: Environment,
+    control: Control,
+    _stash: Stash,
+  ) => {
+    control.push(instr.switchInstr(command.cases, command.expression, command));
+    control.push(command.expression);
   },
 
 
@@ -872,6 +882,49 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       control.push(command.trueExpr);
     } else {
       control.push(command.falseExpr);
+    }
+  },
+
+  [InstrType.SWITCH]: (
+    command: SwitchInstr,
+    _environment: Environment,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Pop the evaluated discriminant from the stash.
+    const discValue = stash.pop() as Literal;
+
+    let matchedCase: SwitchCase | null = null;
+
+    // Iterate over each switch case.
+    for (const swCase of command.cases) {
+      // Check all labels for this case.
+      for (const label of swCase.labels) {
+        if (label.kind === "CaseLabel") {
+          // Assume the case label's expression is a literal.
+          const caseLiteral = label.expression as Literal;
+          if (discValue.literalType.value === caseLiteral.literalType.value) {
+            matchedCase = swCase;
+            break;
+          }
+        } else if (label.kind === "DefaultLabel") {
+          // Save default case (only one default should exist).
+          matchedCase = swCase;
+        }
+      }
+      if (matchedCase) break;
+    }
+
+    // Determine which case to use.
+    if (matchedCase) {
+      if (matchedCase && matchedCase.statements && matchedCase.statements.length > 0) {
+        // Push the statements in reverse order to the control stack.
+        for (let i = matchedCase.statements.length - 1; i >= 0; i--) {
+          if (matchedCase.statements[i].kind == "BreakStatement")
+            continue
+          control.push(matchedCase.statements[i]);
+        }
+      }
     }
   }
 };

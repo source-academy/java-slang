@@ -10,7 +10,7 @@ import {
   Literal,
   LocalVariableDeclarationStatement,
   MethodInvocation,
-  ReturnStatement, TernaryExpression
+  ReturnStatement, SwitchStatement, TernaryExpression
 } from '../types/blocks-and-statements'
 import {
   ConstructorDeclaration,
@@ -117,6 +117,31 @@ export const astToString = (node: Node, indent: number = 0): string => {
     case "TernaryExpression":
       const ter = node as TernaryExpression;
       return `${astToString(ter.condition)} ? ${astToString(ter.consequent)} : ${astToString(ter.alternate)}`;
+
+    case "BreakStatement":
+      return 'break'
+
+    case 'SwitchStatement':
+      const sw = node as SwitchStatement;
+      let result = indentLine(indent, `switch (${astToString(sw.expression)}) {`) + "\n";
+      for (const swCase of sw.cases) {
+        // Print each label on its own line.
+        for (const label of swCase.labels) {
+          if (label.kind === "CaseLabel") {
+            result += indentLine(indent + INDENT_SPACES, `case ${astToString(label.expression)}:`) + "\n";
+          } else if (label.kind === "DefaultLabel") {
+            result += indentLine(indent + INDENT_SPACES, `default:`) + "\n";
+          }
+        }
+        // Print the statements for this case, if any.
+        if (swCase.statements && swCase.statements.length > 0) {
+          for (const stmt of swCase.statements) {
+            result += newline(astToString(stmt, indent + INDENT_SPACES * 2));
+          }
+        }
+      }
+      result += indentLine(indent, "}");
+      return result;
 
     case "ExpressionName":
       const exp = node as ExpressionName;
