@@ -3,7 +3,7 @@ import { cloneDeep } from "lodash";
 import {
   Assignment,
   BinaryExpression,
-  Block,
+  Block, BreakStatement,
   ClassInstanceCreationExpression,
   ExplicitConstructorInvocation,
   Expression,
@@ -58,7 +58,7 @@ import {
   ResConOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  StructType, CondInstr, SwitchInstr
+  StructType, BranchInstr, SwitchInstr
 } from './types'
 import { 
   defaultValues,
@@ -419,7 +419,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     _stash: Stash,
   ) => {
-    control.push(instr.condInstr(command.consequent, command.alternate, command));
+    control.push(instr.branchInstr(command.consequent, command.alternate, command));
     control.push(command.condition);
   },
 
@@ -429,10 +429,23 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control: Control,
     _stash: Stash,
   ) => {
+    control.push(instr.markerInstr(command));
     control.push(instr.switchInstr(command.cases, command.expression, command));
     control.push(command.expression);
   },
 
+  BreakStatement: (
+    _command: BreakStatement,
+    _environment: Environment,
+    control: Control,
+    _stash: Stash,
+  ) => {
+    while ((control.peek() as Instr).instrType != InstrType.MARKER) {
+      control.pop();
+    }
+
+    control.pop(); // pop the marker
+  },
 
   [InstrType.POP]: (
     _command: Instr,
@@ -863,8 +876,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // No post-processing required for constructor.
   },
 
-  [InstrType.COND]: (
-    command: CondInstr,
+  [InstrType.BRANCH]: (
+    command: BranchInstr,
     _environment: Environment,
     control: Control,
     stash: Stash,
@@ -895,9 +908,11 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const discValue = stash.pop() as Literal;
 
     let matchedCase: SwitchCase | null = null;
+    let matchedIndex = -1;
 
     // Iterate over each switch case.
-    for (const swCase of command.cases) {
+    for (let i = 0; i < command.cases.length; i++) {
+      const swCase = command.cases[i];
       // Check all labels for this case.
       for (const label of swCase.labels) {
         if (label.kind === "CaseLabel") {
@@ -905,24 +920,28 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
           const caseLiteral = label.expression as Literal;
           if (discValue.literalType.value === caseLiteral.literalType.value) {
             matchedCase = swCase;
+            matchedIndex = i;
             break;
           }
-        } else if (label.kind === "DefaultLabel") {
+        } else if (label.kind === "DefaultLabel" && !matchedCase) {
           // Save default case (only one default should exist).
           matchedCase = swCase;
+          matchedIndex = i;
         }
       }
-      if (matchedCase) break;
     }
 
-    // Determine which case to use.
-    if (matchedCase) {
-      if (matchedCase && matchedCase.statements && matchedCase.statements.length > 0) {
+    if (!matchedCase) {
+      return // do nothing if no matching case found.
+    }
+
+    for (let i = command.cases.length; i >= matchedIndex; i--) {
+      const swCase = command.cases[i];
+
+      if (swCase && swCase.statements && swCase.statements.length > 0) {
         // Push the statements in reverse order to the control stack.
-        for (let i = matchedCase.statements.length - 1; i >= 0; i--) {
-          if (matchedCase.statements[i].kind == "BreakStatement")
-            continue
-          control.push(matchedCase.statements[i]);
+        for (let j = swCase.statements.length - 1; j >= 0; j--) {
+          control.push(swCase.statements[j]);
         }
       }
     }

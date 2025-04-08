@@ -40,7 +40,7 @@ export enum InstrType {
   RES_OVERLOAD = 'ResOverload',
   RES_OVERRIDE = 'ResOverride',
   RES_CON_OVERLOAD = 'ResConOverload',
-  COND = 'Cond',
+  BRANCH = 'Branch',
   SWITCH = 'Switch',
 }
 
@@ -100,7 +100,7 @@ export interface ResInstr extends BaseInstr {
   name: string;
 }
 
-export interface CondInstr extends BaseInstr {
+export interface BranchInstr extends BaseInstr {
   trueExpr: Expression;
   falseExpr: Expression;
 }
@@ -128,7 +128,7 @@ export type Instr =
   | ResTypeContInstr
   | ResOverloadInstr
   | ResConOverloadInstr
-  | CondInstr
+  | BranchInstr
   | SwitchInstr;
 
 /**

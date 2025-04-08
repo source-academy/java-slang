@@ -3,8 +3,8 @@ import { Expression, SwitchCase } from '../ast/types/blocks-and-statements'
 import { EnvNode } from "./components";
 import {
   AssmtInstr,
-  BinOpInstr,
-  Class, CondInstr,
+  BinOpInstr, BranchInstr,
+  Class,
   DerefInstr,
   EnvInstr,
   EvalVarInstr,
@@ -155,12 +155,12 @@ export const resConOverloadInstr = (
   arity,
 });
 
-export const condInstr = (
+export const branchInstr = (
   trueExpr: Expression,
   falseExpr: Expression,
   srcNode: Node,
-): CondInstr => ({
-  instrType: InstrType.COND,
+): BranchInstr => ({
+  instrType: InstrType.BRANCH,
   trueExpr,
   falseExpr,
   srcNode
