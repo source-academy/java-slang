@@ -1,5 +1,6 @@
 import { cloneDeep } from "lodash";
 
+
 import { 
   Assignment,
   BinaryExpression,
@@ -16,6 +17,8 @@ import {
   ReturnStatement,
   VariableDeclarator,
   Void,
+  PrefixExpression,
+  PostfixExpression,
 } from "../ast/types/blocks-and-statements";
 import {
   ConstructorDeclaration,
@@ -413,8 +416,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(command.left);
   },
 
-  PrefixUnaryExpression: (
-    command: PrefixUnaryExpression,
+  PrefixExpression: (
+    command:PrefixExpression,
     environment: Environment,
     control: Control,
     stash: Stash,
@@ -422,19 +425,36 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const operator = command.operator;  // Prefix operator (e.g., "++" or "--")
     const operand = command.expression;  // The variable being operated on (e.g., x)
 
-    // Dereference the operand and push instructions to evaluate the operand
-    control.push(instr.derefInstr(operand));
-    // Apply the prefix operation (before using the value)
-    if (operator === '++') {
-      // Prefix increment: evaluate operand, then increment
-      control.push(instr.binOpInstr('+', operand));  // x = x + 1
-    } else if (operator === '--') {
-      // Prefix decrement: evaluate operand, then decrement
-      control.push(instr.binOpInstr('-', operand));  // x = x - 1
+    if (operand.kind !== "ExpressionName") {
+      throw new errors.RuntimeError(
+          `Postfix operator ${operator} can only be applied to variables`
+      );
     }
+    const binExpr = {
+      kind: "BinaryExpression",
+      operator: operator === "++" ? "+" : "-",
+      left: operand,
+      right: {
+        kind: "Literal",
+        literalType: {
+          kind: "DecimalIntegerLiteral",
+          value: "1" // This is the increment/decrement value
+        },
+        location: command.location
+      },
+      location: command.location
+    } as BinaryExpression
 
-    // Operand has been modified before it's used in the expression
-    },
+    // Push the assignment to update the variable:
+    control.push({
+      kind: "Assignment",
+      left: operand,
+      operator: "=",
+      right: binExpr,  // Use the result of the binary operation
+      location: command.location
+    });
+
+  },
 
 
 
@@ -447,29 +467,50 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash.pop();
   },
 
-  PostfixUnaryExpression: (
-    command: PostfixUnaryExpression,
-    environment: Environment,
+  PostfixExpression: (
+    command: PostfixExpression,
+    _environment: Environment,
     control: Control,
-    stash: Stash,
+    _stash: Stash,
   ) => {
     const operator = command.operator;  // Postfix operator (e.g., "++" or "--")
     const operand = command.expression;  // The variable being operated on (e.g., x)
+    if (operand.kind !== "ExpressionName") {
+      throw new errors.RuntimeError(
+          `Postfix operator ${operator} can only be applied to variables`
+      );
+    }
 
+    control.push(instr.popInstr(operand));
 
+    const binExpr = {
+            kind: "BinaryExpression",
+            operator: operator === "++" ? "+" : "-",
+            left: operand,
+            right: {
+              kind: "Literal",
+              literalType: {
+                kind: "DecimalIntegerLiteral",
+                value: "1" // This is the increment/decrement value
+              },
+              location: command.location
+            },
+            location: command.location
+          } as BinaryExpression
+
+    // Push the assignment to update the variable:
+    control.push({
+      kind: "Assignment",
+      left: operand,
+      operator: "=",
+      right: binExpr,  // Use the result of the binary operation
+      location: command.location
+    });
+
+    control.push(operand);
 
     // Apply the postfix operation (after using the value)
-    if (operator === '++') {
-      // Postfix increment: use operand's value first, then increment it
-      control.push(instr.binOpInstr('+', operand));  // x = x + 1
-    } else if (operator === '--') {
-      // Postfix decrement: use operand's value first, then decrement it
-      control.push(instr.binOpInstr('-', operand));  // x = x - 1
-    }
-    // Push instructions to evaluate the operand and use its value
-    control.push(instr.derefInstr(operand));
 
-    // Operand has been used in the expression, then modified afterwards
   },
   
   [InstrType.ASSIGNMENT]: (

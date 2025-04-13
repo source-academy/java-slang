@@ -9,7 +9,7 @@ import {
   ExpressionStatement,
   Literal,
   LocalVariableDeclarationStatement,
-  MethodInvocation,
+  MethodInvocation, PostfixExpression,PrefixExpression,
   ReturnStatement,
 } from '../types/blocks-and-statements';
 import {
@@ -124,6 +124,13 @@ export const astToString = (node: Node, indent: number = 0): string => {
 
     case "Void":
       return "void";
+
+    case "PostfixExpression":
+      const postfix = node as PostfixExpression;
+      return `${astToString(postfix.expression)}${postfix.operator}`;
+    case "PrefixExpression":
+      const prefix = node as PrefixExpression;
+      return `${prefix.operator}${astToString(prefix.expression)}`;
 
     default:
       return node.kind;
