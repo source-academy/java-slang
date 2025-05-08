@@ -774,7 +774,42 @@ AssertStatement
   = assert Expression (colon Expression) semicolon
 
 SwitchStatement
-  = TO_BE_ADDED
+  = switch lparen expr:Expression rparen lcurly
+      cases:SwitchBlock?
+    rcurly {
+      return addLocInfo({
+        kind: "SwitchStatement",
+        expression: expr,
+        cases: cases ?? [],
+      });
+    }
+
+SwitchBlock
+  = cases:SwitchBlockStatementGroup* {
+      return cases;
+    }
+
+SwitchBlockStatementGroup
+  = labels:SwitchLabel+ stmts:BlockStatement* {
+      return {
+        kind: "SwitchBlockStatementGroup",
+        labels: labels,
+        statements: stmts,
+      };
+    }
+
+SwitchLabel
+  = case expr:Expression colon {
+      return {
+        kind: "CaseLabel",
+        expression: expr,
+      };
+    }
+  / default colon {
+      return {
+        kind: "DefaultLabel",
+      };
+    }
 
 DoStatement
   = do body:Statement while lparen expr:Expression rparen semicolon {
@@ -1079,7 +1114,8 @@ MultiplicativeExpression
   }
 
 UnaryExpression
-  = PostfixExpression
+  = / CastExpression
+  / PostfixExpression
   / op:PrefixOp expr:UnaryExpression {
     return addLocInfo({
       kind: "PrefixExpression",
@@ -1087,7 +1123,6 @@ UnaryExpression
       expression: expr,
     })
   }
-  / CastExpression
   / SwitchExpression
 
 PrefixOp
@@ -1107,8 +1142,19 @@ PostfixExpression
   }
 
 CastExpression
-  = lparen PrimitiveType rparen UnaryExpression
-  / lparen ReferenceType rparen (LambdaExpression / !(PlusMinus) UnaryExpression)
+  = lparen castType:PrimitiveType rparen expr:UnaryExpression {
+    return addLocInfo({
+        kind: "CastExpression",
+        type: castType,
+        expression: expr,
+    })}
+  / lparen castType:ReferenceType rparen expr:(LambdaExpression / !(PlusMinus) UnaryExpression) {
+    return addLocInfo({
+        kind: "CastExpression",
+        type: castType,
+        expression: expr,
+    })
+  }
 
 SwitchExpression
   = SwitchStatement
