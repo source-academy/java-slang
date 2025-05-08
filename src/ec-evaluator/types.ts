@@ -1,5 +1,5 @@
 import { Node } from "../ast/types/ast";
-import { Expression, Literal, Void } from "../ast/types/blocks-and-statements";
+import { Expression, Literal, SwitchCase, Void } from '../ast/types/blocks-and-statements'
 import {
   ConstructorDeclaration,
   FieldDeclaration,
@@ -40,6 +40,8 @@ export enum InstrType {
   RES_OVERLOAD = 'ResOverload',
   RES_OVERRIDE = 'ResOverride',
   RES_CON_OVERLOAD = 'ResConOverload',
+  BRANCH = 'Branch',
+  SWITCH = 'Switch',
 }
 
 interface BaseInstr {
@@ -98,6 +100,16 @@ export interface ResInstr extends BaseInstr {
   name: string;
 }
 
+export interface BranchInstr extends BaseInstr {
+  trueExpr: Expression;
+  falseExpr: Expression;
+}
+
+export interface SwitchInstr extends BaseInstr {
+  cases: Array<SwitchCase>;
+  expr: Expression;
+}
+
 export interface DerefInstr extends BaseInstr {}
 
 export type Instr =
@@ -115,7 +127,9 @@ export type Instr =
   | ResTypeInstr
   | ResTypeContInstr
   | ResOverloadInstr
-  | ResConOverloadInstr;
+  | ResConOverloadInstr
+  | BranchInstr
+  | SwitchInstr;
 
 /**
  * Components

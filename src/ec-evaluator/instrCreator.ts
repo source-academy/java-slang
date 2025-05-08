@@ -1,9 +1,9 @@
 import { Node } from "../ast/types/ast";
-import { Expression } from "../ast/types/blocks-and-statements";
+import { Expression, SwitchCase } from '../ast/types/blocks-and-statements'
 import { EnvNode } from "./components";
 import {
   AssmtInstr,
-  BinOpInstr,
+  BinOpInstr, BranchInstr,
   Class,
   DerefInstr,
   EnvInstr,
@@ -18,8 +18,8 @@ import {
   ResOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  ResTypeInstr,
-} from "./types";
+  ResTypeInstr, SwitchInstr
+} from './types'
 
 export const assmtInstr = (
   srcNode: Node,
@@ -153,4 +153,26 @@ export const resConOverloadInstr = (
   instrType: InstrType.RES_CON_OVERLOAD,
   srcNode,
   arity,
+});
+
+export const branchInstr = (
+  trueExpr: Expression,
+  falseExpr: Expression,
+  srcNode: Node,
+): BranchInstr => ({
+  instrType: InstrType.BRANCH,
+  trueExpr,
+  falseExpr,
+  srcNode
+});
+
+export const switchInstr = (
+  cases: Array<SwitchCase>,
+  expr: Expression,
+  srcNode: Node
+): SwitchInstr => ({
+  instrType: InstrType.SWITCH,
+  cases,
+  expr,
+  srcNode,
 });

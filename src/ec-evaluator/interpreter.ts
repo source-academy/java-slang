@@ -1,9 +1,9 @@
 import { cloneDeep } from "lodash";
 
-import { 
+import {
   Assignment,
   BinaryExpression,
-  Block,
+  Block, BreakStatement,
   ClassInstanceCreationExpression,
   ExplicitConstructorInvocation,
   Expression,
@@ -13,10 +13,10 @@ import {
   LocalVariableDeclarationStatement,
   LocalVariableType,
   MethodInvocation,
-  ReturnStatement,
+  ReturnStatement, SwitchCase, SwitchStatement, TernaryExpression,
   VariableDeclarator,
-  Void,
-} from "../ast/types/blocks-and-statements";
+  Void
+} from '../ast/types/blocks-and-statements'
 import {
   ConstructorDeclaration,
   FieldDeclaration,
@@ -58,8 +58,8 @@ import {
   ResConOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  StructType,
-} from "./types";
+  StructType, BranchInstr, SwitchInstr
+} from './types'
 import { 
   defaultValues,
   evaluateBinaryExpression,
@@ -411,6 +411,40 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(instr.binOpInstr(command.operator, command));
     control.push(command.right);
     control.push(command.left);
+  },
+
+  TernaryExpression: (
+    command: TernaryExpression,
+    _environment: Environment,
+    control: Control,
+    _stash: Stash,
+  ) => {
+    control.push(instr.branchInstr(command.consequent, command.alternate, command));
+    control.push(command.condition);
+  },
+
+  SwitchStatement: (
+    command: SwitchStatement,
+    _environment: Environment,
+    control: Control,
+    _stash: Stash,
+  ) => {
+    control.push(instr.markerInstr(command));
+    control.push(instr.switchInstr(command.cases, command.expression, command));
+    control.push(command.expression);
+  },
+
+  BreakStatement: (
+    _command: BreakStatement,
+    _environment: Environment,
+    control: Control,
+    _stash: Stash,
+  ) => {
+    while ((control.peek() as Instr).instrType != InstrType.MARKER) {
+      control.pop();
+    }
+
+    control.pop(); // pop the marker
   },
 
   [InstrType.POP]: (
@@ -841,4 +875,75 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // No post-processing required for constructor.
   },
+
+  [InstrType.BRANCH]: (
+    command: BranchInstr,
+    _environment: Environment,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Pop the condition result (assumed to be a Literal).
+    const conditionValue = stash.pop() as Literal;
+
+    const isTruthy = (value: Literal): boolean => {
+      return (value.literalType.kind == 'BooleanLiteral' && value.literalType.value == 'true')
+        || (value.literalType.kind != 'BooleanLiteral' && Boolean(value.literalType.value))
+    };
+
+    // Determine truthiness (you may need to adjust this to your language's rules).
+    if (isTruthy(conditionValue)) {
+      control.push(command.trueExpr);
+    } else {
+      control.push(command.falseExpr);
+    }
+  },
+
+  [InstrType.SWITCH]: (
+    command: SwitchInstr,
+    _environment: Environment,
+    control: Control,
+    stash: Stash,
+  ) => {
+    // Pop the evaluated discriminant from the stash.
+    const discValue = stash.pop() as Literal;
+
+    let matchedCase: SwitchCase | null = null;
+    let matchedIndex = -1;
+
+    // Iterate over each switch case.
+    for (let i = 0; i < command.cases.length; i++) {
+      const swCase = command.cases[i];
+      // Check all labels for this case.
+      for (const label of swCase.labels) {
+        if (label.kind === "CaseLabel") {
+          // Assume the case label's expression is a literal.
+          const caseLiteral = label.expression as Literal;
+          if (discValue.literalType.value === caseLiteral.literalType.value) {
+            matchedCase = swCase;
+            matchedIndex = i;
+            break;
+          }
+        } else if (label.kind === "DefaultLabel" && !matchedCase) {
+          // Save default case (only one default should exist).
+          matchedCase = swCase;
+          matchedIndex = i;
+        }
+      }
+    }
+
+    if (!matchedCase) {
+      return // do nothing if no matching case found.
+    }
+
+    for (let i = command.cases.length; i >= matchedIndex; i--) {
+      const swCase = command.cases[i];
+
+      if (swCase && swCase.statements && swCase.statements.length > 0) {
+        // Push the statements in reverse order to the control stack.
+        for (let j = swCase.statements.length - 1; j >= 0; j--) {
+          control.push(swCase.statements[j]);
+        }
+      }
+    }
+  }
 };
