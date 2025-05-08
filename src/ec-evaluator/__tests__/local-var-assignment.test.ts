@@ -69,7 +69,7 @@ it("evaluate LocalVariableDeclarationStatement without variableInitializer corre
   const expectedStashTrace = [
     "Test", // ResType
     "String[]", // ResType
-    "main", // ResOverload
+    "Descriptor", // ResOverload
     "Test", // EvalVariable
     "Test", // Deref
     "main", // ResOverride
@@ -154,7 +154,7 @@ it("evaluate LocalVariableDeclarationStatement with variableInitializer correctl
   const expectedStashTrace = [
     "Test", // ResType
     "String[]", // ResType
-    "main", // ResOverload
+    "Descriptor", // ResOverload
     "Test", // EvalVariable
     "Test", // Deref
     "main", // ResOverride
@@ -241,7 +241,7 @@ it("evaluate Assignment correctly", () => {
   const expectedStashTrace = [
     "Test", // ResType
     "String[]", // ResType
-    "main", // ResOverload
+    "Descriptor", // ResOverload
     "Test", // EvalVariable
     "Test", // Deref
     "main", // ResOverride
@@ -344,7 +344,7 @@ it("evaluate LocalVariableDeclarationStatement with local variable as variableIn
   const expectedStashTrace = [
     "Test", // ResType
     "String[]", // ResType
-    "main", // ResOverload
+    "Descriptor", // ResOverload
     "Test", // EvalVariable
     "Test", // Deref
     "main", // ResOverride

@@ -29,6 +29,7 @@ export const runECEvaluator = (
   } catch (e) {
     // Possible interpreting language error thrown, so conversion to RuntimeError may be required.
     const error = e.type ? e : new RuntimeError(e.message);
+    console.log(error);
     context.errors.push(error);
     return new Promise((resolve, _) => {
       resolve({ status: 'error', context } as Error);

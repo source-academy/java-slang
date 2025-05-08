@@ -1,3 +1,4 @@
+import { Closure } from "../../ec-evaluator/types";
 import { BaseNode } from "./ast";
 import { Identifier, UnannType } from "./classes";
 
@@ -288,4 +289,14 @@ export interface TernaryExpression extends BaseNode {
   condition: Expression;
   consequent: Expression;
   alternate: Expression;
+}
+
+export interface MethodDescriptor extends BaseNode {
+  kind: "Descriptor";
+  value: string;
+  returnType: string;
+  identifier: string;
+  formalParameterTypes: string[];
+  closure: Closure;
+  isStatic: boolean;
 }

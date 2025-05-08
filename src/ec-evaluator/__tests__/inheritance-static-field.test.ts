@@ -103,7 +103,7 @@ describe("evaluate static fields with inheritance", () => {
       "1", // Assign
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -225,7 +225,7 @@ describe("evaluate static fields with inheritance", () => {
       "2", // Assign
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -419,7 +419,7 @@ describe("evaluate static fields with inheritance", () => {
       "1", // Assign
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -642,7 +642,7 @@ describe("evaluate static fields with inheritance", () => {
       "2", // Assign
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -865,7 +865,7 @@ describe("evaluate static fields with inheritance", () => {
       "2", // Assign
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride

@@ -195,7 +195,7 @@ describe("evaluate constructor overloading resolution correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -387,7 +387,7 @@ describe("evaluate constructor overloading resolution correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable,
       "Test", // Deref
       "main", // ResOverride
@@ -577,7 +577,7 @@ describe("evaluate constructor overloading resolution correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable,
       "Test", // Deref
       "main", // ResOverride
@@ -791,7 +791,7 @@ describe("evaluate constructor overloading resolution correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable,
       "Test", // Deref
       "main", // ResOverride

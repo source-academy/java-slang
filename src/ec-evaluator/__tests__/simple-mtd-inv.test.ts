@@ -96,13 +96,13 @@ describe("evaluate static MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "test", // ResOverride
@@ -291,7 +291,7 @@ describe("evaluate static MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -310,14 +310,14 @@ describe("evaluate static MethodInvocation correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
       "Object",
       "Test", // ResType
       "int", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "this", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -510,7 +510,7 @@ describe("evaluate instance MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -529,14 +529,14 @@ describe("evaluate instance MethodInvocation correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
       "Object",
       "Test", // ResType
       "int", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "this", // EvalVariable
       "Object", // Deref
       "test", // ResOverride

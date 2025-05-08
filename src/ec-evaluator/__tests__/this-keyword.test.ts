@@ -178,7 +178,7 @@ describe("evaluate field access with this keyword correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -201,7 +201,7 @@ describe("evaluate field access with this keyword correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -395,7 +395,7 @@ describe("evaluate field access with this keyword correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -418,7 +418,7 @@ describe("evaluate field access with this keyword correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -615,7 +615,7 @@ describe("evaluate method invocation with this keyword correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -634,14 +634,14 @@ describe("evaluate method invocation with this keyword correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
       "Object",
       "Test", // ResType
       "int", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "this", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -837,7 +837,7 @@ describe("evaluate method invocation with this keyword correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -856,14 +856,14 @@ describe("evaluate method invocation with this keyword correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
       "Object",
       "Test", // ResType
       "int", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "this", // EvalVariable
       "Object", // Deref
       "test", // ResOverride

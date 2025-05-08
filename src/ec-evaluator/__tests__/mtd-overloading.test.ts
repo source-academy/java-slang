@@ -113,7 +113,7 @@ describe("evaluate method overloading correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -121,7 +121,7 @@ describe("evaluate method overloading correctly", () => {
       "x", // EvalVariable
       "Test", // ResType
       "int", // ResType
-      "test", // ResOverlaod
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "test", // ResOverride
@@ -330,7 +330,7 @@ describe("evaluate method overloading correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -360,7 +360,7 @@ describe("evaluate method overloading correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "Test", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Object", // Deref
       "Test", // ResOverride
@@ -584,7 +584,7 @@ describe("evaluate method overloading correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -614,7 +614,7 @@ describe("evaluate method overloading correctly", () => {
       "Object", // Assign
       "Test", // ResType
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "t", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -844,7 +844,7 @@ describe("evaluate method overloading correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -874,7 +874,7 @@ describe("evaluate method overloading correctly", () => {
       "Object", // Assign
       "Test", // ResType
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "t", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -1109,7 +1109,7 @@ describe("evaluate method overloading correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -1140,7 +1140,7 @@ describe("evaluate method overloading correctly", () => {
       "Test", // ResType
       "Test", // ResType
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "t", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -1305,13 +1305,13 @@ describe("evaluate method overloading correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "test", // ResOverride

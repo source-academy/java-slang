@@ -96,13 +96,13 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "test", // ResOverride
@@ -260,7 +260,7 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -279,7 +279,7 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -468,7 +468,7 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -487,14 +487,14 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
       "Object",
       "Test", // ResType
       "int", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "test", // ResOverride
@@ -663,7 +663,7 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -683,7 +683,7 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
       "Object", // Assign
       "x", // EvalVariable
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -936,7 +936,7 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -955,7 +955,7 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
       "Object", // Deref
       "Object", // Assign
       "Test", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -975,7 +975,7 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
       "Object", // Assign
       "Test", // ResType
       "int", // ResType
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "test", // EvalVariable
       "Object", // Deref
       "test", // ResOverride
@@ -1098,14 +1098,14 @@ describe("evaluate complex qualified MethodInvocation correctly", () => {
       "null", // Assign
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
       `[""]`, // Literal
       "Test", // ResType
       "Test", // ResTypeCont
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "t", // Res
       "null", // Deref
@@ -1288,7 +1288,7 @@ describe("evaluate complex qualified MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -1312,7 +1312,7 @@ describe("evaluate complex qualified MethodInvocation correctly", () => {
       "Object", // Assign
       "Test", // ResType
       "AnotherTest", // ResTypeCont
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "t", // EvalVariable
       "t", // Res
       "null", // Deref
@@ -1520,7 +1520,7 @@ describe("evaluate complex qualified MethodInvocation correctly", () => {
     const expectedStashTrace = [
       "Test", // ResType
       "String[]", // ResType
-      "main", // ResOverload
+      "Descriptor", // ResOverload
       "Test", // EvalVariable
       "Test", // Deref
       "main", // ResOverride
@@ -1550,7 +1550,7 @@ describe("evaluate complex qualified MethodInvocation correctly", () => {
       "Object", // Assign
       "Test", // ResType
       "Test", // ResTypeCont
-      "test", // ResOverload
+      "Descriptor", // ResOverload
       "t", // EvalVariable
       "t", // Res
       "null", // Deref
