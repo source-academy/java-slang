@@ -4,55 +4,36 @@ import {
   MethodDeclaration,
   NormalClassDeclaration,
   UnannType
-} from "../ast/types/classes";
-import { EnvNode } from "./components";
-import {
-  Name,
-  StructType,
-  Type,
-  VarValue,
-  Variable,
-  Symbol,
-  Object,
-  Class,
-  Closure
-} from "./types";
+} from '../ast/types/classes'
+import { EnvNode } from './components'
+import { Name, StructType, Type, VarValue, Variable, Symbol, Object, Class, Closure } from './types'
 
-export const varStruct = (
-  type: UnannType,
-  name: Name,
-  value: VarValue,
-): Variable => ({
+export const varStruct = (type: UnannType, name: Name, value: VarValue): Variable => ({
   kind: StructType.VARIABLE,
   type,
   name,
-  value,
-});
+  value
+})
 
-export const symStruct = (
-  value: string,
-): Symbol => ({
+export const symStruct = (value: string): Symbol => ({
   kind: StructType.SYMBOL,
-  value,
-});
+  value
+})
 
-export const objStruct = (
-  frame: EnvNode,
-  c: Class,
-): Object => ({
+export const objStruct = (frame: EnvNode, c: Class): Object => ({
   kind: StructType.OBJECT,
   frame,
-  class: c,
-});
+  class: c
+})
 
 export const closureStruct = (
   mtdOrCon: MethodDeclaration | ConstructorDeclaration,
-  env: EnvNode,
+  env: EnvNode
 ): Closure => ({
   kind: StructType.CLOSURE,
   mtdOrCon,
-  env,
-});
+  env
+})
 
 export const classStruct = (
   frame: EnvNode,
@@ -62,7 +43,7 @@ export const classStruct = (
   instanceMethods: MethodDeclaration[],
   staticFields: FieldDeclaration[],
   staticMethods: MethodDeclaration[],
-  superclass?: Class,
+  superclass?: Class
 ): Class => ({
   kind: StructType.CLASS,
   frame,
@@ -72,12 +53,10 @@ export const classStruct = (
   instanceMethods,
   staticFields,
   staticMethods,
-  superclass,
-});
+  superclass
+})
 
-export const typeStruct = (
-  type: string,
-): Type => ({
+export const typeStruct = (type: string): Type => ({
   kind: StructType.TYPE,
-  type,
-});
+  type
+})
