@@ -160,3 +160,13 @@ export class NoMainMtdError extends RuntimeError {
     return `public static void main(String[] args) is not defined in any class.`
   }
 }
+
+export class UndefinedNativeMethod extends RuntimeError {
+  constructor(private descriptor: string) {
+    super()
+  }
+
+  public explain() {
+    return `Native function ${this.descriptor} has no defined implementation.`
+  }
+}
