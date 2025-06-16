@@ -506,10 +506,11 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     // Native function escape hatch
     if (closure.mtdOrCon.kind === 'MethodDeclaration' && isNative(closure.mtdOrCon)) {
-      const nativeFn = natives[getFullyQualifiedDescriptor(closure.mtdOrCon)]
+      const nativeFnDescriptor = getFullyQualifiedDescriptor(closure.mtdOrCon)
+      const nativeFn = natives[nativeFnDescriptor]
 
       if (!nativeFn) {
-        throw new errors.UndefinedNativeMethod(nativeFn)
+        throw new errors.UndefinedNativeMethod(nativeFnDescriptor)
       }
 
       // call foreign fn
