@@ -87,12 +87,15 @@ import {
   searchMainMtdClass,
   prependExpConInvIfNeeded,
   isStatic,
+  isNative,
   resOverload,
   resOverride,
   resConOverload,
   isNull,
-  makeNonLocalVarNonParamSimpleNameQualified
+  makeNonLocalVarNonParamSimpleNameQualified,
+  getFullyQualifiedDescriptor
 } from './utils'
+import { natives } from './natives'
 
 type CmdEvaluator = (
   command: ControlItem,
@@ -136,7 +139,7 @@ export const evaluate = (
   return stash.peek()
 }
 
-const cmdEvaluators: { [type: string]: CmdEvaluator } = {
+export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   CompilationUnit: (
     command: CompilationUnit,
     _environment: Environment,
@@ -499,6 +502,28 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     // Bind arguments to corresponding FormalParameters.
     for (let i = 0; i < args.length; i++) {
       environment.defineVariable(params[i].identifier, params[i].unannType, args[i])
+    }
+
+    // Native function escape hatch
+    if (closure.mtdOrCon.kind === 'MethodDeclaration' && isNative(closure.mtdOrCon)) {
+      const nativeFn = natives[getFullyQualifiedDescriptor(closure.mtdOrCon)]
+
+      if (!nativeFn) {
+        throw new errors.UndefinedNativeMethod(nativeFn)
+      }
+
+      // call foreign fn
+      nativeFn({ control, stash, environment })
+
+      // only because resetInstr demands one, never actually used
+      const superfluousReturnStatement: ReturnStatement = {
+        kind: 'ReturnStatement',
+        exp: { kind: 'Void' }
+      }
+
+      // handle return from native fn
+      control.push(instr.resetInstr(superfluousReturnStatement))
+      return
     }
 
     // Push method/constructor body.
