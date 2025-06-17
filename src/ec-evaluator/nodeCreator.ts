@@ -138,41 +138,5 @@ export const objClassDeclNode = (): ClassDeclaration => ({
   kind: 'NormalClassDeclaration',
   classModifier: [],
   typeIdentifier: OBJECT_CLASS,
-  classBody: [
-    {
-      kind: 'FieldDeclaration',
-      fieldModifier: ['private'],
-      fieldType: 'int',
-      variableDeclaratorList: [
-        {
-          kind: 'VariableDeclarator',
-          variableDeclaratorId: 'hash',
-          variableInitializer: {
-            kind: 'Literal',
-            literalType: {
-              kind: 'DecimalIntegerLiteral',
-              value: String(Math.floor(Math.random() * Math.pow(2, 32)))
-            }
-          }
-        }
-      ]
-    },
-    {
-      kind: 'MethodDeclaration',
-      methodModifier: ['public'],
-      methodHeader: { result: 'int', identifier: 'hashCode', formalParameterList: [] },
-      methodBody: {
-        kind: 'Block',
-        blockStatements: [
-          {
-            kind: 'ReturnStatement',
-            exp: {
-              kind: 'ExpressionName',
-              name: 'this.hash'
-            }
-          }
-        ]
-      }
-    }
-  ]
+  classBody: []
 })
