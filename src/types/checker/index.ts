@@ -8,6 +8,7 @@ import {
   CannotFindSymbolError,
   IncompatibleTypesError,
   MissingMethodBodyError,
+  NativeMethodHasBodyError,
   NotApplicableToExpressionTypeError,
   TypeCheckerError,
   TypeCheckerInternalError,
@@ -520,9 +521,11 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
               break
             }
 
-            // skip type checking for bodies of native methods (admit empty body)
+            // native methods (admit empty body)
             if (bodyDeclaration.methodModifiers.map(i => i.identifier).includes('native')) {
-              console.log(bodyDeclaration)
+              if (bodyDeclaration.methodBody !== undefined) {
+                errors.push(new NativeMethodHasBodyError(bodyDeclaration.location))
+              }
               break
             }
 
