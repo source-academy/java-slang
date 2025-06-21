@@ -6,7 +6,18 @@ import {
   UnannType
 } from '../ast/types/classes'
 import { EnvNode } from './components'
-import { Name, StructType, Type, VarValue, Variable, Symbol, Object, Class, Closure } from './types'
+import {
+  Name,
+  StructType,
+  Type,
+  VarValue,
+  Variable,
+  Symbol,
+  Object,
+  Class,
+  Closure,
+  NativeDeclaration
+} from './types'
 
 export const varStruct = (type: UnannType, name: Name, value: VarValue): Variable => ({
   kind: StructType.VARIABLE,
@@ -27,11 +38,11 @@ export const objStruct = (frame: EnvNode, c: Class): Object => ({
 })
 
 export const closureStruct = (
-  mtdOrCon: MethodDeclaration | ConstructorDeclaration,
+  decl: MethodDeclaration | ConstructorDeclaration | NativeDeclaration,
   env: EnvNode
 ): Closure => ({
   kind: StructType.CLOSURE,
-  mtdOrCon,
+  decl,
   env
 })
 
