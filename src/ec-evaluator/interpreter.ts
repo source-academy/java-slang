@@ -65,7 +65,8 @@ import {
   ResConOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  StructType
+  StructType,
+  NativeDeclaration
 } from './types'
 import {
   defaultValues,
@@ -87,7 +88,7 @@ import {
   searchMainMtdClass,
   prependExpConInvIfNeeded,
   isStatic,
-  isNative,
+  isNativeMethodDeclaration,
   resOverload,
   resOverride,
   resConOverload,
@@ -95,7 +96,7 @@ import {
   makeNonLocalVarNonParamSimpleNameQualified,
   getFullyQualifiedDescriptor
 } from './utils'
-import { natives } from './natives'
+import { foreigns } from './natives'
 
 type CmdEvaluator = (
   command: ControlItem,
@@ -253,9 +254,31 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     _control: Control,
     _stash: Stash
   ) => {
+    let mtdClosure
+    // Native method handling
+    if (isNativeMethodDeclaration(command)) {
+      const FQMtdDesc = getFullyQualifiedDescriptor(environment.current.name, command)
+      const fn = foreigns[FQMtdDesc]
+
+      if (fn === undefined) {
+        throw new errors.UndefinedNativeMethod(FQMtdDesc)
+      }
+
+      // bind foreign function
+      const natDecl: NativeDeclaration = {
+        kind: 'NativeDeclaration',
+        methodModifier: command.methodModifier,
+        methodHeader: command.methodHeader,
+        foreignFunction: fn
+      }
+
+      mtdClosure = struct.closureStruct(natDecl, environment.current)
+    } else {
+      mtdClosure = struct.closureStruct(command, environment.current)
+    }
+
     // Use method descriptor as key.
     const mtdDescriptor: string = getDescriptor(command)
-    const mtdClosure = struct.closureStruct(command, environment.current)
     environment.defineMtdOrCon(mtdDescriptor, mtdClosure)
   },
 
@@ -471,13 +494,13 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const closure: Closure = stash.pop()! as Closure
 
     const params: FormalParameter[] =
-      closure.mtdOrCon.kind === 'MethodDeclaration'
-        ? cloneDeep(closure.mtdOrCon.methodHeader.formalParameterList)
-        : cloneDeep(closure.mtdOrCon.constructorDeclarator.formalParameterList)
+      closure.decl.kind === 'MethodDeclaration' || closure.decl.kind === 'NativeDeclaration'
+        ? cloneDeep(closure.decl.methodHeader.formalParameterList)
+        : cloneDeep(closure.decl.constructorDeclarator.formalParameterList)
 
     // Extend env from global frame.
-    const mtdOrConDescriptor = getDescriptor(closure.mtdOrCon)
-    environment.extendEnv(environment.global, mtdOrConDescriptor)
+    const methodDescriptor = getDescriptor(closure.decl)
+    environment.extendEnv(environment.global, methodDescriptor)
 
     const isInstanceMtdOrCon = args.length == params.length + 1
     if (isInstanceMtdOrCon) {
@@ -504,17 +527,10 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       environment.defineVariable(params[i].identifier, params[i].unannType, args[i])
     }
 
-    // Native function escape hatch
-    if (closure.mtdOrCon.kind === 'MethodDeclaration' && isNative(closure.mtdOrCon)) {
-      const nativeFnDescriptor = getFullyQualifiedDescriptor(closure.mtdOrCon)
-      const nativeFn = natives[nativeFnDescriptor]
-
-      if (!nativeFn) {
-        throw new errors.UndefinedNativeMethod(nativeFnDescriptor)
-      }
-
-      // call foreign fn
-      nativeFn({ control, stash, environment })
+    // Native functions
+    if (closure.decl.kind === 'NativeDeclaration') {
+      // call foreign fn with CSE machine state
+      closure.decl.foreignFunction({ control, stash, environment })
 
       // only because resetInstr demands one, never actually used
       const superfluousReturnStatement: ReturnStatement = {
@@ -524,15 +540,14 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
       // handle return from native fn
       control.push(instr.resetInstr(superfluousReturnStatement))
-      return
+    } else {
+      // Push method/constructor body.
+      const body =
+        closure.decl.kind === 'MethodDeclaration'
+          ? closure.decl.methodBody
+          : closure.decl.constructorBody
+      control.push(body)
     }
-
-    // Push method/constructor body.
-    const body =
-      closure.mtdOrCon.kind === 'MethodDeclaration'
-        ? closure.mtdOrCon.methodBody
-        : closure.mtdOrCon.constructorBody
-    control.push(body)
   },
 
   [InstrType.ENV]: (
@@ -811,7 +826,7 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash.push(closure)
 
     // Post-processing required if overload resolved method is instance method.
-    if (isInstance(closure.mtdOrCon as MethodDeclaration)) {
+    if (isInstance(closure.decl as MethodDeclaration)) {
       // Increment arity of InvInstr on control.
       let n = 1
       while (
@@ -834,7 +849,7 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const target = stash.pop()!
     const overloadResolvedClosure = stash.pop()! as Closure
 
-    if (isStatic(overloadResolvedClosure.mtdOrCon as MethodDeclaration)) {
+    if (isStatic(overloadResolvedClosure.decl as MethodDeclaration)) {
       // No method overriding resolution is required if resolved method is a static method.
       stash.push(overloadResolvedClosure)
       return

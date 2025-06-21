@@ -1,4 +1,5 @@
 import { Control, Environment, Stash } from './components'
+import { StashItem } from './types'
 
 /*
     Native function escape hatch.
@@ -14,7 +15,7 @@ import { Control, Environment, Stash } from './components'
     The current implementation automatically injects a return instruction after the external handler function call ends.
 */
 
-export type NativeFunction = ({
+export type ForeignFunction = ({
   control,
   stash,
   environment
@@ -24,6 +25,25 @@ export type NativeFunction = ({
   environment: Environment
 }) => void
 
-export const natives: {
-  [descriptor: string]: NativeFunction
-} = {}
+export const foreigns: {
+  [descriptor: string]: ForeignFunction
+} = {
+  'Object::hashCode(): int': ({ stash }) => {
+    const hashCode = Math.floor(Math.random() * Math.pow(2, 32))
+    const stashItem: StashItem = {
+      kind: 'Literal',
+      literalType: { kind: 'DecimalIntegerLiteral', value: String(hashCode) }
+    }
+
+    console.log(stashItem)
+    stash.push(stashItem)
+  },
+
+  'Object::display(String s): void': ({ environment }) => {
+    // @ts-expect-error ts(2339): guaranteed valid by type checker
+    const s = environment.getVariable('s').value.literalType.value
+
+    // TODO: hook up to frontend
+    console.log(s)
+  }
+}

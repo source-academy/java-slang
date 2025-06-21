@@ -4,11 +4,14 @@ import {
   ConstructorDeclaration,
   FieldDeclaration,
   MethodDeclaration,
+  MethodHeader,
+  MethodModifier,
   NormalClassDeclaration,
   UnannType
 } from '../ast/types/classes'
 import { Control, EnvNode, Environment, Stash } from './components'
 import { SourceError } from './errors'
+import { ForeignFunction } from './natives'
 
 export interface Context {
   errors: SourceError[]
@@ -161,9 +164,16 @@ export interface Object {
   class: Class
 }
 
+export interface NativeDeclaration {
+  kind: 'NativeDeclaration'
+  methodModifier: Array<MethodModifier>
+  methodHeader: MethodHeader
+  foreignFunction: ForeignFunction
+}
+
 export interface Closure {
   kind: StructType.CLOSURE
-  mtdOrCon: MethodDeclaration | ConstructorDeclaration
+  decl: MethodDeclaration | ConstructorDeclaration | NativeDeclaration
   env: EnvNode
 }
 
@@ -173,7 +183,7 @@ export interface Class {
   classDecl: NormalClassDeclaration
   constructors: ConstructorDeclaration[]
   instanceFields: FieldDeclaration[]
-  instanceMethods: MethodDeclaration[]
+  instanceMethods: (MethodDeclaration | NativeDeclaration)[]
   staticFields: FieldDeclaration[]
   staticMethods: MethodDeclaration[]
   superclass?: Class
