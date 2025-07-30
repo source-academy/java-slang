@@ -1294,8 +1294,14 @@ class AstExtractor extends BaseJavaCstVisitor {
     return getIdentifier(ctx.Identifier![0])
   }
 
-  methodBody(ctx: JavaParser.MethodBodyCtx): AST.MethodBody {
+  methodBody(ctx: JavaParser.MethodBodyCtx): AST.MethodBody | undefined {
     if (ctx.block) return this.visit(ctx.block)
+
+    // handle only semicolon i.e. empty block
+    if (ctx.Semicolon) {
+      return undefined
+    }
+
     throw new Error('Not implemented')
   }
 
