@@ -91,6 +91,9 @@ export const addClassParents = (node: Node, frame: Frame): Result => {
       const classType = frame.getType(node.typeIdentifier.identifier, node.typeIdentifier.location)
       if (classType instanceof Error) return newResult(null, [classType])
       if (!(classType instanceof ClassType)) throw new Error('class type should be a ClassImpl')
+      if (node.typeIdentifier.identifier === 'Object') {
+        return newResult(null)
+      }
       if (node.classExtends) {
         const extendsType = frame.getType(
           node.classExtends.classType.typeIdentifier.identifier,
@@ -108,7 +111,11 @@ export const addClassParents = (node: Node, frame: Frame): Result => {
           type = type.getParentClass()
         }
         classType.setParentClass(extendsType)
+      } else {
+        const objectType = frame.getType('Object', { startOffset: -1, startLine: -1 })
+        classType.setParentClass(objectType as ObjectClass)
       }
+
       return newResult(classType)
     }
     default:
