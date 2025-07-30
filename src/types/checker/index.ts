@@ -54,8 +54,8 @@ export const newResult = (
 
 export const OK_RESULT: Result = newResult(null)
 
-export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result => {
-  const typeCheckingFrame = frame.newChildFrame()
+export const check = (node: Node, frame: Frame = Frame.globalFrame().newChildFrame()): Result => {
+  const typeCheckingFrame = frame
   const addClassesResult = addClasses(node, typeCheckingFrame)
   if (addClassesResult.hasErrors) return addClassesResult
   const addClassParentsResult = addClassParents(node, typeCheckingFrame)
