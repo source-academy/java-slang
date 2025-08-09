@@ -99,6 +99,22 @@ const testCases: testCase[] = [
     expectedLines: ["true", "false"],
   },
   {
+    comment: "println with concatenated arguments",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          System.out.println("Hello" + " " + "world!");
+          System.out.println("This is an int: " + 123);
+          System.out.println("This is a float: " + 4.5f);
+          System.out.println("This is a long: " + 10000000000L);
+          System.out.println("This is a double: " + 10.3);
+        }
+      }
+    `,
+    expectedLines: ["Hello world!", "This is an int: 123", "This is a float: 4.5",
+      "This is a long: 10000000000", "This is a double: 10.3"],
+  },
+  {
     comment: "multiple println statements",
     program: `
       public class Main {
