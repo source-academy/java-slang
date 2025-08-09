@@ -24,6 +24,7 @@ const binaryWriter = new BinaryWriter();
 
 export function runTest(program: string, expectedLines: string[]) {
   const ast = parser.parse(program);
+  console.log(JSON.stringify(ast, null, 2) + "\n");
   expect(ast).not.toBeNull();
 
   if (debug) {

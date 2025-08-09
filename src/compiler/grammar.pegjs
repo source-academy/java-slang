@@ -1079,7 +1079,8 @@ MultiplicativeExpression
   }
 
 UnaryExpression
-  = PostfixExpression
+  = / CastExpression
+  / PostfixExpression
   / op:PrefixOp expr:UnaryExpression {
     return addLocInfo({
       kind: "PrefixExpression",
@@ -1087,7 +1088,6 @@ UnaryExpression
       expression: expr,
     })
   }
-  / CastExpression
   / SwitchExpression
 
 PrefixOp
@@ -1107,8 +1107,19 @@ PostfixExpression
   }
 
 CastExpression
-  = lparen PrimitiveType rparen UnaryExpression
-  / lparen ReferenceType rparen (LambdaExpression / !(PlusMinus) UnaryExpression)
+  = lparen castType:PrimitiveType rparen expr:UnaryExpression {
+    return addLocInfo({
+        kind: "CastExpression",
+        type: castType,
+        expression: expr,
+    })}
+  / lparen castType:ReferenceType rparen expr:(LambdaExpression / !(PlusMinus) UnaryExpression) {
+    return addLocInfo({
+        kind: "CastExpression",
+        type: castType,
+        expression: expr,
+    })
+  }
 
 SwitchExpression
   = SwitchStatement

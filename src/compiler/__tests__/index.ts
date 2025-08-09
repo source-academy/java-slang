@@ -9,8 +9,11 @@ import { methodInvocationTest } from "./tests/methodInvocation.test";
 import { importTest } from "./tests/import.test";
 import { arrayTest } from "./tests/array.test";
 import { classTest } from "./tests/class.test";
+import { assignmentExpressionTest } from './tests/assignmentExpression.test'
+import { castExpressionTest } from './tests/castExpression.test'
 
 describe("compiler tests", () => {
+  castExpressionTest();
   printlnTest();
   variableDeclarationTest();
   arithmeticExpressionTest();
@@ -22,4 +25,5 @@ describe("compiler tests", () => {
   importTest();
   arrayTest();
   classTest();
+  assignmentExpressionTest();
 })
