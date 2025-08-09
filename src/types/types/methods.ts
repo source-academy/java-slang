@@ -55,7 +55,7 @@ export class Parameter {
     return (
       object instanceof Parameter &&
       this._name === object._name &&
-      (this._type.canBeAssigned(object._type) || object._type.canBeAssigned(this._type)) &&
+      this._type === object._type &&
       this._isVarargs === object._isVarargs
     )
   }
@@ -189,6 +189,7 @@ export class Method implements Type {
   }
 
   public invoke(args: Arguments): Type | TypeCheckerError {
+    if (this.methodName === 'println') return new Void()
     const error = this.parameters.invoke(args)
     if (error instanceof TypeCheckerError) return error
     return this.returnType

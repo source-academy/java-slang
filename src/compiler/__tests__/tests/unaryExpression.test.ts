@@ -160,6 +160,45 @@ const testCases: testCase[] = [
     expectedLines: ["10", "10", "-10", "-10", "-10", "-10", "10", "9", "-10"],
   },
   {
+    comment: "unary plus/minus for long",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          long a = 9223372036854775807L;
+          System.out.println(+a);
+          System.out.println(-a);
+        }
+      }
+    `,
+    expectedLines: ["9223372036854775807", "-9223372036854775807"],
+  },
+  {
+    comment: "unary plus/minus for float",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          float a = 4.5f;
+          System.out.println(+a);
+          System.out.println(-a);
+        }
+      }
+    `,
+    expectedLines: ["4.5", "-4.5"],
+  },
+  {
+    comment: "unary plus/minus for double",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          double a = 10.75;
+          System.out.println(+a);
+          System.out.println(-a);
+        }
+      }
+    `,
+    expectedLines: ["10.75", "-10.75"],
+  },
+  {
     comment: "bitwise complement",
     program: `
     public class Main {

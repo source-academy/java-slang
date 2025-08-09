@@ -18,7 +18,7 @@ export class SymbolRedeclarationError extends CompileError {
 
 export class SymbolCannotBeResolvedError extends CompileError {
   constructor(token: string, fullName: string) {
-    super('cannot resolve symbol ' + '"' + token + '"' + ' in' + '"' + fullName + '"')
+    super('cannot resolve symbol ' + '"' + token + '"' + ' in ' + '"' + fullName + '"')
   }
 }
 
@@ -31,5 +31,23 @@ export class InvalidMethodCallError extends CompileError {
 export class ConstructNotSupportedError extends CompileError {
   constructor(name: string) {
     super('"' + name + '"' + ' is currently not supported by the compiler')
+  }
+}
+
+export class NoMethodMatchingSignatureError extends CompileError {
+  constructor(signature: string) {
+    super(`No method matching signature ${signature}) found.`)
+  }
+}
+
+export class AmbiguousMethodCallError extends CompileError {
+  constructor(signature: string) {
+    super(`Ambiguous method call: ${signature}`)
+  }
+}
+
+export class OverrideFinalMethodError extends CompileError {
+  constructor(name: string) {
+    super(`Cannot override final method ${name}`)
   }
 }
