@@ -28,7 +28,8 @@ export type Statement =
   | IfStatement
   | WhileStatement
   | ForStatement
-  | EmptyStatement;
+  | EmptyStatement
+  | SwitchStatement;
 
 export interface EmptyStatement extends BaseNode {
   kind: "EmptyStatement";
@@ -64,6 +65,34 @@ export interface BasicForStatement extends BaseNode {
 
 export interface EnhancedForStatement extends BaseNode {
   kind: "EnhancedForStatement";
+}
+
+export interface SwitchStatement extends BaseNode {
+  kind: "SwitchStatement";
+  expression: Expression; // The expression to evaluate for the switch
+  cases: Array<SwitchCase>;
+}
+
+export interface SwitchCase extends BaseNode {
+  kind: "SwitchCase";
+  labels: Array<CaseLabel | DefaultLabel>; // Labels for case blocks
+  statements?: Array<BlockStatement>; // Statements to execute for the case
+}
+
+export type CaseLabel = CaseLiteralLabel | CaseExpressionLabel;
+
+export interface CaseLiteralLabel extends BaseNode {
+  kind: "CaseLabel";
+  expression: Literal; // Literal values: byte, short, int, char, or String
+}
+
+export interface CaseExpressionLabel extends BaseNode {
+  kind: "CaseLabel";
+  expression: Expression; // For future extension if needed
+}
+
+export interface DefaultLabel extends BaseNode {
+  kind: "DefaultLabel"; // Represents the default case
 }
 
 export type StatementWithoutTrailingSubstatement =
@@ -259,7 +288,7 @@ export interface Assignment extends BaseNode {
 }
 
 export type LeftHandSide = ExpressionName | ArrayAccess;
-export type UnaryExpression = PrefixExpression | PostfixExpression;
+export type UnaryExpression = PrefixExpression | PostfixExpression | CastExpression;
 
 export interface PrefixExpression extends BaseNode {
   kind: "PrefixExpression";
@@ -288,4 +317,10 @@ export interface TernaryExpression extends BaseNode {
   condition: Expression;
   consequent: Expression;
   alternate: Expression;
+}
+
+export interface CastExpression extends BaseNode {
+  kind: "CastExpression";
+  type: UnannType;
+  expression: Expression;
 }

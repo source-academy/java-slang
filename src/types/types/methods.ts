@@ -189,6 +189,7 @@ export class Method implements Type {
   }
 
   public invoke(args: Arguments): Type | TypeCheckerError {
+    if (this.methodName === 'println') return new Void()
     const error = this.parameters.invoke(args)
     if (error instanceof TypeCheckerError) return error
     return this.returnType
