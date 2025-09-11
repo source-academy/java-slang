@@ -20,7 +20,19 @@ export interface Context {
   stash: Stash
   environment: Environment
 
+  interfaces: Interfaces
+
   totalSteps: number
+}
+
+export interface Interfaces {
+  stdout: (displayString: string) => void
+  stderr: (errType: 'TypeCheck' | 'Compile' | 'Runtime', errMsg: string) => void
+}
+
+export interface IOCallbacks {
+  stdout?: (displayString: string) => void
+  stderr?: (errType: 'TypeCheck' | 'Compile' | 'Runtime', errMsg: string) => void
 }
 
 /**
