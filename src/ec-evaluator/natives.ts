@@ -1,5 +1,5 @@
 import { Control, Environment, Stash } from './components'
-import { StashItem } from './types'
+import { Interfaces, StashItem } from './types'
 
 /*
     Native function escape hatch.
@@ -18,11 +18,13 @@ import { StashItem } from './types'
 export type ForeignFunction = ({
   control,
   stash,
-  environment
+  environment,
+  interfaces
 }: {
   control: Control
   stash: Stash
   environment: Environment
+  interfaces: Interfaces
 }) => void
 
 export const foreigns: {
@@ -39,11 +41,10 @@ export const foreigns: {
     stash.push(stashItem)
   },
 
-  'Object::display(String s): void': ({ environment }) => {
+  'Object::display(int s): void': ({ environment, interfaces }) => {
     // @ts-expect-error ts(2339): guaranteed valid by type checker
     const s = environment.getVariable('s').value.literalType.value
 
-    // TODO: hook up to frontend
-    console.log(s)
+    interfaces.stdout(s)
   }
 }
