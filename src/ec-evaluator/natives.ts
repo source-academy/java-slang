@@ -30,14 +30,16 @@ export type ForeignFunction = ({
 export const foreigns: {
   [descriptor: string]: ForeignFunction
 } = {
-  'Object::hashCode(): int': ({ stash }) => {
-    const hashCode = Math.floor(Math.random() * Math.pow(2, 32))
+  'Object::hashCode(): int': ({ environment, stash, interfaces }) => {
+    const instance = environment.getVariable('this').value
+
+    const hashCode = 'hashCode' in instance ? instance.hashCode : interfaces.statics.lfsr.next()
+
     const stashItem: StashItem = {
       kind: 'Literal',
       literalType: { kind: 'DecimalIntegerLiteral', value: String(hashCode) }
     }
 
-    console.log(stashItem)
     stash.push(stashItem)
   },
 

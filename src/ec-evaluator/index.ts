@@ -4,8 +4,8 @@ import { Control, Environment, Stash } from './components'
 import { STEP_LIMIT } from './constants'
 import { RuntimeError } from './errors'
 import { evaluate } from './interpreter'
-import { libraryClasses } from './lib'
-import { Context, Error, Finished, IOCallbacks, Result } from './types'
+import { LFSR, libraryClasses } from './lib'
+import { Context, Error, Finished, Interfaces, IOCallbacks, Result } from './types'
 import { handleSequence } from './utils'
 
 export * from './components'
@@ -18,7 +18,7 @@ export const runECEvaluatorInjected = (
   targetStep: number = STEP_LIMIT,
   ioCallbacks: IOCallbacks
 ): Promise<Result> => {
-  const context = createContext(ioCallbacks)
+  const context = createContext(code, ioCallbacks)
 
   // type checking
   const typeCheckResult = typeCheck(libraryClasses, code)
@@ -57,7 +57,7 @@ export const runECEvaluatorInjected = (
 }
 
 export const runECEvaluator = (code: string, targetStep: number = STEP_LIMIT): Promise<Result> => {
-  const context = createContext()
+  const context = createContext(code)
   try {
     // parse() may throw SyntaxError.
     const compilationUnit = parse(code)
@@ -79,21 +79,24 @@ export const runECEvaluator = (code: string, targetStep: number = STEP_LIMIT): P
   }
 }
 
-export const createContext = (ioCallbacks?: IOCallbacks): Context => ({
+export const createContext = (code: string, ioCallbacks?: IOCallbacks): Context => ({
   errors: [],
 
   control: new Control(),
   stash: new Stash(),
   environment: new Environment(),
 
-  interfaces: initialiseInterfaces(ioCallbacks),
+  interfaces: initialiseInterfaces(code, ioCallbacks),
 
   totalSteps: 0
 })
 
-const initialiseInterfaces = (ioCallbacks?: IOCallbacks) => {
+const initialiseInterfaces = (code: string, ioCallbacks?: IOCallbacks): Interfaces => {
   return {
     stdout: ioCallbacks?.stdout ?? console.log,
-    stderr: ioCallbacks?.stderr ?? console.log
+    stderr: ioCallbacks?.stderr ?? console.log,
+    statics: {
+      lfsr: new LFSR(code)
+    }
   }
 }
