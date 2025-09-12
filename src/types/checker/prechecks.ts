@@ -113,7 +113,10 @@ export const addClassParents = (node: Node, frame: Frame): Result => {
         classType.setParentClass(extendsType)
       } else {
         const objectType = frame.getType('Object', { startOffset: -1, startLine: -1 })
-        classType.setParentClass(objectType as ObjectClass)
+        // if Object is declared explicitly, use that
+        if (!(objectType instanceof TypeCheckerError)) {
+          classType.setParentClass(objectType as ObjectClass)
+        }
       }
 
       return newResult(classType)

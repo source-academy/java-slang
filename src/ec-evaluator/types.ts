@@ -11,6 +11,7 @@ import {
 } from '../ast/types/classes'
 import { Control, EnvNode, Environment, Stash } from './components'
 import { SourceError } from './errors'
+import { LFSR } from './lib'
 import { ForeignFunction } from './natives'
 
 export interface Context {
@@ -28,6 +29,9 @@ export interface Context {
 export interface Interfaces {
   stdout: (displayString: string) => void
   stderr: (errType: 'TypeCheck' | 'Compile' | 'Runtime', errMsg: string) => void
+  statics: {
+    lfsr: LFSR
+  }
 }
 
 export interface IOCallbacks {
