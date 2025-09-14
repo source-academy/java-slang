@@ -35,9 +35,11 @@ export class LFSR {
 
 export const libraryClasses = `
 class Object {
+  public static native void display(int s);
+
   public native int hashCode();
 
-  public static native void display(int s);
+  public native String toString();
 }`
 
 // const disabled = `class PrintStream extends Object {

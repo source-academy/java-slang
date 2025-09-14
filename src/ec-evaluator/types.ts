@@ -178,6 +178,7 @@ export interface Object {
   kind: StructType.OBJECT
   frame: EnvNode
   class: Class
+  hashCode?: number
 }
 
 export interface NativeDeclaration {
