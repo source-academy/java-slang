@@ -1,5 +1,6 @@
 import { Control, Environment, Stash } from './components'
-import { Interfaces, StashItem } from './types'
+import { RuntimeError } from './errors'
+import { Interfaces, StashItem, StructType, VarValue } from './types'
 
 /*
     Native function escape hatch.
@@ -30,10 +31,10 @@ export type ForeignFunction = ({
 export const foreigns: {
   [descriptor: string]: ForeignFunction
 } = {
-  'Object::hashCode(): int': ({ environment, stash, interfaces }) => {
+  'Object::hashCode(): int': ({ stash, environment, interfaces }) => {
     const instance = environment.getVariable('this').value
 
-    const hashCode = 'hashCode' in instance ? instance.hashCode : interfaces.statics.lfsr.next()
+    const hashCode = getHashCode(instance, interfaces)
 
     const stashItem: StashItem = {
       kind: 'Literal',
@@ -48,5 +49,41 @@ export const foreigns: {
     const s = environment.getVariable('s').value.literalType.value
 
     interfaces.stdout(s)
+  },
+
+  'Object::toString(): String': ({ stash, environment, interfaces }) => {
+    const instance = environment.getVariable('this').value
+
+    if (instance.kind !== StructType.OBJECT) {
+      throw new RuntimeError('Call to toString on non-Object')
+    }
+
+    const className = instance.class.classDecl.typeIdentifier
+    const hashCodeToHex = getHashCode(instance, interfaces).toString(16)
+
+    const stashItem: StashItem = {
+      kind: 'Literal',
+      literalType: {
+        kind: 'StringLiteral',
+        value: `${className}@${hashCodeToHex}`
+      }
+    }
+
+    stash.push(stashItem)
+    return
   }
+}
+
+// Utility functions used by native methods
+const getHashCode = (obj: VarValue, interfaces: Interfaces): number => {
+  if (obj.kind !== StructType.OBJECT) {
+    // TODO: throw error here
+    throw new RuntimeError('Attempt to retrieve hashCode from non-Object')
+  }
+
+  if (obj.hashCode === undefined) {
+    obj.hashCode = interfaces.statics.lfsr.next()
+  }
+
+  return obj.hashCode
 }
