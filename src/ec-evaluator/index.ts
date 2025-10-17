@@ -25,7 +25,8 @@ export const runECEvaluator = (
   if (typeCheckResult.hasTypeErrors) {
     const typeErrMsg = typeCheckResult.errorMsgs.join('\n')
     context.interfaces.stderr('TypeCheck', typeErrMsg)
-    return Promise.resolve({ status: 'error' } as Error)
+    console.error(typeErrMsg)
+    return Promise.resolve({ status: 'error', context } as Error)
   }
 
   // load library
@@ -33,7 +34,9 @@ export const runECEvaluator = (
   context.control.push(
     ...handleSequence(libraryCompilationUnit.topLevelClassOrInterfaceDeclarations)
   )
-  evaluate(context, targetStep)
+
+  // step size limit is irrelevant here, just makes injected library classes run to completion
+  evaluate(context, 100000)
 
   try {
     // parse() may throw SyntaxError.
