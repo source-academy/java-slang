@@ -44,7 +44,7 @@ export const foreigns: {
     stash.push(stashItem)
   },
 
-  'Object::display(int s): void': ({ environment, interfaces }) => {
+  'PrintStream::println(String s): void': ({ environment, interfaces }) => {
     // @ts-expect-error ts(2339): guaranteed valid by type checker
     const s = environment.getVariable('s').value.literalType.value
 
