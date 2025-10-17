@@ -65,10 +65,6 @@ describe("evaluate main method correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class AnotherTest {...}
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // static void main(String[] args) {...}
@@ -154,10 +150,6 @@ describe("evaluate main method correctly", () => {
 
       "ExpressionStatement", // test.main([""]);
       "NormalClassDeclaration", // class test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}

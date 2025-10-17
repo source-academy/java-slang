@@ -36,10 +36,6 @@ describe("evaluate field access with this keyword correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -247,10 +243,6 @@ describe("evaluate field access with this keyword correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -467,10 +459,6 @@ describe("evaluate method invocation with this keyword correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -686,10 +674,6 @@ describe("evaluate method invocation with this keyword correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
