@@ -202,7 +202,7 @@ export interface Class {
   instanceFields: FieldDeclaration[]
   instanceMethods: (MethodDeclaration | NativeDeclaration)[]
   staticFields: FieldDeclaration[]
-  staticMethods: MethodDeclaration[]
+  staticMethods: (MethodDeclaration | NativeDeclaration)[]
   superclass?: Class
 }
 

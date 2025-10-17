@@ -5,7 +5,7 @@ import { STEP_LIMIT } from './constants'
 import { RuntimeError } from './errors'
 import { evaluate } from './interpreter'
 import { LFSR, libraryClasses } from './lib'
-import { Context, Error, Finished, Interfaces, IOCallbacks, Result } from './types'
+import { Class, Context, Error, Finished, Interfaces, IOCallbacks, Result } from './types'
 import { handleSequence } from './utils'
 
 export * from './components'
@@ -13,7 +13,7 @@ export * from './errors'
 export * from './types'
 export { isInstr, isNode } from './utils'
 
-export const runECEvaluatorInjected = (
+export const runECEvaluator = (
   code: string,
   targetStep: number = STEP_LIMIT,
   ioCallbacks: IOCallbacks
@@ -56,29 +56,6 @@ export const runECEvaluatorInjected = (
   }
 }
 
-export const runECEvaluator = (code: string, targetStep: number = STEP_LIMIT): Promise<Result> => {
-  const context = createContext(code)
-  try {
-    // parse() may throw SyntaxError.
-    const compilationUnit = parse(code)
-
-    context.control.push(compilationUnit)
-    // evaluate() may throw RuntimeError
-    const value = evaluate(context, targetStep)
-
-    return new Promise((resolve, _) => {
-      resolve({ status: 'finished', context, value } as Finished)
-    })
-  } catch (e) {
-    // Possible interpreting language error thrown, so conversion to RuntimeError may be required.
-    const error = e.type ? e : new RuntimeError(e.message)
-    context.errors.push(error)
-    return new Promise((resolve, _) => {
-      resolve({ status: 'error', context } as Error)
-    })
-  }
-}
-
 export const createContext = (code: string, ioCallbacks?: IOCallbacks): Context => ({
   errors: [],
 
@@ -94,9 +71,21 @@ export const createContext = (code: string, ioCallbacks?: IOCallbacks): Context 
 const initialiseInterfaces = (code: string, ioCallbacks?: IOCallbacks): Interfaces => {
   return {
     stdout: ioCallbacks?.stdout ?? console.log,
-    stderr: ioCallbacks?.stderr ?? console.log,
+    stderr: ioCallbacks?.stderr ?? console.error,
     statics: {
       lfsr: new LFSR(code)
     }
   }
+}
+
+export const makeObjectClass = (): Class => {
+  const context = createContext('')
+  const objectClassDefinition = 'class Object {}'
+  const libraryCompilationUnit = parse(objectClassDefinition)
+  context.control.push(
+    ...handleSequence(libraryCompilationUnit.topLevelClassOrInterfaceDeclarations)
+  )
+  evaluate(context, STEP_LIMIT)
+
+  return context.environment.getClass('Object')
 }
