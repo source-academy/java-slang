@@ -1,15 +1,15 @@
-import { parse } from "../../ast/parser";
-import { evaluate } from "../interpreter";
+import { parse } from '../../ast/parser'
+import { evaluate } from '../interpreter'
 import {
   ControlStub,
   StashStub,
   createContextStub,
   getControlItemStr,
   getStashItemStr
-} from "./__utils__/utils";
+} from './__utils__/utils'
 
-describe("evaluate field access with this keyword correctly", () => {  
-  it("evaluate LHS this correctly", () => {
+describe('evaluate field access with this keyword correctly', () => {
+  it('evaluate LHS this correctly', () => {
     const programStr = `
       class Test {
         int x = 1;
@@ -21,206 +21,206 @@ describe("evaluate field access with this keyword correctly", () => {
           this.x = 2;
         }
       }
-    `;
+    `
 
-    const compilationUnit = parse(programStr);
-    expect(compilationUnit).toBeTruthy();
+    const compilationUnit = parse(programStr)
+    expect(compilationUnit).toBeTruthy()
 
-    const context = createContextStub();
-    context.control.push(compilationUnit!);
+    const context = createContextStub()
+    context.control.push(compilationUnit!)
 
-    const result = evaluate(context);
+    const result = evaluate(context)
 
     const expectedControlTrace = [
-      "CompilationUnit",
+      'CompilationUnit',
 
-      "ExpressionStatement", // Test.main([""]);
-      "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
+      'ExpressionStatement', // Test.main([""]);
+      'NormalClassDeclaration', // class Test {...}
 
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
+      'Env',
+      'MethodDeclaration', // void test() {...}
+      'MethodDeclaration', // public static void main(String[] args) {...}
+      'ConstructorDeclaration', // Test() {...}
 
-      "Env",
-      "MethodDeclaration", // void test() {...}
-      "MethodDeclaration", // public static void main(String[] args) {...}
-      "ConstructorDeclaration", // Test() {...}
+      'Pop',
+      'MethodInvocation', // Test.main([""])
 
-      "Pop",
-      "MethodInvocation", // Test.main([""])
-      
-      "Invocation", // ()
-      "Literal", // [""]
-      "ResOverride",
-      "ExpressionName", // Test
-      "ResOverload", // main
-      "ResType", // [""]
-      "ResType", // Test
+      'Invocation', // ()
+      'Literal', // [""]
+      'ResOverride',
+      'ExpressionName', // Test
+      'ResOverload', // main
+      'ResType', // [""]
+      'ResType', // Test
 
-      "Deref",
-      "EvalVariable", // Test
+      'Deref',
+      'EvalVariable', // Test
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Block
-      "ReturnStatement", // return;
-      "ExpressionStatement", // test.test();
-      "LocalVariableDeclarationStatement", // Test test = new Test();
+      'Env', // from Block
+      'ReturnStatement', // return;
+      'ExpressionStatement', // test.test();
+      'LocalVariableDeclarationStatement', // Test test = new Test();
 
-      "ExpressionStatement", // test = new Test();
-      "LocalVariableDeclarationStatement", // Test test;
+      'ExpressionStatement', // test = new Test();
+      'LocalVariableDeclarationStatement', // Test test;
 
-      "Pop",
-      "Assignment", // test = new Test()
+      'Pop',
+      'Assignment', // test = new Test()
 
-      "Assign", // =
-      "ClassInstanceCreationExpression", // new Test()
-      "EvalVariable", // test
+      'Assign', // =
+      'ClassInstanceCreationExpression', // new Test()
+      'EvalVariable', // test
 
-      "Invocation", // ()
-      "New", // new
-      "ResConOverload", // Test
-      "ResType", // Test
+      'Invocation', // ()
+      'New', // new
+      'ResConOverload', // Test
+      'ResType', // Test
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Block
-      "ReturnStatement", // return this;
-      "ExpressionStatement", // this.x = 1;
-      "ExplicitConstructorInvocation", // super();
+      'Env', // from Block
+      'ReturnStatement', // return this;
+      'ExpressionStatement', // this.x = 1;
+      'ExplicitConstructorInvocation', // super();
 
-      "Pop",
-      "Invocation", // ()
-      "ExpressionName", // super
-      "ResConOverload", // Object
-      "ResType", // super
+      'Pop',
+      'Invocation', // ()
+      'ExpressionName', // super
+      'ResConOverload', // Object
+      'ResType', // super
 
-      "Deref",
-      "EvalVariable", // super
+      'Deref',
+      'EvalVariable', // super
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Block
-      "ReturnStatement", // return this;
+      'Env', // from Block
+      'ReturnStatement', // return this;
 
-      "Reset", // return
-      "ExpressionName", // this
+      'Reset', // return
+      'ExpressionName', // this
 
-      "Deref",
-      "EvalVariable", // this
+      'Deref',
+      'EvalVariable', // this
 
-      "Reset", // Skip Env from Block
+      'Reset', // Skip Env from Block
 
-      "Pop",
-      "Assignment", // this.x = 1
+      'Pop',
+      'Assignment', // this.x = 1
 
-      "Assign", // =
-      "Literal", // 1
-      "EvalVariable", // this.x
+      'Assign', // =
+      'Literal', // 1
+      'EvalVariable', // this.x
 
-      "Res", // x
-      "EvalVariable", // this
+      'Res', // x
+      'EvalVariable', // this
 
-      "Reset", // return
-      "ExpressionName", // this
-    
-      "Deref",
-      "EvalVariable", // this
+      'Reset', // return
+      'ExpressionName', // this
 
-      "Reset", // skip Env from Block
+      'Deref',
+      'EvalVariable', // this
 
-      "Pop",
-      "MethodInvocation", // test.test()
+      'Reset', // skip Env from Block
 
-      "Invocation", // ()
-      "ResOverride",
-      "ExpressionName", // test
-      "ResOverload", // test
-      "ResType", // test
+      'Pop',
+      'MethodInvocation', // test.test()
 
-      "Deref",
-      "EvalVariable", // test
+      'Invocation', // ()
+      'ResOverride',
+      'ExpressionName', // test
+      'ResOverload', // test
+      'ResType', // test
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Deref',
+      'EvalVariable', // test
 
-      "Env", // from Block
-      "ReturnStatement", // return;
-      "ExpressionStatement", // this.x = 2;
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Pop",
-      "Assignment", // this.x = 2
+      'Env', // from Block
+      'ReturnStatement', // return;
+      'ExpressionStatement', // this.x = 2;
 
-      "Assign", // =
-      "Literal", // 2
-      "EvalVariable", // this.x
+      'Pop',
+      'Assignment', // this.x = 2
 
-      "Res", // x
-      "EvalVariable", // this
+      'Assign', // =
+      'Literal', // 2
+      'EvalVariable', // this.x
 
-      "Reset", // return
-      "Void",
+      'Res', // x
+      'EvalVariable', // this
 
-      "Reset", // skip Env from Block
+      'Reset', // return
+      'Void',
 
-      "Reset", // return
-      "Void",
+      'Reset', // skip Env from Block
 
-      "Reset", // skip Env from Block
-    ];
+      'Reset', // return
+      'Void',
+
+      'Reset' // skip Env from Block
+    ]
     const expectedStashTrace = [
-      "Test", // ResType
-      "String[]", // ResType
-      "main", // ResOverload
-      "Test", // EvalVariable
-      "Test", // Deref
-      "main", // ResOverride
+      'Test', // ResType
+      'String[]', // ResType
+      'main', // ResOverload
+      'Test', // EvalVariable
+      'Test', // Deref
+      'main', // ResOverride
       `[""]`, // Literal
-      "test", // EvalVariable
-      "Test", // ResType
-      "Test", // ResConOverload
-      "Object", // New
-      "Object", // ResType
-      "Object", // ResConOverload
-      "super", // EvalVariable
-      "Object", // Deref
-      "this", // EvalVariable
-      "Object", // Deref
-      "this", // EvalVariable
-      "x", // Res
-      "1", // Literal
-      "1", // Assign
-      "this", // EvalVariable
-      "Object", // Deref
-      "Object", // Assign
-      "Test", // ResType
-      "test", // ResOverload
-      "test", // EvalVariable
-      "Object", // Deref
-      "test", // ResOverride
-      "Object",
-      "this", // EvalVariable
-      "x", // Res
-      "2", // Literal
-      "2", // Assign
-      "Void",
-      "Void",
-    ];
+      'test', // EvalVariable
+      'Test', // ResType
+      'Test', // ResConOverload
+      'Object', // New
+      'Object', // ResType
+      'Object', // ResConOverload
+      'super', // EvalVariable
+      'Object', // Deref
+      'this', // EvalVariable
+      'Object', // Deref
+      'this', // EvalVariable
+      'x', // Res
+      '1', // Literal
+      '1', // Assign
+      'this', // EvalVariable
+      'Object', // Deref
+      'Object', // Assign
+      'Test', // ResType
+      'test', // ResOverload
+      'test', // EvalVariable
+      'Object', // Deref
+      'test', // ResOverride
+      'Object',
+      'this', // EvalVariable
+      'x', // Res
+      '2', // Literal
+      '2', // Assign
+      'Void',
+      'Void'
+    ]
 
-    expect(result).toEqual(undefined);
-    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
-    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
+    expect(result).toEqual(undefined)
+    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(
+      expectedControlTrace
+    )
+    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(
+      expectedStashTrace
+    )
     // TODO test env
-  });
+  })
 
-  it("evaluate RHS this correctly", () => {
+  it('evaluate RHS this correctly', () => {
     const programStr = `
       class Test {
         int x = 1;
@@ -232,215 +232,215 @@ describe("evaluate field access with this keyword correctly", () => {
           int x = this.x;
         }
       }
-    `;
+    `
 
-    const compilationUnit = parse(programStr);
-    expect(compilationUnit).toBeTruthy();
+    const compilationUnit = parse(programStr)
+    expect(compilationUnit).toBeTruthy()
 
-    const context = createContextStub();
-    context.control.push(compilationUnit!);
+    const context = createContextStub()
+    context.control.push(compilationUnit!)
 
-    const result = evaluate(context);
+    const result = evaluate(context)
 
     const expectedControlTrace = [
-      "CompilationUnit",
+      'CompilationUnit',
 
-      "ExpressionStatement", // Test.main([""]);
-      "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
+      'ExpressionStatement', // Test.main([""]);
+      'NormalClassDeclaration', // class Test {...}
 
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
+      'Env',
+      'MethodDeclaration', // void test() {...}
+      'MethodDeclaration', // public static void main(String[] args) {...}
+      'ConstructorDeclaration', // Test() {...}
 
-      "Env",
-      "MethodDeclaration", // void test() {...}
-      "MethodDeclaration", // public static void main(String[] args) {...}
-      "ConstructorDeclaration", // Test() {...}
+      'Pop',
+      'MethodInvocation', // Test.main([""])
 
-      "Pop",
-      "MethodInvocation", // Test.main([""])
+      'Invocation', // ()
+      'Literal', // [""]
+      'ResOverride',
+      'ExpressionName', // Test
+      'ResOverload', // main
+      'ResType', // [""]
+      'ResType', // Test
 
-      "Invocation", // ()
-      "Literal", // [""]
-      "ResOverride",
-      "ExpressionName", // Test
-      "ResOverload", // main
-      "ResType", // [""]
-      "ResType", // Test
+      'Deref',
+      'EvalVariable', // Test
 
-      "Deref",
-      "EvalVariable", // Test
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Block
+      'ReturnStatement', // return;
+      'ExpressionStatement', // test.test();
+      'LocalVariableDeclarationStatement', // Test test = new Test();
 
-      "Env", // from Block
-      "ReturnStatement", // return;
-      "ExpressionStatement", // test.test();
-      "LocalVariableDeclarationStatement", // Test test = new Test();
+      'ExpressionStatement', // test = new Test();
+      'LocalVariableDeclarationStatement', // Test test;
 
-      "ExpressionStatement", // test = new Test();
-      "LocalVariableDeclarationStatement", // Test test;
+      'Pop',
+      'Assignment', // test = new Test()
 
-      "Pop",
-      "Assignment", // test = new Test()
+      'Assign', // =
+      'ClassInstanceCreationExpression', // new Test()
+      'EvalVariable', // test
 
-      "Assign", // =
-      "ClassInstanceCreationExpression", // new Test()
-      "EvalVariable", // test
+      'Invocation', // ()
+      'New', // new
+      'ResConOverload', // Test
+      'ResType', // Test
 
-      "Invocation", // ()
-      "New", // new
-      "ResConOverload", // Test
-      "ResType", // Test
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Block
+      'ReturnStatement', // return this;
+      'ExpressionStatement', // this.x = 1;
+      'ExplicitConstructorInvocation', // super();
 
-      "Env", // from Block
-      "ReturnStatement", // return this;
-      "ExpressionStatement", // this.x = 1;
-      "ExplicitConstructorInvocation", // super();
+      'Pop',
+      'Invocation', // ()
+      'ExpressionName', // super
+      'ResConOverload', // Object
+      'ResType', // super
 
-      "Pop",
-      "Invocation", // ()
-      "ExpressionName", // super
-      "ResConOverload", // Object
-      "ResType", // super
+      'Deref',
+      'EvalVariable', // super
 
-      "Deref",
-      "EvalVariable", // super
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Block
+      'ReturnStatement', // return this;
 
-      "Env", // from Block
-      "ReturnStatement", // return this;
+      'Reset', // return
+      'ExpressionName', // this
 
-      "Reset", // return
-      "ExpressionName", // this
+      'Deref',
+      'EvalVariable', // this
 
-      "Deref",
-      "EvalVariable", // this
+      'Reset', // Skip Env from Block
 
-      "Reset", // Skip Env from Block
+      'Pop',
+      'Assignment', // this.x = 1
 
-      "Pop",
-      "Assignment", // this.x = 1
+      'Assign', // =
+      'Literal', // 1
+      'EvalVariable', // this.x
 
-      "Assign", // =
-      "Literal", // 1
-      "EvalVariable", // this.x
+      'Res', // x
+      'EvalVariable', // this
 
-      "Res", // x
-      "EvalVariable", // this
+      'Reset', // return
+      'ExpressionName', // this
 
-      "Reset", // return
-      "ExpressionName", // this
+      'Deref',
+      'EvalVariable', // this
 
-      "Deref",
-      "EvalVariable", // this
+      'Reset', // skip Env from Block
 
-      "Reset", // skip Env from Block
+      'Pop',
+      'MethodInvocation', // test.test()
 
-      "Pop",
-      "MethodInvocation", // test.test()
+      'Invocation', // ()
+      'ResOverride',
+      'ExpressionName', // test
+      'ResOverload', // test
+      'ResType', // test
 
-      "Invocation", // ()
-      "ResOverride",
-      "ExpressionName", // test
-      "ResOverload", // test
-      "ResType", // test
+      'Deref',
+      'EvalVariable', // test
 
-      "Deref",
-      "EvalVariable", // test
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Block
+      'ReturnStatement', // return;
+      'LocalVariableDeclarationStatement', // int x = this.x;
 
-      "Env", // from Block
-      "ReturnStatement", // return;
-      "LocalVariableDeclarationStatement", // int x = this.x;
+      'ExpressionStatement', // x = this.x;
+      'LocalVariableDeclarationStatement', // int x;
 
-      "ExpressionStatement", // x = this.x;
-      "LocalVariableDeclarationStatement", // int x;
+      'Pop',
+      'Assignment', // x = this.x
 
-      "Pop",
-      "Assignment", // x = this.x
+      'Assign', // =
+      'ExpressionName', // this.x
+      'EvalVariable', // x
 
-      "Assign", // =
-      "ExpressionName", // this.x
-      "EvalVariable", // x
+      'Deref',
+      'EvalVariable', // this.x
 
-      "Deref",
-      "EvalVariable", // this.x
+      'Res', // x
+      'EvalVariable', // this
 
-      "Res", // x
-      "EvalVariable", // this
+      'Reset', // return
+      'Void',
 
-      "Reset", // return
-      "Void",
+      'Reset', // skip Env from Block
 
-      "Reset", // skip Env from Block
+      'Reset', // return
+      'Void',
 
-      "Reset", // return
-      "Void",
-
-      "Reset", // skip Env from Block
-    ];
+      'Reset' // skip Env from Block
+    ]
     const expectedStashTrace = [
-      "Test", // ResType
-      "String[]", // ResType
-      "main", // ResOverload
-      "Test", // EvalVariable
-      "Test", // Deref
-      "main", // ResOverride
+      'Test', // ResType
+      'String[]', // ResType
+      'main', // ResOverload
+      'Test', // EvalVariable
+      'Test', // Deref
+      'main', // ResOverride
       `[""]`, // Literal
-      "test", // EvalVariable
-      "Test", // ResConOverload
-      "Test", // ResType
-      "Object", // New
-      "Object", // ResType
-      "Object", // ResConOverload
-      "super", // EvalVariable
-      "Object", // Deref
-      "this", // EvalVariable
-      "Object", // Deref
-      "this", // EvalVariable
-      "x", // Res
-      "1", // Literal
-      "1", // Assign
-      "this", // EvalVariable
-      "Object", // Deref
-      "Object", // Assign
-      "Test", // ResType
-      "test", // ResOverload
-      "test", // EvalVariable
-      "Object", // Deref
-      "test", // ResOverride
-      "Object",
-      "x", // EvalVariable
-      "this", // EvalVariable
-      "x", // Res
-      "1", // Deref
-      "1", // Assign
-      "Void",
-      "Void",
-    ];
+      'test', // EvalVariable
+      'Test', // ResConOverload
+      'Test', // ResType
+      'Object', // New
+      'Object', // ResType
+      'Object', // ResConOverload
+      'super', // EvalVariable
+      'Object', // Deref
+      'this', // EvalVariable
+      'Object', // Deref
+      'this', // EvalVariable
+      'x', // Res
+      '1', // Literal
+      '1', // Assign
+      'this', // EvalVariable
+      'Object', // Deref
+      'Object', // Assign
+      'Test', // ResType
+      'test', // ResOverload
+      'test', // EvalVariable
+      'Object', // Deref
+      'test', // ResOverride
+      'Object',
+      'x', // EvalVariable
+      'this', // EvalVariable
+      'x', // Res
+      '1', // Deref
+      '1', // Assign
+      'Void',
+      'Void'
+    ]
 
-    expect(result).toEqual(undefined);
-    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
-    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
+    expect(result).toEqual(undefined)
+    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(
+      expectedControlTrace
+    )
+    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(
+      expectedStashTrace
+    )
     // TODO test env
-  });
+  })
 })
 
-describe("evaluate method invocation with this keyword correctly", () => {
-  it("evaluate static MethodInvocation in instance MethodInvocation with this keyword correctly", () => {
+describe('evaluate method invocation with this keyword correctly', () => {
+  it('evaluate static MethodInvocation in instance MethodInvocation with this keyword correctly', () => {
     const programStr = `
       class Test {
         public static void main(String[] args) {
@@ -452,212 +452,212 @@ describe("evaluate method invocation with this keyword correctly", () => {
           this.test(1);
         }
       }
-    `;
+    `
 
-    const compilationUnit = parse(programStr);
-    expect(compilationUnit).toBeTruthy();
+    const compilationUnit = parse(programStr)
+    expect(compilationUnit).toBeTruthy()
 
-    const context = createContextStub();
-    context.control.push(compilationUnit!);
+    const context = createContextStub()
+    context.control.push(compilationUnit!)
 
-    const result = evaluate(context);
+    const result = evaluate(context)
 
     const expectedControlTrace = [
-      "CompilationUnit",
+      'CompilationUnit',
 
-      "ExpressionStatement", // Test.main([""]);
-      "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
+      'ExpressionStatement', // Test.main([""]);
+      'NormalClassDeclaration', // class Test {...}
 
-      "Env",
-      "MethodDeclaration", // void test() {...}
-      "MethodDeclaration", // static void test(int x) {...}
-      "MethodDeclaration", // public static void main(String[] args) {...}
-      "ConstructorDeclaration", // Test() {...}
+      'Env',
+      'MethodDeclaration', // void test() {...}
+      'MethodDeclaration', // static void test(int x) {...}
+      'MethodDeclaration', // public static void main(String[] args) {...}
+      'ConstructorDeclaration', // Test() {...}
 
-      "Pop",
-      "MethodInvocation", // Test.main([""])
+      'Pop',
+      'MethodInvocation', // Test.main([""])
 
-      "Invocation", // ()
-      "Literal", // [""]
-      "ResOverride",
-      "ExpressionName", // Test
-      "ResOverload", // main
-      "ResType", // [""]
-      "ResType", // Test
+      'Invocation', // ()
+      'Literal', // [""]
+      'ResOverride',
+      'ExpressionName', // Test
+      'ResOverload', // main
+      'ResType', // [""]
+      'ResType', // Test
 
-      "Deref",
-      "EvalVariable", // Test
+      'Deref',
+      'EvalVariable', // Test
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Block
-      "ReturnStatement", // return;
-      "ExpressionStatement", // test.test();
-      "LocalVariableDeclarationStatement", // Test test = new Test();
+      'Env', // from Block
+      'ReturnStatement', // return;
+      'ExpressionStatement', // test.test();
+      'LocalVariableDeclarationStatement', // Test test = new Test();
 
-      "ExpressionStatement", // test = new Test();
-      "LocalVariableDeclarationStatement", // Test test;
+      'ExpressionStatement', // test = new Test();
+      'LocalVariableDeclarationStatement', // Test test;
 
-      "Pop",
-      "Assignment", // test = new Test()
+      'Pop',
+      'Assignment', // test = new Test()
 
-      "Assign", // =
-      "ClassInstanceCreationExpression", // new Test()
-      "EvalVariable", // test
+      'Assign', // =
+      'ClassInstanceCreationExpression', // new Test()
+      'EvalVariable', // test
 
-      "Invocation", // ()
-      "New", // new
-      "ResConOverload", // Test
-      "ResType", // Test
+      'Invocation', // ()
+      'New', // new
+      'ResConOverload', // Test
+      'ResType', // Test
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Block
-      "ReturnStatement", // return this;
-      "ExplicitConstructorInvocation", // super();
+      'Env', // from Block
+      'ReturnStatement', // return this;
+      'ExplicitConstructorInvocation', // super();
 
-      "Pop",
-      "Invocation", // ()
-      "ExpressionName", // super
-      "ResConOverload", // Object
-      "ResType", // super
+      'Pop',
+      'Invocation', // ()
+      'ExpressionName', // super
+      'ResConOverload', // Object
+      'ResType', // super
 
-      "Deref",
-      "EvalVariable", // super
+      'Deref',
+      'EvalVariable', // super
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Block
-      "ReturnStatement", // return this;
+      'Env', // from Block
+      'ReturnStatement', // return this;
 
-      "Reset", // return
-      "ExpressionName", // this
+      'Reset', // return
+      'ExpressionName', // this
 
-      "Deref",
-      "EvalVariable", // this
+      'Deref',
+      'EvalVariable', // this
 
-      "Reset", // Skip Env from Block
+      'Reset', // Skip Env from Block
 
-      "Reset", // return
-      "ExpressionName", // this
+      'Reset', // return
+      'ExpressionName', // this
 
-      "Deref",
-      "EvalVariable", // this
+      'Deref',
+      'EvalVariable', // this
 
-      "Reset", // skip Env from Block
+      'Reset', // skip Env from Block
 
-      "Pop",
-      "MethodInvocation", // test.test()
+      'Pop',
+      'MethodInvocation', // test.test()
 
-      "Invocation", // ()
-      "ResOverride",
-      "ExpressionName", // test
-      "ResOverload", // test
-      "ResType", // Test
+      'Invocation', // ()
+      'ResOverride',
+      'ExpressionName', // test
+      'ResOverload', // test
+      'ResType', // Test
 
-      "Deref",
-      "EvalVariable", // test
+      'Deref',
+      'EvalVariable', // test
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Block
-      "ReturnStatement", // return;
-      "ExpressionStatement", // this.test(1);
+      'Env', // from Block
+      'ReturnStatement', // return;
+      'ExpressionStatement', // this.test(1);
 
-      "Pop",
-      "MethodInvocation", // this.test(1)
+      'Pop',
+      'MethodInvocation', // this.test(1)
 
-      "Invocation",
-      "Literal", // 1
-      "ResOverride",
-      "ExpressionName", // this
-      "ResOverload", // test
-      "ResType", // 1
-      "ResType", // this
+      'Invocation',
+      'Literal', // 1
+      'ResOverride',
+      'ExpressionName', // this
+      'ResOverload', // test
+      'ResType', // 1
+      'ResType', // this
 
-      "Deref",
-      "EvalVariable", // this
+      'Deref',
+      'EvalVariable', // this
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Block
-      "ReturnStatement", // return;
+      'Env', // from Block
+      'ReturnStatement', // return;
 
-      "Reset", // return
-      "Void", //
+      'Reset', // return
+      'Void', //
 
-      "Reset", // skip Env from Block
+      'Reset', // skip Env from Block
 
-      "Reset", // return
-      "Void", //
+      'Reset', // return
+      'Void', //
 
-      "Reset", // skip Env from Block
+      'Reset', // skip Env from Block
 
-      "Reset", // return
-      "Void", //
+      'Reset', // return
+      'Void', //
 
-      "Reset", // skip Env from Block
-    ];
+      'Reset' // skip Env from Block
+    ]
     const expectedStashTrace = [
-      "Test", // ResType
-      "String[]", // ResType
-      "main", // ResOverload
-      "Test", // EvalVariable
-      "Test", // Deref
-      "main", // ResOverride
+      'Test', // ResType
+      'String[]', // ResType
+      'main', // ResOverload
+      'Test', // EvalVariable
+      'Test', // Deref
+      'main', // ResOverride
       `[""]`, // Literal
-      "test", // EvalVariable
-      "Test", // ResType
-      "Test", // ResConOverload
-      "Object", // New
-      "Object", // ResType
-      "Object", // ResConOverload
-      "super", // EvalVariable
-      "Object", // Deref
-      "this", // EvalVariable
-      "Object", // Deref
-      "this", // EvalVariable
-      "Object", // Deref
-      "Object", // Assign
-      "Test", // ResType
-      "test", // ResOverload
-      "test", // EvalVariable
-      "Object", // Deref
-      "test", // ResOverride
-      "Object",
-      "Test", // ResType
-      "int", // ResType
-      "test", // ResOverload
-      "this", // EvalVariable
-      "Object", // Deref
-      "test", // ResOverride
-      "1", // Literal
-      "Void",
-      "Void",
-      "Void",
-    ];
+      'test', // EvalVariable
+      'Test', // ResType
+      'Test', // ResConOverload
+      'Object', // New
+      'Object', // ResType
+      'Object', // ResConOverload
+      'super', // EvalVariable
+      'Object', // Deref
+      'this', // EvalVariable
+      'Object', // Deref
+      'this', // EvalVariable
+      'Object', // Deref
+      'Object', // Assign
+      'Test', // ResType
+      'test', // ResOverload
+      'test', // EvalVariable
+      'Object', // Deref
+      'test', // ResOverride
+      'Object',
+      'Test', // ResType
+      'int', // ResType
+      'test', // ResOverload
+      'this', // EvalVariable
+      'Object', // Deref
+      'test', // ResOverride
+      '1', // Literal
+      'Void',
+      'Void',
+      'Void'
+    ]
 
-    expect(result).toEqual(undefined);
-    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
-    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
+    expect(result).toEqual(undefined)
+    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(
+      expectedControlTrace
+    )
+    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(
+      expectedStashTrace
+    )
     // TODO test env
-  });
+  })
 
-  it("evaluate instance MethodInvocation in instance MethodInvocation with this keyword correctly", () => {
+  it('evaluate instance MethodInvocation in instance MethodInvocation with this keyword correctly', () => {
     const programStr = `
       class Test {
         public static void main(String[] args) {
@@ -671,213 +671,213 @@ describe("evaluate method invocation with this keyword correctly", () => {
           this.test(1);
         }
       }
-    `;
+    `
 
-    const compilationUnit = parse(programStr);
-    expect(compilationUnit).toBeTruthy();
+    const compilationUnit = parse(programStr)
+    expect(compilationUnit).toBeTruthy()
 
-    const context = createContextStub();
-    context.control.push(compilationUnit!);
+    const context = createContextStub()
+    context.control.push(compilationUnit!)
 
-    const result = evaluate(context);
+    const result = evaluate(context)
 
     const expectedControlTrace = [
-      "CompilationUnit",
+      'CompilationUnit',
 
-      "ExpressionStatement", // Test.main([""]);
-      "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
+      'ExpressionStatement', // Test.main([""]);
+      'NormalClassDeclaration', // class Test {...}
 
-      "Env",
-      "MethodDeclaration", // void test() {...}
-      "MethodDeclaration", // int test(int x) {...}
-      "MethodDeclaration", // public static void main(String[] args) {...}
-      "ConstructorDeclaration", // Test() {...}
+      'Env',
+      'MethodDeclaration', // void test() {...}
+      'MethodDeclaration', // int test(int x) {...}
+      'MethodDeclaration', // public static void main(String[] args) {...}
+      'ConstructorDeclaration', // Test() {...}
 
-      "Pop",
-      "MethodInvocation", // Test.main([""])
+      'Pop',
+      'MethodInvocation', // Test.main([""])
 
-      "Invocation", // ()
-      "Literal", // [""]
-      "ResOverride",
-      "ExpressionName", // Test
-      "ResOverload", // main
-      "ResType", // [""]
-      "ResType", // Test
+      'Invocation', // ()
+      'Literal', // [""]
+      'ResOverride',
+      'ExpressionName', // Test
+      'ResOverload', // main
+      'ResType', // [""]
+      'ResType', // Test
 
-      "Deref",
-      "EvalVariable", // Test
+      'Deref',
+      'EvalVariable', // Test
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Env", // from Block
-      "ReturnStatement", // return;
-      "ExpressionStatement", // test.test();
-      "LocalVariableDeclarationStatement", // Test test = new Test();
+      'Env', // from Block
+      'ReturnStatement', // return;
+      'ExpressionStatement', // test.test();
+      'LocalVariableDeclarationStatement', // Test test = new Test();
 
-      "ExpressionStatement", // test = new Test();
-      "LocalVariableDeclarationStatement", // Test test;
+      'ExpressionStatement', // test = new Test();
+      'LocalVariableDeclarationStatement', // Test test;
 
-      "Pop",
-      "Assignment", // test = new Test()
+      'Pop',
+      'Assignment', // test = new Test()
 
-      "Assign", // =
-      "ClassInstanceCreationExpression", // new Test()
-      "EvalVariable", // test
+      'Assign', // =
+      'ClassInstanceCreationExpression', // new Test()
+      'EvalVariable', // test
 
-      "Invocation", // ()
-      "New", // new
-      "ResConOverload", // Test
-      "ResType", // Test
-      
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Invocation', // ()
+      'New', // new
+      'ResConOverload', // Test
+      'ResType', // Test
 
-      "Env", // from Block
-      "ReturnStatement", // return this;
-      "ExplicitConstructorInvocation", // super();
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Pop",
-      "Invocation", // ()
-      "ExpressionName", // super
-      "ResConOverload", // Object
-      "ResType", // super
+      'Env', // from Block
+      'ReturnStatement', // return this;
+      'ExplicitConstructorInvocation', // super();
 
-      "Deref",
-      "EvalVariable", // super
+      'Pop',
+      'Invocation', // ()
+      'ExpressionName', // super
+      'ResConOverload', // Object
+      'ResType', // super
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Deref',
+      'EvalVariable', // super
 
-      "Env", // from Block
-      "ReturnStatement", // return this;
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Reset", // return
-      "ExpressionName", // this
+      'Env', // from Block
+      'ReturnStatement', // return this;
 
-      "Deref",
-      "EvalVariable", // this
+      'Reset', // return
+      'ExpressionName', // this
 
-      "Reset", // Skip Env from Block
+      'Deref',
+      'EvalVariable', // this
 
-      "Reset", // return
-      "ExpressionName", // this
+      'Reset', // Skip Env from Block
 
-      "Deref",
-      "EvalVariable", // this
+      'Reset', // return
+      'ExpressionName', // this
 
-      "Reset", // skip Env from Block
+      'Deref',
+      'EvalVariable', // this
 
-      "Pop",
-      "MethodInvocation", // test.test()
+      'Reset', // skip Env from Block
 
-      "Invocation", // ()
-      "ResOverride",
-      "ExpressionName", // test
-      "ResOverload", // test
-      "ResType", // Test
+      'Pop',
+      'MethodInvocation', // test.test()
 
-      "Deref",
-      "EvalVariable", // test
+      'Invocation', // ()
+      'ResOverride',
+      'ExpressionName', // test
+      'ResOverload', // test
+      'ResType', // Test
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Deref',
+      'EvalVariable', // test
 
-      "Env", // from Block
-      "ReturnStatement", // return;
-      "ExpressionStatement", // this.test(1);
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Pop",
-      "MethodInvocation", // this.test(1)
+      'Env', // from Block
+      'ReturnStatement', // return;
+      'ExpressionStatement', // this.test(1);
 
-      "Invocation", // ()
-      "Literal", // 1
-      "ResOverride",
-      "ExpressionName", // this
-      "ResOverload", // test
-      "ResType", // 1
-      "ResType", // this
+      'Pop',
+      'MethodInvocation', // this.test(1)
 
-      "Deref",
-      "EvalVariable", // this
+      'Invocation', // ()
+      'Literal', // 1
+      'ResOverride',
+      'ExpressionName', // this
+      'ResOverload', // test
+      'ResType', // 1
+      'ResType', // this
 
-      "Env", // from Invocation
-      "Marker",
-      "Block", // {...}
+      'Deref',
+      'EvalVariable', // this
 
-      "Env", // from Block
-      "ReturnStatement", // return x;
+      'Env', // from Invocation
+      'Marker',
+      'Block', // {...}
 
-      "Reset", // return
-      "ExpressionName", // x
+      'Env', // from Block
+      'ReturnStatement', // return x;
 
-      "Deref",
-      "EvalVariable", // x
+      'Reset', // return
+      'ExpressionName', // x
 
-      "Reset", // skip Env from Block
+      'Deref',
+      'EvalVariable', // x
 
-      "Reset", // return
-      "Void", //
+      'Reset', // skip Env from Block
 
-      "Reset", // skip Env from Block
+      'Reset', // return
+      'Void', //
 
-      "Reset", // return
-      "Void", //
+      'Reset', // skip Env from Block
 
-      "Reset", // skip Env from Block
-    ];
+      'Reset', // return
+      'Void', //
+
+      'Reset' // skip Env from Block
+    ]
     const expectedStashTrace = [
-      "Test", // ResType
-      "String[]", // ResType
-      "main", // ResOverload
-      "Test", // EvalVariable
-      "Test", // Deref
-      "main", // ResOverride
+      'Test', // ResType
+      'String[]', // ResType
+      'main', // ResOverload
+      'Test', // EvalVariable
+      'Test', // Deref
+      'main', // ResOverride
       `[""]`, // Literal
-      "test", // EvalVariable
-      "Test", // ResType
-      "Test", // ResConOverload
-      "Object", // New
-      "Object", // ResType
-      "Object", // ResConOverload
-      "super", // EvalVariable
-      "Object", // Deref
-      "this", // EvalVariable
-      "Object", // Deref
-      "this", // EvalVariable
-      "Object", // Deref
-      "Object", // Assign
-      "Test", // ResType
-      "test", // ResOverload
-      "test", // EvalVariable
-      "Object", // Deref
-      "test", // ResOverride
-      "Object",
-      "Test", // ResType
-      "int", // ResType
-      "test", // ResOverload
-      "this", // EvalVariable
-      "Object", // Deref
-      "test", // ResOverride
-      "Object",
-      "1", // Literal
-      "x", // EvalVariable
-      "1", // Deref
-      "Void",
-      "Void",
-    ];
+      'test', // EvalVariable
+      'Test', // ResType
+      'Test', // ResConOverload
+      'Object', // New
+      'Object', // ResType
+      'Object', // ResConOverload
+      'super', // EvalVariable
+      'Object', // Deref
+      'this', // EvalVariable
+      'Object', // Deref
+      'this', // EvalVariable
+      'Object', // Deref
+      'Object', // Assign
+      'Test', // ResType
+      'test', // ResOverload
+      'test', // EvalVariable
+      'Object', // Deref
+      'test', // ResOverride
+      'Object',
+      'Test', // ResType
+      'int', // ResType
+      'test', // ResOverload
+      'this', // EvalVariable
+      'Object', // Deref
+      'test', // ResOverride
+      'Object',
+      '1', // Literal
+      'x', // EvalVariable
+      '1', // Deref
+      'Void',
+      'Void'
+    ]
 
-    expect(result).toEqual(undefined);
-    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(expectedControlTrace);
-    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(expectedStashTrace);
+    expect(result).toEqual(undefined)
+    expect((context.control as ControlStub).getTrace().map(i => getControlItemStr(i))).toEqual(
+      expectedControlTrace
+    )
+    expect((context.stash as StashStub).getTrace().map(i => getStashItemStr(i))).toEqual(
+      expectedStashTrace
+    )
     // TODO test env
-  });
-});
+  })
+})

@@ -26,7 +26,16 @@ import {
   nullLitNode,
   returnThisStmtNode
 } from './nodeCreator'
-import { ControlItem, Context, Instr, Class, Type, Closure, StashItem } from './types'
+import {
+  ControlItem,
+  Context,
+  Instr,
+  Class,
+  Type,
+  Closure,
+  StashItem,
+  NativeDeclaration
+} from './types'
 
 /**
  * Components.
@@ -177,10 +186,12 @@ export const defaultValues = new Map<UnannType, Literal>([
 /**
  * Name
  */
-export const getDescriptor = (mtdOrCon: MethodDeclaration | ConstructorDeclaration): string => {
-  return mtdOrCon.kind === 'MethodDeclaration'
-    ? `${mtdOrCon.methodHeader.identifier}(${mtdOrCon.methodHeader.formalParameterList.map(p => p.unannType).join(',')})${mtdOrCon.methodHeader.result}`
-    : `${mtdOrCon.constructorDeclarator.identifier}(${mtdOrCon.constructorDeclarator.formalParameterList.map(p => p.unannType).join(',')})`
+export const getDescriptor = (
+  decl: MethodDeclaration | ConstructorDeclaration | NativeDeclaration
+): string => {
+  return decl.kind === 'MethodDeclaration' || decl.kind === 'NativeDeclaration'
+    ? `${decl.methodHeader.identifier}(${decl.methodHeader.formalParameterList.map(p => p.unannType).join(',')}): ${decl.methodHeader.result}`
+    : `${decl.constructorDeclarator.identifier}(${decl.constructorDeclarator.formalParameterList.map(p => p.unannType).join(',')})`
 }
 
 export const isQualified = (name: string) => {
@@ -228,6 +239,10 @@ export const isStatic = (fieldOrMtd: FieldDeclaration | MethodDeclaration): bool
 
 export const isInstance = (fieldOrMtd: FieldDeclaration | MethodDeclaration): boolean => {
   return !isStatic(fieldOrMtd)
+}
+
+export const isNativeMethodDeclaration = (mtd: MethodDeclaration): boolean => {
+  return mtd.methodModifier.includes('native')
 }
 
 const convertFieldDeclToExpStmtAssmt = (fd: FieldDeclaration): ExpressionStatement => {
@@ -421,8 +436,8 @@ export const resOverload = (
     for (const [closureName, closure] of c.frame.frame.entries()) {
       // Methods contains parantheses and must have return type.
       if (closureName.includes(mtdName + '(') && closureName[closureName.length - 1] !== ')') {
-        const params = ((closure as Closure).mtdOrCon as MethodDeclaration).methodHeader
-          .formalParameterList
+        const params = ((closure as Closure).decl as MethodDeclaration | NativeDeclaration)
+          .methodHeader.formalParameterList
 
         if (argTypes.length != params.length) continue
 
@@ -457,9 +472,10 @@ export const resOverload = (
   for (let i = 0; i < argTypes.length; i++) {
     let mostSpecClosureByParam = appClosures[0]
     for (const appClosure of appClosures) {
-      const mostSpecParams = (mostSpecClosureByParam.mtdOrCon as MethodDeclaration).methodHeader
+      const mostSpecParams = (mostSpecClosureByParam.decl as MethodDeclaration | NativeDeclaration)
+        .methodHeader.formalParameterList
+      const params = (appClosure.decl as MethodDeclaration | NativeDeclaration).methodHeader
         .formalParameterList
-      const params = (appClosure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList
       if (isSubtype(params[i].unannType, mostSpecParams[i].unannType, classStore)) {
         mostSpecClosureByParam = appClosure
       }
@@ -475,7 +491,7 @@ export const resOverload = (
 }
 
 export const resOverride = (classToSearchIn: Class, overloadResolvedClosure: Closure): Closure => {
-  const overloadResolvedMtd = overloadResolvedClosure.mtdOrCon as MethodDeclaration
+  const overloadResolvedMtd = overloadResolvedClosure.decl as MethodDeclaration | NativeDeclaration
   const name = overloadResolvedMtd.methodHeader.identifier
   const overloadResolvedClosureParams = overloadResolvedMtd.methodHeader.formalParameterList
 
@@ -489,7 +505,8 @@ export const resOverride = (classToSearchIn: Class, overloadResolvedClosure: Clo
 
   let overrideResolvedClosure = overloadResolvedClosure
   for (const closure of closures) {
-    const params = (closure.mtdOrCon as MethodDeclaration).methodHeader.formalParameterList
+    const params = (closure.decl as MethodDeclaration | NativeDeclaration).methodHeader
+      .formalParameterList
 
     if (overloadResolvedClosureParams.length != params.length) continue
 
@@ -523,7 +540,7 @@ export const resConOverload = (
 
   let resolved: Closure | undefined
   for (const closure of closures) {
-    const params = (closure.mtdOrCon as ConstructorDeclaration).constructorDeclarator
+    const params = (closure.decl as ConstructorDeclaration).constructorDeclarator
       .formalParameterList
 
     if (argTypes.length != params.length) continue
@@ -550,3 +567,7 @@ export const resConOverload = (
 export const isNull = (stashItem: StashItem) => {
   return stashItem.kind === 'Literal' && stashItem.literalType.kind === 'NullLiteral'
 }
+
+// because native functions must retrieve variables from the environment by identifier, this descriptor type also includes parameter names for convenience
+export const getFullyQualifiedDescriptor = (className: string, decl: MethodDeclaration) =>
+  `${className}::${decl.methodHeader.identifier}(${decl.methodHeader.formalParameterList.map(p => `${p.unannType} ${p.identifier}`).join(',')}): ${decl.methodHeader.result}`

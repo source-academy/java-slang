@@ -65,7 +65,9 @@ import {
   ResConOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  StructType
+  StructType,
+  NativeDeclaration,
+  Interfaces
 } from './types'
 import {
   defaultValues,
@@ -87,18 +89,22 @@ import {
   searchMainMtdClass,
   prependExpConInvIfNeeded,
   isStatic,
+  isNativeMethodDeclaration,
   resOverload,
   resOverride,
   resConOverload,
   isNull,
-  makeNonLocalVarNonParamSimpleNameQualified
+  makeNonLocalVarNonParamSimpleNameQualified,
+  getFullyQualifiedDescriptor
 } from './utils'
+import { foreigns } from './natives'
 
 type CmdEvaluator = (
   command: ControlItem,
   environment: Environment,
   control: Control,
-  stash: Stash
+  stash: Stash,
+  interfaces: Interfaces
 ) => void
 
 /**
@@ -112,6 +118,7 @@ export const evaluate = (
   const environment = context.environment
   const control = context.control
   const stash = context.stash
+  const interfaces = context.interfaces
 
   context.totalSteps = 0
 
@@ -124,9 +131,9 @@ export const evaluate = (
 
     control.pop()
     if (isNode(command)) {
-      cmdEvaluators[command.kind](command, environment, control, stash)
+      cmdEvaluators[command.kind](command, environment, control, stash, interfaces)
     } else {
-      cmdEvaluators[command.instrType](command, environment, control, stash)
+      cmdEvaluators[command.instrType](command, environment, control, stash, interfaces)
     }
 
     command = control.peek()
@@ -136,12 +143,13 @@ export const evaluate = (
   return stash.peek()
 }
 
-const cmdEvaluators: { [type: string]: CmdEvaluator } = {
+export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
   CompilationUnit: (
     command: CompilationUnit,
     _environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     // Get first class that defines the main method according to program order.
     const className = searchMainMtdClass(command.topLevelClassOrInterfaceDeclarations)
@@ -151,14 +159,14 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
 
     control.push(node.mainMtdInvExpStmtNode(className))
     control.push(...handleSequence(command.topLevelClassOrInterfaceDeclarations))
-    control.push(node.objClassDeclNode())
   },
 
   NormalClassDeclaration: (
     command: NormalClassDeclaration,
     environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     const className = command.typeIdentifier
 
@@ -224,7 +232,13 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(...handleSequence(staticFields))
   },
 
-  Block: (command: Block, environment: Environment, control: Control, _stash: Stash) => {
+  Block: (
+    command: Block,
+    environment: Environment,
+    control: Control,
+    _stash: Stash,
+    _interfaces: Interfaces
+  ) => {
     // Save current environment before extending.
     control.push(instr.envInstr(environment.current, command))
     control.push(...handleSequence(command.blockStatements))
@@ -236,7 +250,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ConstructorDeclaration,
     environment: Environment,
     _control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     // Use constructor descriptor as key.
     const conDescriptor: string = getDescriptor(command)
@@ -248,11 +263,34 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: MethodDeclaration,
     environment: Environment,
     _control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
+    let mtdClosure
+    // Native method handling
+    if (isNativeMethodDeclaration(command)) {
+      const FQMtdDesc = getFullyQualifiedDescriptor(environment.current.name, command)
+      const fn = foreigns[FQMtdDesc]
+
+      if (fn === undefined) {
+        throw new errors.UndefinedNativeMethod(FQMtdDesc)
+      }
+
+      // bind foreign function
+      const natDecl: NativeDeclaration = {
+        kind: 'NativeDeclaration',
+        methodModifier: command.methodModifier,
+        methodHeader: command.methodHeader,
+        foreignFunction: fn
+      }
+
+      mtdClosure = struct.closureStruct(natDecl, environment.current)
+    } else {
+      mtdClosure = struct.closureStruct(command, environment.current)
+    }
+
     // Use method descriptor as key.
     const mtdDescriptor: string = getDescriptor(command)
-    const mtdClosure = struct.closureStruct(command, environment.current)
     environment.defineMtdOrCon(mtdDescriptor, mtdClosure)
   },
 
@@ -260,7 +298,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: FieldDeclaration,
     environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     // FieldDeclaration to be evaluated are always static fields.
     // Instance fields are transformed into Assignment ExpressionStatement inserted into constructors.
@@ -285,7 +324,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: LocalVariableDeclarationStatement,
     environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     const type: LocalVariableType = command.localVariableType
     const declaration: VariableDeclarator = command.variableDeclaratorList[0]
@@ -308,7 +348,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ExpressionStatement,
     _environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     control.push(instr.popInstr(command))
     control.push(command.stmtExp)
@@ -318,7 +359,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ReturnStatement,
     _environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     control.push(instr.resetInstr(command))
     control.push(command.exp)
@@ -334,7 +376,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: MethodInvocation,
     _environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     const nameParts = command.identifier.split('.')
     const target = nameParts.splice(0, nameParts.length - 1).join('.')
@@ -355,7 +398,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ClassInstanceCreationExpression,
     environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     const c: Class = environment.getClass(command.identifier)
 
@@ -371,7 +415,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ExplicitConstructorInvocation,
     _environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     control.push(instr.popInstr(command))
     control.push(instr.invInstr(command.argumentList.length + 1, command))
@@ -382,11 +427,23 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     control.push(instr.resTypeInstr(node.exprNameNode(command.thisOrSuper, command), command))
   },
 
-  Literal: (command: Literal, _environment: Environment, _control: Control, stash: Stash) => {
+  Literal: (
+    command: Literal,
+    _environment: Environment,
+    _control: Control,
+    stash: Stash,
+    _interfaces: Interfaces
+  ) => {
     stash.push(command)
   },
 
-  Void: (command: Void, _environment: Environment, _control: Control, stash: Stash) => {
+  Void: (
+    command: Void,
+    _environment: Environment,
+    _control: Control,
+    stash: Stash,
+    _interfaces: Interfaces
+  ) => {
     stash.push(command)
   },
 
@@ -394,7 +451,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ExpressionName,
     _environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     control.push(instr.derefInstr(command))
     control.push(instr.evalVarInstr(command.name, command))
@@ -404,7 +462,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: BinaryExpression,
     _environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     control.push(instr.binOpInstr(command.operator, command))
     control.push(command.right)
@@ -415,7 +474,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     _command: Instr,
     _environment: Environment,
     _control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     stash.pop()
   },
@@ -424,7 +484,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     _command: AssmtInstr,
     _environment: Environment,
     _control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     // value is popped before variable becuase value is evaluated later than variable.
     const value = stash.pop()! as Literal | Object
@@ -440,7 +501,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: BinOpInstr,
     _environment: Environment,
     _control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     const right = stash.pop()! as Literal
     const left = stash.pop()! as Literal
@@ -451,7 +513,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: InvInstr,
     environment: Environment,
     control: Control,
-    stash: Stash
+    stash: Stash,
+    interfaces: Interfaces
   ) => {
     // Save current environment to be restored after method returns.
     control.push(instr.envInstr(environment.current, command.srcNode))
@@ -468,13 +531,13 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const closure: Closure = stash.pop()! as Closure
 
     const params: FormalParameter[] =
-      closure.mtdOrCon.kind === 'MethodDeclaration'
-        ? cloneDeep(closure.mtdOrCon.methodHeader.formalParameterList)
-        : cloneDeep(closure.mtdOrCon.constructorDeclarator.formalParameterList)
+      closure.decl.kind === 'MethodDeclaration' || closure.decl.kind === 'NativeDeclaration'
+        ? cloneDeep(closure.decl.methodHeader.formalParameterList)
+        : cloneDeep(closure.decl.constructorDeclarator.formalParameterList)
 
     // Extend env from global frame.
-    const mtdOrConDescriptor = getDescriptor(closure.mtdOrCon)
-    environment.extendEnv(environment.global, mtdOrConDescriptor)
+    const methodDescriptor = getDescriptor(closure.decl)
+    environment.extendEnv(environment.global, methodDescriptor)
 
     const isInstanceMtdOrCon = args.length == params.length + 1
     if (isInstanceMtdOrCon) {
@@ -501,19 +564,35 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       environment.defineVariable(params[i].identifier, params[i].unannType, args[i])
     }
 
-    // Push method/constructor body.
-    const body =
-      closure.mtdOrCon.kind === 'MethodDeclaration'
-        ? closure.mtdOrCon.methodBody
-        : closure.mtdOrCon.constructorBody
-    control.push(body)
+    // Native functions
+    if (closure.decl.kind === 'NativeDeclaration') {
+      // call foreign fn with CSE machine state
+      closure.decl.foreignFunction({ control, stash, environment, interfaces })
+
+      // only because resetInstr demands one, never actually used
+      const superfluousReturnStatement: ReturnStatement = {
+        kind: 'ReturnStatement',
+        exp: { kind: 'Void' }
+      }
+
+      // handle return from native fn
+      control.push(instr.resetInstr(superfluousReturnStatement))
+    } else {
+      // Push method/constructor body.
+      const body =
+        closure.decl.kind === 'MethodDeclaration'
+          ? closure.decl.methodBody
+          : closure.decl.constructorBody
+      control.push(body)
+    }
   },
 
   [InstrType.ENV]: (
     command: EnvInstr,
     environment: Environment,
     _control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     environment.restoreEnv(command.env)
   },
@@ -522,7 +601,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ResetInstr,
     _environment: Environment,
     control: Control,
-    _stash: Stash
+    _stash: Stash,
+    _interfaces: Interfaces
   ) => {
     // Continue popping ControlItem until Marker is found.
     const next: ControlItem | undefined = control.pop()
@@ -535,7 +615,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: EvalVarInstr,
     environment: Environment,
     control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     if (isQualified(command.symbol)) {
       const nameParts = command.symbol.split('.')
@@ -552,7 +633,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ResInstr,
     environment: Environment,
     _control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     const varOrClass = stash.pop()! as Variable | Class
 
@@ -621,7 +703,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     _command: DerefInstr,
     _environment: Environment,
     _control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     const varOrClass = stash.pop()! as Variable | Class
     const value =
@@ -638,7 +721,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: NewInstr,
     environment: Environment,
     _control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     // To be restore after extending curr env to declare instance fields in obj frame.
     const currEnv = environment.current
@@ -688,7 +772,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ResTypeInstr,
     environment: Environment,
     control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     // TODO need to handle all type of arg expressions
     const value: Expression | Class = command.value
@@ -726,7 +811,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ResTypeContInstr,
     environment: Environment,
     _control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     const typeToSearchIn = stash.pop()! as Type
 
@@ -766,7 +852,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ResOverloadInstr,
     environment: Environment,
     control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     // Retrieve arg types in reversed order for method overloading resolution.
     const argTypes: Type[] = []
@@ -785,7 +872,7 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash.push(closure)
 
     // Post-processing required if overload resolved method is instance method.
-    if (isInstance(closure.mtdOrCon as MethodDeclaration)) {
+    if (isInstance(closure.decl as MethodDeclaration)) {
       // Increment arity of InvInstr on control.
       let n = 1
       while (
@@ -803,12 +890,13 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     _command: ResOverrideInstr,
     environment: Environment,
     _control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     const target = stash.pop()!
     const overloadResolvedClosure = stash.pop()! as Closure
 
-    if (isStatic(overloadResolvedClosure.mtdOrCon as MethodDeclaration)) {
+    if (isStatic(overloadResolvedClosure.decl as MethodDeclaration)) {
       // No method overriding resolution is required if resolved method is a static method.
       stash.push(overloadResolvedClosure)
       return
@@ -835,7 +923,8 @@ const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     command: ResConOverloadInstr,
     environment: Environment,
     _control: Control,
-    stash: Stash
+    stash: Stash,
+    _interfaces: Interfaces
   ) => {
     // Retrieve arg types in reversed order for constructor resolution.
     const argTypes: Type[] = []

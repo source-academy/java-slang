@@ -4,11 +4,15 @@ import {
   ConstructorDeclaration,
   FieldDeclaration,
   MethodDeclaration,
+  MethodHeader,
+  MethodModifier,
   NormalClassDeclaration,
   UnannType
 } from '../ast/types/classes'
 import { Control, EnvNode, Environment, Stash } from './components'
 import { SourceError } from './errors'
+import { LFSR } from './lib'
+import { ForeignFunction } from './natives'
 
 export interface Context {
   errors: SourceError[]
@@ -17,7 +21,22 @@ export interface Context {
   stash: Stash
   environment: Environment
 
+  interfaces: Interfaces
+
   totalSteps: number
+}
+
+export interface Interfaces {
+  stdout: (displayString: string) => void
+  stderr: (errType: 'TypeCheck' | 'Compile' | 'Runtime', errMsg: string) => void
+  statics: {
+    lfsr: LFSR
+  }
+}
+
+export interface IOCallbacks {
+  stdout?: (displayString: string) => void
+  stderr?: (errType: 'TypeCheck' | 'Compile' | 'Runtime', errMsg: string) => void
 }
 
 /**
@@ -159,11 +178,19 @@ export interface Object {
   kind: StructType.OBJECT
   frame: EnvNode
   class: Class
+  hashCode?: number
+}
+
+export interface NativeDeclaration {
+  kind: 'NativeDeclaration'
+  methodModifier: Array<MethodModifier>
+  methodHeader: MethodHeader
+  foreignFunction: ForeignFunction
 }
 
 export interface Closure {
   kind: StructType.CLOSURE
-  mtdOrCon: MethodDeclaration | ConstructorDeclaration
+  decl: MethodDeclaration | ConstructorDeclaration | NativeDeclaration
   env: EnvNode
 }
 
@@ -173,9 +200,9 @@ export interface Class {
   classDecl: NormalClassDeclaration
   constructors: ConstructorDeclaration[]
   instanceFields: FieldDeclaration[]
-  instanceMethods: MethodDeclaration[]
+  instanceMethods: (MethodDeclaration | NativeDeclaration)[]
   staticFields: FieldDeclaration[]
-  staticMethods: MethodDeclaration[]
+  staticMethods: (MethodDeclaration | NativeDeclaration)[]
   superclass?: Class
 }
 
