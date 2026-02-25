@@ -7,7 +7,7 @@ on:
 
 jobs:
   verify:
-    name: Verify should publish
+    name: Publish if pkg version changed
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -15,35 +15,31 @@ jobs:
         with:
           ref: main
           submodules: recursive
-      - name: Verify version has changed
-        # We use jq as `npm pkg get version` returns a quoted string
-        run: |
-          if [ "$(cat package.json | jq -r .version)" == "$(npm view java-slang version)" ]; then
-            echo "Version has not changed"
-            echo "UPDATE=false" >> "$GITHUB_OUTPUT"
-          else
-              echo "Version has changed";
-            echo "UPDATE=true" >> "$GITHUB_OUTPUT"
-          fi
-  publish:
-    name: Publish to npm
-    needs: [verify]
-    if: ${{ needs.verify.outputs.UPDATE == 'true' }}
-    runs-on: ubuntu-latestg
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          submodules: recursive
+
+      - name: Get package version
+        id: get_pkg_version
+        run: echo "pkg_version=$(cat package.json | jq -r .version)" >> "$GITHUB_OUTPUT"
+
+      - name: Get npm version
+        id: get_npm_version
+        run: echo "npm_version=$(npm view java-slang version)" >> "$GITHUB_OUTPUT"
+
+      - name: Stop if version has not changed
+        if: steps.get_pkg_version.outputs.pkg_version == steps.get_npm_version.outputs.npm_version
+        run: exit 1
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          registry-url: https://registry.npmjs.org/
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+
       - name: Build
         run: yarn build
+
       - name: Publish to npm
         run: npm publish
         env:

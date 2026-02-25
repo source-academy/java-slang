@@ -72,6 +72,75 @@ const testCases: testCase[] = [
     expectedLines: ["4", "1", "3", "2", "2", "3", "3"],
   },
   {
+    comment: "increment/decrement on class fields",
+    program: `
+    public class Main {
+      public static int g;
+      public static int h;
+      public static void main(String[] args) {
+        g = 10;
+        System.out.println(g);
+        g++;
+        System.out.println(g);
+        ++g;
+        System.out.println(g);
+
+        h = 20;
+        System.out.println(h);
+        --h;
+        System.out.println(h);
+        h--;
+        System.out.println(h);
+      }
+    }`,
+    expectedLines: ["10", "11", "12", "20", "19", "18"],
+  },
+  {
+    comment: "increment/decrement on instance fields",
+    program: `
+    public class Main {
+      public int x;
+      public void inc() {
+        this.x++;
+      }
+      public void dec() {
+        this.x--;
+      }
+
+      public static void main(String[] args) {
+        Main m = new Main();
+        System.out.println(m.x);
+        m.inc();
+        m.inc();
+        System.out.println(m.x);
+        m.x = 100;
+        m.dec();
+        System.out.println(m.x);
+      }
+    }`,
+    expectedLines: ["0", "2", "99"],
+  },
+  {
+    comment: "increment/decrement on arrays",
+    program: `
+    public class Main {
+      public static void main(String[] args) {
+        int[] arr = {1, 5, 10, 15, 20};
+        arr[0]++;
+        --arr[1];
+        System.out.println(arr[0]);
+        System.out.println(arr[1]);
+
+        arr[3] = arr[2]++;
+        arr[4] = --arr[2];
+        System.out.println(arr[3]);
+        System.out.println(arr[4]);
+        System.out.println(arr[2]);
+      }
+    }`,
+    expectedLines: ["2", "4", "10", "10", "10"],
+  },
+  {
     comment: "unary plus/minus",
     program: `
     public class Main {

@@ -50,4 +50,14 @@ describe('JNI', () => {
     ;(getResult as SuccessResult<any>).result(thread, [])
     expect(callback).toHaveBeenCalled()
   })
+
+  test('JNI: create instance with empty stdlib', () => {
+    const testSystem = new TestSystem()
+    const jni = new JNI('testClassPath', testSystem)
+
+    expect(jni).toBeInstanceOf(JNI)
+    expect(jni['classes']).toEqual({})
+    expect(jni['classPath']).toBe('testClassPath')
+    expect(jni['system']).toBe(testSystem)
+  })
 })

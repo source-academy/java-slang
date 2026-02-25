@@ -24,7 +24,11 @@ export class UnsafeHeap {
    * Gets the dataview at the offset.
    */
   get(offset: bigint): DataView {
-    return this.heap[Number(offset)]
+    const dataView = this.heap[Number(offset)]
+    if (!dataView) {
+      throw new Error(`Invalid offset: ${offset}`)
+    }
+    return dataView
   }
 
   free(offset: bigint): void {

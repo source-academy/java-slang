@@ -246,13 +246,31 @@ const testCases: testCase[] = [
           } else {
             System.out.println("Yes3");
           }
-
-          boolean d = !(!(!(b == c)));
-          System.out.println(d);
         }
       }
     `,
-    expectedLines: ["Yes1", "Yes2", "Yes3", "true"],
+    expectedLines: ["Yes1", "Yes2", "Yes3"],
+  },
+  {
+    comment: "boolean expression",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          boolean b = true;
+          boolean c = !b;
+
+          boolean d = !(!(!(b == c)));
+          System.out.println(d);
+
+          boolean e = null == null;
+          System.out.println(e);
+
+          Main m = new Main();
+          System.out.println(null == m);
+        }
+      }
+    `,
+    expectedLines: ["true", "true", "false"],
   },
   {
     comment: "complex conditional expression",

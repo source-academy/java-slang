@@ -144,6 +144,31 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["100", "101", "100"],
   },
+  {
+    comment: "instance method using this keyword",
+    program: `
+      public class Main {
+        public void f() {
+          System.out.println("In f");
+        }
+        public void g() {
+          System.out.println("In g");
+        }
+
+        public void print() {
+          this.f();
+          System.out.println("In print");
+          this.g();
+        }
+
+        public static void main(String[] args) {
+          Main m = new Main();
+          m.print();
+        }
+      }
+    `,
+    expectedLines: ["In f", "In print", "In g"],
+  },
 ];
 
 export const classTest = () => describe("fields and methods of class", () => {
