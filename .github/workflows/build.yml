@@ -18,6 +18,7 @@ jobs:
     permissions:
       checks: write
       contents: read
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -43,3 +44,4 @@ jobs:
       - uses: ArtiomTr/jest-coverage-report-action@v2
         with:
           test-script: yarn test
+          annotations: none
