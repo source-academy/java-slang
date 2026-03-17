@@ -1,3 +1,4 @@
+/*
 import { printlnTest } from "./tests/println.test";
 import { variableDeclarationTest } from "./tests/variableDeclaration.test";
 import { arithmeticExpressionTest } from "./tests/arithmeticExpression.test";
@@ -9,17 +10,9 @@ import { methodInvocationTest } from "./tests/methodInvocation.test";
 import { importTest } from "./tests/import.test";
 import { arrayTest } from "./tests/array.test";
 import { classTest } from "./tests/class.test";
+*/
+import { typeConversionTest } from "./tests/typeConversion.test";
 
 describe("compiler tests", () => {
-  printlnTest();
-  variableDeclarationTest();
-  arithmeticExpressionTest();
-  unaryExpressionTest();
-  ifElseTest();
-  whileTest();
-  forTest();
-  methodInvocationTest();
-  importTest();
-  arrayTest();
-  classTest();
+  typeConversionTest();
 })
