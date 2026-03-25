@@ -24,7 +24,8 @@ import {
   ClassInstanceCreationExpression,
   ExpressionStatement,
   TernaryExpression,
-  LeftHandSide
+  LeftHandSide,
+  CastExpression
 } from '../ast/types/blocks-and-statements'
 import { MethodDeclaration, UnannType } from '../ast/types/classes'
 import { ConstantPoolManager } from './constant-pool-manager'
@@ -514,6 +515,59 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       return res
     }
     return f(node, cg.labels[cg.labels.length - 1], false)
+  },
+
+  CastExpression: (node: Node, cg: CodeGenerator) => {
+    const { castType: ct,  expression: expr, isPrimitiveCast: b } = node as CastExpression
+    if (b) {
+      const res = compile(expr, cg)
+      const { stackSize: size, resultType: rt } = res
+      switch (ct) {
+        case 'double':
+          switch (rt) {
+            case 'F':
+              cg.code.push(OPCODE.F2D)
+            case 'J':
+              cg.code.push(OPCODE.L2D)
+            case 'I':
+              cg.code.push(OPCODE.I2D)
+            default:
+          }
+          return { stackSize: Math.max(size, 2), resultType: 'D' }
+        case 'float':
+          switch(rt) {
+            case 'D':
+              cg.code.push(OPCODE.D2F)
+            case 'J':
+              cg.code.push(OPCODE.L2F)
+            case 'I':
+              cg.code.push(OPCODE.I2F)
+            default:
+          }
+          return { stackSize: Math.max(size, 1), resultType: 'F' }
+        case 'long':
+          switch(rt) {
+            case 'D':
+              cg.code.push(OPCODE.D2L)
+            case 'F':
+              cg.code.push(OPCODE.F2L)
+            case 'I':
+              cg.code.push(OPCODE.I2L)
+          }
+          return { stackSize: Math.max(size, 2), resultType: 'L' }
+        case 'int':
+          switch (rt) {
+            case 'D':
+              cg.code.push(OPCODE.D2I)
+            case 'F':
+              cg.code.push(OPCODE.F2I)
+            case 'J':
+              cg.code.push(OPCODE.L2I)
+          }
+          return { stackSize: Math.max(size, 1), resultType: 'I' }
+      }
+    }
+    return compile(expr, cg)
   },
 
   ClassInstanceCreationExpression: (node: Node, cg: CodeGenerator) => {
