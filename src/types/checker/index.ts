@@ -1,7 +1,7 @@
 import { Array as ArrayType } from '../types/arrays'
 import { Integer, String, Throwable, Void } from '../types/references'
 import { CaseConstant, Node } from '../ast/specificationTypes'
-import { Type } from '../types/type'
+import { PrimitiveType, Type } from '../types/type'
 import {
   ArrayRequiredError,
   BadOperandTypesError,
@@ -62,6 +62,33 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
   if (addClassMethodsResult.hasErrors) return addClassMethodsResult
   return typeCheckBody(node, typeCheckingFrame)
 }
+
+const isCastCompatible = (fromType: Type, toType: Type): boolean => {
+  // Handle primitive type compatibility
+  if (fromType instanceof PrimitiveType && toType instanceof PrimitiveType) {
+    const fromName = fromType.constructor.name;
+    const toName = toType.constructor.name;
+
+    console.log(fromName, toName);
+
+    return !(fromName === 'char' && toName !== 'int');
+  }
+
+  // Handle class type compatibility
+  if (fromType instanceof ClassType && toType instanceof ClassType) {
+    // Allow upcasts (base class to derived class) or downcasts (derived class to base class)
+    return fromType.canBeAssigned(toType) || toType.canBeAssigned(fromType);
+  }
+
+  // Handle array type compatibility
+  if (fromType instanceof ArrayType && toType instanceof ArrayType) {
+    // Ensure the content types are compatible
+    return isCastCompatible(fromType.getContentType(), toType.getContentType());
+  }
+
+  // Disallow other cases by default
+  return false;
+};
 
 export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): Result => {
   switch (node.kind) {
@@ -192,6 +219,55 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
     case 'BreakStatement': {
       return OK_RESULT
     }
+
+    case 'CastExpression': {
+      let castType: Type | TypeCheckerError;
+      let expressionType: Type | null = null;
+      let expressionResult: Result;
+
+      if ('primitiveType' in node) {
+        castType = frame.getType(unannTypeToString(node.primitiveType), node.primitiveType.location);
+      } else {
+        throw new Error('Invalid CastExpression: Missing type information.');
+      }
+
+      if (castType instanceof TypeCheckerError) {
+        return newResult(null, [castType]);
+      }
+
+      if ('unaryExpression' in node) {
+        expressionResult = typeCheckBody(node.unaryExpression, frame);
+      } else {
+        throw new Error('Invalid CastExpression: Missing expression.');
+      }
+
+      if (expressionResult.hasErrors) {
+        return expressionResult;
+      }
+
+      expressionType = expressionResult.currentType;
+      if (!expressionType) {
+        throw new Error('Expression in cast should have a type.');
+      }
+
+      if (
+        (castType instanceof PrimitiveType && expressionType instanceof PrimitiveType)
+      ) {
+        if (!isCastCompatible(expressionType, castType)) {
+          return newResult(null, [
+            new IncompatibleTypesError(node.location),
+          ]);
+        }
+      } else {
+        return newResult(null, [
+          new IncompatibleTypesError(node.location),
+        ]);
+      }
+
+      // If the cast is valid, return the target type
+      return newResult(castType);
+    }
+
     case 'ClassInstanceCreationExpression': {
       const classIdentifier =
         node.unqualifiedClassInstanceCreationExpression.classOrInterfaceTypeToInstantiate
