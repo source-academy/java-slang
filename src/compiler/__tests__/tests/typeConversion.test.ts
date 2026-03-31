@@ -9,13 +9,13 @@ const testCases: testCase[] = [
     program: `
       public class Main {
         public static void main(String[] args) {
-          int x = 1;
-          float y = x;
-          System.out.println(y);
+          float f = 1.0f;
+          int x = (int) f;
+          System.out.println(x);
         }
       }
     `,
-    expectedLines: ["1.0"],
+    expectedLines: ["1"],
   }
 ];
 
