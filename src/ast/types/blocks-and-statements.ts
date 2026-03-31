@@ -265,7 +265,7 @@ export interface CastExpression extends BaseNode {
   kind: "CastExpression";
   castType: Identifier;
   expression: Expression;
-  isPrimitiveCast: Boolean;
+  isPrimitiveCast: boolean;
 }
 
 export interface PrefixExpression extends BaseNode {

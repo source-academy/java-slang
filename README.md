@@ -51,14 +51,14 @@ The Java language in Source Academy currently supports a host of available featu
 - Implicit type widening for both primitive and non-primitive types (e.g. int to long)
 - Basic exception/error messages
 - Basic system calls e.g. System.out.println
+- Explicit type conversion (type narrowing)
+- Implicit type conversion for system calls (e.g. int input to System.out.println)
 - Single nested class
 
 ## Future Features
 
 - Multiple class declarations in the same file
 - Inheritance (basis for implementation exists but requires multiclass declaration to function)
-- Explicit type conversion (type narrowing)
-- Implicit type conversion for system calls (e.g. int input to System.out.println)
 - Generics
 - Multi-file programs
 

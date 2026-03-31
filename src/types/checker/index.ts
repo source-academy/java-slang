@@ -193,35 +193,32 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       return OK_RESULT
     }
     case 'CastExpression': {
+      let castTypeNode, expressionNode;
       if ('primitiveType' in node) {
-        let castType = frame.getType(unannTypeToString(node.primitiveType), node.primitiveType.location)
-        if (castType instanceof TypeCheckerError) return newResult(null, [castType])
-        const { currentType, errors } = typeCheckBody(node.unaryExpression, frame)
-        if (errors.length > 0) return newResult(null, errors)
-        if (!currentType) throw new Error('Target of cast expression should return a type.')
-        if (!castType.canBeAssigned(currentType) && !currentType.canBeAssigned(castType))
-          return newResult(null, [new IncompatibleTypesError(node.location)])
-        return newResult(castType)
+        castTypeNode = node.primitiveType;
+        expressionNode = node.unaryExpression;
       } else if ('referenceType' in node && 'unaryExpressionNotPlusMinus' in node) {
-        let castType = frame.getType(unannTypeToString(node.referenceType), node.referenceType.location)
-        if (castType instanceof TypeCheckerError) return newResult(null, [castType])
-        const { currentType, errors } = typeCheckBody(node.unaryExpressionNotPlusMinus, frame)
-        if (errors.length > 0) return newResult(null, errors)
-        if (!currentType) throw new Error('Target of cast expression should return a type.')
-        if (!castType.canBeAssigned(currentType) && !currentType.canBeAssigned(castType))
-          return newResult(null, [new IncompatibleTypesError(node.location)])
-        return newResult(castType)
+        castTypeNode = node.referenceType;
+        expressionNode = node.unaryExpressionNotPlusMinus;
       } else if ('referenceType' in node && 'lambdaExpression' in node) {
-        let castType = frame.getType(unannTypeToString(node.referenceType), node.referenceType.location)
-        if (castType instanceof TypeCheckerError) return newResult(null, [castType])
-        const { currentType, errors } = typeCheckBody(node.lambdaExpression, frame)
-        if (errors.length > 0) return newResult(null, errors)
-        if (!currentType) throw new Error('Target of cast expression should return a type.')
-        if (!castType.canBeAssigned(currentType) && !currentType.canBeAssigned(castType))
-          return newResult(null, [new IncompatibleTypesError(node.location)])
-        return newResult(castType)
+        castTypeNode = node.referenceType;
+        expressionNode = node.lambdaExpression;
+      } else {
+        throw new Error('Invalid typecast.');
       }
-      throw new Error('Invalid typecast.')
+
+      const castType = frame.getType(unannTypeToString(castTypeNode), castTypeNode.location);
+      if (castType instanceof TypeCheckerError) return newResult(null, [castType]);
+
+      const { currentType, errors } = typeCheckBody(expressionNode, frame);
+      if (errors.length > 0) return newResult(null, errors);
+      if (!currentType) throw new Error('Target of cast expression should return a type.');
+
+      if (!castType.canBeAssigned(currentType) && !currentType.canBeAssigned(castType)) {
+        return newResult(null, [new IncompatibleTypesError(node.location)]);
+      }
+
+      return newResult(castType);
     }
     case 'ClassInstanceCreationExpression': {
       const classIdentifier =

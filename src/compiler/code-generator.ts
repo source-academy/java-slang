@@ -527,21 +527,28 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           switch (rt) {
             case 'F':
               cg.code.push(OPCODE.F2D)
+              break
             case 'J':
               cg.code.push(OPCODE.L2D)
+              break
             case 'I':
               cg.code.push(OPCODE.I2D)
+              break
             default:
+              break
           }
           return { stackSize: Math.max(size, 2), resultType: 'D' }
         case 'float':
           switch(rt) {
             case 'D':
               cg.code.push(OPCODE.D2F)
+              break
             case 'J':
               cg.code.push(OPCODE.L2F)
+              break
             case 'I':
               cg.code.push(OPCODE.I2F)
+              break
             default:
           }
           return { stackSize: Math.max(size, 1), resultType: 'F' }
@@ -549,25 +556,38 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           switch(rt) {
             case 'D':
               cg.code.push(OPCODE.D2L)
+              break
             case 'F':
               cg.code.push(OPCODE.F2L)
+              break
             case 'I':
               cg.code.push(OPCODE.I2L)
+              break
+            default:
+              break
           }
           return { stackSize: Math.max(size, 2), resultType: 'L' }
         case 'int':
           switch (rt) {
             case 'D':
               cg.code.push(OPCODE.D2I)
+              break
             case 'F':
               cg.code.push(OPCODE.F2I)
+              break
             case 'J':
               cg.code.push(OPCODE.L2I)
+              break
+            default:
+              break
           }
           return { stackSize: Math.max(size, 1), resultType: 'I' }
       }
     }
-    return compile(expr, cg)
+    const res = compile(expr, cg);
+    const classInfoIndex = cg.constantPoolManager.indexClassInfo(ct as string);
+    cg.code.push(OPCODE.CHECKCAST, 0, classInfoIndex);
+    return res;
   },
 
   ClassInstanceCreationExpression: (node: Node, cg: CodeGenerator) => {
