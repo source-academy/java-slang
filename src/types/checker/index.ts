@@ -192,6 +192,34 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
     case 'BreakStatement': {
       return OK_RESULT
     }
+    case 'CastExpression': {
+      let castTypeNode, expressionNode;
+      if ('primitiveType' in node) {
+        castTypeNode = node.primitiveType;
+        expressionNode = node.unaryExpression;
+      } else if ('referenceType' in node && 'unaryExpressionNotPlusMinus' in node) {
+        castTypeNode = node.referenceType;
+        expressionNode = node.unaryExpressionNotPlusMinus;
+      } else if ('referenceType' in node && 'lambdaExpression' in node) {
+        castTypeNode = node.referenceType;
+        expressionNode = node.lambdaExpression;
+      } else {
+        throw new Error('Invalid typecast.');
+      }
+
+      const castType = frame.getType(unannTypeToString(castTypeNode), castTypeNode.location);
+      if (castType instanceof TypeCheckerError) return newResult(null, [castType]);
+
+      const { currentType, errors } = typeCheckBody(expressionNode, frame);
+      if (errors.length > 0) return newResult(null, errors);
+      if (!currentType) throw new Error('Target of cast expression should return a type.');
+
+      if (!castType.canBeAssigned(currentType) && !currentType.canBeAssigned(castType)) {
+        return newResult(null, [new IncompatibleTypesError(node.location)]);
+      }
+
+      return newResult(castType);
+    }
     case 'ClassInstanceCreationExpression': {
       const classIdentifier =
         node.unqualifiedClassInstanceCreationExpression.classOrInterfaceTypeToInstantiate

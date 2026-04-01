@@ -8,6 +8,8 @@ Open-source Implementation of the Java language in TypeScript. (<https://docs.or
   - [Table of Contents](#table-of-contents)
   - [Prerequisites](#prerequisites)
   - [Usage](#usage)
+  - [Current Features](#current-features)
+  - [Future Features](#future-features)
   - [Testing](#testing)
   - [Using your java-slang in Source Academy](#using-your-java-slang-in-source-academy)
   - [Using your java-slang in your local Source Academy](#using-your-java-slang-in-your-local-source-academy)
@@ -39,6 +41,26 @@ $ git submodule update --init --recursive
 $ git submodule update --recursive --remote
 ```
 
+## Current Features
+
+The Java language in Source Academy currently supports a host of available features, including:
+
+- Primitive classes: boolean, byte, short, int, long, char, float and double.
+- Custom (non-primitive) classes
+- Method overloading
+- Implicit type widening for both primitive and non-primitive types (e.g. int to long)
+- Basic exception/error messages
+- Basic system calls e.g. System.out.println
+- Explicit type conversion (type narrowing)
+- Implicit type conversion for system calls (e.g. int input to System.out.println)
+- Single nested class
+
+## Future Features
+
+- Multiple class declarations in the same file
+- Inheritance (basis for implementation exists but requires multiclass declaration to function)
+- Generics
+- Multi-file programs
 
 ## Testing
 
