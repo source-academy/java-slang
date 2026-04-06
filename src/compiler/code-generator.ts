@@ -518,7 +518,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   CastExpression: (node: Node, cg: CodeGenerator) => {
-    const { castType: ct,  expression: expr, isPrimitiveCast: b } = node as CastExpression
+    const { castType: ct, expression: expr, isPrimitiveCast: b } = node as CastExpression
     if (b) {
       const res = compile(expr, cg)
       const { stackSize: size, resultType: rt } = res
@@ -539,7 +539,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           }
           return { stackSize: Math.max(size, 2), resultType: 'D' }
         case 'float':
-          switch(rt) {
+          switch (rt) {
             case 'D':
               cg.code.push(OPCODE.D2F)
               break
@@ -553,7 +553,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           }
           return { stackSize: Math.max(size, 1), resultType: 'F' }
         case 'long':
-          switch(rt) {
+          switch (rt) {
             case 'D':
               cg.code.push(OPCODE.D2L)
               break
@@ -584,10 +584,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           return { stackSize: Math.max(size, 1), resultType: 'I' }
       }
     }
-    const res = compile(expr, cg);
-    const classInfoIndex = cg.constantPoolManager.indexClassInfo(ct as string);
-    cg.code.push(OPCODE.CHECKCAST, 0, classInfoIndex);
-    return res;
+    const res = compile(expr, cg)
+    const classInfoIndex = cg.constantPoolManager.indexClassInfo(ct)
+    cg.code.push(OPCODE.CHECKCAST, 0, classInfoIndex)
+    return res
   },
 
   ClassInstanceCreationExpression: (node: Node, cg: CodeGenerator) => {
