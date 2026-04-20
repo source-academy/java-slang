@@ -118,9 +118,21 @@ export class MethodCannotBeAppliedError extends TypeCheckerError {
   }
 }
 
+export class MissingMethodBodyError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('missing method body', location)
+  }
+}
+
 export class ModifierNotAllowedHereError extends TypeCheckerError {
   constructor(location?: Location) {
     super('modifier not allowed here', location)
+  }
+}
+
+export class NativeMethodHasBodyError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('native methods cannot have a body', location)
   }
 }
 
