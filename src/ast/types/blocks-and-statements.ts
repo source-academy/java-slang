@@ -290,6 +290,13 @@ export interface Assignment extends BaseNode {
 export type LeftHandSide = ExpressionName | ArrayAccess;
 export type UnaryExpression = PrefixExpression | PostfixExpression | CastExpression;
 
+export interface CastExpression extends BaseNode {
+  kind: "CastExpression";
+  castType: Identifier;
+  expression: Expression;
+  isPrimitiveCast: boolean;
+}
+
 export interface PrefixExpression extends BaseNode {
   kind: "PrefixExpression";
   operator: "-" | "+" | "++" | "--" | "!" | "~";
@@ -317,10 +324,4 @@ export interface TernaryExpression extends BaseNode {
   condition: Expression;
   consequent: Expression;
   alternate: Expression;
-}
-
-export interface CastExpression extends BaseNode {
-  kind: "CastExpression";
-  type: UnannType;
-  expression: Expression;
 }

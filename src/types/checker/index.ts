@@ -219,55 +219,34 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
     case 'BreakStatement': {
       return OK_RESULT
     }
-
     case 'CastExpression': {
-      let castType: Type | TypeCheckerError;
-      let expressionType: Type | null = null;
-      let expressionResult: Result;
-
+      let castTypeNode, expressionNode;
       if ('primitiveType' in node) {
-        castType = frame.getType(unannTypeToString(node.primitiveType), node.primitiveType.location);
+        castTypeNode = node.primitiveType;
+        expressionNode = node.unaryExpression;
+      } else if ('referenceType' in node && 'unaryExpressionNotPlusMinus' in node) {
+        castTypeNode = node.referenceType;
+        expressionNode = node.unaryExpressionNotPlusMinus;
+      } else if ('referenceType' in node && 'lambdaExpression' in node) {
+        castTypeNode = node.referenceType;
+        expressionNode = node.lambdaExpression;
       } else {
-        throw new Error('Invalid CastExpression: Missing type information.');
+        throw new Error('Invalid typecast.');
       }
 
-      if (castType instanceof TypeCheckerError) {
-        return newResult(null, [castType]);
+      const castType = frame.getType(unannTypeToString(castTypeNode), castTypeNode.location);
+      if (castType instanceof TypeCheckerError) return newResult(null, [castType]);
+
+      const { currentType, errors } = typeCheckBody(expressionNode, frame);
+      if (errors.length > 0) return newResult(null, errors);
+      if (!currentType) throw new Error('Target of cast expression should return a type.');
+
+      if (!castType.canBeAssigned(currentType) && !currentType.canBeAssigned(castType)) {
+        return newResult(null, [new IncompatibleTypesError(node.location)]);
       }
 
-      if ('unaryExpression' in node) {
-        expressionResult = typeCheckBody(node.unaryExpression, frame);
-      } else {
-        throw new Error('Invalid CastExpression: Missing expression.');
-      }
-
-      if (expressionResult.hasErrors) {
-        return expressionResult;
-      }
-
-      expressionType = expressionResult.currentType;
-      if (!expressionType) {
-        throw new Error('Expression in cast should have a type.');
-      }
-
-      if (
-        (castType instanceof PrimitiveType && expressionType instanceof PrimitiveType)
-      ) {
-        if (!isCastCompatible(expressionType, castType)) {
-          return newResult(null, [
-            new IncompatibleTypesError(node.location),
-          ]);
-        }
-      } else {
-        return newResult(null, [
-          new IncompatibleTypesError(node.location),
-        ]);
-      }
-
-      // If the cast is valid, return the target type
       return newResult(castType);
     }
-
     case 'ClassInstanceCreationExpression': {
       const classIdentifier =
         node.unqualifiedClassInstanceCreationExpression.classOrInterfaceTypeToInstantiate

@@ -2,4 +2,3 @@ node_modules
 dist
 
 src/ast
-src/ec-evaluator

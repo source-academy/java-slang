@@ -1144,18 +1144,21 @@ PostfixExpression
   }
 
 CastExpression
-  = lparen castType:PrimitiveType rparen expr:UnaryExpression {
+  = lparen t:PrimitiveType rparen expr:UnaryExpression {
     return addLocInfo({
-        kind: "CastExpression",
-        type: castType,
-        expression: expr,
-    })}
-  / lparen castType:ReferenceType rparen expr:(LambdaExpression / !(PlusMinus) UnaryExpression) {
+      kind: "CastExpression",
+      castType: t,
+      expression: expr,
+      isPrimitiveCast: true,
+    });
+  }
+  / lparen t:ReferenceType rparen expr:(LambdaExpression / !(PlusMinus) UnaryExpression) {
     return addLocInfo({
-        kind: "CastExpression",
-        type: castType,
-        expression: expr,
-    })
+      kind: "CastExpression",
+      castType: t,
+      expression: expr,
+      isPrimitiveCast: false,
+    });
   }
 
 SwitchExpression

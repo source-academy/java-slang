@@ -1,5 +1,6 @@
 import { IToken } from 'java-parser'
 import {
+  ArrayType,
   ClassOrInterfaceType,
   Dim,
   Identifier,
@@ -67,9 +68,11 @@ export const isIdentifier = (object: Record<string, any>): boolean => {
  * @deprecated
  */
 export const unannTypeToString = (
-  type: LocalVariableType | ClassOrInterfaceType | Result
+  type: LocalVariableType | ClassOrInterfaceType | ArrayType | Result
 ): string => {
   switch (type.kind) {
+    case 'ArrayType':
+      return unannTypeToString(type.type) + '[]'.repeat(type.dims.dims.length)
     case 'Boolean':
       return 'boolean'
     case 'FloatingPointType':

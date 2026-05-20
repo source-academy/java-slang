@@ -1,6 +1,6 @@
-import { Node } from "../ast/types/ast";
-import { Expression } from "../ast/types/blocks-and-statements";
-import { EnvNode } from "./components";
+import { Node } from '../ast/types/ast'
+import { Expression } from '../ast/types/blocks-and-statements'
+import { EnvNode } from './components'
 import {
   AssmtInstr,
   BinOpInstr,
@@ -18,139 +18,96 @@ import {
   ResOverloadInstr,
   ResOverrideInstr,
   ResTypeContInstr,
-  ResTypeInstr,
-} from "./types";
+  ResTypeInstr
+} from './types'
 
-export const assmtInstr = (
-  srcNode: Node,
-): AssmtInstr => ({
+export const assmtInstr = (srcNode: Node): AssmtInstr => ({
   instrType: InstrType.ASSIGNMENT,
-  srcNode,
-});
+  srcNode
+})
 
-export const binOpInstr = (
-  symbol: string,
-  srcNode: Node,
-): BinOpInstr => ({
+export const binOpInstr = (symbol: string, srcNode: Node): BinOpInstr => ({
   instrType: InstrType.BINARY_OP,
   symbol,
-  srcNode,
-});
+  srcNode
+})
 
-export const popInstr = (
-  srcNode: Node,
-): Instr => ({
+export const popInstr = (srcNode: Node): Instr => ({
   instrType: InstrType.POP,
-  srcNode,
-});
+  srcNode
+})
 
-export const invInstr = (
-  arity: number,
-  srcNode: Node,
-): InvInstr => ({
+export const invInstr = (arity: number, srcNode: Node): InvInstr => ({
   instrType: InstrType.INVOCATION,
   arity,
-  srcNode,
-});
+  srcNode
+})
 
-export const envInstr = (
-  env: EnvNode,
-  srcNode: Node,
-): EnvInstr => ({
+export const envInstr = (env: EnvNode, srcNode: Node): EnvInstr => ({
   instrType: InstrType.ENV,
   env,
-  srcNode,
-});
+  srcNode
+})
 
-export const markerInstr = (
-  srcNode: Node,
-): MarkerInstr => ({
+export const markerInstr = (srcNode: Node): MarkerInstr => ({
   instrType: InstrType.MARKER,
-  srcNode,
-});
+  srcNode
+})
 
-export const resetInstr = (
-  srcNode: Node,
-): Instr => ({
+export const resetInstr = (srcNode: Node): Instr => ({
   instrType: InstrType.RESET,
-  srcNode,
-});
+  srcNode
+})
 
-export const evalVarInstr = (
-  symbol: string,
-  srcNode: Node,
-): EvalVarInstr => ({
+export const evalVarInstr = (symbol: string, srcNode: Node): EvalVarInstr => ({
   instrType: InstrType.EVAL_VAR,
   srcNode,
-  symbol,
-});
+  symbol
+})
 
-export const resInstr = (
-  name: string,
-  srcNode: Node,
-): ResInstr => ({
+export const resInstr = (name: string, srcNode: Node): ResInstr => ({
   instrType: InstrType.RES,
   srcNode,
-  name,
-});
+  name
+})
 
-export const derefInstr = (
-  srcNode: Node,
-): DerefInstr => ({
+export const derefInstr = (srcNode: Node): DerefInstr => ({
   instrType: InstrType.DEREF,
-  srcNode,
-});
+  srcNode
+})
 
-export const newInstr = (
-  c: Class,
-  srcNode: Node,
-): NewInstr => ({
+export const newInstr = (c: Class, srcNode: Node): NewInstr => ({
   instrType: InstrType.NEW,
   srcNode,
-  c,
-});
+  c
+})
 
-export const resTypeInstr = (
-  value: Expression | Class,
-  srcNode: Node,
-): ResTypeInstr => ({
+export const resTypeInstr = (value: Expression | Class, srcNode: Node): ResTypeInstr => ({
   instrType: InstrType.RES_TYPE,
   srcNode,
-  value,
-});
+  value
+})
 
-export const resTypeContInstr = (
-  name: string,
-  srcNode: Node,
-): ResTypeContInstr => ({
+export const resTypeContInstr = (name: string, srcNode: Node): ResTypeContInstr => ({
   instrType: InstrType.RES_TYPE_CONT,
   srcNode,
-  name,
-});
+  name
+})
 
-export const resOverloadInstr = (
-  name: string,
-  arity: number,
-  srcNode: Node,
-): ResOverloadInstr => ({
+export const resOverloadInstr = (name: string, arity: number, srcNode: Node): ResOverloadInstr => ({
   instrType: InstrType.RES_OVERLOAD,
   srcNode,
   name,
-  arity,
-});
+  arity
+})
 
-export const resOverrideInstr = (
-  srcNode: Node,
-): ResOverrideInstr => ({
+export const resOverrideInstr = (srcNode: Node): ResOverrideInstr => ({
   instrType: InstrType.RES_OVERRIDE,
-  srcNode,
-});
+  srcNode
+})
 
-export const resConOverloadInstr = (
-  arity: number,
-  srcNode: Node,
-): ResConOverloadInstr => ({
+export const resConOverloadInstr = (arity: number, srcNode: Node): ResConOverloadInstr => ({
   instrType: InstrType.RES_CON_OVERLOAD,
   srcNode,
-  arity,
-});
+  arity
+})
