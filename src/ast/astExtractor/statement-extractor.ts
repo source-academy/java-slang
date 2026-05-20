@@ -21,6 +21,10 @@ import {
   PrimaryPrefixCtx,
   PrimarySuffixCtx,
   ReturnStatementCtx,
+  SwitchStatementCtx,
+  SwitchBlockCtx,
+  SwitchLabelCtx,
+  SwitchBlockStatementGroupCtx,
   StatementCstNode,
   StatementExpressionCtx,
   StatementWithoutTrailingSubstatementCtx,
@@ -32,13 +36,17 @@ import {
   ExpressionStatementCtx,
   LocalVariableTypeCtx,
   VariableDeclaratorListCtx,
-  VariableDeclaratorCtx,
-} from "java-parser";
+  VariableDeclaratorCtx
+} from 'java-parser'
 import {
   BasicForStatement,
   ExpressionStatement,
   IfStatement,
   MethodInvocation,
+  SwitchStatement,
+  SwitchCase,
+  CaseLabel,
+  DefaultLabel,
   Statement,
   StatementExpression,
   VariableDeclarator,
@@ -80,6 +88,8 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
       return { kind: "BreakStatement" };
     } else if (ctx.continueStatement) {
       return { kind: "ContinueStatement" };
+    } else if (ctx.switchStatement) {
+      return this.visit(ctx.switchStatement);
     } else if (ctx.returnStatement) {
       const returnStatementExp = this.visit(ctx.returnStatement);
       return {
@@ -88,6 +98,122 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
         location: ctx.returnStatement[0].location,
       };
     }
+  }
+
+  switchStatement(ctx: SwitchStatementCtx): SwitchStatement {
+    const expressionExtractor = new ExpressionExtractor();
+
+    return {
+      kind: "SwitchStatement",
+      expression: expressionExtractor.extract(ctx.expression[0]),
+      cases: ctx.switchBlock
+        ? this.visit(ctx.switchBlock)
+        : [],
+      location: ctx.Switch[0]
+    };
+  }
+
+  switchBlock(ctx: SwitchBlockCtx): Array<SwitchCase> {
+    const cases: Array<SwitchCase> = [];
+    let currentCase: SwitchCase;
+
+    ctx.switchBlockStatementGroup?.forEach((group) => {
+      const extractedCase = this.visit(group);
+
+      if (!currentCase) {
+        // First case in the switch block
+        currentCase = extractedCase;
+        cases.push(currentCase);
+      } else if (currentCase.statements && currentCase.statements.length === 0) {
+        // Fallthrough case, merge labels
+        currentCase.labels.push(...extractedCase.labels);
+      } else {
+        // New case with statements starts, push previous case and start new one
+        currentCase = extractedCase;
+        cases.push(currentCase);
+      }
+    });
+
+    return cases;
+  }
+
+  switchBlockStatementGroup(ctx: SwitchBlockStatementGroupCtx): SwitchCase {
+    const blockStatementExtractor = new BlockStatementExtractor();
+
+    console.log(ctx.switchLabel)
+
+    return {
+      kind: "SwitchCase",
+      labels: ctx.switchLabel.flatMap((label) => this.visit(label)),
+      statements: ctx.blockStatements
+        ? ctx.blockStatements.flatMap((blockStatements) =>
+          blockStatements.children.blockStatement.map((stmt) =>
+            blockStatementExtractor.extract(stmt)
+          )
+        )
+        : [],
+    };
+  }
+
+  // switchLabel(ctx: SwitchLabelCtx): CaseLabel | DefaultLabel {
+  //   // Check if the context contains a "case" label
+  //   if (ctx.caseOrDefaultLabel?.[0]?.children?.Case) {
+  //     const expressionExtractor = new ExpressionExtractor();
+  //     // @ts-ignore
+  //     const expressionCtx = ctx.caseOrDefaultLabel[0].children.caseLabelElement[0]
+  //       .children.caseConstant[0].children.ternaryExpression[0].children;
+  //
+  //     // Ensure the expression context is valid before proceeding
+  //     if (!expressionCtx) {
+  //       throw new Error("Invalid Case expression in switch label");
+  //     }
+  //
+  //     const expression = expressionExtractor.ternaryExpression(expressionCtx);
+  //
+  //     return {
+  //       kind: "CaseLabel",
+  //       expression: expression,
+  //     };
+  //   }
+  //
+  //   // Check if the context contains a "default" label
+  //   if (ctx.caseOrDefaultLabel?.[0]?.children?.Default) {
+  //     return { kind: "DefaultLabel" };
+  //   }
+  //
+  //   // Throw an error if the context does not match expected patterns
+  //   throw new Error("Invalid switch label: Neither 'case' nor 'default' found");
+  // }
+
+  switchLabel(ctx: SwitchLabelCtx): Array<CaseLabel | DefaultLabel> {
+    const expressionExtractor = new ExpressionExtractor();
+    const labels: Array<CaseLabel | DefaultLabel> = [];
+
+    // Process all case or default labels
+    for (const labelCtx of ctx.caseOrDefaultLabel) {
+      if (labelCtx.children.Case) {
+        // Extract the expression for the case label
+        const expressionCtx = labelCtx.children.caseLabelElement?.[0]
+          ?.children.caseConstant?.[0]?.children.ternaryExpression?.[0]?.children;
+
+        if (!expressionCtx) {
+          throw new Error("Invalid Case expression in switch label");
+        }
+
+        labels.push({
+          kind: "CaseLabel",
+          expression: expressionExtractor.ternaryExpression(expressionCtx),
+        });
+      } else if (labelCtx.children.Default) {
+        labels.push({ kind: "DefaultLabel" });
+      }
+    }
+
+    if (labels.length === 0) {
+      throw new Error("Invalid switch label: Neither 'case' nor 'default' found");
+    }
+
+    return labels;
   }
 
   expressionStatement(ctx: ExpressionStatementCtx): ExpressionStatement {

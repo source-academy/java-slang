@@ -1035,3 +1035,142 @@ describe("extract ClassInstanceCreationExpression correctly", () => {
     expect(ast).toEqual(expectedAst);
   });
 });
+
+describe("extract CastExpression correctly", () => {
+  it("extract CastExpression int to char correctly", () => {
+    const programStr = `
+      class Test {
+        void test() {
+          char c = (char) 65;
+        }
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      importDeclarations: [],
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "LocalVariableDeclarationStatement",
+                    localVariableType: "char",
+                    variableDeclaratorList: [
+                      {
+                        kind: "VariableDeclarator",
+                        variableDeclaratorId: "c",
+                        variableInitializer: {
+                          kind: "CastExpression",
+                          type: "char",
+                          expression: {
+                            kind: "Literal",
+                            literalType: {
+                              kind: "DecimalIntegerLiteral",
+                              value: "65",
+                            },
+                            location: expect.anything(),
+                          },
+                          location: expect.anything(),
+                        },
+                      },
+                    ],
+                    location: expect.anything(),
+                  },
+                ],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
+            },
+          ],
+          location: expect.anything(),
+        },
+      ],
+      location: expect.anything(),
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+
+  it("extract CastExpression double to int correctly", () => {
+    const programStr = `
+      class Test {
+        void test() {
+          int x = (int) 3.14;
+        }
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      importDeclarations: [],
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "LocalVariableDeclarationStatement",
+                    localVariableType: "int",
+                    variableDeclaratorList: [
+                      {
+                        kind: "VariableDeclarator",
+                        variableDeclaratorId: "x",
+                        variableInitializer: {
+                          kind: "CastExpression",
+                          type: "int",
+                          expression: {
+                            kind: "Literal",
+                            literalType: {
+                              kind: "DecimalFloatingPointLiteral",
+                              value: "3.14",
+                            }
+                          },
+                          location: expect.anything(),
+                        },
+                      },
+                    ],
+                    location: expect.anything(),
+                  },
+                ],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
+            },
+          ],
+          location: expect.anything(),
+        },
+      ],
+      location: expect.anything(),
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+});

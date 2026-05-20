@@ -6,12 +6,13 @@ import {
   generateMethodAccessFlags
 } from './compiler-utils'
 import {
-  InvalidMethodCallError,
+  InvalidMethodCallError, OverrideFinalMethodError,
   SymbolCannotBeResolvedError,
   SymbolNotFoundError,
   SymbolRedeclarationError
 } from './error'
 import { libraries } from './import/libs'
+import { METHOD_FLAGS } from '../ClassFile/types/methods'
 
 export const typeMap = new Map([
   ['byte', 'B'],
@@ -63,6 +64,7 @@ export interface MethodInfo {
   accessFlags: number
   parentClassName: string
   typeDescriptor: string
+  className: string
 }
 
 export interface VariableInfo {
@@ -99,7 +101,8 @@ export class SymbolTable {
 
   private setup() {
     libraries.forEach(p => {
-      this.importedPackages.push(p.packageName + '/')
+      if (this.importedPackages.findIndex(e => e == p.packageName + '/') == -1)
+        this.importedPackages.push(p.packageName + '/')
       p.classes.forEach(c => {
         this.insertClassInfo({
           name: c.className,
@@ -119,7 +122,8 @@ export class SymbolTable {
             name: m.methodName,
             accessFlags: generateMethodAccessFlags(m.accessFlags),
             parentClassName: c.className,
-            typeDescriptor: this.generateMethodDescriptor(m.argsTypeName, m.returnTypeName)
+            typeDescriptor: this.generateMethodDescriptor(m.argsTypeName, m.returnTypeName),
+            className: c.className
           })
         )
         this.returnToRoot()
@@ -131,7 +135,7 @@ export class SymbolTable {
     return new Map<Symbol, SymbolNode>()
   }
 
-  private returnToRoot() {
+  public returnToRoot() {
     this.tables = [this.tables[0]]
     this.curTable = this.tables[0]
     this.curIdx = 0
@@ -189,6 +193,7 @@ export class SymbolTable {
   insertFieldInfo(info: FieldInfo) {
     const key = generateSymbol(info.name, SymbolType.FIELD)
 
+    this.curTable = this.tables[this.curIdx]
     if (this.curTable.has(key)) {
       throw new SymbolRedeclarationError(info.name)
     }
@@ -203,6 +208,22 @@ export class SymbolTable {
   insertMethodInfo(info: MethodInfo) {
     const key = generateSymbol(info.name, SymbolType.METHOD)
 
+    for (let i = this.curClassIdx - 1; i > 0; i--) {
+      const parentTable = this.tables[i];
+      if (parentTable.has(key)) {
+        const parentMethods = parentTable.get(key)!.info;
+        if (Array.isArray(parentMethods)) {
+          for (const m of parentMethods) {
+            if (m.typeDescriptor === info.typeDescriptor && (m.accessFlags & METHOD_FLAGS.ACC_FINAL)
+              && m.className == info.parentClassName) {
+              throw new OverrideFinalMethodError(info.name);
+            }
+          }
+        }
+      }
+    }
+
+    this.curTable = this.tables[this.curIdx]
     if (!this.curTable.has(key)) {
       const symbolNode: SymbolNode = {
         info: [info],
@@ -225,7 +246,7 @@ export class SymbolTable {
   insertVariableInfo(info: VariableInfo) {
     const key = generateSymbol(info.name, SymbolType.VARIABLE)
 
-    for (let i = this.curIdx; i > this.curClassIdx; i--) {
+    for (let i = this.curIdx; i >= this.curClassIdx; i--) {
       if (this.tables[i].has(key)) {
         throw new SymbolRedeclarationError(info.name)
       }
@@ -235,6 +256,7 @@ export class SymbolTable {
       info: info,
       children: this.getNewTable()
     }
+    this.curTable = this.tables[this.curIdx]
     this.curTable.set(key, symbolNode)
   }
 
@@ -266,6 +288,36 @@ export class SymbolTable {
     throw new SymbolNotFoundError(name)
   }
 
+  private getClassTable(name: string): Table {
+    let key = generateSymbol(name, SymbolType.CLASS)
+    for (let i = this.curIdx; i >= 0; i--) {
+      const table = this.tables[i]
+      if (table.has(key)) {
+        return table.get(key)!.children
+      }
+    }
+
+    const root = this.tables[0]
+    if (this.importedClassMap.has(name)) {
+      const fullName = this.importedClassMap.get(name)!
+      key = generateSymbol(fullName, SymbolType.CLASS)
+      if (root.has(key)) {
+        return root.get(key)!.children
+      }
+    }
+
+    let p: string
+    for (p of this.importedPackages) {
+      const fullName = p + name
+      key = generateSymbol(fullName, SymbolType.CLASS)
+      if (root.has(key)) {
+        return root.get(key)!.children
+      }
+    }
+
+    throw new SymbolNotFoundError(name)
+  }
+
   private querySymbol(name: string, symbolType: SymbolType): Array<SymbolInfo> {
     let curTable = this.getNewTable()
     const symbolInfos: Array<SymbolInfo> = []
@@ -275,7 +327,7 @@ export class SymbolTable {
     tokens.forEach((token, i) => {
       if (i === 0) {
         const key1 = generateSymbol(token, SymbolType.VARIABLE)
-        for (let i = this.curIdx; i > this.curClassIdx; i--) {
+        for (let i = this.curIdx; i >= this.curClassIdx; i--) {
           if (this.tables[i].has(key1)) {
             const node = this.tables[i].get(key1)!
             token = (node.info as VariableInfo).typeName
@@ -287,8 +339,7 @@ export class SymbolTable {
         if (token === 'this') {
           curTable = this.tables[this.curClassIdx]
         } else {
-          const key = generateSymbol(this.queryClass(token).name, SymbolType.CLASS)
-          curTable = this.tables[0].get(key)!.children
+          curTable = this.getClassTable(token)
         }
       } else if (i < len - 1) {
         const key = generateSymbol(token, SymbolType.FIELD)
@@ -299,8 +350,7 @@ export class SymbolTable {
         symbolInfos.push(node.info)
 
         const typeName = (node.info as FieldInfo).typeName
-        const type = generateSymbol(this.queryClass(typeName).name, SymbolType.CLASS)
-        curTable = this.tables[0].get(type)!.children
+        curTable = this.getClassTable(typeName)
       } else {
         const key = generateSymbol(token, symbolType)
         const node = curTable.get(key)
@@ -324,16 +374,26 @@ export class SymbolTable {
     }
 
     const key1 = generateSymbol(name, SymbolType.VARIABLE)
-    for (let i = this.curIdx; i > this.curClassIdx; i--) {
+    for (let i = this.curIdx; i >= this.curClassIdx; i--) {
       if (this.tables[i].has(key1)) {
         throw new InvalidMethodCallError(name)
       }
     }
 
+    const results: Array<SymbolInfo> = []
     const key2 = generateSymbol(name, SymbolType.METHOD)
-    const table = this.tables[this.curClassIdx]
-    if (table.has(key2)) {
-      return [table.get(key2)!.info]
+    for (let i = this.curIdx; i > 0; i--) {
+      const table = this.tables[i]
+      if (table.has(key2)) {
+        const methodInfos = table.get(key2)!.info as MethodInfos
+        for (const methodInfo of methodInfos) {
+          results.push(methodInfo)
+        }
+      }
+    }
+
+    if (results.length > 0) {
+      return results
     }
     throw new InvalidMethodCallError(name)
   }
@@ -346,7 +406,7 @@ export class SymbolTable {
     const key1 = generateSymbol(name, SymbolType.VARIABLE)
     const key2 = generateSymbol(name, SymbolType.FIELD)
 
-    for (let i = this.curIdx; i >= 0; i--) {
+    for (let i = this.curIdx; i >= this.curClassIdx; i--) {
       const table = this.tables[i]
       if (table.has(key1)) {
         return (table.get(key1) as SymbolNode).info as VariableInfo
