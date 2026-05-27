@@ -1075,7 +1075,7 @@ describe("extract CastExpression correctly", () => {
                         variableDeclaratorId: "c",
                         variableInitializer: {
                           kind: "CastExpression",
-                          type: "char",
+                          castType: "char",
                           expression: {
                             kind: "Literal",
                             literalType: {
@@ -1084,6 +1084,7 @@ describe("extract CastExpression correctly", () => {
                             },
                             location: expect.anything(),
                           },
+                          isPrimitiveCast: true,
                           location: expect.anything(),
                         },
                       },
