@@ -838,7 +838,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     // --- Handle super. calls ---
     if (n.identifier.startsWith('super.')) {
       candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(6)) as MethodInfos
-      candidateMethods.filter(method =>
+      candidateMethods = candidateMethods.filter(method =>
         method.className == cg.symbolTable.queryClass(cg.currentClass).parentClassName)
       cg.code.push(OPCODE.ALOAD, 0);
     }
