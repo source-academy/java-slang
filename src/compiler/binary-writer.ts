@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import { CONSTANT_TAG } from '../ClassFile/constants/constants'
-import { ClassFile } from '../ClassFile/types'
+import { Class, ClassFile } from '../ClassFile/types'
 import {
   AppendFrame,
   AttributeInfo,
@@ -39,19 +39,36 @@ export class BinaryWriter {
     this.constantPool = []
   }
 
-  generateBinary(classFile: ClassFile) {
-    return this.toBinary(classFile)
+  generateBinary(classFile: ClassFile | Class | Array<ClassFile> | Array<Class>) {
+    return this.toBinary(this.normalizeClassFile(classFile))
   }
 
-  writeBinary(classFile: ClassFile, filepath: string) {
+  writeBinary(classFile: ClassFile | Class | Array<ClassFile> | Array<Class>, filepath: string) {
     const filename = filepath + this.getClassName(classFile) + '.class'
-    const binary = this.toBinary(classFile)
+    const binary = this.toBinary(this.normalizeClassFile(classFile))
     fs.writeFileSync(filename, binary)
   }
 
-  private getClassName(classFile: ClassFile) {
-    const classInfo = classFile.constantPool[classFile.thisClass - 1] as ConstantClassInfo
-    const classNameInfo = classFile.constantPool[classInfo.nameIndex - 1] as ConstantUtf8Info
+  private normalizeClassFile(classFile: ClassFile | Class | Array<ClassFile> | Array<Class>): ClassFile {
+    if (Array.isArray(classFile)) {
+      if (classFile.length === 0) {
+        throw new Error('BinaryWriter expected a non-empty array of classes')
+      }
+      classFile = classFile[0]
+    }
+    if ('classFile' in classFile) {
+      return classFile.classFile
+    }
+    if (!classFile.constantPool) {
+      throw new Error('BinaryWriter expected a ClassFile with a constantPool array')
+    }
+    return classFile
+  }
+
+  private getClassName(classFile: ClassFile | Class | Array<ClassFile> | Array<Class>) {
+    const resolved = this.normalizeClassFile(classFile)
+    const classInfo = resolved.constantPool[resolved.thisClass - 1] as ConstantClassInfo
+    const classNameInfo = resolved.constantPool[classInfo.nameIndex - 1] as ConstantUtf8Info
     return classNameInfo.value
   }
 
