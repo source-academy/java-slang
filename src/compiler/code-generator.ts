@@ -850,7 +850,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       if (receiverStr === 'this') {
         candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(5)) as MethodInfos
         console.debug(candidateMethods)
-        candidateMethods.filter(method =>
+        candidateMethods = candidateMethods.filter(method =>
           method.className == cg.currentClass)
         cg.code.push(OPCODE.ALOAD, 0);
       } else {
