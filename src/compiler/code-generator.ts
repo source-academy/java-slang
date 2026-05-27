@@ -220,9 +220,10 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
   const conversionKey = `${fromType}->${toType}`
   if (conversionKey in typeConversionsImplicit) {
     cg.code.push(typeConversionsImplicit[conversionKey])
-    if (!(fromType in ['J', 'D']) && toType in ['J', 'D']) {
+    if (!['J', 'D'].includes(fromType) && ['J', 'D'].includes(toType)) {
       return 1
-    } else if (!(toType in ['J', 'D']) && fromType in ['J', 'D']) {
+    } else if (!['J', 'D'].includes(toType) && ['J', 'D'].includes(fromType)) {
+      return -1
       return -1
     } else {
       return 0
