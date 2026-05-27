@@ -140,7 +140,6 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   switchBlockStatementGroup(ctx: SwitchBlockStatementGroupCtx): SwitchCase {
     const blockStatementExtractor = new BlockStatementExtractor();
 
-    console.log(ctx.switchLabel)
 
     return {
       kind: "SwitchCase",
