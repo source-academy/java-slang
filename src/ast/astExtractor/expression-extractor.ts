@@ -95,9 +95,10 @@ export class ExpressionExtractor extends BaseJavaCstVisitorWithDefaults {
       const expression = this.visit(primitiveCast.children.unaryExpression[0]);
       return {
         kind: "CastExpression",
-        type: type,
+        castType: type,
         expression: expression,
         location: this.location,
+        isPrimitiveCast: true,
       };
     }
 
