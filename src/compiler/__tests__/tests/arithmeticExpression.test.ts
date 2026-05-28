@@ -78,6 +78,58 @@ const testCases: testCase[] = [
     expectedLines: ["-2147483648", "-32769", "-32768",
       "-129", "-128", "-1", "0", "1", "127", "128", "32767", "32768", "2147483647"],
   },
+  {
+    comment: "Mixed int and float addition (order swapped)",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          int a = 5;
+          float b = 2.5f;
+          System.out.println(a + b);
+        }
+      }
+    `,
+    expectedLines: ["7.5"],
+  },
+  {
+    comment: "Mixed long and double multiplication",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          double a = 3.5;
+          long b = 10L;
+          System.out.println(a * b);
+        }
+      }
+    `,
+    expectedLines: ["35.0"],
+  },
+  {
+    comment: "Mixed long and double multiplication (order swapped)",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          long a = 10L;
+          double b = 3.5;
+          System.out.println(a * b);
+        }
+      }
+    `,
+    expectedLines: ["35.0"],
+  },
+  {
+    comment: "Mixed int and double division",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          double a = 2.0;
+          int b = 5;
+          System.out.println(a / b);
+        }
+      }
+    `,
+    expectedLines: ["0.4"],
+  }
 ];
 
 export const arithmeticExpressionTest = () => describe("arithmetic expression", () => {
