@@ -1,5 +1,5 @@
-import BasicEvaluator, { IRunnerPlugin } from './runner'
 import setupJVM from '../jvm/index'
+import BasicEvaluator, { IRunnerPlugin } from './runner'
 
 /**
  * Minimal Java conductor evaluator stub.
