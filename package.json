@@ -41,7 +41,8 @@
     "@types/lodash": "^4.14.198",
     "java-parser": "^2.0.5",
     "lodash": "^4.17.21",
-    "peggy": "^4.0.2"
+    "peggy": "^4.0.2",
+    "conductor": "https://github.com/source-academy/conductor.git#0.3.0"
   },
   "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
 }
