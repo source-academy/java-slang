@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     name: Build runner
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
