@@ -37,6 +37,7 @@ import {
   ConstructNotSupportedError,
   NoMethodMatchingSignatureError
 } from './error'
+import { unannTypeToString } from '../types/ast/utils'
 import { FieldInfo, MethodInfos, SymbolInfo, SymbolTable, VariableInfo } from './symbol-table'
 
 type Label = {
@@ -574,6 +575,123 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     return { stackSize: maxStack, resultType: resType }
+  },
+
+  TryStatement: (node: Node, cg: CodeGenerator) => {
+    let maxStack = 0
+    const { block, catches } = node as any
+
+    // If no catches, just compile the try block
+    if (!catches || !catches.catchClauses || catches.catchClauses.length === 0) {
+      return { stackSize: compile(block, cg).stackSize, resultType: EMPTY_TYPE }
+    }
+
+    // mark start of protected region
+    const tryStart = cg.generateNewLabel()
+    tryStart.offset = cg.code.length
+
+    // compile try block
+    maxStack = Math.max(maxStack, compile(block, cg).stackSize)
+
+    // end of protected region (first instruction after try block)
+    const tryEnd = cg.generateNewLabel()
+    tryEnd.offset = cg.code.length
+
+    // jump over handlers when try completes normally
+    const afterHandlers = cg.generateNewLabel()
+    cg.addBranchInstr(OPCODE.GOTO, afterHandlers)
+
+    // For each catch clause, emit a handler and an exception table entry
+    for (const catchClause of catches.catchClauses) {
+      const handlerLabel = cg.generateNewLabel()
+      handlerLabel.offset = cg.code.length
+
+      // determine catch type index (constant pool)
+      const catchTypeNode = catchClause.catchFormalParameter.catchType
+      const catchTypeName = unannTypeToString(catchTypeNode.unannClassType)
+      let catchClassName = 'java/lang/Throwable'
+      try {
+        catchClassName = cg.symbolTable.queryClass(catchTypeName).name
+      } catch (e) {
+        catchClassName = catchTypeName.includes('/') ? catchTypeName : catchTypeName.replace(/\./g, '/')
+      }
+      const catchTypeIndex = cg.constantPoolManager.indexClassInfo(catchClassName)
+
+      // add exception table entry (startPc, endPc, handlerPc, catchType)
+      cg.exceptionTable.push({ startPc: tryStart.offset, endPc: tryEnd.offset, handlerPc: handlerLabel.offset, catchType: catchTypeIndex })
+
+      // create scope for catch variable
+      cg.symbolTable.extend()
+      const varName = catchClause.catchFormalParameter.variableDeclaratorId
+      const varTypeStr = unannTypeToString(catchTypeNode.unannClassType)
+      const varInfo = {
+        name: varName,
+        accessFlags: 0,
+        index: cg.maxLocals,
+        typeName: varTypeStr,
+        typeDescriptor: cg.symbolTable.generateFieldDescriptor(varTypeStr)
+      }
+      cg.symbolTable.insertVariableInfo(varInfo)
+      if (['J', 'D'].includes(varInfo.typeDescriptor)) {
+        cg.maxLocals += 2
+      } else {
+        cg.maxLocals++
+      }
+
+      // at handler entry, the exception object is on the stack; store it into the local
+      cg.code.push(OPCODE.ASTORE, varInfo.index)
+
+      // compile catch block statements
+      const catchBlock = catchClause.block
+      catchBlock.blockStatements.forEach((stmt: any) => {
+        const { stackSize } = compile(stmt, cg)
+        maxStack = Math.max(maxStack, stackSize)
+      })
+
+      // teardown catch scope
+      cg.symbolTable.teardown()
+
+      // after handler, jump to afterHandlers
+      cg.addBranchInstr(OPCODE.GOTO, afterHandlers)
+    }
+
+    // If finally exists, add a catch-all handler that runs finally then rethrows
+    const finallyNode: any = (node as any).finally
+    if (finallyNode) {
+      const catchAllLabel = cg.generateNewLabel()
+      catchAllLabel.offset = cg.code.length
+      cg.exceptionTable.push({ startPc: tryStart.offset, endPc: tryEnd.offset, handlerPc: catchAllLabel.offset, catchType: 0 })
+
+      // allocate temp local to store exception
+      const tempIndex = cg.maxLocals
+      cg.maxLocals += 1
+      cg.code.push(OPCODE.ASTORE, tempIndex)
+
+      // compile finally block inside catch-all
+      finallyNode.blockStatements.forEach((stmt: any) => {
+        const { stackSize } = compile(stmt, cg)
+        maxStack = Math.max(maxStack, stackSize)
+      })
+
+      // reload exception and rethrow
+      cg.code.push(OPCODE.ALOAD, tempIndex, OPCODE.ATHROW)
+
+      // normal finally path: compile finally once for normal/handled flows
+      const finallyLabel = cg.generateNewLabel()
+      finallyLabel.offset = cg.code.length
+      finallyNode.blockStatements.forEach((stmt: any) => {
+        const { stackSize } = compile(stmt, cg)
+        maxStack = Math.max(maxStack, stackSize)
+      })
+
+      // place after-handlers label
+      afterHandlers.offset = cg.code.length
+    } else {
+      // no finally: place after-handlers label
+      afterHandlers.offset = cg.code.length
+    }
+
+    return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
 
   TernaryExpression: (node: Node, cg: CodeGenerator) => {
@@ -1684,6 +1802,7 @@ class CodeGenerator {
   constantPoolManager: ConstantPoolManager
   maxLocals: number = 0
   stackSize: number = 0
+  exceptionTable: Array<ExceptionHandler> = []
   labels: Label[] = []
   loopLabels: Label[][] = []
   switchLabels: Label[] = []
@@ -1722,6 +1841,7 @@ class CodeGenerator {
   generateCode(currentClass: string, methodNode: MethodDeclaration) {
     this.symbolTable.extend()
     this.currentClass = currentClass
+    this.exceptionTable = []
     if (!methodNode.methodModifier.includes('static')) {
       this.maxLocals++
     }
@@ -1760,7 +1880,6 @@ class CodeGenerator {
     }
     this.resolveLabels()
 
-    const exceptionTable: Array<ExceptionHandler> = []
     const attributes: Array<AttributeInfo> = []
     const codeBuf = new Uint8Array(this.code).buffer
     const dataView = new DataView(codeBuf)
@@ -1769,7 +1888,7 @@ class CodeGenerator {
     const attributeLength =
       12 +
       this.code.length +
-      8 * exceptionTable.length +
+      8 * this.exceptionTable.length +
       attributes.map(attr => attr.attributeLength + 6).reduce((acc, val) => acc + val, 0)
     this.symbolTable.teardown()
 
@@ -1780,8 +1899,8 @@ class CodeGenerator {
       maxLocals: this.maxLocals,
       codeLength: this.code.length,
       code: dataView,
-      exceptionTableLength: exceptionTable.length,
-      exceptionTable: exceptionTable,
+      exceptionTableLength: this.exceptionTable.length,
+      exceptionTable: this.exceptionTable,
       attributesCount: attributes.length,
       attributes: attributes
     }
