@@ -1546,7 +1546,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       } else {
         for (let k = 0; k < caseValues.length; k++) {
           const idx = caseLabelIndex[1 + k]
-          const off = caseLabels[k].offset - positionOffset
+          const lbl = caseLabelMap.get(caseValues[k]) || defaultLabel
+          const off = lbl.offset - positionOffset
           cg.code[idx] = (off >> 24) & 0xff
           cg.code[idx + 1] = (off >> 16) & 0xff
           cg.code[idx + 2] = (off >> 8) & 0xff
