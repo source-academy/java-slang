@@ -1,5 +1,6 @@
 import { UnannType } from '../ast/types/classes'
 import { ImportDeclaration } from '../ast/types/packages-and-modules'
+import { METHOD_FLAGS } from '../ClassFile/types/methods'
 import {
   generateClassAccessFlags,
   generateFieldAccessFlags,
@@ -12,7 +13,6 @@ import {
   SymbolRedeclarationError
 } from './error'
 import { libraries } from './import/libs'
-import { METHOD_FLAGS } from '../ClassFile/types/methods'
 
 export const typeMap = new Map([
   ['byte', 'B'],

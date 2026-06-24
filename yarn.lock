@@ -640,6 +640,11 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
+"@sourceacademy/conductor@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@sourceacademy/conductor/-/conductor-0.3.0.tgz#5294caeb14c5eba29fb3a6015296d262683026d2"
+  integrity sha512-pwzx64p22g8OM6AI73eyE8wgzBg7Iq35T6HLwcO3MXDgeLvsEV33BQVLtXqRNAJYQiVy4301Ci2WAI8eM149oA==
+
 "@tootallnate/once@2":
   version "2.0.0"
   resolved "https://registry.npmjs.org/@tootallnate/once/-/once-2.0.0.tgz"
