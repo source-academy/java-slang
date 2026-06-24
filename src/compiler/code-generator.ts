@@ -1416,9 +1416,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           indexTracker++
         }
 
-        // Add default branch (jump to default label)
-        cg.code.push(0, 0, 0, defaultLabel.offset)
-        caseLabelIndex.push(indexTracker + 3)
+        // Add default branch (reserve 4 bytes for default label offset)
+        cg.code.push(0, 0, 0, 0)
+        caseLabelIndex.push(indexTracker)
         indexTracker += 4
 
         // Push low and high values (min and max case values)
@@ -1436,16 +1436,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         )
         indexTracker += 8
 
-        // Generate branch table (map each value to a case label)
+        // Generate branch table (reserve 4 bytes per entry and record start indices)
         for (let i = minValue; i <= maxValue; i++) {
-          const caseIndex = caseValues.indexOf(i)
-          cg.code.push(
-            0,
-            0,
-            0,
-            caseIndex !== -1 ? caseLabels[caseIndex].offset : defaultLabel.offset
-          )
-          caseLabelIndex.push(indexTracker + 3)
+          // push the 4-byte placeholder for the branch target
+          cg.code.push(0, 0, 0, 0)
+          caseLabelIndex.push(indexTracker)
           indexTracker += 4
         }
       } else {
@@ -1458,9 +1453,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           indexTracker++
         }
 
-        // Add default branch (jump to default label)
-        cg.code.push(0, 0, 0, defaultLabel.offset)
-        caseLabelIndex.push(indexTracker + 3)
+        // Add default branch (reserve 4 bytes for default label offset)
+        cg.code.push(0, 0, 0, 0)
+        caseLabelIndex.push(indexTracker)
         indexTracker += 4
 
         // Push the number of case-value pairs
@@ -1474,9 +1469,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
         // Generate lookup table (pairs of case values and corresponding labels)
         caseValues.forEach((value, index) => {
-          cg.code.push(value >> 24, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff)
-          cg.code.push(0, 0, 0, caseLabels[index].offset)
-          caseLabelIndex.push(indexTracker + 7)
+          // push 4-byte key
+          cg.code.push((value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff)
+          // reserve 4 bytes for the branch target
+          cg.code.push(0, 0, 0, 0)
+          // label offset starts after the 4-byte key
+          caseLabelIndex.push(indexTracker + 4)
           indexTracker += 8
         })
       }
@@ -1523,10 +1521,38 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         }
       }
 
-      cg.code[caseLabelIndex[0]] = caseLabels[caseLabels.length - 1].offset - positionOffset
+      // Patch switch target offsets (write full 4-byte signed offsets, big-endian)
+      // Patch default target
+      {
+        const idx = caseLabelIndex[0]
+        const defOff = defaultLabel.offset - positionOffset
+        cg.code[idx] = (defOff >> 24) & 0xff
+        cg.code[idx + 1] = (defOff >> 16) & 0xff
+        cg.code[idx + 2] = (defOff >> 8) & 0xff
+        cg.code[idx + 3] = defOff & 0xff
+      }
 
-      for (let i = 1; i < caseLabelIndex.length; i++) {
-        cg.code[caseLabelIndex[i]] = caseLabels[i - 1].offset - positionOffset
+      if (useTableSwitch) {
+        const range = maxValue - minValue + 1
+        for (let j = 0; j < range; j++) {
+          const idx = caseLabelIndex[1 + j]
+          const lbl = caseLabelMap.get(minValue + j) || defaultLabel
+          const off = lbl.offset - positionOffset
+          cg.code[idx] = (off >> 24) & 0xff
+          cg.code[idx + 1] = (off >> 16) & 0xff
+          cg.code[idx + 2] = (off >> 8) & 0xff
+          cg.code[idx + 3] = off & 0xff
+        }
+      } else {
+        for (let k = 0; k < caseValues.length; k++) {
+          const idx = caseLabelIndex[1 + k]
+          const lbl = caseLabelMap.get(caseValues[k]) || defaultLabel
+          const off = lbl.offset - positionOffset
+          cg.code[idx] = (off >> 24) & 0xff
+          cg.code[idx + 1] = (off >> 16) & 0xff
+          cg.code[idx + 2] = (off >> 8) & 0xff
+          cg.code[idx + 3] = off & 0xff
+        }
       }
 
       endLabel.offset = cg.code.length
@@ -1570,9 +1596,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         indexTracker++
       }
 
-      // Default jump target
-      cg.code.push(0, 0, 0, defaultLabel.offset)
-      caseLabelIndex.push(indexTracker + 3)
+      // Default jump target (reserve 4 bytes)
+      cg.code.push(0, 0, 0, 0)
+      caseLabelIndex.push(indexTracker)
       indexTracker += 4
 
       // Number of case-value pairs
@@ -1585,15 +1611,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       indexTracker += 4
 
       // Populate LOOKUPSWITCH
+      const hashLabels: Label[] = []
       hashCaseMap.forEach((label, hashCode) => {
-        cg.code.push(
-          hashCode >> 24,
-          (hashCode >> 16) & 0xff,
-          (hashCode >> 8) & 0xff,
-          hashCode & 0xff
-        )
-        cg.code.push(0, 0, 0, label.offset)
-        caseLabelIndex.push(indexTracker + 7)
+        cg.code.push((hashCode >> 24) & 0xff, (hashCode >> 16) & 0xff, (hashCode >> 8) & 0xff, hashCode & 0xff)
+        // reserve 4 bytes for the branch target
+        cg.code.push(0, 0, 0, 0)
+        // label offset starts after the 4-byte key
+        caseLabelIndex.push(indexTracker + 4)
+        hashLabels.push(label)
         indexTracker += 8
       })
 
@@ -1660,10 +1685,24 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         })
       }
 
-      cg.code[caseLabelIndex[0]] = caseLabels[caseLabels.length - 1].offset - positionOffset
+      // Patch default target
+      {
+        const idx = caseLabelIndex[0]
+        const defOff = defaultLabel.offset - positionOffset
+        cg.code[idx] = (defOff >> 24) & 0xff
+        cg.code[idx + 1] = (defOff >> 16) & 0xff
+        cg.code[idx + 2] = (defOff >> 8) & 0xff
+        cg.code[idx + 3] = defOff & 0xff
+      }
 
-      for (let i = 1; i < caseLabelIndex.length; i++) {
-        cg.code[caseLabelIndex[i]] = caseLabels[i - 1].offset - positionOffset
+      // Patch hash-case entries in insertion order
+      for (let k = 0; k < hashLabels.length; k++) {
+        const idx = caseLabelIndex[1 + k]
+        const off = hashLabels[k].offset - positionOffset
+        cg.code[idx] = (off >> 24) & 0xff
+        cg.code[idx + 1] = (off >> 16) & 0xff
+        cg.code[idx + 2] = (off >> 8) & 0xff
+        cg.code[idx + 3] = off & 0xff
       }
 
       endLabel.offset = cg.code.length
