@@ -580,11 +580,24 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   TryStatement: (node: Node, cg: CodeGenerator) => {
     let maxStack = 0
     const { block, catches } = node as any
+    const finallyNode: any = (node as any).finally
 
-    // If no catches, just compile the try block
-    if (!catches || !catches.catchClauses || catches.catchClauses.length === 0) {
+    const hasCatches = catches && catches.catchClauses && catches.catchClauses.length > 0
+
+    if (!hasCatches && !finallyNode) {
       return { stackSize: compile(block, cg).stackSize, resultType: EMPTY_TYPE }
     }
+
+    if (hasCatches || finallyNode) {
+      maxStack = Math.max(maxStack, 1)
+    }
+
+    const localExceptionTable: Array<{
+      startPc: number
+      endPc: number
+      handlerLabel: Label
+      catchType: number
+    }> = []
 
     // mark start of protected region
     const tryStart = cg.generateNewLabel()
@@ -597,70 +610,116 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const tryEnd = cg.generateNewLabel()
     tryEnd.offset = cg.code.length
 
+    const catchAllLabel = finallyNode ? cg.generateNewLabel() : null
+
+    // If finally exists, add catch-all entry for the try block
+    if (finallyNode && catchAllLabel) {
+      localExceptionTable.push({
+        startPc: tryStart.offset,
+        endPc: tryEnd.offset,
+        handlerLabel: catchAllLabel,
+        catchType: 0
+      })
+    }
+
+    // For normal path: run finally block if it exists
+    if (finallyNode) {
+      finallyNode.blockStatements.forEach((stmt: any) => {
+        const { stackSize } = compile(stmt, cg)
+        maxStack = Math.max(maxStack, stackSize)
+      })
+    }
+
     // jump over handlers when try completes normally
     const afterHandlers = cg.generateNewLabel()
     cg.addBranchInstr(OPCODE.GOTO, afterHandlers)
 
     // For each catch clause, emit a handler and an exception table entry
-    for (const catchClause of catches.catchClauses) {
-      const handlerLabel = cg.generateNewLabel()
-      handlerLabel.offset = cg.code.length
+    if (hasCatches) {
+      for (const catchClause of catches.catchClauses) {
+        const handlerLabel = cg.generateNewLabel()
+        handlerLabel.offset = cg.code.length
 
-      // determine catch type index (constant pool)
-      const catchTypeNode = catchClause.catchFormalParameter.catchType
-      const catchTypeName = unannTypeToString(catchTypeNode.unannClassType)
-      let catchClassName = 'java/lang/Throwable'
-      try {
-        catchClassName = cg.symbolTable.queryClass(catchTypeName).name
-      } catch (e) {
-        catchClassName = catchTypeName.includes('/') ? catchTypeName : catchTypeName.replace(/\./g, '/')
+        // determine catch type index (constant pool)
+        const catchTypeNode = catchClause.catchFormalParameter.catchType
+        const catchTypeName = unannTypeToString(catchTypeNode.unannClassType)
+        let catchClassName = 'java/lang/Throwable'
+        try {
+          catchClassName = cg.symbolTable.queryClass(catchTypeName).name
+        } catch (e) {
+          catchClassName = catchTypeName.includes('/') ? catchTypeName : catchTypeName.replace(/\./g, '/')
+        }
+        const catchTypeIndex = cg.constantPoolManager.indexClassInfo(catchClassName)
+
+        // add exception table entry (startPc, endPc, handlerPc, catchType)
+        localExceptionTable.push({
+          startPc: tryStart.offset,
+          endPc: tryEnd.offset,
+          handlerLabel: handlerLabel,
+          catchType: catchTypeIndex
+        })
+
+        // create scope for catch variable
+        cg.symbolTable.extend()
+        const varName = catchClause.catchFormalParameter.variableDeclaratorId
+        const varTypeStr = unannTypeToString(catchTypeNode.unannClassType)
+        const varInfo = {
+          name: varName,
+          accessFlags: 0,
+          index: cg.maxLocals,
+          typeName: varTypeStr,
+          typeDescriptor: cg.symbolTable.generateFieldDescriptor(varTypeStr)
+        }
+        cg.symbolTable.insertVariableInfo(varInfo)
+        if (['J', 'D'].includes(varInfo.typeDescriptor)) {
+          cg.maxLocals += 2
+        } else {
+          cg.maxLocals++
+        }
+
+        // at handler entry, the exception object is on the stack; store it into the local
+        cg.code.push(OPCODE.ASTORE, varInfo.index)
+
+        const catchStartOffset = cg.code.length
+
+        // compile catch block statements
+        const catchBlock = catchClause.block
+        catchBlock.blockStatements.forEach((stmt: any) => {
+          const { stackSize } = compile(stmt, cg)
+          maxStack = Math.max(maxStack, stackSize)
+        })
+
+        const catchEndOffset = cg.code.length
+
+        // teardown catch scope
+        cg.symbolTable.teardown()
+
+        // If finally exists, add catch-all entry for this catch block
+        if (finallyNode && catchAllLabel && catchStartOffset < catchEndOffset) {
+          localExceptionTable.push({
+            startPc: catchStartOffset,
+            endPc: catchEndOffset,
+            handlerLabel: catchAllLabel,
+            catchType: 0
+          })
+        }
+
+        // For caught path: run finally block if it exists
+        if (finallyNode) {
+          finallyNode.blockStatements.forEach((stmt: any) => {
+            const { stackSize } = compile(stmt, cg)
+            maxStack = Math.max(maxStack, stackSize)
+          })
+        }
+
+        // after handler, jump to afterHandlers
+        cg.addBranchInstr(OPCODE.GOTO, afterHandlers)
       }
-      const catchTypeIndex = cg.constantPoolManager.indexClassInfo(catchClassName)
-
-      // add exception table entry (startPc, endPc, handlerPc, catchType)
-      cg.exceptionTable.push({ startPc: tryStart.offset, endPc: tryEnd.offset, handlerPc: handlerLabel.offset, catchType: catchTypeIndex })
-
-      // create scope for catch variable
-      cg.symbolTable.extend()
-      const varName = catchClause.catchFormalParameter.variableDeclaratorId
-      const varTypeStr = unannTypeToString(catchTypeNode.unannClassType)
-      const varInfo = {
-        name: varName,
-        accessFlags: 0,
-        index: cg.maxLocals,
-        typeName: varTypeStr,
-        typeDescriptor: cg.symbolTable.generateFieldDescriptor(varTypeStr)
-      }
-      cg.symbolTable.insertVariableInfo(varInfo)
-      if (['J', 'D'].includes(varInfo.typeDescriptor)) {
-        cg.maxLocals += 2
-      } else {
-        cg.maxLocals++
-      }
-
-      // at handler entry, the exception object is on the stack; store it into the local
-      cg.code.push(OPCODE.ASTORE, varInfo.index)
-
-      // compile catch block statements
-      const catchBlock = catchClause.block
-      catchBlock.blockStatements.forEach((stmt: any) => {
-        const { stackSize } = compile(stmt, cg)
-        maxStack = Math.max(maxStack, stackSize)
-      })
-
-      // teardown catch scope
-      cg.symbolTable.teardown()
-
-      // after handler, jump to afterHandlers
-      cg.addBranchInstr(OPCODE.GOTO, afterHandlers)
     }
 
     // If finally exists, add a catch-all handler that runs finally then rethrows
-    const finallyNode: any = (node as any).finally
-    if (finallyNode) {
-      const catchAllLabel = cg.generateNewLabel()
+    if (finallyNode && catchAllLabel) {
       catchAllLabel.offset = cg.code.length
-      cg.exceptionTable.push({ startPc: tryStart.offset, endPc: tryEnd.offset, handlerPc: catchAllLabel.offset, catchType: 0 })
 
       // allocate temp local to store exception
       const tempIndex = cg.maxLocals
@@ -675,21 +734,20 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
       // reload exception and rethrow
       cg.code.push(OPCODE.ALOAD, tempIndex, OPCODE.ATHROW)
-
-      // normal finally path: compile finally once for normal/handled flows
-      const finallyLabel = cg.generateNewLabel()
-      finallyLabel.offset = cg.code.length
-      finallyNode.blockStatements.forEach((stmt: any) => {
-        const { stackSize } = compile(stmt, cg)
-        maxStack = Math.max(maxStack, stackSize)
-      })
-
-      // place after-handlers label
-      afterHandlers.offset = cg.code.length
-    } else {
-      // no finally: place after-handlers label
-      afterHandlers.offset = cg.code.length
     }
+
+    // place after-handlers label
+    afterHandlers.offset = cg.code.length
+
+    // Now that all labels are resolved, push to cg.exceptionTable
+    localExceptionTable.forEach(entry => {
+      cg.exceptionTable.push({
+        startPc: entry.startPc,
+        endPc: entry.endPc,
+        handlerPc: entry.handlerLabel.offset,
+        catchType: entry.catchType
+      })
+    })
 
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
