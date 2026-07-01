@@ -624,7 +624,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     // For normal path: run finally block if it exists
     if (finallyNode) {
-      finallyNode.blockStatements.forEach((stmt: any) => {
+      finallyNode.block.blockStatements.forEach((stmt: any) => {
         const { stackSize } = compile(stmt, cg)
         maxStack = Math.max(maxStack, stackSize)
       })
@@ -706,7 +706,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
         // For caught path: run finally block if it exists
         if (finallyNode) {
-          finallyNode.blockStatements.forEach((stmt: any) => {
+          finallyNode.block.blockStatements.forEach((stmt: any) => {
             const { stackSize } = compile(stmt, cg)
             maxStack = Math.max(maxStack, stackSize)
           })
@@ -727,7 +727,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       cg.code.push(OPCODE.ASTORE, tempIndex)
 
       // compile finally block inside catch-all
-      finallyNode.blockStatements.forEach((stmt: any) => {
+      finallyNode.block.blockStatements.forEach((stmt: any) => {
         const { stackSize } = compile(stmt, cg)
         maxStack = Math.max(maxStack, stackSize)
       })
