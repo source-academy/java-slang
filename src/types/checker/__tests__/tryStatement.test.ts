@@ -36,6 +36,17 @@ const testcases: {
   },
   {
     input: `
+      try {
+        throw new Exception();
+      } catch (Exception e) {
+        throw new Exception();
+      } finally {
+      }
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
       try {} 
       catch (String s) {}
     `,
