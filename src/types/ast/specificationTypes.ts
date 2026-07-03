@@ -742,7 +742,7 @@ export type MethodDeclaration = {
   kind: 'MethodDeclaration'
   methodModifiers: MethodModifier[]
   methodHeader: MethodHeader
-  methodBody: MethodBody
+  methodBody: MethodBody | undefined
   location: Location
 }
 

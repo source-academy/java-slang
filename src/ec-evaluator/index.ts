@@ -1,17 +1,43 @@
 import { parse } from '../ast/parser'
+import { typeCheck } from '../types'
 import { Control, Environment, Stash } from './components'
 import { STEP_LIMIT } from './constants'
 import { RuntimeError } from './errors'
 import { evaluate } from './interpreter'
-import { Context, Error, Finished, Result } from './types'
+import { LFSR, libraryClasses } from './lib'
+import { Class, Context, Error, Finished, Interfaces, IOCallbacks, Result } from './types'
+import { handleSequence } from './utils'
 
 export * from './components'
 export * from './errors'
 export * from './types'
 export { isInstr, isNode } from './utils'
 
-export const runECEvaluator = (code: string, targetStep: number = STEP_LIMIT): Promise<Result> => {
-  const context = createContext()
+export const runECEvaluator = (
+  code: string,
+  targetStep: number = STEP_LIMIT,
+  ioCallbacks: IOCallbacks
+): Promise<Result> => {
+  const context = createContext(code, ioCallbacks)
+
+  // type checking
+  const typeCheckResult = typeCheck(libraryClasses, code)
+  if (typeCheckResult.hasTypeErrors) {
+    const typeErrMsg = typeCheckResult.errorMsgs.join('\n')
+    context.interfaces.stderr('TypeCheck', typeErrMsg)
+    console.error(typeErrMsg)
+    return Promise.resolve({ status: 'error', context } as Error)
+  }
+
+  // load library
+  const libraryCompilationUnit = parse(libraryClasses)
+  context.control.push(
+    ...handleSequence(libraryCompilationUnit.topLevelClassOrInterfaceDeclarations)
+  )
+
+  // step size limit is irrelevant here, just makes injected library classes run to completion
+  evaluate(context, 100000)
+
   try {
     // parse() may throw SyntaxError.
     const compilationUnit = parse(code)
@@ -33,12 +59,36 @@ export const runECEvaluator = (code: string, targetStep: number = STEP_LIMIT): P
   }
 }
 
-export const createContext = (): Context => ({
+export const createContext = (code: string, ioCallbacks?: IOCallbacks): Context => ({
   errors: [],
 
   control: new Control(),
   stash: new Stash(),
   environment: new Environment(),
 
-  totalSteps: STEP_LIMIT
+  interfaces: initialiseInterfaces(code, ioCallbacks),
+
+  totalSteps: 0
 })
+
+const initialiseInterfaces = (code: string, ioCallbacks?: IOCallbacks): Interfaces => {
+  return {
+    stdout: ioCallbacks?.stdout ?? console.log,
+    stderr: ioCallbacks?.stderr ?? console.error,
+    statics: {
+      lfsr: new LFSR(code)
+    }
+  }
+}
+
+export const makeObjectClass = (): Class => {
+  const context = createContext('')
+  const objectClassDefinition = 'class Object {}'
+  const libraryCompilationUnit = parse(objectClassDefinition)
+  context.control.push(
+    ...handleSequence(libraryCompilationUnit.topLevelClassOrInterfaceDeclarations)
+  )
+  evaluate(context, STEP_LIMIT)
+
+  return context.environment.getClass('Object')
+}
