@@ -661,21 +661,7 @@ VariableModifier
   = final
 
 Throws
-  = throws et:ExceptionTypeList {
-    return addLocInfo({
-      kind: "Throws",
-      exceptionTypeList: et,
-    })
-  }
-
-ExceptionTypeList
-  = e:ExceptionType es:(comma @ExceptionType)* {
-    return [e, ...es];
-  }
-
-ExceptionType
-  = ClassType
-  / TypeIdentifier
+  = throw TO_BE_ADDED
 
 ConstructorDeclaration
   = cm:ConstructorModifier* cd:ConstructorDeclarator Throws? cb:ConstructorBody {
