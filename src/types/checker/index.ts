@@ -482,15 +482,24 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       // Resolve overload: find the first applicable method
       let selectedMethod: Method | null = null
       let selectedReturnType: Type | TypeCheckerError | null = null
+      let lastInvokeError: TypeCheckerError | null = null
       for (let i = 0; i < methods.length; i++) {
         const result = methods[i].invoke(argumentList)
-        if (result instanceof TypeCheckerError) continue
+        if (result instanceof TypeCheckerError) {
+          lastInvokeError = result
+          continue
+        }
         selectedMethod = methods[i]
         selectedReturnType = result
         break
       }
-      if (selectedMethod === null || selectedReturnType === null)
+      if (selectedMethod === null || selectedReturnType === null) {
+        // If there was exactly one candidate and it produced a specific
+        // type-check error (e.g. incompatible types), surface that error
+        // instead of the generic "method cannot be applied" message.
+        if (methods.length === 1 && lastInvokeError) return newResult(null, [...errors, lastInvokeError])
         return newResult(null, [...errors, new MethodCannotBeAppliedError(node.location)])
+      }
 
       // Enforce declared exceptions from the invoked method: any checked exception
       // must either be caught by an enclosing try/catch or declared by the current method.
