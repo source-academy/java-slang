@@ -1,7 +1,7 @@
 import { Array as ArrayType } from '../types/arrays'
 import { Integer, String, Throwable, Void } from '../types/references'
 import { CaseConstant, Node } from '../ast/specificationTypes'
-import { Type } from '../types/type'
+import { PrimitiveType, Type } from '../types/type'
 import {
   ArrayRequiredError,
   BadOperandTypesError,
@@ -62,6 +62,33 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
   if (addClassMethodsResult.hasErrors) return addClassMethodsResult
   return typeCheckBody(node, typeCheckingFrame)
 }
+
+const isCastCompatible = (fromType: Type, toType: Type): boolean => {
+  // Handle primitive type compatibility
+  if (fromType instanceof PrimitiveType && toType instanceof PrimitiveType) {
+    const fromName = fromType.constructor.name;
+    const toName = toType.constructor.name;
+
+    console.log(fromName, toName);
+
+    return !(fromName === 'char' && toName !== 'int');
+  }
+
+  // Handle class type compatibility
+  if (fromType instanceof ClassType && toType instanceof ClassType) {
+    // Allow upcasts (base class to derived class) or downcasts (derived class to base class)
+    return fromType.canBeAssigned(toType) || toType.canBeAssigned(fromType);
+  }
+
+  // Handle array type compatibility
+  if (fromType instanceof ArrayType && toType instanceof ArrayType) {
+    // Ensure the content types are compatible
+    return isCastCompatible(fromType.getContentType(), toType.getContentType());
+  }
+
+  // Disallow other cases by default
+  return false;
+};
 
 export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): Result => {
   switch (node.kind) {
@@ -191,6 +218,34 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
     }
     case 'BreakStatement': {
       return OK_RESULT
+    }
+    case 'CastExpression': {
+      let castTypeNode, expressionNode;
+      if ('primitiveType' in node) {
+        castTypeNode = node.primitiveType;
+        expressionNode = node.unaryExpression;
+      } else if ('referenceType' in node && 'unaryExpressionNotPlusMinus' in node) {
+        castTypeNode = node.referenceType;
+        expressionNode = node.unaryExpressionNotPlusMinus;
+      } else if ('referenceType' in node && 'lambdaExpression' in node) {
+        castTypeNode = node.referenceType;
+        expressionNode = node.lambdaExpression;
+      } else {
+        throw new Error('Invalid typecast.');
+      }
+
+      const castType = frame.getType(unannTypeToString(castTypeNode), castTypeNode.location);
+      if (castType instanceof TypeCheckerError) return newResult(null, [castType]);
+
+      const { currentType, errors } = typeCheckBody(expressionNode, frame);
+      if (errors.length > 0) return newResult(null, errors);
+      if (!currentType) throw new Error('Target of cast expression should return a type.');
+
+      if (!castType.canBeAssigned(currentType) && !currentType.canBeAssigned(castType)) {
+        return newResult(null, [new IncompatibleTypesError(node.location)]);
+      }
+
+      return newResult(castType);
     }
     case 'ClassInstanceCreationExpression': {
       const classIdentifier =
