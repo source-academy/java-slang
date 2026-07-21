@@ -18,6 +18,44 @@ PRINTLN_METHOD_2.addParameter(new Parameter('message', new Primitives.Int()))
 PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_1, { startLine: -1, startOffset: -1 })
 PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_2, { startLine: -1, startOffset: -1 })
 
+const THROWABLE_CLASS = new NonPrimitives.Throwable()
+const EXCEPTION_CLASS = new NonPrimitives.Exception()
+const RUNTIME_EXCEPTION_CLASS = new ClassType('RuntimeException')
+RUNTIME_EXCEPTION_CLASS.setParentClass(EXCEPTION_CLASS)
+const ERROR_CLASS = new ClassType('Error')
+ERROR_CLASS.setParentClass(THROWABLE_CLASS)
+
+const ARITHMETIC_EXCEPTION_CLASS = new ClassType('ArithmeticException')
+ARITHMETIC_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS = new ClassType('ArrayIndexOutOfBoundsException')
+ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const ARRAY_STORE_EXCEPTION_CLASS = new ClassType('ArrayStoreException')
+ARRAY_STORE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const CLASS_CAST_EXCEPTION_CLASS = new ClassType('ClassCastException')
+CLASS_CAST_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const ILLEGAL_ARGUMENT_EXCEPTION_CLASS = new ClassType('IllegalArgumentException')
+ILLEGAL_ARGUMENT_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const ILLEGAL_MONITOR_STATE_EXCEPTION_CLASS = new ClassType('IllegalMonitorStateException')
+ILLEGAL_MONITOR_STATE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const ILLEGAL_STATE_EXCEPTION_CLASS = new ClassType('IllegalStateException')
+ILLEGAL_STATE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS = new ClassType('IndexOutOfBoundsException')
+INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const NEGATIVE_ARRAY_SIZE_EXCEPTION_CLASS = new ClassType('NegativeArraySizeException')
+NEGATIVE_ARRAY_SIZE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const NULL_POINTER_EXCEPTION_CLASS = new ClassType('NullPointerException')
+NULL_POINTER_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const NUMBER_FORMAT_EXCEPTION_CLASS = new ClassType('NumberFormatException')
+NUMBER_FORMAT_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const STRING_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS = new ClassType('StringIndexOutOfBoundsException')
+STRING_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS.setParentClass(INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS)
+const UNSUPPORTED_OPERATION_EXCEPTION_CLASS = new ClassType('UnsupportedOperationException')
+UNSUPPORTED_OPERATION_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const SECURITY_EXCEPTION_CLASS = new ClassType('SecurityException')
+SECURITY_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+const ILLEGAL_THREAD_STATE_EXCEPTION_CLASS = new ClassType('IllegalThreadStateException')
+ILLEGAL_THREAD_STATE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
+
 const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   boolean: new Primitives.Boolean(),
   byte: new Primitives.Byte(),
@@ -40,8 +78,25 @@ const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
 
   // Hard coded variables
   System: SYSTEM_CLASS,
-  Throwable: new NonPrimitives.Throwable(),
-  Exception: new NonPrimitives.Exception()
+  Throwable: THROWABLE_CLASS,
+  Error: ERROR_CLASS,
+  Exception: EXCEPTION_CLASS,
+  RuntimeException: RUNTIME_EXCEPTION_CLASS,
+  ArithmeticException: ARITHMETIC_EXCEPTION_CLASS,
+  ArrayIndexOutOfBoundsException: ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS,
+  ArrayStoreException: ARRAY_STORE_EXCEPTION_CLASS,
+  ClassCastException: CLASS_CAST_EXCEPTION_CLASS,
+  IllegalArgumentException: ILLEGAL_ARGUMENT_EXCEPTION_CLASS,
+  IllegalMonitorStateException: ILLEGAL_MONITOR_STATE_EXCEPTION_CLASS,
+  IllegalStateException: ILLEGAL_STATE_EXCEPTION_CLASS,
+  IndexOutOfBoundsException: INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS,
+  NegativeArraySizeException: NEGATIVE_ARRAY_SIZE_EXCEPTION_CLASS,
+  NullPointerException: NULL_POINTER_EXCEPTION_CLASS,
+  NumberFormatException: NUMBER_FORMAT_EXCEPTION_CLASS,
+  StringIndexOutOfBoundsException: STRING_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS,
+  UnsupportedOperationException: UNSUPPORTED_OPERATION_EXCEPTION_CLASS,
+  SecurityException: SECURITY_EXCEPTION_CLASS,
+  IllegalThreadStateException: ILLEGAL_THREAD_STATE_EXCEPTION_CLASS
 }
 
 export class Frame {
