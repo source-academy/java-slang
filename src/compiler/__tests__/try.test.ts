@@ -17,6 +17,24 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["1", "0"],
   },
+  {
+    comment: "try/catch/finally block with exception handled",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          try {
+            int y = 1 / 0;
+          } catch (Exception e) {
+            System.out.println(2);
+          } finally {
+            System.out.println(3);
+          }
+          System.out.println(4);
+        }
+      }
+    `,
+    expectedLines: ["2", "3", "4"],
+  }
 ];
 
 describe("try/catch", () => {

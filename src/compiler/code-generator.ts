@@ -612,16 +612,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     const catchAllLabel = finallyNode ? cg.generateNewLabel() : null
 
-    // If finally exists, add catch-all entry for the try block
-    if (finallyNode && catchAllLabel) {
-      localExceptionTable.push({
-        startPc: tryStart.offset,
-        endPc: tryEnd.offset,
-        handlerLabel: catchAllLabel,
-        catchType: 0
-      })
-    }
-
     // For normal path: run finally block if it exists
     if (finallyNode) {
       finallyNode.block.blockStatements.forEach((stmt: any) => {
@@ -715,6 +705,17 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         // after handler, jump to afterHandlers
         cg.addBranchInstr(OPCODE.GOTO, afterHandlers)
       }
+    }
+
+    // If finally exists, add catch-all entry for the try block after all specific catch handlers.
+    // This ensures the catch clauses are matched before the generic finally rethrow path.
+    if (finallyNode && catchAllLabel) {
+      localExceptionTable.push({
+        startPc: tryStart.offset,
+        endPc: tryEnd.offset,
+        handlerLabel: catchAllLabel,
+        catchType: 0
+      })
     }
 
     // If finally exists, add a catch-all handler that runs finally then rethrows
