@@ -1,33 +1,45 @@
-import { ClassData } from "./types/class/ClassData"
+import { ClassData } from './types/class/ClassData'
 
-class Entry {
-    from: number
-    to: number
-    target: number
-    type: ClassData
-
-    constructor(from: number, to: number, target: number, type: ClassData) {
-        this.from = from;
-        this.to = to;
-        this.target = target;
-        this.type = type;
-    }
+export interface ExceptionTableEntry {
+    startPc: number
+    endPc: number
+    handlerPc: number
+    catchType: any | null
 }
 
-export class ExceptionTable {
-    private entries: Entry[]
+export class ExceptionTable implements Iterable<ExceptionTableEntry> {
+    private entries: ExceptionTableEntry[]
 
-    retrieve(line: number): Entry | null {
-        this.entries.forEach(entry => {
-            if (line >= entry.from && line <= entry.to) {
-                return entry
+    constructor(entries?: ExceptionTableEntry[]) {
+        this.entries = entries ? entries.slice() : []
+    }
+
+    retrieve(pc: number): ExceptionTableEntry | null {
+        for (let i = 0; i < this.entries.length; i++) {
+            const e = this.entries[i]
+            if (pc >= e.startPc && pc < e.endPc) {
+                return e
             }
-        })
+        }
         return null
     }
 
-    insert(from: number, to: number, target: number, type: ClassData): void {
-        var entry = new Entry(from, to, target, type)
-        this.entries.push(entry)
+    insert(startPc: number, endPc: number, handlerPc: number, catchType: ClassData | null): void {
+        this.entries.push({ startPc, endPc, handlerPc, catchType })
+    }
+
+    toArray(): ExceptionTableEntry[] {
+        return this.entries.slice()
+    }
+
+    [Symbol.iterator](): Iterator<ExceptionTableEntry> {
+        return this.entries[Symbol.iterator]()
+    }
+    forEach(cb: (entry: ExceptionTableEntry, idx?: number) => void) {
+        this.entries.forEach(cb)
+    }
+
+    get length() {
+        return this.entries.length
     }
 }

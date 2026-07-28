@@ -25,6 +25,13 @@ import {
   SwitchBlockCtx,
   SwitchLabelCtx,
   SwitchBlockStatementGroupCtx,
+  ThrowStatementCtx,
+  TryStatementCtx,
+  CatchClauseCtx,
+  CatchFormalParameterCtx,
+  CatchTypeCtx,
+  CatchesCtx,
+  FinallyCtx,
   StatementCstNode,
   StatementExpressionCtx,
   StatementWithoutTrailingSubstatementCtx,
@@ -97,6 +104,10 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
         exp: returnStatementExp,
         location: ctx.returnStatement[0].location,
       };
+    } else if (ctx.throwStatement) {
+      return this.visit(ctx.throwStatement);
+    } else if (ctx.tryStatement) {
+      return this.visit(ctx.tryStatement);
     }
   }
 
@@ -356,6 +367,69 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
     return ctx.expression.map((e) => expressionExtractor.extract(e));
   }
 
+  throwStatement(ctx: ThrowStatementCtx) {
+    const expressionExtractor = new ExpressionExtractor();
+    return {
+      kind: "ThrowStatement",
+      expression: expressionExtractor.extract(ctx.expression[0]),
+      location: ctx.Throw[0],
+    };
+  }
+
+  tryStatement(ctx: TryStatementCtx) {
+    return {
+      kind: "TryStatement",
+      block: ctx.block ? this.visit(ctx.block) : { kind: "Block", blockStatements: [], location: ctx.Try![0] },
+      catches: ctx.catches ? this.visit(ctx.catches) : undefined,
+      finally: ctx.finally ? this.visit(ctx.finally) : undefined,
+      location: ctx.Try![0],
+    };
+  }
+
+  catches(ctx: CatchesCtx) {
+    return {
+      kind: "Catches",
+      catchClauses: ctx.catchClause.map((catchClause) => this.visit(catchClause)),
+      location: ctx.catchClause[0].location,
+    };
+  }
+
+  catchClause(ctx: CatchClauseCtx) {
+    return {
+      kind: "CatchClause",
+      catchFormalParameter: this.visit(ctx.catchFormalParameter),
+      block: this.visit(ctx.block),
+      location: ctx.Catch[0],
+    };
+  }
+
+  catchFormalParameter(ctx: CatchFormalParameterCtx) {
+    return {
+      kind: "CatchFormalParameter",
+      catchType: this.visit(ctx.catchType[0]),
+      variableDeclaratorId:
+        ctx.variableDeclaratorId[0].children.Identifier[0].image,
+      location: ctx.catchType[0].location,
+    };
+  }
+
+  catchType(ctx: CatchTypeCtx) {
+    const result = new TypeExtractor().visit(ctx.unannClassType[0] as any);
+      return {
+        kind: "CatchType",
+        unannClassType: result,
+        location: ctx.unannClassType[0].location,
+      };
+  }
+
+  finally(ctx: FinallyCtx) {
+    return {
+      kind: "Finally",
+      block: this.visit(ctx.block),
+      location: ctx.Finally[0],
+    };
+  }
+
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
     // Assignment LHS, MethodInvocation identifier
     let { name, location } = this.visit(ctx.fqnOrRefTypePartFirst);
@@ -419,8 +493,15 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   block(ctx: BlockCtx): Statement {
-    if (ctx.blockStatements) return this.visit(ctx.blockStatements);
-    return { kind: "EmptyStatement" };
+    const location =
+      (ctx.blockStatements?.[0] as any)?.location ||
+      (ctx.LCurly?.[0] as any)?.location ||
+      (ctx.RCurly?.[0] as any)?.location;
+    if (ctx.blockStatements) {
+      const block = this.visit(ctx.blockStatements) as Statement;
+      return { ...block, location };
+    }
+    return { kind: "EmptyStatement", location };
   }
 
   blockStatements(ctx: BlockStatementsCtx): Statement {

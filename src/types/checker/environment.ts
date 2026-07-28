@@ -7,42 +7,118 @@ import { Array } from '../types/arrays'
 import { Class, ClassType } from '../types/classes'
 import { Location } from '../ast/specificationTypes'
 import { isArrayType, removeArraySuffix } from './arrays'
+import { libraries } from '../../compiler/import/libs'
 
-const SYSTEM_CLASS = new ClassType('System')
-const PRINTSTREAM_CLASS = new ClassType('PrintStream')
-SYSTEM_CLASS.addField('out', PRINTSTREAM_CLASS, { startLine: -1, startOffset: -1 })
-const PRINTLN_METHOD_1 = new Method('println')
-PRINTLN_METHOD_1.addParameter(new Parameter('message', new NonPrimitives.String()))
-const PRINTLN_METHOD_2 = new Method('println')
-PRINTLN_METHOD_2.addParameter(new Parameter('message', new Primitives.Int()))
-PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_1, { startLine: -1, startOffset: -1 })
-PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_2, { startLine: -1, startOffset: -1 })
-
-const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
-  boolean: new Primitives.Boolean(),
-  byte: new Primitives.Byte(),
-  char: new Primitives.Char(),
-  double: new Primitives.Double(),
-  float: new Primitives.Float(),
-  int: new Primitives.Int(),
-  long: new Primitives.Long(),
-  short: new Primitives.Short(),
-  void: new NonPrimitives.Void(),
-  Boolean: new NonPrimitives.Boolean(),
-  Byte: new NonPrimitives.Byte(),
-  Character: new NonPrimitives.Character(),
-  Double: new NonPrimitives.Double(),
-  Float: new NonPrimitives.Float(),
-  Integer: new NonPrimitives.Integer(),
-  Long: new NonPrimitives.Long(),
-  Short: new NonPrimitives.Short(),
-  String: new NonPrimitives.String(),
-
-  // Hard coded variables
-  System: SYSTEM_CLASS,
-  Throwable: new NonPrimitives.Throwable(),
-  Exception: new NonPrimitives.Exception()
+const BUILT_IN_TYPE_FACTORIES: { [name: string]: () => Type } = {
+  boolean: () => new Primitives.Boolean(),
+  byte: () => new Primitives.Byte(),
+  char: () => new Primitives.Char(),
+  double: () => new Primitives.Double(),
+  float: () => new Primitives.Float(),
+  int: () => new Primitives.Int(),
+  long: () => new Primitives.Long(),
+  short: () => new Primitives.Short(),
+  void: () => new NonPrimitives.Void(),
+  Boolean: () => new NonPrimitives.Boolean(),
+  Byte: () => new NonPrimitives.Byte(),
+  Character: () => new NonPrimitives.Character(),
+  Double: () => new NonPrimitives.Double(),
+  Float: () => new NonPrimitives.Float(),
+  Integer: () => new NonPrimitives.Integer(),
+  Long: () => new NonPrimitives.Long(),
+  Short: () => new NonPrimitives.Short(),
+  String: () => new NonPrimitives.String()
 }
+
+const EXCEPTION_INHERITANCE: { [child: string]: string } = {
+  Error: 'Throwable',
+  Exception: 'Throwable',
+  RuntimeException: 'Exception',
+  ArithmeticException: 'RuntimeException',
+  ArrayIndexOutOfBoundsException: 'RuntimeException',
+  ArrayStoreException: 'RuntimeException',
+  ClassCastException: 'RuntimeException',
+  IllegalArgumentException: 'RuntimeException',
+  IllegalMonitorStateException: 'RuntimeException',
+  IllegalStateException: 'RuntimeException',
+  IndexOutOfBoundsException: 'RuntimeException',
+  NegativeArraySizeException: 'RuntimeException',
+  NullPointerException: 'RuntimeException',
+  NumberFormatException: 'RuntimeException',
+  StringIndexOutOfBoundsException: 'IndexOutOfBoundsException',
+  UnsupportedOperationException: 'RuntimeException',
+  SecurityException: 'RuntimeException',
+  IllegalThreadStateException: 'RuntimeException'
+}
+
+const stdlibTypeMap = new Map<string, Type>()
+
+const createType = (typeName: string): Type => {
+  if (stdlibTypeMap.has(typeName)) return stdlibTypeMap.get(typeName)!
+
+  const factory = BUILT_IN_TYPE_FACTORIES[typeName]
+  const type = factory ? factory() : new ClassType(typeName)
+  stdlibTypeMap.set(typeName, type)
+  return type
+}
+
+const parseType = (typeName: string): Type => {
+  if (typeName.endsWith('[]')) {
+    return new Array(parseType(typeName.slice(0, -2)))
+  }
+  return createType(typeName.replaceAll('/', '.').split('.').pop() || typeName)
+}
+
+const buildStandardLibraryTypes = (): { [key: string]: Type } => {
+  // Preload built-in type objects
+  Object.keys(BUILT_IN_TYPE_FACTORIES).forEach(typeName => createType(typeName))
+
+  const getSimpleName = (qualifiedName: string) => {
+    const lastToken = qualifiedName.replaceAll('.', '/').split('/').pop() || qualifiedName
+    return lastToken
+  }
+
+  libraries.forEach(pkg => {
+    pkg.classes.forEach(clazz => {
+      const className = getSimpleName(clazz.className)
+      createType(className)
+    })
+  })
+
+  libraries.forEach(pkg => {
+    pkg.classes.forEach(clazz => {
+      const className = getSimpleName(clazz.className)
+      const classType = createType(className)
+      if (!(classType instanceof ClassType)) return
+
+      clazz.fields.forEach(field => {
+        const fieldType = parseType(field.typeName)
+        classType.addField(field.fieldName, fieldType, { startLine: -1, startOffset: -1 })
+      })
+
+      clazz.methods.forEach(methodInfo => {
+        const method = new Method(methodInfo.methodName, parseType(methodInfo.returnTypeName))
+        methodInfo.argsTypeName.forEach((argTypeName, index) => {
+          const parameter = new Parameter(`arg${index}`, parseType(argTypeName))
+          method.addParameter(parameter)
+        })
+        classType.addMethod(methodInfo.methodName, method, { startLine: -1, startOffset: -1 })
+      })
+    })
+  })
+
+  Object.entries(EXCEPTION_INHERITANCE).forEach(([child, parent]) => {
+    const childType = createType(child)
+    const parentType = createType(parent)
+    if (childType instanceof ClassType && parentType instanceof ClassType) {
+      childType.setParentClass(parentType)
+    }
+  })
+
+  return Object.fromEntries(stdlibTypeMap.entries())
+}
+
+const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = buildStandardLibraryTypes()
 
 export class Frame {
   private _currentClass: Class
@@ -51,6 +127,8 @@ export class Frame {
   private _variables = new Map<string, Type>()
 
   private _returnType: Type | null = null
+  private _throws: any[] = []
+  private _activeCaughtExceptions: any[] = []
 
   private _parentFrame: Frame | null = null
   private _childrenFrames: Frame[] = []
@@ -69,6 +147,25 @@ export class Frame {
     if (this._returnType) return this._returnType
     if (this._parentFrame) return this._parentFrame.getReturn()
     throw new Error('cannot find return type')
+  }
+
+  public setThrows(exceptions: any[]): void {
+    this._throws = exceptions.slice()
+  }
+
+  public getThrows(): any[] {
+    if (this._throws && this._throws.length > 0) return this._throws.slice()
+    if (this._parentFrame) return this._parentFrame.getThrows()
+    return []
+  }
+
+  public setActiveCaughtExceptions(exceptions: any[]): void {
+    this._activeCaughtExceptions = exceptions.slice()
+  }
+
+  public getActiveCaughtExceptions(): any[] {
+    const parentCaught = this._parentFrame ? this._parentFrame.getActiveCaughtExceptions() : []
+    return parentCaught.concat(this._activeCaughtExceptions)
   }
 
   public getType(name: string, location: Location): Type | TypeCheckerError {
