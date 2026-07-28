@@ -7,97 +7,118 @@ import { Array } from '../types/arrays'
 import { Class, ClassType } from '../types/classes'
 import { Location } from '../ast/specificationTypes'
 import { isArrayType, removeArraySuffix } from './arrays'
+import { libraries } from '../../compiler/import/libs'
 
-const SYSTEM_CLASS = new ClassType('System')
-const PRINTSTREAM_CLASS = new ClassType('PrintStream')
-SYSTEM_CLASS.addField('out', PRINTSTREAM_CLASS, { startLine: -1, startOffset: -1 })
-const PRINTLN_METHOD_1 = new Method('println')
-PRINTLN_METHOD_1.addParameter(new Parameter('message', new NonPrimitives.String()))
-const PRINTLN_METHOD_2 = new Method('println')
-PRINTLN_METHOD_2.addParameter(new Parameter('message', new Primitives.Int()))
-PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_1, { startLine: -1, startOffset: -1 })
-PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_2, { startLine: -1, startOffset: -1 })
-
-const THROWABLE_CLASS = new NonPrimitives.Throwable()
-const EXCEPTION_CLASS = new NonPrimitives.Exception()
-const RUNTIME_EXCEPTION_CLASS = new ClassType('RuntimeException')
-RUNTIME_EXCEPTION_CLASS.setParentClass(EXCEPTION_CLASS)
-const ERROR_CLASS = new ClassType('Error')
-ERROR_CLASS.setParentClass(THROWABLE_CLASS)
-
-const ARITHMETIC_EXCEPTION_CLASS = new ClassType('ArithmeticException')
-ARITHMETIC_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS = new ClassType('ArrayIndexOutOfBoundsException')
-ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const ARRAY_STORE_EXCEPTION_CLASS = new ClassType('ArrayStoreException')
-ARRAY_STORE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const CLASS_CAST_EXCEPTION_CLASS = new ClassType('ClassCastException')
-CLASS_CAST_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const ILLEGAL_ARGUMENT_EXCEPTION_CLASS = new ClassType('IllegalArgumentException')
-ILLEGAL_ARGUMENT_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const ILLEGAL_MONITOR_STATE_EXCEPTION_CLASS = new ClassType('IllegalMonitorStateException')
-ILLEGAL_MONITOR_STATE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const ILLEGAL_STATE_EXCEPTION_CLASS = new ClassType('IllegalStateException')
-ILLEGAL_STATE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS = new ClassType('IndexOutOfBoundsException')
-INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const NEGATIVE_ARRAY_SIZE_EXCEPTION_CLASS = new ClassType('NegativeArraySizeException')
-NEGATIVE_ARRAY_SIZE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const NULL_POINTER_EXCEPTION_CLASS = new ClassType('NullPointerException')
-NULL_POINTER_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const NUMBER_FORMAT_EXCEPTION_CLASS = new ClassType('NumberFormatException')
-NUMBER_FORMAT_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const STRING_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS = new ClassType('StringIndexOutOfBoundsException')
-STRING_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS.setParentClass(INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS)
-const UNSUPPORTED_OPERATION_EXCEPTION_CLASS = new ClassType('UnsupportedOperationException')
-UNSUPPORTED_OPERATION_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const SECURITY_EXCEPTION_CLASS = new ClassType('SecurityException')
-SECURITY_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-const ILLEGAL_THREAD_STATE_EXCEPTION_CLASS = new ClassType('IllegalThreadStateException')
-ILLEGAL_THREAD_STATE_EXCEPTION_CLASS.setParentClass(RUNTIME_EXCEPTION_CLASS)
-
-const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
-  boolean: new Primitives.Boolean(),
-  byte: new Primitives.Byte(),
-  char: new Primitives.Char(),
-  double: new Primitives.Double(),
-  float: new Primitives.Float(),
-  int: new Primitives.Int(),
-  long: new Primitives.Long(),
-  short: new Primitives.Short(),
-  void: new NonPrimitives.Void(),
-  Boolean: new NonPrimitives.Boolean(),
-  Byte: new NonPrimitives.Byte(),
-  Character: new NonPrimitives.Character(),
-  Double: new NonPrimitives.Double(),
-  Float: new NonPrimitives.Float(),
-  Integer: new NonPrimitives.Integer(),
-  Long: new NonPrimitives.Long(),
-  Short: new NonPrimitives.Short(),
-  String: new NonPrimitives.String(),
-
-  // Hard coded variables
-  System: SYSTEM_CLASS,
-  Throwable: THROWABLE_CLASS,
-  Error: ERROR_CLASS,
-  Exception: EXCEPTION_CLASS,
-  RuntimeException: RUNTIME_EXCEPTION_CLASS,
-  ArithmeticException: ARITHMETIC_EXCEPTION_CLASS,
-  ArrayIndexOutOfBoundsException: ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS,
-  ArrayStoreException: ARRAY_STORE_EXCEPTION_CLASS,
-  ClassCastException: CLASS_CAST_EXCEPTION_CLASS,
-  IllegalArgumentException: ILLEGAL_ARGUMENT_EXCEPTION_CLASS,
-  IllegalMonitorStateException: ILLEGAL_MONITOR_STATE_EXCEPTION_CLASS,
-  IllegalStateException: ILLEGAL_STATE_EXCEPTION_CLASS,
-  IndexOutOfBoundsException: INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS,
-  NegativeArraySizeException: NEGATIVE_ARRAY_SIZE_EXCEPTION_CLASS,
-  NullPointerException: NULL_POINTER_EXCEPTION_CLASS,
-  NumberFormatException: NUMBER_FORMAT_EXCEPTION_CLASS,
-  StringIndexOutOfBoundsException: STRING_INDEX_OUT_OF_BOUNDS_EXCEPTION_CLASS,
-  UnsupportedOperationException: UNSUPPORTED_OPERATION_EXCEPTION_CLASS,
-  SecurityException: SECURITY_EXCEPTION_CLASS,
-  IllegalThreadStateException: ILLEGAL_THREAD_STATE_EXCEPTION_CLASS
+const BUILT_IN_TYPE_FACTORIES: { [name: string]: () => Type } = {
+  boolean: () => new Primitives.Boolean(),
+  byte: () => new Primitives.Byte(),
+  char: () => new Primitives.Char(),
+  double: () => new Primitives.Double(),
+  float: () => new Primitives.Float(),
+  int: () => new Primitives.Int(),
+  long: () => new Primitives.Long(),
+  short: () => new Primitives.Short(),
+  void: () => new NonPrimitives.Void(),
+  Boolean: () => new NonPrimitives.Boolean(),
+  Byte: () => new NonPrimitives.Byte(),
+  Character: () => new NonPrimitives.Character(),
+  Double: () => new NonPrimitives.Double(),
+  Float: () => new NonPrimitives.Float(),
+  Integer: () => new NonPrimitives.Integer(),
+  Long: () => new NonPrimitives.Long(),
+  Short: () => new NonPrimitives.Short(),
+  String: () => new NonPrimitives.String()
 }
+
+const EXCEPTION_INHERITANCE: { [child: string]: string } = {
+  Error: 'Throwable',
+  Exception: 'Throwable',
+  RuntimeException: 'Exception',
+  ArithmeticException: 'RuntimeException',
+  ArrayIndexOutOfBoundsException: 'RuntimeException',
+  ArrayStoreException: 'RuntimeException',
+  ClassCastException: 'RuntimeException',
+  IllegalArgumentException: 'RuntimeException',
+  IllegalMonitorStateException: 'RuntimeException',
+  IllegalStateException: 'RuntimeException',
+  IndexOutOfBoundsException: 'RuntimeException',
+  NegativeArraySizeException: 'RuntimeException',
+  NullPointerException: 'RuntimeException',
+  NumberFormatException: 'RuntimeException',
+  StringIndexOutOfBoundsException: 'IndexOutOfBoundsException',
+  UnsupportedOperationException: 'RuntimeException',
+  SecurityException: 'RuntimeException',
+  IllegalThreadStateException: 'RuntimeException'
+}
+
+const stdlibTypeMap = new Map<string, Type>()
+
+const createType = (typeName: string): Type => {
+  if (stdlibTypeMap.has(typeName)) return stdlibTypeMap.get(typeName)!
+
+  const factory = BUILT_IN_TYPE_FACTORIES[typeName]
+  const type = factory ? factory() : new ClassType(typeName)
+  stdlibTypeMap.set(typeName, type)
+  return type
+}
+
+const parseType = (typeName: string): Type => {
+  if (typeName.endsWith('[]')) {
+    return new Array(parseType(typeName.slice(0, -2)))
+  }
+  return createType(typeName.replaceAll('/', '.').split('.').pop() || typeName)
+}
+
+const buildStandardLibraryTypes = (): { [key: string]: Type } => {
+  // Preload built-in type objects
+  Object.keys(BUILT_IN_TYPE_FACTORIES).forEach(typeName => createType(typeName))
+
+  const getSimpleName = (qualifiedName: string) => {
+    const lastToken = qualifiedName.replaceAll('.', '/').split('/').pop() || qualifiedName
+    return lastToken
+  }
+
+  libraries.forEach(pkg => {
+    pkg.classes.forEach(clazz => {
+      const className = getSimpleName(clazz.className)
+      createType(className)
+    })
+  })
+
+  libraries.forEach(pkg => {
+    pkg.classes.forEach(clazz => {
+      const className = getSimpleName(clazz.className)
+      const classType = createType(className)
+      if (!(classType instanceof ClassType)) return
+
+      clazz.fields.forEach(field => {
+        const fieldType = parseType(field.typeName)
+        classType.addField(field.fieldName, fieldType, { startLine: -1, startOffset: -1 })
+      })
+
+      clazz.methods.forEach(methodInfo => {
+        const method = new Method(methodInfo.methodName, parseType(methodInfo.returnTypeName))
+        methodInfo.argsTypeName.forEach((argTypeName, index) => {
+          const parameter = new Parameter(`arg${index}`, parseType(argTypeName))
+          method.addParameter(parameter)
+        })
+        classType.addMethod(methodInfo.methodName, method, { startLine: -1, startOffset: -1 })
+      })
+    })
+  })
+
+  Object.entries(EXCEPTION_INHERITANCE).forEach(([child, parent]) => {
+    const childType = createType(child)
+    const parentType = createType(parent)
+    if (childType instanceof ClassType && parentType instanceof ClassType) {
+      childType.setParentClass(parentType)
+    }
+  })
+
+  return Object.fromEntries(stdlibTypeMap.entries())
+}
+
+const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = buildStandardLibraryTypes()
 
 export class Frame {
   private _currentClass: Class
