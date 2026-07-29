@@ -183,6 +183,11 @@ export const getDescriptor = (mtdOrCon: MethodDeclaration | ConstructorDeclarati
     : `${mtdOrCon.constructorDeclarator.identifier}(${mtdOrCon.constructorDeclarator.formalParameterList.map(p => p.unannType).join(',')})`
 }
 
+// for native methods (uses new proposed format) with parameter names
+// because native functions must retrieve variables from the environment by identifier, this descriptor type also includes parameter names for convenience
+export const getFullyQualifiedDescriptor = (mtd: MethodDeclaration): string =>
+  `${mtd.methodHeader.identifier}(${mtd.methodHeader.formalParameterList.map(p => `${p.unannType} ${p.identifier}`).join(',')}): ${mtd.methodHeader.result}`
+
 export const isQualified = (name: string) => {
   return name.includes('.')
 }
@@ -228,6 +233,10 @@ export const isStatic = (fieldOrMtd: FieldDeclaration | MethodDeclaration): bool
 
 export const isInstance = (fieldOrMtd: FieldDeclaration | MethodDeclaration): boolean => {
   return !isStatic(fieldOrMtd)
+}
+
+export const isNative = (mtd: MethodDeclaration): boolean => {
+  return mtd.methodModifier.includes('native')
 }
 
 const convertFieldDeclToExpStmtAssmt = (fd: FieldDeclaration): ExpressionStatement => {
