@@ -1,4 +1,5 @@
 import { OPCODE } from '../ClassFile/constants/instructions'
+import { ACCESS_FLAGS } from '../ClassFile/types'
 import { ExceptionHandler, AttributeInfo } from '../ClassFile/types/attributes'
 import { FIELD_FLAGS } from '../ClassFile/types/fields'
 import { METHOD_FLAGS } from '../ClassFile/types/methods'
@@ -1375,6 +1376,27 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { stackSize: exprStackSize, resultType } = compile(expression, cg)
     let maxStack = exprStackSize
 
+    // If the expression is an enum type, invoke ordinal() to convert to int and then continue
+    let _resultType = resultType
+    if (_resultType && _resultType.startsWith('L') && _resultType !== 'Ljava/lang/String;') {
+      const clean = _resultType.replace(/^L|;$/g, '')
+      try {
+        const classInfo = cg.symbolTable.queryClass(clean)
+        if (classInfo.accessFlags & ACCESS_FLAGS.ACC_ENUM) {
+          // call java.lang.Enum.ordinal() (returns int)
+          cg.code.push(
+            OPCODE.INVOKEVIRTUAL,
+            0,
+            cg.constantPoolManager.indexMethodrefInfo('java/lang/Enum', 'ordinal', '()I')
+          )
+          _resultType = 'I'
+          maxStack = Math.max(maxStack, exprStackSize + 1)
+        }
+      } catch (e) {
+        // ignore: not a known class
+      }
+    }
+
     const caseLabels: Label[] = cases.map(() => cg.generateNewLabel())
     const defaultLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
@@ -1382,7 +1404,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     // Track the switch statement's end label
     cg.switchLabels.push(endLabel)
 
-    if (['I', 'B', 'S', 'C'].includes(resultType)) {
+    if (['I', 'B', 'S', 'C'].includes(_resultType)) {
       const caseValues: number[] = []
       const caseLabelMap: Map<number, Label> = new Map()
       let hasDefault = false
@@ -1556,7 +1578,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
 
       endLabel.offset = cg.code.length
-    } else if (resultType === 'Ljava/lang/String;') {
+    } else if (_resultType === 'Ljava/lang/String;') {
       // **String Switch Handling**
       const hashCaseMap: Map<number, Label> = new Map()
 
@@ -1708,7 +1730,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       endLabel.offset = cg.code.length
     } else {
       throw new Error(
-        `Switch statements only support byte, short, int, char, or String types. Found: ${resultType}`
+        `Switch statements only support byte, short, int, char, String, or enum types. Found: ${_resultType}`
       )
     }
 

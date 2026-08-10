@@ -6,7 +6,8 @@ import { ClassModifier, FieldModifier, MethodModifier } from '../ast/types/class
 const classAccessFlagMap = new Map([
   ['public', ACCESS_FLAGS.ACC_PUBLIC],
   ['final', ACCESS_FLAGS.ACC_FINAL],
-  ['abstract', ACCESS_FLAGS.ACC_ABSTRACT]
+  ['abstract', ACCESS_FLAGS.ACC_ABSTRACT],
+  ['enum', ACCESS_FLAGS.ACC_ENUM]
 ])
 
 export function generateClassAccessFlags(modifiers: Array<ClassModifier>) {

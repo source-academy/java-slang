@@ -73,6 +73,31 @@ const testcases: {
       }
     `,
     result: { type: null, errors: [new IncompatibleTypesError()] }
+  },
+  {
+    input: `
+      enum Color { RED, BLUE }
+      Color selector = Color.RED;
+      switch(selector) {
+        case Color.RED: {
+          selector = Color.BLUE;
+        }
+        default: {}
+      }
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      enum Color { RED, BLUE }
+      enum Other { X }
+      Color selector = Color.RED;
+      switch(selector) {
+        case Other.X: {}
+        default: {}
+      }
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] }
   }
 ]
 

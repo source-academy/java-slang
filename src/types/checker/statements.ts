@@ -6,6 +6,7 @@ import {
   TypeCheckerError
 } from '../errors'
 import { Throwable } from '../types/references'
+import { EnumClass } from '../types/classes'
 import { Type } from '../types/type'
 import {
   isPrimitiveBooleanType,
@@ -29,6 +30,7 @@ export const checkSwitchExpression = (
 ): null | TypeCheckerError => {
   if (isPrimitiveIntegralType(expressionType) && !isPrimitiveLongType(expressionType)) return null
   if (isStringType(expressionType)) return null
+  if (expressionType instanceof EnumClass) return null
   return new SelectorTypeNotAllowedError(location)
 }
 
