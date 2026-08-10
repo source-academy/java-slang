@@ -12,7 +12,7 @@ import {
   isPrimitiveIntegralType,
   isPrimitiveLongType,
   isReferenceBooleanType,
-  isReferenceType
+  isStringType
 } from '../types/utils'
 
 export const checkDoExpression = (
@@ -28,7 +28,7 @@ export const checkSwitchExpression = (
   location: Location
 ): null | TypeCheckerError => {
   if (isPrimitiveIntegralType(expressionType) && !isPrimitiveLongType(expressionType)) return null
-  if (isReferenceType(expressionType)) return null
+  if (isStringType(expressionType)) return null
   return new SelectorTypeNotAllowedError(location)
 }
 

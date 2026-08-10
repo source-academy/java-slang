@@ -1,6 +1,6 @@
 import { check } from '..'
 import { parse } from '../../ast'
-import { IncompatibleTypesError, TypeCheckerError } from '../../errors'
+import { IncompatibleTypesError, SelectorTypeNotAllowedError, TypeCheckerError } from '../../errors'
 import { Type } from '../../types/type'
 
 const createProgram = (statement: string) => `
@@ -26,6 +26,27 @@ const testcases: {
       }
     `,
     result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      String selector = "Tuesday";
+      switch(selector) {
+        case "Tuesday": {
+          selector = "Wednesday";
+        }
+        default:
+      }
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      Boolean selector = true;
+      switch(selector) {
+        default: {}
+      }
+    `,
+    result: { type: null, errors: [new SelectorTypeNotAllowedError()] }
   },
   {
     input: `
