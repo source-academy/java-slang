@@ -14,6 +14,12 @@ export const rawLibInfo = {
           fields: ['public static final java.io.PrintStream out']
         },
         {
+          name: 'public class java.lang.Throwable'
+        },
+        {
+          name: 'public class java.lang.Exception'
+        },
+        {
           name: 'public final java.lang.Math',
           methods: [
             'public static int max(int,int)',
