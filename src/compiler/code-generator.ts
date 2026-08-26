@@ -191,19 +191,19 @@ const EMPTY_TYPE: string = ''
 function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGenerator): boolean {
   const cleanFrom = fromType.replace(/^L|;$/g, '')
   const cleanTo = toType.replace(/^L|;$/g, '')
-  if (cleanFrom === cleanTo) return true;
+  if (cleanFrom === cleanTo) return true
 
   try {
-    let current = cg.symbolTable.queryClass(cleanFrom);
+    let current = cg.symbolTable.queryClass(cleanFrom)
     while (current.parentClassName) {
-      const parentClean = current.parentClassName;
-      if (parentClean === cleanTo) return true;
-      current = cg.symbolTable.queryClass(parentClean);
+      const parentClean = current.parentClassName
+      if (parentClean === cleanTo) return true
+      current = cg.symbolTable.queryClass(parentClean)
     }
   } catch (e) {
-    return false;
+    return false
   }
-  return false;
+  return false
 }
 
 function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator): number {
@@ -839,30 +839,30 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     // --- Handle super. calls ---
     if (n.identifier.startsWith('super.')) {
       candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(6)) as MethodInfos
-      candidateMethods = candidateMethods.filter(method =>
-        method.className == cg.symbolTable.queryClass(cg.currentClass).parentClassName)
-      cg.code.push(OPCODE.ALOAD, 0);
+      candidateMethods = candidateMethods.filter(
+        method => method.className == cg.symbolTable.queryClass(cg.currentClass).parentClassName
+      )
+      cg.code.push(OPCODE.ALOAD, 0)
     }
     // --- Handle qualified calls (e.g. System.out.println or p.show) ---
     else if (n.identifier.includes('.')) {
-      const lastDot = n.identifier.lastIndexOf('.');
-      const receiverStr = n.identifier.slice(0, lastDot);
+      const lastDot = n.identifier.lastIndexOf('.')
+      const receiverStr = n.identifier.slice(0, lastDot)
 
       if (receiverStr === 'this') {
         candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(5)) as MethodInfos
-        candidateMethods = candidateMethods.filter(method =>
-          method.className == cg.currentClass)
-        cg.code.push(OPCODE.ALOAD, 0);
+        candidateMethods = candidateMethods.filter(method => method.className == cg.currentClass)
+        cg.code.push(OPCODE.ALOAD, 0)
       } else {
-        const recvRes = compile({ kind: 'ExpressionName', name: receiverStr }, cg);
-        maxStack = Math.max(maxStack, recvRes.stackSize);
+        const recvRes = compile({ kind: 'ExpressionName', name: receiverStr }, cg)
+        maxStack = Math.max(maxStack, recvRes.stackSize)
         candidateMethods = cg.symbolTable.queryMethod(n.identifier).pop() as MethodInfos
       }
     }
     // --- Handle unqualified calls ---
     else {
       candidateMethods = cg.symbolTable.queryMethod(n.identifier) as MethodInfos
-      unqualifiedCall = true;
+      unqualifiedCall = true
     }
 
     // Filter candidate methods by matching the argument list.
@@ -904,11 +904,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             .slice(1, methodMatches[i].typeDescriptor.indexOf(')'))
             .match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
         if (
-          candParams.map((p, idx) => isSubtype(p, currParams[idx], cg)).reduce((a, b) => a && b, true)
+          candParams
+            .map((p, idx) => isSubtype(p, currParams[idx], cg))
+            .reduce((a, b) => a && b, true)
         ) {
           selectedMethod = methodMatches[i]
         } else if (
-          !currParams.map((p, idx) => isSubtype(p, candParams[idx], cg)).reduce((a, b) => a && b, true)
+          !currParams
+            .map((p, idx) => isSubtype(p, candParams[idx], cg))
+            .reduce((a, b) => a && b, true)
         ) {
           throw new AmbiguousMethodCallError(n.identifier + argDescs.join(','))
         }
@@ -1267,7 +1271,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     try {
       info = cg.symbolTable.queryVariable(name)
     } catch (e) {
-      return { stackSize: 1, resultType: 'Ljava/lang/Class;' };
+      return { stackSize: 1, resultType: 'Ljava/lang/Class;' }
     }
     if (Array.isArray(info)) {
       const fieldInfos = info
@@ -1492,7 +1496,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         // Generate lookup table (pairs of case values and corresponding labels)
         caseValues.forEach((value, index) => {
           // push 4-byte key
-          cg.code.push((value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff)
+          cg.code.push(
+            (value >> 24) & 0xff,
+            (value >> 16) & 0xff,
+            (value >> 8) & 0xff,
+            value & 0xff
+          )
           // reserve 4 bytes for the branch target
           cg.code.push(0, 0, 0, 0)
           // label offset starts after the 4-byte key
@@ -1635,7 +1644,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       // Populate LOOKUPSWITCH
       const hashLabels: Label[] = []
       hashCaseMap.forEach((label, hashCode) => {
-        cg.code.push((hashCode >> 24) & 0xff, (hashCode >> 16) & 0xff, (hashCode >> 8) & 0xff, hashCode & 0xff)
+        cg.code.push(
+          (hashCode >> 24) & 0xff,
+          (hashCode >> 16) & 0xff,
+          (hashCode >> 8) & 0xff,
+          hashCode & 0xff
+        )
         // reserve 4 bytes for the branch target
         cg.code.push(0, 0, 0, 0)
         // label offset starts after the 4-byte key

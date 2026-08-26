@@ -534,23 +534,31 @@ EnumDeclaration
   }
 
 EnumBody
-  = lcurly ecl:EnumConstantList? ec:EnumConstant* rcurly {
-    const constants = ecl ? [...ecl, ...ec] : ec;
+  = lcurly ecl:EnumConstantList? semicolon? em:EnumBodyMembers rcurly {
+    const constants = ecl || [];
     return addLocInfo({
       kind: "EnumBody",
       constants: constants,
+      bodyMembers: em,
     })
   }
 
+EnumBodyMembers
+  = members:ClassBodyDeclaration* {
+    return members;
+  }
+
 EnumConstantList
-  = @EnumConstant (comma @EnumConstant)* comma?
+  = first:EnumConstant rest:(comma @EnumConstant)* comma? {
+    return [first, ...rest];
+  }
 
 EnumConstant
-  = name:Identifier (lparen al:ArgumentList? rparen)? cb:(lcurly ClassBodyDeclaration* rcurly)? {
+  = name:Identifier args:(lparen al:ArgumentList? rparen)? cb:(lcurly ClassBodyDeclaration* rcurly)? {
     return addLocInfo({
       kind: "EnumConstant",
       name: name,
-      arguments: al || [],
+      arguments: (args && args[1]) ? args[1] : [],
       classBody: cb || [],
     })
   }

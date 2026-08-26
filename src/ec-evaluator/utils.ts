@@ -9,6 +9,7 @@ import {
   ReturnStatement
 } from '../ast/types/blocks-and-statements'
 import {
+  ClassDeclaration,
   ConstructorDeclaration,
   FieldDeclaration,
   MethodDeclaration,
@@ -370,9 +371,12 @@ export const appendEmtpyReturn = (method: MethodDeclaration): void => {
   }
 }
 
-export const searchMainMtdClass = (classes: NormalClassDeclaration[]) => {
-  return classes.find(c =>
-    c.classBody.some(
+export const searchMainMtdClass = (classes: ClassDeclaration[]) => {
+  return classes.find(c => {
+    if (c.kind === 'EnumDeclaration') {
+      return false // Enums can't have main method (they have bodyMembers instead of classBody)
+    }
+    return (c as NormalClassDeclaration).classBody.some(
       d =>
         d.kind === 'MethodDeclaration' &&
         d.methodModifier.includes('public') &&
@@ -383,7 +387,7 @@ export const searchMainMtdClass = (classes: NormalClassDeclaration[]) => {
         d.methodHeader.formalParameterList[0].unannType === 'String[]' &&
         d.methodHeader.formalParameterList[0].identifier === 'args'
     )
-  )?.typeIdentifier
+  })?.typeIdentifier
 }
 
 /**

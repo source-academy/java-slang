@@ -56,17 +56,26 @@ export class Compiler {
 
     ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
       const className = decl.typeIdentifier
-      const parentClassName = decl.sclass ? decl.sclass : 'java/lang/Object'
+      const parentClassName = (decl.kind === 'EnumDeclaration' ? 'java/lang/Enum' : 
+                               ('sclass' in decl && decl.sclass) ? decl.sclass : 'java/lang/Object')
       const accessFlags = generateClassAccessFlags(decl.classModifier)
-      this.symbolTable.insertClassInfo(
-        { name: className, accessFlags: accessFlags, parentClassName: parentClassName })
+      this.symbolTable.insertClassInfo({
+        name: className,
+        accessFlags: accessFlags,
+        parentClassName: parentClassName
+      })
       this.symbolTable.returnToRoot()
     })
 
     ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
       this.resetClassFileState()
-      const classFile = this.compileClass(decl)
-      classFiles.push({classFile: classFile, className: this.className})
+      if (decl.kind === 'EnumDeclaration') {
+        const classFile = this.compileEnum(decl)
+        classFiles.push({ classFile: classFile, className: this.className })
+      } else {
+        const classFile = this.compileClass(decl)
+        classFiles.push({ classFile: classFile, className: this.className })
+      }
     })
 
     return classFiles
@@ -74,7 +83,8 @@ export class Compiler {
 
   private compileClass(classNode: ClassDeclaration): ClassFile {
     this.className = classNode.typeIdentifier
-    this.parentClassName = classNode.sclass ? classNode.sclass : 'java/lang/Object'
+    const sclass = 'sclass' in classNode ? classNode.sclass : undefined
+    this.parentClassName = sclass ? sclass : 'java/lang/Object'
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
     this.symbolTable.extend()
     this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
@@ -82,8 +92,50 @@ export class Compiler {
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
     this.constantPoolManager.indexUtf8Info('Code')
-    this.handleClassBody(classNode.classBody)
+    const classBody = 'classBody' in classNode ? classNode.classBody : []
+    this.handleClassBody(classBody)
 
+    const constantPool = this.constantPoolManager.getPool()
+    return {
+      magic: MAGIC,
+      minorVersion: MINOR_VERSION,
+      majorVersion: MAJOR_VERSION,
+      constantPoolCount: this.constantPoolManager.getSize(),
+      constantPool: constantPool,
+      accessFlags: accessFlags,
+      thisClass: thisClassIndex,
+      superClass: superClassIndex,
+      interfacesCount: this.interfaces.length,
+      interfaces: this.interfaces,
+      fieldsCount: this.fields.length,
+      fields: this.fields,
+      methodsCount: this.methods.length,
+      methods: this.methods,
+      attributesCount: this.attributes.length,
+      attributes: this.attributes
+    }
+  }
+
+  private compileEnum(enumNode: any): ClassFile {
+    this.className = enumNode.typeIdentifier
+    this.parentClassName = 'java/lang/Enum'
+    const accessFlags = generateClassAccessFlags(enumNode.classModifier) | 0x4000 // Add ACC_ENUM
+    this.symbolTable.extend()
+    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
+
+    const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
+    const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
+    this.constantPoolManager.indexUtf8Info('Code')
+    
+    // Handle enum constants and body members
+    const enumBody = enumNode.enumBody
+    const bodyMembers = enumBody.bodyMembers || []
+    this.handleClassBody(bodyMembers)
+    
+    // TODO: Add synthetic enum fields and methods
+    // Add $VALUES array field
+    // Add ordinal, name, toString, values, valueOf methods
+    
     const constantPool = this.constantPoolManager.getPool()
     return {
       magic: MAGIC,

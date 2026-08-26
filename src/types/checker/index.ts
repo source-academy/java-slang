@@ -639,7 +639,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
             const methodIdentifier = (bodyDeclaration as any).methodHeader.methodDeclarator.identifier
             const methodName = methodIdentifier.identifier
             const overloadIndex = bodyDecls
-              .filter((n: any) => n.kind === 'MethodDeclaration' && (n as any).methodHeader.methodDeclarator.identifier.identifier === methodName)
+              .filter((n: any) => n.kind === 'MethodDeclaration' && (n).methodHeader.methodDeclarator.identifier.identifier === methodName)
               .findIndex(n => n === bodyDeclaration)
             const method = classType.getMethod(methodName)[overloadIndex]
             const methodFrame = classFrame.newChildFrame()

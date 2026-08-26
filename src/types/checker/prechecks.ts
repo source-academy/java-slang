@@ -151,7 +151,7 @@ export const addClassMethods = (node: Node, frame: Frame): Result => {
       for (const bodyNode of bodyDecls) {
         switch (bodyNode.kind) {
           case 'ConstructorDeclaration': {
-            const constructorMethod = createMethodLocal(bodyNode as ConstructorDeclaration)
+            const constructorMethod = createMethodLocal(bodyNode)
             if (constructorMethod instanceof TypeCheckerError) return newResult(null, [constructorMethod])
             const error = classType.addConstructor(constructorMethod, bodyNode.location)
             if (error instanceof TypeCheckerError) return newResult(null, [error])
@@ -171,9 +171,9 @@ export const addClassMethods = (node: Node, frame: Frame): Result => {
             break
           }
           case 'MethodDeclaration': {
-            const methodSignature = createMethodLocal(bodyNode as MethodDeclaration)
+            const methodSignature = createMethodLocal(bodyNode)
             if (methodSignature instanceof TypeCheckerError) return newResult(null, [methodSignature])
-            const methodName = (bodyNode as MethodDeclaration).methodHeader.methodDeclarator.identifier
+            const methodName = (bodyNode).methodHeader.methodDeclarator.identifier
             const error = classType.addMethod(methodName.identifier, methodSignature, methodName.location)
             if (error instanceof TypeCheckerError) return newResult(null, [error])
             break
