@@ -376,7 +376,7 @@ export const searchMainMtdClass = (classes: ClassDeclaration[]) => {
     if (c.kind === 'EnumDeclaration') {
       return false // Enums can't have main method (they have bodyMembers instead of classBody)
     }
-    return (c as NormalClassDeclaration).classBody.some(
+    return c.classBody.some(
       d =>
         d.kind === 'MethodDeclaration' &&
         d.methodModifier.includes('public') &&
