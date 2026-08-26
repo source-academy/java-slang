@@ -7,10 +7,12 @@ import {
   BadOperandTypesError,
   CannotFindSymbolError,
   IncompatibleTypesError,
+  MethodCannotBeAppliedError,
   NotApplicableToExpressionTypeError,
   TypeCheckerError,
   TypeCheckerInternalError,
   VariableAlreadyDefinedError
+  ,UnhandledExceptionError
 } from '../errors'
 import {
   Boolean,
@@ -477,14 +479,60 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       if (argumentList instanceof TypeCheckerError)
         return newResult(null, [...errors, argumentList])
 
-      for (let i = 0; i < methods.length - 1; i++) {
+      // Resolve overload: find the first applicable method
+      let selectedMethod: Method | null = null
+      let selectedReturnType: Type | TypeCheckerError | null = null
+      let lastInvokeError: TypeCheckerError | null = null
+      for (let i = 0; i < methods.length; i++) {
         const result = methods[i].invoke(argumentList)
-        if (result instanceof TypeCheckerError) continue
-        return newResult(result, errors)
+        if (result instanceof TypeCheckerError) {
+          lastInvokeError = result
+          continue
+        }
+        selectedMethod = methods[i]
+        selectedReturnType = result
+        break
       }
-      const returnType = methods[methods.length - 1].invoke(argumentList)
-      if (returnType instanceof TypeCheckerError) return newResult(null, [...errors, returnType])
-      return newResult(returnType, errors)
+      if (selectedMethod === null || selectedReturnType === null) {
+        // If there was exactly one candidate and it produced a specific
+        // type-check error (e.g. incompatible types), surface that error
+        // instead of the generic "method cannot be applied" message.
+        if (methods.length === 1 && lastInvokeError) return newResult(null, [...errors, lastInvokeError])
+        return newResult(null, [...errors, new MethodCannotBeAppliedError(node.location)])
+      }
+
+      // Enforce declared exceptions from the invoked method: any checked exception
+      // must either be caught by an enclosing try/catch or declared by the current method.
+      const declaredExceptions: any[] =
+        (selectedMethod as any).getThrownExceptions?.() || []
+      if (declaredExceptions.length > 0) {
+        const exceptionBase = frame.getType('Exception', node.location)
+        for (const declaredException of declaredExceptions) {
+          // If we cannot determine checkedness, be conservative and treat as checked
+          let isChecked = true
+          if (!(exceptionBase instanceof TypeCheckerError)) {
+            // checked if it's an Exception subtype
+            isChecked = (exceptionBase as any).canBeAssigned(declaredException)
+          }
+          if (!isChecked) continue
+
+          // check if caught by any active catch in scope
+          const activeCaught = frame.getActiveCaughtExceptions()
+          const isCaught = activeCaught.some(caughtType => caughtType.canBeAssigned(declaredException))
+          if (isCaught) continue
+
+          // check if current method declares it
+          const declaredByCurrent = frame.getThrows()
+          const isDeclared = declaredByCurrent.some(declared => declared.canBeAssigned(declaredException))
+          if (isDeclared) continue
+
+          return newResult(null, [new UnhandledExceptionError(node.location)])
+        }
+      }
+
+      if (selectedReturnType instanceof TypeCheckerError)
+        return newResult(null, [...errors, selectedReturnType])
+      return newResult(selectedReturnType, errors)
     }
     case 'NormalClassDeclaration': {
       const errors: TypeCheckerError[] = []
@@ -520,6 +568,10 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
             if (constructorMethodErrors.length > 0) {
               errors.push(...constructorMethodErrors)
               break
+            }
+            // set declared throws for constructor body checking
+            if (constructor.getThrownExceptions) {
+              methodFrame.setThrows(constructor.getThrownExceptions())
             }
             const { errors: checkErrors } = typeCheckBody(
               bodyDeclaration.constructorBody,
@@ -565,6 +617,10 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
             const methodFrame = classFrame.newChildFrame()
             const methodErrors: TypeCheckerError[] = []
             methodFrame.setReturnType(method.getReturnType())
+            // set declared throws for method body checking
+            if (method.getThrownExceptions) {
+              methodFrame.setThrows(method.getThrownExceptions())
+            }
             method.mapParameters((name, type, isVarargs) => {
               const error = methodFrame.setVariable(name, type, { startLine: -1, startOffset: -1 })
               if (error) methodErrors.push(error)
@@ -672,12 +728,13 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       return newResult(null, [new IncompatibleTypesError(node.expression.location)])
     }
     case 'TryStatement': {
-      const checkBlockStatements = typeCheckBody(node.block, frame)
-      if (checkBlockStatements.hasErrors) return checkBlockStatements
       const errors: TypeCheckerError[] = []
+
+      // Collect and validate catch parameter types first so the try block
+      // can be type-checked with knowledge of active caught exceptions.
+      const catchParameters: Type[] = []
       if (node.catches) {
-        const catchParameters: Type[] = []
-        node.catches.catchClauses.forEach(catchClause => {
+        for (const catchClause of node.catches.catchClauses) {
           const catchTypeNode = catchClause.catchFormalParameter.catchType
           const catchType = frame.getType(
             unannTypeToString(catchTypeNode.unannClassType),
@@ -685,7 +742,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
           )
           if (catchType instanceof TypeCheckerError) {
             errors.push(catchType)
-            return
+            continue
           }
           const checkCatchTypeError = checkTryCatchType(
             catchType,
@@ -694,12 +751,29 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
           )
           if (checkCatchTypeError instanceof TypeCheckerError) {
             errors.push(checkCatchTypeError)
-            return
+            continue
           }
           catchParameters.push(catchType)
+        }
+      }
+
+      // Type-check the try block with active caught exceptions available
+      const tryFrame = frame.newChildFrame()
+      tryFrame.setActiveCaughtExceptions(catchParameters)
+      const tryBlockCheck = typeCheckBody(node.block, tryFrame)
+      if (tryBlockCheck.hasErrors) errors.push(...tryBlockCheck.errors)
+
+      // Now type-check each catch clause body with its parameter bound
+      if (node.catches) {
+        for (const catchClause of node.catches.catchClauses) {
+          const catchTypeNode = catchClause.catchFormalParameter.catchType
+          const catchType = frame.getType(
+            unannTypeToString(catchTypeNode.unannClassType),
+            catchTypeNode.location
+          )
+          if (catchType instanceof TypeCheckerError) continue
           const catchFrame = frame.newChildFrame()
-          const catchTypeParameter =
-            catchClause.catchFormalParameter.variableDeclaratorId.identifier
+          const catchTypeParameter = catchClause.catchFormalParameter.variableDeclaratorId.identifier
           const error = catchFrame.setVariable(
             catchTypeParameter.identifier,
             catchType,
@@ -707,16 +781,18 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
           )
           if (error instanceof TypeCheckerError) {
             errors.push(error)
-            return
+            continue
           }
           const catchBlockCheck = typeCheckBody(catchClause.block, catchFrame)
           if (catchBlockCheck.hasErrors) errors.push(...catchBlockCheck.errors)
-        })
+        }
       }
+
       if (node.finally) {
         const finallyBlockCheck = typeCheckBody(node.finally.block, frame)
         if (finallyBlockCheck.hasErrors) errors.push(...finallyBlockCheck.errors)
       }
+
       return newResult(null, errors)
     }
     case 'UnaryExpression': {

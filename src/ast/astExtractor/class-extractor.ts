@@ -27,14 +27,17 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
 
   extract(cst: ClassDeclarationCstNode): ClassDeclaration {
     this.visit(cst);
-    return {
+    const result: NormalClassDeclaration = {
       kind: "NormalClassDeclaration",
       classModifier: this.modifier,
       typeIdentifier: this.identifier,
       classBody: this.body,
-      sclass: this.sclass,
       location: cst.location,
-    } as NormalClassDeclaration;
+    };
+    if (this.sclass) {
+      result.sclass = this.sclass;
+    }
+    return result;
   }
 
   classModifier(ctx: ClassModifierCtx) {

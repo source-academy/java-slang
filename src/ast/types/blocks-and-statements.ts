@@ -101,7 +101,48 @@ export type StatementWithoutTrailingSubstatement =
   | DoStatement
   | ReturnStatement
   | BreakStatement
-  | ContinueStatement;
+  | ContinueStatement
+  | ThrowStatement
+  | TryStatement;
+
+export interface ThrowStatement extends BaseNode {
+  kind: "ThrowStatement";
+  expression: Expression;
+}
+
+export interface CatchClause extends BaseNode {
+  kind: "CatchClause";
+  catchFormalParameter: CatchFormalParameter;
+  block: Block;
+}
+
+export interface Catches extends BaseNode {
+  kind: "Catches";
+  catchClauses: Array<CatchClause>;
+}
+
+export interface CatchFormalParameter extends BaseNode {
+  kind: "CatchFormalParameter";
+  catchType: CatchType;
+  variableDeclaratorId: Identifier;
+}
+
+export interface CatchType extends BaseNode {
+  kind: "CatchType";
+  unannClassType: UnannType;
+}
+
+export interface Finally extends BaseNode {
+  kind: "Finally";
+  block: Block;
+}
+
+export interface TryStatement extends BaseNode {
+  kind: "TryStatement";
+  block: Block;
+  catches?: Catches;
+  finally?: Finally;
+}
 
 export interface ExpressionStatement extends BaseNode {
   kind: "ExpressionStatement";

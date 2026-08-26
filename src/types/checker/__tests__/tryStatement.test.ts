@@ -1,8 +1,8 @@
 import { check } from '..'
 import { parse } from '../../ast'
 import {
-  ExceptionHasAlreadyBeenCaughtError,
   IncompatibleTypesError,
+  UnhandledExceptionError,
   TypeCheckerError
 } from '../../errors'
 import { Type } from '../../types/type'
@@ -14,11 +14,17 @@ const createProgram = (statement: string) => `
     }
   }
 `
+const createClass = (body: string) => `
+  public class Main {
+    ${body}
+  }
+`
 
 const testcases: {
   input: string
   result: { type: Type | null; errors: Error[] }
   only?: boolean
+  fullProgram?: boolean
 }[] = [
   {
     input: `
@@ -30,9 +36,58 @@ const testcases: {
     input: `
       try {} 
       catch (Throwable e) {}
-      catch (Exception e) {}
     `,
-    result: { type: null, errors: [new ExceptionHasAlreadyBeenCaughtError()] }
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      public static void foo() throws Exception {
+        throw new Exception();
+      }
+      public static void main(String args[]) {
+        foo();
+      }
+    `,
+    fullProgram: true,
+    result: { type: null, errors: [new UnhandledExceptionError()] }
+  },
+  {
+    input: `
+      public static void foo() throws Exception {
+        throw new Exception();
+      }
+      public static void main(String args[]) throws Exception {
+        foo();
+      }
+    `,
+    fullProgram: true,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      public static void foo() throws Exception {
+        throw new Exception();
+      }
+      public static void main(String args[]) {
+        try {
+          foo();
+        } catch (Exception e) {
+        }
+      }
+    `,
+    fullProgram: true,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      try {
+        throw new Exception();
+      } catch (Exception e) {
+        throw new Exception();
+      } finally {
+      }
+    `,
+    result: { type: null, errors: [] }
   },
   {
     input: `
@@ -48,7 +103,7 @@ describe('Type Checker', () => {
     let it = test
     if (testcase.only) it = test.only
     it(`Checking try statements for ${testcase.input}`, () => {
-      const program = createProgram(testcase.input)
+      const program = testcase.fullProgram ? createClass(testcase.input) : createProgram(testcase.input)
       const ast = parse(program)
       if (!ast) throw new Error('Program parsing returns null.')
       if (ast instanceof TypeCheckerError) throw new Error('Test case is invalid.')

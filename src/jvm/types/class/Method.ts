@@ -6,6 +6,7 @@ import { attrInfo2Interface, parseMethodDescriptor, getArgs, logger } from '../.
 import { ErrorResult, ImmediateResult, ResultType, SuccessResult } from '../Result'
 import { JavaType, JvmObject } from '../reference/Object'
 import { Code, Exceptions, IAttribute, NestHost, Signature } from './Attributes'
+import { ExceptionTable } from '../../exception-table'
 import { ReferenceClassData, ArrayClassData, ClassData } from './ClassData'
 import { ConstantClass, ConstantMethodref, ConstantNameAndType, ConstantUtf8 } from './Constants'
 
@@ -484,7 +485,7 @@ export class Method {
           codeLength: dv.buffer.byteLength,
           code: dv,
           exceptionTableLength: 0,
-          exceptionTable: [],
+          exceptionTable: new ExceptionTable(),
           attributes: {}
         } as Code
       },
