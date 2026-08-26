@@ -477,6 +477,7 @@ TypeImportOnDemandDeclaration
 
 TopLevelClassOrInterfaceDeclaration
   = ClassDeclaration
+  / EnumDeclaration
   / InterfaceDeclaration
   / semicolon
 
@@ -522,6 +523,38 @@ ClassModifier
   / non_sealed
   / strictfp
 
+EnumDeclaration
+  = cm:ClassModifier* enum tm:TypeIdentifier ClassImplements? eb:EnumBody {
+    return addLocInfo({
+      kind: "EnumDeclaration",
+      classModifier: cm,
+      typeIdentifier: tm,
+      enumBody: eb,
+    })
+  }
+
+EnumBody
+  = lcurly ecl:EnumConstantList? ec:EnumConstant* rcurly {
+    const constants = ecl ? [...ecl, ...ec] : ec;
+    return addLocInfo({
+      kind: "EnumBody",
+      constants: constants,
+    })
+  }
+
+EnumConstantList
+  = @EnumConstant (comma @EnumConstant)* comma?
+
+EnumConstant
+  = name:Identifier (lparen al:ArgumentList? rparen)? cb:(lcurly ClassBodyDeclaration* rcurly)? {
+    return addLocInfo({
+      kind: "EnumConstant",
+      name: name,
+      arguments: al || [],
+      classBody: cb || [],
+    })
+  }
+
 TypeParameters
   = TO_BE_ADDED
 
@@ -553,6 +586,7 @@ ClassMemberDeclaration
   = FieldDeclaration
   / MethodDeclaration
   / ClassDeclaration
+  / EnumDeclaration
   / InterfaceDeclaration
   / semicolon
 
