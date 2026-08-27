@@ -54,6 +54,7 @@ The Java language in Source Academy currently supports a host of available featu
 - Explicit type conversion (type narrowing)
 - Implicit type conversion for system calls (e.g. int input to System.out.println)
 - Single nested class
+- Exceptions
 
 ## Future Features
 
