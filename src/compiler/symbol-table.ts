@@ -1,18 +1,19 @@
 import { UnannType } from '../ast/types/classes'
 import { ImportDeclaration } from '../ast/types/packages-and-modules'
+import { METHOD_FLAGS } from '../ClassFile/types/methods'
 import {
   generateClassAccessFlags,
   generateFieldAccessFlags,
   generateMethodAccessFlags
 } from './compiler-utils'
 import {
-  InvalidMethodCallError, OverrideFinalMethodError,
+  InvalidMethodCallError,
+  OverrideFinalMethodError,
   SymbolCannotBeResolvedError,
   SymbolNotFoundError,
   SymbolRedeclarationError
 } from './error'
 import { libraries } from './import/libs'
-import { METHOD_FLAGS } from '../ClassFile/types/methods'
 
 export const typeMap = new Map([
   ['byte', 'B'],
@@ -209,14 +210,17 @@ export class SymbolTable {
     const key = generateSymbol(info.name, SymbolType.METHOD)
 
     for (let i = this.curClassIdx - 1; i > 0; i--) {
-      const parentTable = this.tables[i];
+      const parentTable = this.tables[i]
       if (parentTable.has(key)) {
-        const parentMethods = parentTable.get(key)!.info;
+        const parentMethods = parentTable.get(key)!.info
         if (Array.isArray(parentMethods)) {
           for (const m of parentMethods) {
-            if (m.typeDescriptor === info.typeDescriptor && (m.accessFlags & METHOD_FLAGS.ACC_FINAL)
-              && m.className == info.parentClassName) {
-              throw new OverrideFinalMethodError(info.name);
+            if (
+              m.typeDescriptor === info.typeDescriptor &&
+              m.accessFlags & METHOD_FLAGS.ACC_FINAL &&
+              m.className == info.parentClassName
+            ) {
+              throw new OverrideFinalMethodError(info.name)
             }
           }
         }
