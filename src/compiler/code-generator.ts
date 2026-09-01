@@ -443,19 +443,28 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   ReturnStatement: (node: Node, cg: CodeGenerator) => {
     const { exp: expr } = node as ReturnStatement
-    
-    // Emit finally blocks from innermost to outermost before returning
-    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
-      const finallyBlock = cg.finallyBlockStack[i] as any
-      finallyBlock.blockStatements.forEach((stmt: any) => {
-        compile(stmt, cg)
-      })
-    }
-    
+
     if (expr) {
       const { stackSize: stackSize, resultType: resultType } = compile(expr, cg)
+      if (cg.finallyBlockStack.length > 0) {
+        const tempIndex = cg.maxLocals
+        cg.maxLocals += ['J', 'D'].includes(resultType) ? 2 : 1
+        cg.code.push(resultType in normalStoreOp ? normalStoreOp[resultType] : OPCODE.ASTORE, tempIndex)
+
+        for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
+          const finallyBlock = cg.finallyBlockStack[i] as any
+          finallyBlock.blockStatements.forEach((stmt: any) => compile(stmt, cg))
+        }
+
+        cg.code.push(resultType in normalLoadOp ? normalLoadOp[resultType] : OPCODE.ALOAD, tempIndex)
+      }
       cg.code.push(resultType in returnOp ? returnOp[resultType] : OPCODE.ARETURN)
       return { stackSize, resultType }
+    }
+
+    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
+      const finallyBlock = cg.finallyBlockStack[i] as any
+      finallyBlock.blockStatements.forEach((stmt: any) => compile(stmt, cg))
     }
 
     cg.code.push(OPCODE.RETURN)
