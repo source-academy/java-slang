@@ -37,8 +37,68 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["2", "3", "4"],
-  }
-  ,
+  },
+  {
+    comment: "try/catch/finally runs finally after a throwing return expression",
+    program: `
+      public class Main {
+        public static int divide(int x, int y) {
+          try {
+            return x / y;
+          } catch (Exception e) {
+            System.out.println(1);
+            return 0;
+          } finally {
+            System.out.println(2);
+          }
+        }
+
+        public static void main(String[] args) {
+          int z = divide(1, 0);
+          System.out.println(0);
+        }
+      }
+    `,
+    expectedLines: ["1", "2", "0"],
+  },
+  {
+    comment: "try/finally runs finally after a normal return expression",
+    program: `
+      public class Main {
+        public static int value() {
+          try {
+            return 1;
+          } finally {
+            System.out.println(2);
+          }
+        }
+
+        public static void main(String[] args) {
+          System.out.println(value());
+        }
+      }
+    `,
+    expectedLines: ["2", "1"],
+  },
+  {
+    comment: "try/finally runs finally before a break exits its loop",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          while (true) {
+            try {
+              System.out.println(1);
+              break;
+            } finally {
+              System.out.println(2);
+            }
+          }
+          System.out.println(0);
+        }
+      }
+    `,
+    expectedLines: ["1", "2", "0"],
+  },
   {
     comment: "static helper method throws exception and catch handles it",
     program: `
