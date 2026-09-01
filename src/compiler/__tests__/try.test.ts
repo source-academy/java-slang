@@ -79,8 +79,26 @@ const testCases: testCase[] = [
       }
     `,
     expectedLines: ["2", "1"],
-  }
-  ,
+  },
+  {
+    comment: "try/finally runs finally before a break exits its loop",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          while (true) {
+            try {
+              System.out.println(1);
+              break;
+            } finally {
+              System.out.println(2);
+            }
+          }
+          System.out.println(0);
+        }
+      }
+    `,
+    expectedLines: ["1", "2", "0"],
+  },
   {
     comment: "static helper method throws exception and catch handles it",
     program: `
