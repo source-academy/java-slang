@@ -73,18 +73,15 @@ export class Compiler {
     declarations.forEach(decl => {
       const className = decl.typeIdentifier
       const parentClassName =
-        decl.kind === 'EnumDeclaration'
-          ? 'java/lang/Enum'
-          : 'sclass' in decl && decl.sclass
+        'sclass' in decl && decl.sclass
             ? decl.sclass
             : 'java/lang/Object'
-      const accessFlags =
-        generateClassAccessFlags(decl.classModifier) |
-        (decl.kind === 'EnumDeclaration' ? 0x4000 : 0)
+      const accessFlags = generateClassAccessFlags(decl.classModifier)
       this.symbolTable.insertClassInfo({
         name: className,
         accessFlags: accessFlags,
-        parentClassName: parentClassName
+        parentClassName: parentClassName,
+        isEnum: decl.kind === 'EnumDeclaration'
       })
       this.symbolTable.returnToRoot()
     })
@@ -150,8 +147,8 @@ export class Compiler {
 
   private compileEnum(enumNode: any): ClassFile {
     this.className = enumNode.typeIdentifier
-    this.parentClassName = 'java/lang/Enum'
-    const accessFlags = generateClassAccessFlags(enumNode.classModifier) | 0x4000 // Add ACC_ENUM
+    this.parentClassName = 'java/lang/Object'
+    const accessFlags = generateClassAccessFlags(enumNode.classModifier)
     this.symbolTable.extend()
     this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
 
@@ -194,9 +191,18 @@ export class Compiler {
       attributesCount: 0,
       attributes: []
     })
+
+    this.fields.push({
+      accessFlags: 0x1002,
+      nameIndex: this.constantPoolManager.indexUtf8Info('$ordinal'),
+      descriptorIndex: this.constantPoolManager.indexUtf8Info('I'),
+      attributesCount: 0,
+      attributes: []
+    })
     
     if (bodyMembers.length === 0) {
       this.addEnumConstructor()
+      this.addEnumOrdinalMethod()
     } else {
       this.handleClassBody(bodyMembers)
     }
@@ -231,19 +237,31 @@ export class Compiler {
     const bytecode = [
       0x19,
       0x00,
-      0x19,
-      0x01,
-      0x15,
-      0x02,
       0xb7
     ]
     const constructorRef = this.constantPoolManager.indexMethodrefInfo(
-      'java/lang/Enum',
+      'java/lang/Object',
       '<init>',
-      '(Ljava/lang/String;I)V'
+      '()V'
     )
-    bytecode.push((constructorRef >> 8) & 0xff, constructorRef & 0xff, 0xb1)
-    const codeAttribute = this.createEnumCodeAttribute(bytecode, 3, 3)
+    const ordinalFieldRef = this.constantPoolManager.indexFieldrefInfo(
+      this.className,
+      '$ordinal',
+      'I'
+    )
+    bytecode.push(
+      (constructorRef >> 8) & 0xff,
+      constructorRef & 0xff,
+      0x19,
+      0x00,
+      0x15,
+      0x02,
+      0xb5,
+      (ordinalFieldRef >> 8) & 0xff,
+      ordinalFieldRef & 0xff,
+      0xb1
+    )
+    const codeAttribute = this.createEnumCodeAttribute(bytecode, 2, 3)
 
     this.methods.push({
       accessFlags: 0x0002,
@@ -251,6 +269,26 @@ export class Compiler {
       descriptorIndex: this.constantPoolManager.indexUtf8Info('(Ljava/lang/String;I)V'),
       attributesCount: 1,
       attributes: [codeAttribute]
+    })
+  }
+
+  private addEnumOrdinalMethod() {
+    const fieldRef = this.constantPoolManager.indexFieldrefInfo(this.className, '$ordinal', 'I')
+    const codeAttribute = this.createEnumCodeAttribute([0x19, 0x00, 0xb4, fieldRef >> 8, fieldRef & 0xff, 0xac], 1, 1)
+
+    this.methods.push({
+      accessFlags: 0x0001,
+      nameIndex: this.constantPoolManager.indexUtf8Info('ordinal'),
+      descriptorIndex: this.constantPoolManager.indexUtf8Info('()I'),
+      attributesCount: 1,
+      attributes: [codeAttribute]
+    })
+    this.symbolTable.insertMethodInfo({
+      name: 'ordinal',
+      accessFlags: 0x0001,
+      parentClassName: this.className,
+      typeDescriptor: '()I',
+      className: this.className
     })
   }
 

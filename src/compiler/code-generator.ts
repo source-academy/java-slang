@@ -1,5 +1,4 @@
 import { OPCODE } from '../ClassFile/constants/instructions'
-import { ACCESS_FLAGS } from '../ClassFile/types'
 import { ExceptionHandler, AttributeInfo } from '../ClassFile/types/attributes'
 import { FIELD_FLAGS } from '../ClassFile/types/fields'
 import { METHOD_FLAGS } from '../ClassFile/types/methods'
@@ -1601,12 +1600,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const clean = _resultType.replace(/^L|;$/g, '')
       try {
         const classInfo = cg.symbolTable.queryClass(clean)
-        if (classInfo.accessFlags & ACCESS_FLAGS.ACC_ENUM) {
-          // call java.lang.Enum.ordinal() (returns int)
+        if (classInfo.isEnum) {
+          // Generated enums provide their own ordinal() method so they run without java.lang.Enum.
           cg.code.push(
             OPCODE.INVOKEVIRTUAL,
             0,
-            cg.constantPoolManager.indexMethodrefInfo('java/lang/Enum', 'ordinal', '()I')
+            cg.constantPoolManager.indexMethodrefInfo(clean, 'ordinal', '()I')
           )
           _resultType = 'I'
           enumTypeName = clean
@@ -1636,7 +1635,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             const value =
               label.expression.kind === 'ExpressionName' && enumTypeName
                 ? (() => {
-                    const fields = cg.symbolTable.queryField(label.expression.name)
+                    const fields = cg.symbolTable.queryField(
+                      `${enumTypeName}.${label.expression.name}`
+                    )
                     const field = fields[fields.length - 1] as FieldInfo
                     if (field.parentClassName !== enumTypeName || field.ordinal === undefined)
                       throw new Error(`Invalid enum switch label: ${label.expression.name}`)

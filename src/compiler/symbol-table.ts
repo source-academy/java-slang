@@ -48,6 +48,7 @@ export interface ClassInfo {
   name: string
   accessFlags: number
   parentClassName?: string
+  isEnum?: boolean
 }
 
 export interface FieldInfo {

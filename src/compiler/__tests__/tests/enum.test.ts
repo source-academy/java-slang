@@ -2,6 +2,7 @@ import {
   runTest,
   testCase,
 } from "../__utils__/test-utils";
+import { compileFromSource } from "../../index";
 
 const testCases: testCase[] = [
   {
@@ -34,10 +35,10 @@ const testCases: testCase[] = [
         public static void main(String[] args) {
           Light light = Light.GREEN;
           switch (light) {
-            case Light.RED:
+            case RED:
               System.out.println("stop");
               break;
-            case Light.GREEN:
+            case GREEN:
               System.out.println("go");
               break;
             default:
@@ -59,26 +60,27 @@ const testCases: testCase[] = [
 
         public static void main(String[] args) {
           Day day = Day.SUNDAY;
+          System.out.println(10);
           switch (day) {
-            case Day.SUNDAY:
+            case SUNDAY:
               System.out.println(0);
               break;
-            case Day.MONDAY:
+            case MONDAY:
               System.out.println(1);
               break;
-            case Day.TUESDAY:
+            case TUESDAY:
               System.out.println(2);
               break;
-            case Day.WEDNESDAY:
+            case WEDNESDAY:
               System.out.println(3);
               break;
-            case Day.THURSDAY:
+            case THURSDAY:
               System.out.println(4);
               break;
-            case Day.FRIDAY:
+            case FRIDAY:
               System.out.println(5);
               break;
-            case Day.SATURDAY:
+            case SATURDAY:
               System.out.println(6);
               break;
             default:
@@ -87,7 +89,7 @@ const testCases: testCase[] = [
         }
       }
     `,
-    expectedLines: ["0"],
+    expectedLines: ["10", "0"],
   },
   {
     comment: "enum switch and synthetic methods",
@@ -106,10 +108,10 @@ const testCases: testCase[] = [
 
           Color selector = Color.BLUE;
           switch (selector) {
-            case Color.RED:
+            case RED:
               System.out.println("bad");
               break;
-            case Color.BLUE:
+            case BLUE:
               System.out.println("ok");
               break;
             default:
@@ -135,7 +137,7 @@ const testCases: testCase[] = [
           Direction[] fresh = Direction.values();
 
           switch (fresh[0]) {
-            case Direction.NORTH:
+            case NORTH:
               System.out.println("fresh");
               break;
             default:
@@ -143,7 +145,7 @@ const testCases: testCase[] = [
           }
 
           switch (copy[0]) {
-            case Direction.SOUTH:
+            case SOUTH:
               System.out.println("mutated");
               break;
             default:
@@ -189,4 +191,22 @@ export const enumTest = () => describe("enums", () => {
     const { comment: comment, program: program, expectedLines: expectedLines } = testCase;
     it(comment, () => runTest(program, expectedLines));
   }
+
+  it("rejects qualified enum switch labels", () => {
+    expect(() =>
+      compileFromSource(`
+        class Main {
+          enum Day { SUNDAY }
+
+          public static void main(String[] args) {
+            Day day = Day.SUNDAY;
+            switch (day) {
+              case Day.SUNDAY:
+                break;
+            }
+          }
+        }
+      `)
+    ).toThrow(SyntaxError);
+  });
 });

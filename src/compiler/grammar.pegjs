@@ -855,7 +855,7 @@ SwitchBlockStatementGroup
     }
 
 SwitchLabel
-  = case expr:Expression colon {
+  = case expr:(Literal / id:Identifier { return addLocInfo({ kind: "ExpressionName", name: id }) }) colon {
       return {
         kind: "CaseLabel",
         expression: expr,
