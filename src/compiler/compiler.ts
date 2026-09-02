@@ -4,6 +4,7 @@ import {
   ClassBodyDeclaration,
   ClassDeclaration,
   ConstructorDeclaration,
+  EnumDeclaration,
   FieldDeclaration,
   MethodDeclaration
 } from '../ast/types/classes'
@@ -55,8 +56,21 @@ export class Compiler {
     this.setup()
     this.symbolTable.handleImports(ast.importDeclarations)
     const classFiles: Array<Class> = []
+    const declarations = [
+      ...ast.topLevelClassOrInterfaceDeclarations,
+      ...ast.topLevelClassOrInterfaceDeclarations.flatMap(declaration =>
+        declaration.kind === 'NormalClassDeclaration'
+          ? this.getMemberEnums(declaration.classBody)
+          : []
+      )
+    ]
 
-    ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
+    const compilationOrder = [
+      ...declarations.filter(declaration => declaration.kind === 'EnumDeclaration'),
+      ...declarations.filter(declaration => declaration.kind !== 'EnumDeclaration')
+    ]
+
+    declarations.forEach(decl => {
       const className = decl.typeIdentifier
       const parentClassName =
         decl.kind === 'EnumDeclaration'
@@ -64,7 +78,9 @@ export class Compiler {
           : 'sclass' in decl && decl.sclass
             ? decl.sclass
             : 'java/lang/Object'
-      const accessFlags = generateClassAccessFlags(decl.classModifier)
+      const accessFlags =
+        generateClassAccessFlags(decl.classModifier) |
+        (decl.kind === 'EnumDeclaration' ? 0x4000 : 0)
       this.symbolTable.insertClassInfo({
         name: className,
         accessFlags: accessFlags,
@@ -73,7 +89,7 @@ export class Compiler {
       this.symbolTable.returnToRoot()
     })
 
-    ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
+    compilationOrder.forEach(decl => {
       this.resetClassFileState()
       if (decl.kind === 'EnumDeclaration') {
         const classFile = this.compileEnum(decl)
@@ -85,6 +101,16 @@ export class Compiler {
     })
 
     return classFiles
+  }
+
+  private getMemberEnums(classBody: Array<ClassBodyDeclaration>): Array<EnumDeclaration> {
+    return classBody.flatMap(declaration => {
+      if (declaration.kind !== 'EnumDeclaration') return []
+      return [
+        declaration,
+        ...this.getMemberEnums(declaration.enumBody.bodyMembers || [])
+      ]
+    })
   }
 
   private compileClass(classNode: ClassDeclaration): ClassFile {
@@ -153,7 +179,8 @@ export class Compiler {
         accessFlags: 0x0019,
         parentClassName: this.className,
         typeName: this.className,
-        typeDescriptor: fieldDescriptor
+        typeDescriptor: fieldDescriptor,
+        ordinal
       })
       this.enumOrdinals.set(constant.name, ordinal)
     })
@@ -168,29 +195,13 @@ export class Compiler {
       attributes: []
     })
     
-    // Add $name and $ordinal fields (synthetic, private final)
-    this.fields.push({
-      accessFlags: 0x1002, // private final synthetic
-      nameIndex: this.constantPoolManager.indexUtf8Info('$name'),
-      descriptorIndex: this.constantPoolManager.indexUtf8Info('Ljava/lang/String;'),
-      attributesCount: 0,
-      attributes: []
-    })
-    
-    this.fields.push({
-      accessFlags: 0x1002, // private final synthetic
-      nameIndex: this.constantPoolManager.indexUtf8Info('$ordinal'),
-      descriptorIndex: this.constantPoolManager.indexUtf8Info('I'),
-      attributesCount: 0,
-      attributes: []
-    })
-    
-    this.handleClassBody(bodyMembers)
+    if (bodyMembers.length === 0) {
+      this.addEnumConstructor()
+    } else {
+      this.handleClassBody(bodyMembers)
+    }
     
     // Add synthetic methods
-    this.addEnumOrdinalMethod()
-    this.addEnumNameMethod()
-    this.addEnumToStringMethod()
     this.addEnumValuesMethod(enumConstants)
     this.addEnumValueOfMethod(enumConstants)
     this.addEnumStaticInitializer(enumConstants)
@@ -216,70 +227,46 @@ export class Compiler {
     }
   }
 
-  private addEnumOrdinalMethod() {
-    // public int ordinal() { return this.$ordinal; }
-    const nameIndex = this.constantPoolManager.indexUtf8Info('ordinal')
-    const descriptorIndex = this.constantPoolManager.indexUtf8Info('()I')
-    const codeAttribute = this.generateSimpleEnumMethod('ordinal', '$ordinal', 'I')
+  private addEnumConstructor() {
+    const bytecode = [
+      0x19,
+      0x00,
+      0x19,
+      0x01,
+      0x15,
+      0x02,
+      0xb7
+    ]
+    const constructorRef = this.constantPoolManager.indexMethodrefInfo(
+      'java/lang/Enum',
+      '<init>',
+      '(Ljava/lang/String;I)V'
+    )
+    bytecode.push((constructorRef >> 8) & 0xff, constructorRef & 0xff, 0xb1)
+    const codeAttribute = this.createEnumCodeAttribute(bytecode, 3, 3)
+
     this.methods.push({
-      accessFlags: 0x0001, // public
-      nameIndex: nameIndex,
-      descriptorIndex: descriptorIndex,
+      accessFlags: 0x0002,
+      nameIndex: this.constantPoolManager.indexUtf8Info('<init>'),
+      descriptorIndex: this.constantPoolManager.indexUtf8Info('(Ljava/lang/String;I)V'),
       attributesCount: 1,
       attributes: [codeAttribute]
-    })
-    // Register in symbol table
-    this.symbolTable.insertMethodInfo({
-      name: 'ordinal',
-      accessFlags: 0x0001, // public
-      parentClassName: this.className,
-      typeDescriptor: '()I',
-      className: this.className
     })
   }
 
-  private addEnumNameMethod() {
-    // public String name() { return this.$name; }
-    const nameIndex = this.constantPoolManager.indexUtf8Info('name')
-    const descriptorIndex = this.constantPoolManager.indexUtf8Info('()Ljava/lang/String;')
-    const codeAttribute = this.generateSimpleEnumMethod('name', '$name', 'Ljava/lang/String;')
-    this.methods.push({
-      accessFlags: 0x0001, // public
-      nameIndex: nameIndex,
-      descriptorIndex: descriptorIndex,
-      attributesCount: 1,
-      attributes: [codeAttribute]
-    })
-    // Register in symbol table
-    this.symbolTable.insertMethodInfo({
-      name: 'name',
-      accessFlags: 0x0001, // public
-      parentClassName: this.className,
-      typeDescriptor: '()Ljava/lang/String;',
-      className: this.className
-    })
-  }
-
-  private addEnumToStringMethod() {
-    // public String toString() { return this.$name; }
-    const nameIndex = this.constantPoolManager.indexUtf8Info('toString')
-    const descriptorIndex = this.constantPoolManager.indexUtf8Info('()Ljava/lang/String;')
-    const codeAttribute = this.generateSimpleEnumMethod('toString', '$name', 'Ljava/lang/String;')
-    this.methods.push({
-      accessFlags: 0x0001, // public
-      nameIndex: nameIndex,
-      descriptorIndex: descriptorIndex,
-      attributesCount: 1,
-      attributes: [codeAttribute]
-    })
-    // Register in symbol table
-    this.symbolTable.insertMethodInfo({
-      name: 'toString',
-      accessFlags: 0x0001, // public
-      parentClassName: this.className,
-      typeDescriptor: '()Ljava/lang/String;',
-      className: this.className
-    })
+  private createEnumCodeAttribute(bytecode: number[], maxStack: number, maxLocals: number): any {
+    return {
+      attributeNameIndex: this.constantPoolManager.indexUtf8Info('Code'),
+      attributeLength: 12 + bytecode.length,
+      maxStack,
+      maxLocals,
+      codeLength: bytecode.length,
+      code: new DataView(new Uint8Array(bytecode).buffer),
+      exceptionTableLength: 0,
+      exceptionTable: [],
+      attributesCount: 0,
+      attributes: []
+    }
   }
 
   private addEnumValuesMethod(enumConstants: any[]) {
@@ -317,7 +304,7 @@ export class Compiler {
       maxStack: 1,
       maxLocals: 0,
       codeLength: bytecode.length,
-      code: bytecode,
+      code: new DataView(new Uint8Array(bytecode).buffer),
       exceptionTableLength: 0,
       exceptionTable: [],
       attributesCount: 0,
@@ -377,7 +364,7 @@ export class Compiler {
       maxStack: 2,
       maxLocals: 1,
       codeLength: bytecode.length,
-      code: bytecode,
+      code: new DataView(new Uint8Array(bytecode).buffer),
       exceptionTableLength: 0,
       exceptionTable: [],
       attributesCount: 0,
@@ -402,30 +389,56 @@ export class Compiler {
   }
 
   private addEnumStaticInitializer(enumConstants: any[]) {
-    // Simplified: just create enum constants and populate $VALUES
-    // Full implementation would be complex bytecode generation
     const nameIndex = this.constantPoolManager.indexUtf8Info('<clinit>')
     const descriptorIndex = this.constantPoolManager.indexUtf8Info('()V')
-    
     const bytecode: number[] = []
-    
-    // For now, just return (empty <clinit>)
-    // The JVM will handle basic initialization
-    bytecode.push(0xb1) // return
-    
-    const codeAttribute: any = {
-      attributeNameIndex: this.constantPoolManager.indexUtf8Info('Code'),
-      attributeLength: 12 + bytecode.length,
-      maxStack: 0,
-      maxLocals: 0,
-      codeLength: bytecode.length,
-      code: bytecode,
-      exceptionTableLength: 0,
-      exceptionTable: [],
-      attributesCount: 0,
-      attributes: []
+    const enumClassRef = this.constantPoolManager.indexClassInfo(this.className)
+    const constructorRef = this.constantPoolManager.indexMethodrefInfo(
+      this.className,
+      '<init>',
+      '(Ljava/lang/String;I)V'
+    )
+    const emitInteger = (value: number) => {
+      if (value <= 5) bytecode.push(0x03 + value)
+      else bytecode.push(0x10, value)
     }
-    
+    const emitLdc = (constantPoolIndex: number) => {
+      bytecode.push(0x13, (constantPoolIndex >> 8) & 0xff, constantPoolIndex & 0xff)
+    }
+
+    enumConstants.forEach((constant, ordinal) => {
+      bytecode.push(0xbb, (enumClassRef >> 8) & 0xff, enumClassRef & 0xff, 0x59)
+      emitLdc(this.constantPoolManager.indexStringInfo(constant.name))
+      emitInteger(ordinal)
+      bytecode.push(0xb7, (constructorRef >> 8) & 0xff, constructorRef & 0xff)
+      const fieldRef = this.constantPoolManager.indexFieldrefInfo(
+        this.className,
+        constant.name,
+        `L${this.className};`
+      )
+      bytecode.push(0xb3, (fieldRef >> 8) & 0xff, fieldRef & 0xff)
+    })
+
+    emitInteger(enumConstants.length)
+    bytecode.push(0xbd, (enumClassRef >> 8) & 0xff, enumClassRef & 0xff)
+    enumConstants.forEach((constant, ordinal) => {
+      bytecode.push(0x59)
+      emitInteger(ordinal)
+      const fieldRef = this.constantPoolManager.indexFieldrefInfo(
+        this.className,
+        constant.name,
+        `L${this.className};`
+      )
+      bytecode.push(0xb2, (fieldRef >> 8) & 0xff, fieldRef & 0xff, 0x53)
+    })
+    const valuesFieldRef = this.constantPoolManager.indexFieldrefInfo(
+      this.className,
+      '$VALUES',
+      `[L${this.className};`
+    )
+    bytecode.push(0xb3, (valuesFieldRef >> 8) & 0xff, valuesFieldRef & 0xff, 0xb1)
+    const codeAttribute = this.createEnumCodeAttribute(bytecode, 4, 0)
+
     this.methods.push({
       accessFlags: 0x0008, // static
       nameIndex: nameIndex,
@@ -433,41 +446,6 @@ export class Compiler {
       attributesCount: 1,
       attributes: [codeAttribute]
     })
-  }
-
-  private generateSimpleEnumMethod(methodName: string, fieldName: string, fieldType: string): any {
-    // Generate: aload_0, getfield fieldName, return
-    const bytecode: number[] = []
-    
-    // aload_0 (this)
-    bytecode.push(0x19)
-    bytecode.push(0x00)
-    
-    // getfield
-    bytecode.push(0xb4)
-    const fieldRef = this.constantPoolManager.indexFieldrefInfo(this.className, fieldName, fieldType)
-    bytecode.push((fieldRef >> 8) & 0xff)
-    bytecode.push(fieldRef & 0xff)
-    
-    // return (areturn for objects, ireturn for int)
-    if (fieldType === 'I') {
-      bytecode.push(0xac) // ireturn
-    } else {
-      bytecode.push(0xb0) // areturn
-    }
-    
-    return {
-      attributeNameIndex: this.constantPoolManager.indexUtf8Info('Code'),
-      attributeLength: 12 + bytecode.length,
-      maxStack: 1,
-      maxLocals: 1,
-      codeLength: bytecode.length,
-      code: bytecode,
-      exceptionTableLength: 0,
-      exceptionTable: [],
-      attributesCount: 0,
-      attributes: []
-    }
   }
 
   private handleClassBody(classBody: Array<ClassBodyDeclaration>) {

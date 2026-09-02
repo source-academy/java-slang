@@ -1596,6 +1596,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     // If the expression is an enum type, invoke ordinal() to convert to int and then continue
     let _resultType = resultType
+    let enumTypeName: string | null = null
     if (_resultType && _resultType.startsWith('L') && _resultType !== 'Ljava/lang/String;') {
       const clean = _resultType.replace(/^L|;$/g, '')
       try {
@@ -1608,6 +1609,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             cg.constantPoolManager.indexMethodrefInfo('java/lang/Enum', 'ordinal', '()I')
           )
           _resultType = 'I'
+          enumTypeName = clean
           maxStack = Math.max(maxStack, exprStackSize + 1)
         }
       } catch (e) {
@@ -1631,7 +1633,16 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       cases.forEach((caseGroup, index) => {
         caseGroup.labels.forEach(label => {
           if (label.kind === 'CaseLabel') {
-            const value = parseInt((label.expression as Literal).literalType.value)
+            const value =
+              label.expression.kind === 'ExpressionName' && enumTypeName
+                ? (() => {
+                    const fields = cg.symbolTable.queryField(label.expression.name)
+                    const field = fields[fields.length - 1] as FieldInfo
+                    if (field.parentClassName !== enumTypeName || field.ordinal === undefined)
+                      throw new Error(`Invalid enum switch label: ${label.expression.name}`)
+                    return field.ordinal
+                  })()
+                : parseInt((label.expression as Literal).literalType.value)
             caseValues.push(value)
             caseLabelMap.set(value, caseLabels[index])
           } else if (label.kind === 'DefaultLabel') {

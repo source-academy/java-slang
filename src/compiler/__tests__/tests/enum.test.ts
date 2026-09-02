@@ -5,6 +5,50 @@ import {
 
 const testCases: testCase[] = [
   {
+    comment: "member enum constant access",
+    program: `
+      public class Main {
+        public enum Day {
+          SUNDAY,
+          MONDAY,
+          TUESDAY,
+          WEDNESDAY,
+          THURSDAY,
+          FRIDAY,
+          SATURDAY
+        }
+
+        public static void main(String[] args) {
+          Day day = Day.SUNDAY;
+        }
+      }
+    `,
+    expectedLines: [],
+  },
+  {
+    comment: "member enum switch selects the matching constant",
+    program: `
+      public class Main {
+        public enum Light { RED, YELLOW, GREEN }
+
+        public static void main(String[] args) {
+          Light light = Light.GREEN;
+          switch (light) {
+            case Light.RED:
+              System.out.println("stop");
+              break;
+            case Light.GREEN:
+              System.out.println("go");
+              break;
+            default:
+              System.out.println("wait");
+          }
+        }
+      }
+    `,
+    expectedLines: ["go"],
+  },
+  {
     comment: "enum switch and synthetic methods",
     program: `
       public enum Color {
