@@ -42,25 +42,4 @@ export class ExceptionTable implements Iterable<ExceptionTableEntry> {
     get length() {
         return this.entries.length
     }
-    return null
-  }
-
-  insert(startPc: number, endPc: number, handlerPc: number, catchType: ClassData | null): void {
-    this.entries.push({ startPc, endPc, handlerPc, catchType })
-  }
-
-  toArray(): ExceptionTableEntry[] {
-    return this.entries.slice()
-  }
-
-  [Symbol.iterator](): Iterator<ExceptionTableEntry> {
-    return this.entries[Symbol.iterator]()
-  }
-  forEach(cb: (entry: ExceptionTableEntry, idx?: number) => void) {
-    this.entries.forEach(cb)
-  }
-
-  get length() {
-    return this.entries.length
-  }
 }
