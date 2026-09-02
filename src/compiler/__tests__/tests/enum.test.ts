@@ -49,6 +49,47 @@ const testCases: testCase[] = [
     expectedLines: ["go"],
   },
   {
+    comment: "member enum switch matches the first of seven constants",
+    program: `
+      class Main {
+        public enum Day {
+          SUNDAY, MONDAY, TUESDAY, WEDNESDAY,
+          THURSDAY, FRIDAY, SATURDAY
+        }
+
+        public static void main(String[] args) {
+          Day day = Day.SUNDAY;
+          switch (day) {
+            case Day.SUNDAY:
+              System.out.println(0);
+              break;
+            case Day.MONDAY:
+              System.out.println(1);
+              break;
+            case Day.TUESDAY:
+              System.out.println(2);
+              break;
+            case Day.WEDNESDAY:
+              System.out.println(3);
+              break;
+            case Day.THURSDAY:
+              System.out.println(4);
+              break;
+            case Day.FRIDAY:
+              System.out.println(5);
+              break;
+            case Day.SATURDAY:
+              System.out.println(6);
+              break;
+            default:
+              break;
+          }
+        }
+      }
+    `,
+    expectedLines: ["0"],
+  },
+  {
     comment: "enum switch and synthetic methods",
     program: `
       public enum Color {
