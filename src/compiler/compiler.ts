@@ -4,6 +4,7 @@ import {
   ClassBodyDeclaration,
   ClassDeclaration,
   ConstructorDeclaration,
+  EnumDeclaration,
   FieldDeclaration,
   MethodDeclaration
 } from '../ast/types/classes'
@@ -32,6 +33,7 @@ export class Compiler {
   private attributes: Array<AttributeInfo>
   private className: string
   private parentClassName: string
+  private enumOrdinals: Map<string, number>
 
   constructor() {
     this.setup()
@@ -47,37 +49,71 @@ export class Compiler {
     this.fields = []
     this.methods = []
     this.attributes = []
+    this.enumOrdinals = new Map()
   }
 
   compile(ast: AST) {
     this.setup()
     this.symbolTable.handleImports(ast.importDeclarations)
     const classFiles: Array<Class> = []
+    const declarations = [
+      ...ast.topLevelClassOrInterfaceDeclarations,
+      ...ast.topLevelClassOrInterfaceDeclarations.flatMap(declaration =>
+        declaration.kind === 'NormalClassDeclaration'
+          ? this.getMemberEnums(declaration.classBody)
+          : []
+      )
+    ]
 
-    ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
+    const compilationOrder = [
+      ...declarations.filter(declaration => declaration.kind === 'EnumDeclaration'),
+      ...declarations.filter(declaration => declaration.kind !== 'EnumDeclaration')
+    ]
+
+    declarations.forEach(decl => {
       const className = decl.typeIdentifier
-      const parentClassName = decl.sclass ? decl.sclass : 'java/lang/Object'
+      const parentClassName =
+        'sclass' in decl && decl.sclass
+            ? decl.sclass
+            : 'java/lang/Object'
       const accessFlags = generateClassAccessFlags(decl.classModifier)
       this.symbolTable.insertClassInfo({
         name: className,
         accessFlags: accessFlags,
-        parentClassName: parentClassName
+        parentClassName: parentClassName,
+        isEnum: decl.kind === 'EnumDeclaration'
       })
       this.symbolTable.returnToRoot()
     })
 
-    ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
+    compilationOrder.forEach(decl => {
       this.resetClassFileState()
-      const classFile = this.compileClass(decl)
-      classFiles.push({ classFile: classFile, className: this.className })
+      if (decl.kind === 'EnumDeclaration') {
+        const classFile = this.compileEnum(decl)
+        classFiles.push({ classFile: classFile, className: this.className })
+      } else {
+        const classFile = this.compileClass(decl)
+        classFiles.push({ classFile: classFile, className: this.className })
+      }
     })
 
     return classFiles
   }
 
+  private getMemberEnums(classBody: Array<ClassBodyDeclaration>): Array<EnumDeclaration> {
+    return classBody.flatMap(declaration => {
+      if (declaration.kind !== 'EnumDeclaration') return []
+      return [
+        declaration,
+        ...this.getMemberEnums(declaration.enumBody.bodyMembers || [])
+      ]
+    })
+  }
+
   private compileClass(classNode: ClassDeclaration): ClassFile {
     this.className = classNode.typeIdentifier
-    this.parentClassName = classNode.sclass ? classNode.sclass : 'java/lang/Object'
+    const sclass = 'sclass' in classNode ? classNode.sclass : undefined
+    this.parentClassName = sclass ? sclass : 'java/lang/Object'
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
     this.symbolTable.extend()
     this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
@@ -85,7 +121,8 @@ export class Compiler {
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
     this.constantPoolManager.indexUtf8Info('Code')
-    this.handleClassBody(classNode.classBody)
+    const classBody = 'classBody' in classNode ? classNode.classBody : []
+    this.handleClassBody(classBody)
 
     const constantPool = this.constantPoolManager.getPool()
     return {
@@ -106,6 +143,347 @@ export class Compiler {
       attributesCount: this.attributes.length,
       attributes: this.attributes
     }
+  }
+
+  private compileEnum(enumNode: any): ClassFile {
+    this.className = enumNode.typeIdentifier
+    this.parentClassName = 'java/lang/Object'
+    const accessFlags = generateClassAccessFlags(enumNode.classModifier)
+    this.symbolTable.extend()
+    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
+
+    const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
+    const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
+    this.constantPoolManager.indexUtf8Info('Code')
+
+    // Handle enum constants and body members
+    const enumBody = enumNode.enumBody
+    const enumConstants = enumBody.constants || []
+    const bodyMembers = enumBody.bodyMembers || []
+    
+    // Add enum constants as static fields
+    enumConstants.forEach((constant: any, ordinal: number) => {
+      const fieldDescriptor = 'L' + this.className + ';'
+      this.fields.push({
+        accessFlags: 0x0019, // public static final
+        nameIndex: this.constantPoolManager.indexUtf8Info(constant.name),
+        descriptorIndex: this.constantPoolManager.indexUtf8Info(fieldDescriptor),
+        attributesCount: 0,
+        attributes: []
+      })
+      this.symbolTable.insertFieldInfo({
+        name: constant.name,
+        accessFlags: 0x0019,
+        parentClassName: this.className,
+        typeName: this.className,
+        typeDescriptor: fieldDescriptor,
+        ordinal
+      })
+      this.enumOrdinals.set(constant.name, ordinal)
+    })
+    
+    // Add synthetic $VALUES field (private static final)
+    const valuesFieldDescriptor = '[L' + this.className + ';'
+    this.fields.push({
+      accessFlags: 0x001a, // private static final
+      nameIndex: this.constantPoolManager.indexUtf8Info('$VALUES'),
+      descriptorIndex: this.constantPoolManager.indexUtf8Info(valuesFieldDescriptor),
+      attributesCount: 0,
+      attributes: []
+    })
+
+    this.fields.push({
+      accessFlags: 0x1002,
+      nameIndex: this.constantPoolManager.indexUtf8Info('$ordinal'),
+      descriptorIndex: this.constantPoolManager.indexUtf8Info('I'),
+      attributesCount: 0,
+      attributes: []
+    })
+    
+    if (bodyMembers.length === 0) {
+      this.addEnumConstructor()
+      this.addEnumOrdinalMethod()
+    } else {
+      this.handleClassBody(bodyMembers)
+    }
+    
+    // Add synthetic methods
+    this.addEnumValuesMethod(enumConstants)
+    this.addEnumValueOfMethod(enumConstants)
+    this.addEnumStaticInitializer(enumConstants)
+
+    const constantPool = this.constantPoolManager.getPool()
+    return {
+      magic: MAGIC,
+      minorVersion: MINOR_VERSION,
+      majorVersion: MAJOR_VERSION,
+      constantPoolCount: this.constantPoolManager.getSize(),
+      constantPool: constantPool,
+      accessFlags: accessFlags,
+      thisClass: thisClassIndex,
+      superClass: superClassIndex,
+      interfacesCount: this.interfaces.length,
+      interfaces: this.interfaces,
+      fieldsCount: this.fields.length,
+      fields: this.fields,
+      methodsCount: this.methods.length,
+      methods: this.methods,
+      attributesCount: this.attributes.length,
+      attributes: this.attributes
+    }
+  }
+
+  private addEnumConstructor() {
+    const bytecode = [
+      0x19,
+      0x00,
+      0xb7
+    ]
+    const constructorRef = this.constantPoolManager.indexMethodrefInfo(
+      'java/lang/Object',
+      '<init>',
+      '()V'
+    )
+    const ordinalFieldRef = this.constantPoolManager.indexFieldrefInfo(
+      this.className,
+      '$ordinal',
+      'I'
+    )
+    bytecode.push(
+      (constructorRef >> 8) & 0xff,
+      constructorRef & 0xff,
+      0x19,
+      0x00,
+      0x15,
+      0x02,
+      0xb5,
+      (ordinalFieldRef >> 8) & 0xff,
+      ordinalFieldRef & 0xff,
+      0xb1
+    )
+    const codeAttribute = this.createEnumCodeAttribute(bytecode, 2, 3)
+
+    this.methods.push({
+      accessFlags: 0x0002,
+      nameIndex: this.constantPoolManager.indexUtf8Info('<init>'),
+      descriptorIndex: this.constantPoolManager.indexUtf8Info('(Ljava/lang/String;I)V'),
+      attributesCount: 1,
+      attributes: [codeAttribute]
+    })
+  }
+
+  private addEnumOrdinalMethod() {
+    const fieldRef = this.constantPoolManager.indexFieldrefInfo(this.className, '$ordinal', 'I')
+    const codeAttribute = this.createEnumCodeAttribute([0x19, 0x00, 0xb4, fieldRef >> 8, fieldRef & 0xff, 0xac], 1, 1)
+
+    this.methods.push({
+      accessFlags: 0x0001,
+      nameIndex: this.constantPoolManager.indexUtf8Info('ordinal'),
+      descriptorIndex: this.constantPoolManager.indexUtf8Info('()I'),
+      attributesCount: 1,
+      attributes: [codeAttribute]
+    })
+    this.symbolTable.insertMethodInfo({
+      name: 'ordinal',
+      accessFlags: 0x0001,
+      parentClassName: this.className,
+      typeDescriptor: '()I',
+      className: this.className
+    })
+  }
+
+  private createEnumCodeAttribute(bytecode: number[], maxStack: number, maxLocals: number): any {
+    return {
+      attributeNameIndex: this.constantPoolManager.indexUtf8Info('Code'),
+      attributeLength: 12 + bytecode.length,
+      maxStack,
+      maxLocals,
+      codeLength: bytecode.length,
+      code: new DataView(new Uint8Array(bytecode).buffer),
+      exceptionTableLength: 0,
+      exceptionTable: [],
+      attributesCount: 0,
+      attributes: []
+    }
+  }
+
+  private addEnumValuesMethod(enumConstants: any[]) {
+    // public static EnumClass[] values() { return $VALUES.clone(); }
+    const nameIndex = this.constantPoolManager.indexUtf8Info('values')
+    const descriptorIndex = this.constantPoolManager.indexUtf8Info('()[L' + this.className + ';')
+    
+    // Generate bytecode: getstatic $VALUES, invokevirtual clone, areturn
+    const bytecode: number[] = []
+    
+    // getstatic $VALUES
+    bytecode.push(0xb2) // getstatic
+    const valuesFieldRef = this.constantPoolManager.indexFieldrefInfo(this.className, '$VALUES', '[L' + this.className + ';')
+    bytecode.push((valuesFieldRef >> 8) & 0xff)
+    bytecode.push(valuesFieldRef & 0xff)
+    
+    // invokevirtual Object.clone()
+    bytecode.push(0xb6) // invokevirtual
+    const cloneMethodRef = this.constantPoolManager.indexMethodrefInfo('java/lang/Object', 'clone', '()Ljava/lang/Object;')
+    bytecode.push((cloneMethodRef >> 8) & 0xff)
+    bytecode.push(cloneMethodRef & 0xff)
+    
+    // checkcast to array type
+    bytecode.push(0xc0) // checkcast
+    const arrayTypeRef = this.constantPoolManager.indexClassInfo('[L' + this.className + ';')
+    bytecode.push((arrayTypeRef >> 8) & 0xff)
+    bytecode.push(arrayTypeRef & 0xff)
+    
+    // areturn
+    bytecode.push(0xb0)
+    
+    const codeAttribute: any = {
+      attributeNameIndex: this.constantPoolManager.indexUtf8Info('Code'),
+      attributeLength: 12 + bytecode.length,
+      maxStack: 1,
+      maxLocals: 0,
+      codeLength: bytecode.length,
+      code: new DataView(new Uint8Array(bytecode).buffer),
+      exceptionTableLength: 0,
+      exceptionTable: [],
+      attributesCount: 0,
+      attributes: []
+    }
+    
+    this.methods.push({
+      accessFlags: 0x0009, // public static
+      nameIndex: nameIndex,
+      descriptorIndex: descriptorIndex,
+      attributesCount: 1,
+      attributes: [codeAttribute]
+    })
+    // Register in symbol table
+    this.symbolTable.insertMethodInfo({
+     name: 'values',
+     accessFlags: 0x0009, // public static
+     parentClassName: this.className,
+     typeDescriptor: '()[L' + this.className + ';',
+     className: this.className
+    })
+  }
+
+  private addEnumValueOfMethod(enumConstants: any[]) {
+    // public static EnumClass valueOf(String name) { return (EnumClass) Enum.valueOf(EnumClass.class, name); }
+    const nameIndex = this.constantPoolManager.indexUtf8Info('valueOf')
+    const descriptorIndex = this.constantPoolManager.indexUtf8Info('(Ljava/lang/String;)L' + this.className + ';')
+    
+    const bytecode: number[] = []
+    
+    // ldc EnumClass.class
+    bytecode.push(0x12) // ldc
+    const classRefIndex = this.constantPoolManager.indexClassInfo(this.className)
+    bytecode.push(classRefIndex & 0xff)
+    
+    // aload_0 (String name parameter)
+    bytecode.push(0x19)
+    bytecode.push(0x00)
+    
+    // invokestatic java/lang/Enum.valueOf(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;
+    bytecode.push(0xb8) // invokestatic
+    const valueOfRef = this.constantPoolManager.indexMethodrefInfo('java/lang/Enum', 'valueOf', '(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;')
+    bytecode.push((valueOfRef >> 8) & 0xff)
+    bytecode.push(valueOfRef & 0xff)
+    
+    // checkcast to enum type
+    bytecode.push(0xc0) // checkcast
+    bytecode.push((classRefIndex >> 8) & 0xff)
+    bytecode.push(classRefIndex & 0xff)
+    
+    // areturn
+    bytecode.push(0xb0)
+    
+    const codeAttribute: any = {
+      attributeNameIndex: this.constantPoolManager.indexUtf8Info('Code'),
+      attributeLength: 12 + bytecode.length,
+      maxStack: 2,
+      maxLocals: 1,
+      codeLength: bytecode.length,
+      code: new DataView(new Uint8Array(bytecode).buffer),
+      exceptionTableLength: 0,
+      exceptionTable: [],
+      attributesCount: 0,
+      attributes: []
+    }
+    
+    this.methods.push({
+      accessFlags: 0x0009, // public static
+      nameIndex: nameIndex,
+      descriptorIndex: descriptorIndex,
+      attributesCount: 1,
+      attributes: [codeAttribute]
+    })
+    // Register in symbol table
+    this.symbolTable.insertMethodInfo({
+      name: 'valueOf',
+      accessFlags: 0x0009, // public static
+      parentClassName: this.className,
+      typeDescriptor: '(Ljava/lang/String;)L' + this.className + ';',
+      className: this.className
+    })
+  }
+
+  private addEnumStaticInitializer(enumConstants: any[]) {
+    const nameIndex = this.constantPoolManager.indexUtf8Info('<clinit>')
+    const descriptorIndex = this.constantPoolManager.indexUtf8Info('()V')
+    const bytecode: number[] = []
+    const enumClassRef = this.constantPoolManager.indexClassInfo(this.className)
+    const constructorRef = this.constantPoolManager.indexMethodrefInfo(
+      this.className,
+      '<init>',
+      '(Ljava/lang/String;I)V'
+    )
+    const emitInteger = (value: number) => {
+      if (value <= 5) bytecode.push(0x03 + value)
+      else bytecode.push(0x10, value)
+    }
+    const emitLdc = (constantPoolIndex: number) => {
+      bytecode.push(0x13, (constantPoolIndex >> 8) & 0xff, constantPoolIndex & 0xff)
+    }
+
+    enumConstants.forEach((constant, ordinal) => {
+      bytecode.push(0xbb, (enumClassRef >> 8) & 0xff, enumClassRef & 0xff, 0x59)
+      emitLdc(this.constantPoolManager.indexStringInfo(constant.name))
+      emitInteger(ordinal)
+      bytecode.push(0xb7, (constructorRef >> 8) & 0xff, constructorRef & 0xff)
+      const fieldRef = this.constantPoolManager.indexFieldrefInfo(
+        this.className,
+        constant.name,
+        `L${this.className};`
+      )
+      bytecode.push(0xb3, (fieldRef >> 8) & 0xff, fieldRef & 0xff)
+    })
+
+    emitInteger(enumConstants.length)
+    bytecode.push(0xbd, (enumClassRef >> 8) & 0xff, enumClassRef & 0xff)
+    enumConstants.forEach((constant, ordinal) => {
+      bytecode.push(0x59)
+      emitInteger(ordinal)
+      const fieldRef = this.constantPoolManager.indexFieldrefInfo(
+        this.className,
+        constant.name,
+        `L${this.className};`
+      )
+      bytecode.push(0xb2, (fieldRef >> 8) & 0xff, fieldRef & 0xff, 0x53)
+    })
+    const valuesFieldRef = this.constantPoolManager.indexFieldrefInfo(
+      this.className,
+      '$VALUES',
+      `[L${this.className};`
+    )
+    bytecode.push(0xb3, (valuesFieldRef >> 8) & 0xff, valuesFieldRef & 0xff, 0xb1)
+    const codeAttribute = this.createEnumCodeAttribute(bytecode, 4, 0)
+
+    this.methods.push({
+      accessFlags: 0x0008, // static
+      nameIndex: nameIndex,
+      descriptorIndex: descriptorIndex,
+      attributesCount: 1,
+      attributes: [codeAttribute]
+    })
   }
 
   private handleClassBody(classBody: Array<ClassBodyDeclaration>) {

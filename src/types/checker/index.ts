@@ -71,7 +71,6 @@ const isCastCompatible = (fromType: Type, toType: Type): boolean => {
     const fromName = fromType.constructor.name;
     const toName = toType.constructor.name;
 
-    console.log(fromName, toName);
 
     return !(fromName === 'char' && toName !== 'int');
   }
@@ -386,7 +385,6 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       return newResult(null, errors)
     }
     case 'InstanceofExpression': {
-      console.log(node)
       return OK_RESULT
     }
     case 'BinaryLiteral':
@@ -640,6 +638,88 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       }
       return newResult(null, errors)
     }
+    case 'EnumDeclaration': {
+      const errors: TypeCheckerError[] = []
+      const classType = frame.getType(node.typeIdentifier.identifier, node.typeIdentifier.location)
+      if (classType instanceof TypeCheckerError) return newResult(null, [classType])
+      if (!(classType instanceof ClassType)) throw new Error('enum type retrieved should be ClassImpl')
+
+      const classFrame = frame.newChildFrame()
+      classFrame.setClass(classType)
+      classType.mapFields((name, type) => {
+        const error = classFrame.setVariable(name, type, { startLine: -1, startOffset: -1 })
+        if (error) errors.push(error)
+      })
+      if (errors.length > 0) return newResult(null, errors)
+
+      const bodyDecls = node.enumBody.enumBodyDeclarations?.classBodyDeclaration || []
+      let numFieldDeclarations = 0
+      let numMethodDeclarations = 0
+      for (let i = 0; i < bodyDecls.length; i++) {
+        const bodyDeclaration = bodyDecls[i]
+        switch (bodyDeclaration.kind) {
+          case 'ConstructorDeclaration': {
+            const methodFrame = classFrame.newChildFrame()
+            const constructor = classType.getConstructor(i - numFieldDeclarations - numMethodDeclarations)
+            const constructorMethodErrors: TypeCheckerError[] = []
+            constructor.mapParameters((name, type, isVarargs) => {
+              const error = methodFrame.setVariable(name, type, { startLine: -1, startOffset: -1 })
+              if (error) constructorMethodErrors.push(error)
+            })
+            if (constructorMethodErrors.length > 0) {
+              errors.push(...constructorMethodErrors)
+              break
+            }
+            const { errors: checkErrors } = typeCheckBody(bodyDeclaration.constructorBody, methodFrame)
+            if (checkErrors.length > 0) errors.push(...checkErrors)
+            break
+          }
+          case 'FieldDeclaration': {
+            for (const variableDeclarator of (bodyDeclaration as any).variableDeclaratorList.variableDeclarators) {
+              const field = classType.accessField(variableDeclarator.variableDeclaratorId.identifier.identifier, variableDeclarator.variableDeclaratorId.identifier.location)
+              if (field instanceof TypeCheckerError) throw new Error('field should exist in enum')
+              const initializer = variableDeclarator.variableInitializer
+              if (initializer) {
+                const type = createArrayType(field, initializer, expression => {
+                  const result = typeCheckBody(expression, frame)
+                  if (result.errors.length > 0) return result.errors[0]
+                  if (!result.currentType) throw new Error('array initializer expression should have a type')
+                  return result.currentType
+                })
+                if (type instanceof TypeCheckerError) errors.push(type)
+              }
+            }
+            break
+          }
+          case 'MethodDeclaration': {
+            const methodIdentifier = (bodyDeclaration as any).methodHeader.methodDeclarator.identifier
+            const methodName = methodIdentifier.identifier
+            const overloadIndex = bodyDecls
+              .filter((n: any) => n.kind === 'MethodDeclaration' && (n).methodHeader.methodDeclarator.identifier.identifier === methodName)
+              .findIndex(n => n === bodyDeclaration)
+            const method = classType.getMethod(methodName)[overloadIndex]
+            const methodFrame = classFrame.newChildFrame()
+            const methodErrors: TypeCheckerError[] = []
+            methodFrame.setReturnType(method.getReturnType())
+            method.mapParameters((name, type, isVarargs) => {
+              const error = methodFrame.setVariable(name, type, { startLine: -1, startOffset: -1 })
+              if (error) methodErrors.push(error)
+            })
+            if (methodErrors.length > 0) {
+              errors.push(...methodErrors)
+              break
+            }
+            const { errors: checkErrors } = typeCheckBody((bodyDeclaration as any).methodBody, methodFrame)
+            if (checkErrors.length > 0) errors.push(...checkErrors)
+            break
+          }
+        }
+
+        if (bodyDeclaration.kind === 'FieldDeclaration') numFieldDeclarations += 1
+        if (bodyDeclaration.kind === 'MethodDeclaration') numMethodDeclarations += 1
+      }
+      return newResult(null, errors)
+    }
     case 'OrdinaryCompilationUnit': {
       const typeCheckErrors = node.topLevelClassOrInterfaceDeclarations
         .map(declaration => typeCheckBody(declaration, frame))
@@ -700,16 +780,20 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       const switchBlockFrame = frame.newChildFrame()
       for (const group of node.switchBlock.switchBlockStatementGroups) {
         for (const switchLabel of group.switchLabels) {
-          if ('caseConstant' in switchLabel) {
-            const checkResult = typeCheckBody(
-              switchLabel.caseConstant as CaseConstant,
-              switchBlockFrame
-            )
-            if (checkResult.hasErrors) return checkResult
-            if (!checkResult.currentType)
-              throw new TypeCheckerInternalError('Switch case constant should have a type.')
-            if (expressionCheck.currentType.canBeAssigned(checkResult.currentType)) continue
-            return newResult(null, [new IncompatibleTypesError(switchLabel.location)])
+          // Support both singular 'caseConstant' and plural 'caseConstants' AST shapes
+          const caseConstants: CaseConstant[] = []
+          if ('caseConstant' in switchLabel && (switchLabel as any).caseConstant) caseConstants.push((switchLabel as any).caseConstant as CaseConstant)
+          if ('caseConstants' in switchLabel && (switchLabel as any).caseConstants) caseConstants.push(...((switchLabel as any).caseConstants as CaseConstant[]))
+          if (caseConstants.length > 0) {
+            for (const caseConst of caseConstants) {
+              const checkResult = typeCheckBody(caseConst, switchBlockFrame)
+              if (checkResult.hasErrors) return checkResult
+              if (!checkResult.currentType)
+                throw new TypeCheckerInternalError('Switch case constant should have a type.')
+              const assignable = expressionCheck.currentType.canBeAssigned(checkResult.currentType)
+              if (assignable) continue
+              return newResult(null, [new IncompatibleTypesError(switchLabel.location)])
+            }
           }
         }
         if (group.blockStatements) {

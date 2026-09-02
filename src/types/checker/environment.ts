@@ -41,7 +41,9 @@ const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
   // Hard coded variables
   System: SYSTEM_CLASS,
   Throwable: new NonPrimitives.Throwable(),
-  Exception: new NonPrimitives.Exception()
+  Exception: new NonPrimitives.Exception(),
+  // enum base type
+  Enum: new ClassType('Enum')
 }
 
 export class Frame {

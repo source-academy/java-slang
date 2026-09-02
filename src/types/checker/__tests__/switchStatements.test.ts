@@ -1,6 +1,6 @@
 import { check } from '..'
 import { parse } from '../../ast'
-import { IncompatibleTypesError, TypeCheckerError } from '../../errors'
+import { IncompatibleTypesError, SelectorTypeNotAllowedError, TypeCheckerError } from '../../errors'
 import { Type } from '../../types/type'
 
 const createProgram = (statement: string) => `
@@ -29,6 +29,27 @@ const testcases: {
   },
   {
     input: `
+      String selector = "Tuesday";
+      switch(selector) {
+        case "Tuesday": {
+          selector = "Wednesday";
+        }
+        default:
+      }
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      Boolean selector = true;
+      switch(selector) {
+        default: {}
+      }
+    `,
+    result: { type: null, errors: [new SelectorTypeNotAllowedError()] }
+  },
+  {
+    input: `
       int selector = 1;
       switch(selector) {
         case 1: {
@@ -49,6 +70,31 @@ const testcases: {
         default: {
           selector = true;
         }
+      }
+    `,
+    result: { type: null, errors: [new IncompatibleTypesError()] }
+  },
+  {
+    input: `
+      enum Color { RED, BLUE }
+      Color selector = Color.RED;
+      switch(selector) {
+        case Color.RED: {
+          selector = Color.BLUE;
+        }
+        default: {}
+      }
+    `,
+    result: { type: null, errors: [] }
+  },
+  {
+    input: `
+      enum Color { RED, BLUE }
+      enum Other { X }
+      Color selector = Color.RED;
+      switch(selector) {
+        case Other.X: {}
+        default: {}
       }
     `,
     result: { type: null, errors: [new IncompatibleTypesError()] }

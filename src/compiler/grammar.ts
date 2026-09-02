@@ -477,6 +477,7 @@ TypeImportOnDemandDeclaration
 
 TopLevelClassOrInterfaceDeclaration
   = ClassDeclaration
+  / EnumDeclaration
   / InterfaceDeclaration
   / semicolon
 
@@ -522,6 +523,46 @@ ClassModifier
   / non_sealed
   / strictfp
 
+EnumDeclaration
+  = cm:ClassModifier* enum tm:TypeIdentifier ClassImplements? eb:EnumBody {
+    return addLocInfo({
+      kind: "EnumDeclaration",
+      classModifier: cm,
+      typeIdentifier: tm,
+      enumBody: eb,
+    })
+  }
+
+EnumBody
+  = lcurly ecl:EnumConstantList? semicolon? em:EnumBodyMembers rcurly {
+    const constants = ecl || [];
+    return addLocInfo({
+      kind: "EnumBody",
+      constants: constants,
+      bodyMembers: em,
+    })
+  }
+
+EnumBodyMembers
+  = members:ClassBodyDeclaration* {
+    return members;
+  }
+
+EnumConstantList
+  = first:EnumConstant rest:(comma @EnumConstant)* comma? {
+    return [first, ...rest];
+  }
+
+EnumConstant
+  = name:Identifier args:(lparen al:ArgumentList? rparen)? cb:(lcurly ClassBodyDeclaration* rcurly)? {
+    return addLocInfo({
+      kind: "EnumConstant",
+      name: name,
+      arguments: (args && args[1]) ? args[1] : [],
+      classBody: cb || [],
+    })
+  }
+
 TypeParameters
   = TO_BE_ADDED
 
@@ -553,6 +594,7 @@ ClassMemberDeclaration
   = FieldDeclaration
   / MethodDeclaration
   / ClassDeclaration
+  / EnumDeclaration
   / InterfaceDeclaration
   / semicolon
 
@@ -815,7 +857,7 @@ SwitchBlockStatementGroup
     }
 
 SwitchLabel
-  = case expr:Expression colon {
+  = case expr:(Literal / id:Identifier { return addLocInfo({ kind: "ExpressionName", name: id }) }) colon {
       return {
         kind: "CaseLabel",
         expression: expr,
