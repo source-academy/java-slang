@@ -70,8 +70,8 @@ export const createMethod = (
   // Add declared exceptions (throws clause) if present
   const throwsNode: any =
     node.kind === 'MethodDeclaration' ? node.methodHeader.throws : node.throws
-  if (throwsNode && (throwsNode).exceptionTypeList) {
-    for (const exceptionTypeNode of (throwsNode).exceptionTypeList) {
+  if (throwsNode?.exceptionTypeList) {
+    for (const exceptionTypeNode of throwsNode.exceptionTypeList) {
       const exceptionType = frame.getType(
         unannTypeToString(exceptionTypeNode),
         exceptionTypeNode.location
