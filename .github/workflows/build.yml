@@ -42,6 +42,10 @@ jobs:
           distribution: 'oracle'
           java-version: '17'
       - uses: ArtiomTr/jest-coverage-report-action@v2
+        if: github.event_name == 'pull_request'
         with:
           test-script: yarn test
           annotations: none
+      - name: Run tests
+        if: github.event_name != 'pull_request'
+        run: yarn test

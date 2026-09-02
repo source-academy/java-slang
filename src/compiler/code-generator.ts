@@ -31,13 +31,13 @@ import {
   CaseLabel
 } from '../ast/types/blocks-and-statements'
 import { MethodDeclaration, UnannType } from '../ast/types/classes'
+import { unannTypeToString } from '../types/ast/utils'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
   AmbiguousMethodCallError,
   ConstructNotSupportedError,
   NoMethodMatchingSignatureError
 } from './error'
-import { unannTypeToString } from '../types/ast/utils'
 import { FieldInfo, MethodInfos, SymbolInfo, SymbolTable, VariableInfo } from './symbol-table'
 
 type Label = {
@@ -443,7 +443,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   ReturnStatement: (node: Node, cg: CodeGenerator) => {
     const { exp: expr } = node as ReturnStatement
-    
+
     // Emit finally blocks from innermost to outermost before returning
     for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
       const finallyBlock = cg.finallyBlockStack[i] as any
@@ -451,7 +451,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         compile(stmt, cg)
       })
     }
-    
+
     if (expr) {
       const { stackSize: stackSize, resultType: resultType } = compile(expr, cg)
       cg.code.push(resultType in returnOp ? returnOp[resultType] : OPCODE.ARETURN)
@@ -470,7 +470,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         compile(stmt, cg)
       })
     }
-    
+
     if (cg.loopLabels.length > 0) {
       // If inside a loop, break jumps to the end of the loop
       cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][1])
@@ -491,7 +491,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         compile(stmt, cg)
       })
     }
-    
+
     cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][0])
     return { stackSize: 0, resultType: EMPTY_TYPE }
   },
@@ -668,7 +668,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           try {
             catchClassName = cg.symbolTable.queryClass(catchTypeName).name
           } catch (e) {
-            catchClassName = catchTypeName.includes('/') ? catchTypeName : catchTypeName.replace(/\./g, '/')
+            catchClassName = catchTypeName.includes('/')
+              ? catchTypeName
+              : catchTypeName.replace(/\./g, '/')
           }
           const catchTypeIndex = cg.constantPoolManager.indexClassInfo(catchClassName)
 
