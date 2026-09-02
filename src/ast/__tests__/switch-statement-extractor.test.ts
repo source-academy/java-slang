@@ -429,7 +429,6 @@ describe("extract SwitchStatement correctly", () => {
     };
 
     const ast = parse(programStr);
-    console.log(JSON.stringify(ast, null, 2));
     expect(ast).toEqual(expectedAst);
   });
 });
