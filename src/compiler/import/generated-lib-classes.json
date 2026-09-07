@@ -34,7 +34,6 @@
   "java/lang/IllegalAccessError.class",
   "java/lang/IllegalAccessException.class",
   "java/lang/IllegalArgumentException.class",
-  "java/lang/IllegalCallerException.class",
   "java/lang/IllegalMonitorStateException.class",
   "java/lang/IllegalStateException.class",
   "java/lang/IllegalThreadStateException.class",
@@ -46,10 +45,8 @@
   "java/lang/InternalError.class",
   "java/lang/InterruptedException.class",
   "java/lang/Iterable.class",
-  "java/lang/LayerInstantiationException.class",
   "java/lang/LinkageError.class",
   "java/lang/Long.class",
-  "java/lang/MatchException.class",
   "java/lang/Math.class",
   "java/lang/NegativeArraySizeException.class",
   "java/lang/NoClassDefFoundError.class",
@@ -83,9 +80,6 @@
   "java/lang/VerifyError.class",
   "java/lang/VirtualMachineError.class",
   "java/lang/Void.class",
-  "java/lang/WrongThreadException.class",
-  "java/lang/constant/Constable.class",
-  "java/lang/constant/ConstantDesc.class",
   "java/util/Arrays.class",
   "java/util/Objects.class"
 ]

@@ -86,8 +86,8 @@ export const libraries: LibInfo = rawLibInfo.packages.map(p => {
 
 /**
  * Authoritative catalogue of the standard-library classes the compiler
- * recognises, derived from `generated-lib-info.json` (extracted from the real
- * `std-lib` class files) and unioned with the curated `lib-info.ts` entries.
+ * recognises, derived from `generated-lib-info.json` (extracted from the JDK
+ * class tree) and unioned with the curated `lib-info.ts` entries.
  * Used to verify `import` declarations without a hand-maintained list.
  */
 const knownClassNames = new Set<string>(Object.keys(generatedLibInfo))
