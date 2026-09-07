@@ -14,6 +14,7 @@ import {
   SymbolRedeclarationError,
   UnresolvedImportError
 } from './error'
+import { generatedLibInfo } from './import/generated-lib-info'
 import { knownClasses, knownPackages, libraries } from './import/libs'
 
 export const typeMap = new Map([
@@ -85,6 +86,18 @@ function generateSymbol(name: string, type: SymbolType) {
   return JSON.stringify(symbol)
 }
 
+/**
+ * Extracts the symbol-table `typeName` for a field from its JVM descriptor:
+ * the internal class name for object types, or the raw descriptor for
+ * primitives and arrays (which are not used as lookup keys).
+ */
+function descriptorToTypeName(descriptor: string): string {
+  let d = descriptor
+  while (d.startsWith('[')) d = d.slice(1)
+  if (d.startsWith('L') && d.endsWith(';')) return d.slice(1, -1)
+  return descriptor
+}
+
 export class SymbolTable {
   private tables: Array<Table>
   private curTable: Table
@@ -102,10 +115,17 @@ export class SymbolTable {
   }
 
   private setup() {
+    // The extracted class-file metadata is authoritative; it is registered
+    // first so its full signatures win over the curated `lib-info.ts` stubs.
+    this.setupGeneratedLibrary()
+
     libraries.forEach(p => {
       if (this.importedPackages.findIndex(e => e == p.packageName + '/') == -1)
         this.importedPackages.push(p.packageName + '/')
       p.classes.forEach(c => {
+        if (this.tables[0].has(generateSymbol(c.className, SymbolType.CLASS))) {
+          return
+        }
         this.insertClassInfo({
           name: c.className,
           accessFlags: generateClassAccessFlags(c.accessFlags)
@@ -130,6 +150,45 @@ export class SymbolTable {
         )
         this.returnToRoot()
       })
+    })
+  }
+
+  /**
+   * Registers every standard-library class from the extracted class-file
+   * metadata. Descriptors and access flags come straight from the `.class`
+   * files, so no hand-written signatures are involved.
+   */
+  private setupGeneratedLibrary() {
+    Object.values(generatedLibInfo).forEach(meta => {
+      const classKey = generateSymbol(meta.name, SymbolType.CLASS)
+      if (this.tables[0].has(classKey)) {
+        return
+      }
+
+      this.insertClassInfo({
+        name: meta.name,
+        accessFlags: meta.accessFlags,
+        parentClassName: meta.superClass ?? undefined
+      })
+      meta.fields.forEach(f =>
+        this.insertFieldInfo({
+          name: f.name,
+          accessFlags: f.accessFlags,
+          parentClassName: meta.name,
+          typeName: descriptorToTypeName(f.descriptor),
+          typeDescriptor: f.descriptor
+        })
+      )
+      meta.methods.forEach(m =>
+        this.insertMethodInfo({
+          name: m.name,
+          accessFlags: m.accessFlags,
+          parentClassName: meta.name,
+          typeDescriptor: m.descriptor,
+          className: meta.name
+        })
+      )
+      this.returnToRoot()
     })
   }
 
