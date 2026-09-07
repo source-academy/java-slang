@@ -55,7 +55,6 @@ export class Compiler {
   compile(ast: AST) {
     this.setup()
     this.symbolTable.handleImports(ast.importDeclarations)
-    const classFiles: Array<Class> = []
     const declarations = [
       ...ast.topLevelClassOrInterfaceDeclarations,
       ...ast.topLevelClassOrInterfaceDeclarations.flatMap(declaration =>
@@ -65,6 +64,8 @@ export class Compiler {
       )
     ]
 
+    // Enums are compiled first so their synthetic members are in the symbol
+    // table before the classes that reference them are compiled.
     const compilationOrder = [
       ...declarations.filter(declaration => declaration.kind === 'EnumDeclaration'),
       ...declarations.filter(declaration => declaration.kind !== 'EnumDeclaration')
@@ -72,10 +73,7 @@ export class Compiler {
 
     declarations.forEach(decl => {
       const className = decl.typeIdentifier
-      const parentClassName =
-        'sclass' in decl && decl.sclass
-            ? decl.sclass
-            : 'java/lang/Object'
+      const parentClassName = 'sclass' in decl && decl.sclass ? decl.sclass : 'java/lang/Object'
       const accessFlags = generateClassAccessFlags(decl.classModifier)
       this.symbolTable.insertClassInfo({
         name: className,
@@ -86,27 +84,23 @@ export class Compiler {
       this.symbolTable.returnToRoot()
     })
 
+    const compiled = new Map<(typeof declarations)[number], Class>()
     compilationOrder.forEach(decl => {
       this.resetClassFileState()
-      if (decl.kind === 'EnumDeclaration') {
-        const classFile = this.compileEnum(decl)
-        classFiles.push({ classFile: classFile, className: this.className })
-      } else {
-        const classFile = this.compileClass(decl)
-        classFiles.push({ classFile: classFile, className: this.className })
-      }
+      const classFile =
+        decl.kind === 'EnumDeclaration' ? this.compileEnum(decl) : this.compileClass(decl)
+      compiled.set(decl, { classFile: classFile, className: this.className })
     })
 
-    return classFiles
+    // Return in declaration order (top-level types first, then member enums) so
+    // the entry class stays at index 0 regardless of compilation order.
+    return declarations.map(decl => compiled.get(decl) as Class)
   }
 
   private getMemberEnums(classBody: Array<ClassBodyDeclaration>): Array<EnumDeclaration> {
     return classBody.flatMap(declaration => {
       if (declaration.kind !== 'EnumDeclaration') return []
-      return [
-        declaration,
-        ...this.getMemberEnums(declaration.enumBody.bodyMembers || [])
-      ]
+      return [declaration, ...this.getMemberEnums(declaration.enumBody.bodyMembers || [])]
     })
   }
 
@@ -160,7 +154,7 @@ export class Compiler {
     const enumBody = enumNode.enumBody
     const enumConstants = enumBody.constants || []
     const bodyMembers = enumBody.bodyMembers || []
-    
+
     // Add enum constants as static fields
     enumConstants.forEach((constant: any, ordinal: number) => {
       const fieldDescriptor = 'L' + this.className + ';'
@@ -181,7 +175,7 @@ export class Compiler {
       })
       this.enumOrdinals.set(constant.name, ordinal)
     })
-    
+
     // Add synthetic $VALUES field (private static final)
     const valuesFieldDescriptor = '[L' + this.className + ';'
     this.fields.push({
@@ -199,14 +193,14 @@ export class Compiler {
       attributesCount: 0,
       attributes: []
     })
-    
+
     if (bodyMembers.length === 0) {
       this.addEnumConstructor()
       this.addEnumOrdinalMethod()
     } else {
       this.handleClassBody(bodyMembers)
     }
-    
+
     // Add synthetic methods
     this.addEnumValuesMethod(enumConstants)
     this.addEnumValueOfMethod(enumConstants)
@@ -234,11 +228,7 @@ export class Compiler {
   }
 
   private addEnumConstructor() {
-    const bytecode = [
-      0x19,
-      0x00,
-      0xb7
-    ]
+    const bytecode = [0x19, 0x00, 0xb7]
     const constructorRef = this.constantPoolManager.indexMethodrefInfo(
       'java/lang/Object',
       '<init>',
@@ -274,7 +264,11 @@ export class Compiler {
 
   private addEnumOrdinalMethod() {
     const fieldRef = this.constantPoolManager.indexFieldrefInfo(this.className, '$ordinal', 'I')
-    const codeAttribute = this.createEnumCodeAttribute([0x19, 0x00, 0xb4, fieldRef >> 8, fieldRef & 0xff, 0xac], 1, 1)
+    const codeAttribute = this.createEnumCodeAttribute(
+      [0x19, 0x00, 0xb4, fieldRef >> 8, fieldRef & 0xff, 0xac],
+      1,
+      1
+    )
 
     this.methods.push({
       accessFlags: 0x0001,
@@ -311,31 +305,39 @@ export class Compiler {
     // public static EnumClass[] values() { return $VALUES.clone(); }
     const nameIndex = this.constantPoolManager.indexUtf8Info('values')
     const descriptorIndex = this.constantPoolManager.indexUtf8Info('()[L' + this.className + ';')
-    
+
     // Generate bytecode: getstatic $VALUES, invokevirtual clone, areturn
     const bytecode: number[] = []
-    
+
     // getstatic $VALUES
     bytecode.push(0xb2) // getstatic
-    const valuesFieldRef = this.constantPoolManager.indexFieldrefInfo(this.className, '$VALUES', '[L' + this.className + ';')
+    const valuesFieldRef = this.constantPoolManager.indexFieldrefInfo(
+      this.className,
+      '$VALUES',
+      '[L' + this.className + ';'
+    )
     bytecode.push((valuesFieldRef >> 8) & 0xff)
     bytecode.push(valuesFieldRef & 0xff)
-    
+
     // invokevirtual Object.clone()
     bytecode.push(0xb6) // invokevirtual
-    const cloneMethodRef = this.constantPoolManager.indexMethodrefInfo('java/lang/Object', 'clone', '()Ljava/lang/Object;')
+    const cloneMethodRef = this.constantPoolManager.indexMethodrefInfo(
+      'java/lang/Object',
+      'clone',
+      '()Ljava/lang/Object;'
+    )
     bytecode.push((cloneMethodRef >> 8) & 0xff)
     bytecode.push(cloneMethodRef & 0xff)
-    
+
     // checkcast to array type
     bytecode.push(0xc0) // checkcast
     const arrayTypeRef = this.constantPoolManager.indexClassInfo('[L' + this.className + ';')
     bytecode.push((arrayTypeRef >> 8) & 0xff)
     bytecode.push(arrayTypeRef & 0xff)
-    
+
     // areturn
     bytecode.push(0xb0)
-    
+
     const codeAttribute: any = {
       attributeNameIndex: this.constantPoolManager.indexUtf8Info('Code'),
       attributeLength: 12 + bytecode.length,
@@ -348,7 +350,7 @@ export class Compiler {
       attributesCount: 0,
       attributes: []
     }
-    
+
     this.methods.push({
       accessFlags: 0x0009, // public static
       nameIndex: nameIndex,
@@ -358,44 +360,50 @@ export class Compiler {
     })
     // Register in symbol table
     this.symbolTable.insertMethodInfo({
-     name: 'values',
-     accessFlags: 0x0009, // public static
-     parentClassName: this.className,
-     typeDescriptor: '()[L' + this.className + ';',
-     className: this.className
+      name: 'values',
+      accessFlags: 0x0009, // public static
+      parentClassName: this.className,
+      typeDescriptor: '()[L' + this.className + ';',
+      className: this.className
     })
   }
 
   private addEnumValueOfMethod(enumConstants: any[]) {
     // public static EnumClass valueOf(String name) { return (EnumClass) Enum.valueOf(EnumClass.class, name); }
     const nameIndex = this.constantPoolManager.indexUtf8Info('valueOf')
-    const descriptorIndex = this.constantPoolManager.indexUtf8Info('(Ljava/lang/String;)L' + this.className + ';')
-    
+    const descriptorIndex = this.constantPoolManager.indexUtf8Info(
+      '(Ljava/lang/String;)L' + this.className + ';'
+    )
+
     const bytecode: number[] = []
-    
+
     // ldc EnumClass.class
     bytecode.push(0x12) // ldc
     const classRefIndex = this.constantPoolManager.indexClassInfo(this.className)
     bytecode.push(classRefIndex & 0xff)
-    
+
     // aload_0 (String name parameter)
     bytecode.push(0x19)
     bytecode.push(0x00)
-    
+
     // invokestatic java/lang/Enum.valueOf(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;
     bytecode.push(0xb8) // invokestatic
-    const valueOfRef = this.constantPoolManager.indexMethodrefInfo('java/lang/Enum', 'valueOf', '(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;')
+    const valueOfRef = this.constantPoolManager.indexMethodrefInfo(
+      'java/lang/Enum',
+      'valueOf',
+      '(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;'
+    )
     bytecode.push((valueOfRef >> 8) & 0xff)
     bytecode.push(valueOfRef & 0xff)
-    
+
     // checkcast to enum type
     bytecode.push(0xc0) // checkcast
     bytecode.push((classRefIndex >> 8) & 0xff)
     bytecode.push(classRefIndex & 0xff)
-    
+
     // areturn
     bytecode.push(0xb0)
-    
+
     const codeAttribute: any = {
       attributeNameIndex: this.constantPoolManager.indexUtf8Info('Code'),
       attributeLength: 12 + bytecode.length,
@@ -408,7 +416,7 @@ export class Compiler {
       attributesCount: 0,
       attributes: []
     }
-    
+
     this.methods.push({
       accessFlags: 0x0009, // public static
       nameIndex: nameIndex,
