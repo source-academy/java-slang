@@ -13,6 +13,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc --build --force",
+    "build:lib-info": "tsc --build --force && node dist/compiler/import/build-lib-info.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "jsdoc": "typedoc --plugin typedoc-plugin-rename-defaults",

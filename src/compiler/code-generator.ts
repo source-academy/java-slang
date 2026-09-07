@@ -206,6 +206,94 @@ function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGener
   return false
 }
 
+// Primitive descriptor -> its wrapper class' internal name.
+const PRIMITIVE_WRAPPERS: { [primitive: string]: string } = {
+  Z: 'java/lang/Boolean',
+  B: 'java/lang/Byte',
+  S: 'java/lang/Short',
+  C: 'java/lang/Character',
+  I: 'java/lang/Integer',
+  J: 'java/lang/Long',
+  F: 'java/lang/Float',
+  D: 'java/lang/Double'
+}
+
+// Primitive descriptor -> the wrapper accessor that unboxes it.
+const WRAPPER_UNBOX_METHODS: { [primitive: string]: string } = {
+  Z: 'booleanValue',
+  B: 'byteValue',
+  S: 'shortValue',
+  C: 'charValue',
+  I: 'intValue',
+  J: 'longValue',
+  F: 'floatValue',
+  D: 'doubleValue'
+}
+
+// Wrapper class descriptor -> the primitive it unboxes to.
+const WRAPPER_DESCRIPTOR_TO_PRIMITIVE: { [descriptor: string]: string } = {
+  'Ljava/lang/Boolean;': 'Z',
+  'Ljava/lang/Byte;': 'B',
+  'Ljava/lang/Short;': 'S',
+  'Ljava/lang/Character;': 'C',
+  'Ljava/lang/Integer;': 'I',
+  'Ljava/lang/Long;': 'J',
+  'Ljava/lang/Float;': 'F',
+  'Ljava/lang/Double;': 'D'
+}
+
+/**
+ * If `type` is a wrapper class descriptor, emits the unbox call (assuming the
+ * wrapper reference is on top of the stack) and returns the primitive
+ * descriptor. Otherwise returns `type` unchanged and emits nothing.
+ */
+function unboxIfWrapper(type: string, cg: CodeGenerator): string {
+  const primitive = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[type]
+  if (!primitive) return type
+  const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+    type.replace(/^L|;$/g, ''),
+    WRAPPER_UNBOX_METHODS[primitive],
+    `()${primitive}`
+  )
+  cg.code.push(OPCODE.INVOKEVIRTUAL, 0, methodRef)
+  return primitive
+}
+
+/**
+ * Emits an autobox (`Wrapper.valueOf`) or unbox (`wrapper.xxxValue()`) call when
+ * converting between a primitive and its exact wrapper class. Returns the net
+ * operand-stack size change, or `null` if this is not a boxing conversion.
+ */
+function tryBoxingConversion(fromType: string, toType: string, cg: CodeGenerator): number | null {
+  const isWide = (primitive: string) => primitive === 'J' || primitive === 'D'
+
+  // primitive -> wrapper
+  const boxTarget = PRIMITIVE_WRAPPERS[fromType]
+  if (boxTarget && toType.replace(/^L|;$/g, '') === boxTarget) {
+    const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+      boxTarget,
+      'valueOf',
+      `(${fromType})L${boxTarget};`
+    )
+    cg.code.push(OPCODE.INVOKESTATIC, 0, methodRef)
+    return isWide(fromType) ? -1 : 0
+  }
+
+  // wrapper -> primitive
+  const unboxSource = PRIMITIVE_WRAPPERS[toType]
+  if (unboxSource && fromType.replace(/^L|;$/g, '') === unboxSource) {
+    const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+      unboxSource,
+      WRAPPER_UNBOX_METHODS[toType],
+      `()${toType}`
+    )
+    cg.code.push(OPCODE.INVOKEVIRTUAL, 0, methodRef)
+    return isWide(toType) ? 1 : 0
+  }
+
+  return null
+}
+
 function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator): number {
   if (fromType === toType || toType.replace(/^L|;$/g, '') === 'java/lang/String') {
     return 0
@@ -214,6 +302,10 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
   if (fromType.startsWith('L') || toType.startsWith('L')) {
     if (areClassTypesCompatible(fromType, toType, cg) || fromType === '') {
       return 0
+    }
+    const boxingStackChange = tryBoxingConversion(fromType, toType, cg)
+    if (boxingStackChange !== null) {
+      return boxingStackChange
     }
     throw new Error(`Unsupported class type conversion: ${fromType} -> ${toType}`)
   }
@@ -444,18 +536,33 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   ReturnStatement: (node: Node, cg: CodeGenerator) => {
     const { exp: expr } = node as ReturnStatement
 
-    // Emit finally blocks from innermost to outermost before returning
-    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
-      const finallyBlock = cg.finallyBlockStack[i] as any
-      finallyBlock.blockStatements.forEach((stmt: any) => {
-        compile(stmt, cg)
-      })
-    }
-
     if (expr) {
       const { stackSize: stackSize, resultType: resultType } = compile(expr, cg)
+      if (cg.finallyBlockStack.length > 0) {
+        const tempIndex = cg.maxLocals
+        cg.maxLocals += ['J', 'D'].includes(resultType) ? 2 : 1
+        cg.code.push(
+          resultType in normalStoreOp ? normalStoreOp[resultType] : OPCODE.ASTORE,
+          tempIndex
+        )
+
+        for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
+          const finallyBlock = cg.finallyBlockStack[i] as any
+          finallyBlock.blockStatements.forEach((stmt: any) => compile(stmt, cg))
+        }
+
+        cg.code.push(
+          resultType in normalLoadOp ? normalLoadOp[resultType] : OPCODE.ALOAD,
+          tempIndex
+        )
+      }
       cg.code.push(resultType in returnOp ? returnOp[resultType] : OPCODE.ARETURN)
       return { stackSize, resultType }
+    }
+
+    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
+      const finallyBlock = cg.finallyBlockStack[i] as any
+      finallyBlock.blockStatements.forEach((stmt: any) => compile(stmt, cg))
     }
 
     cg.code.push(OPCODE.RETURN)
@@ -1260,7 +1367,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         cg.addBranchInstr(op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
       } else {
         l = compile(left, cg)
+        l.resultType = unboxIfWrapper(l.resultType, cg)
         r = compile(right, cg)
+        r.resultType = unboxIfWrapper(r.resultType, cg)
         cg.addBranchInstr(reverseLogicalOp[op], targetLabel)
       }
       cg.code.push(OPCODE.ICONST_1)
@@ -1275,10 +1384,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     }
 
-    const { stackSize: size1, resultType: leftType } = compile(left, cg)
+    const leftCompiled = compile(left, cg)
+    // Unbox a wrapper operand to its primitive before arithmetic / comparison.
+    const leftType = unboxIfWrapper(leftCompiled.resultType, cg)
+    const size1 = Math.max(leftCompiled.stackSize, ['J', 'D'].includes(leftType) ? 2 : 1)
     const insertConversionIndex = cg.code.length
     cg.code.push(OPCODE.NOP)
-    const { stackSize: size2, resultType: rightType } = compile(right, cg)
+    const rightCompiled = compile(right, cg)
+    const rightType = unboxIfWrapper(rightCompiled.resultType, cg)
+    const size2 = Math.max(rightCompiled.stackSize, ['J', 'D'].includes(rightType) ? 2 : 1)
 
     if (op === '+' && (leftType === 'Ljava/lang/String;' || rightType === 'Ljava/lang/String;')) {
       if (leftType !== 'Ljava/lang/String;') {

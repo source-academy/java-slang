@@ -6,45 +6,106 @@ import { CannotFindSymbolError, TypeCheckerError, VariableAlreadyDefinedError } 
 import { Array } from '../types/arrays'
 import { Class, ClassType } from '../types/classes'
 import { Location } from '../ast/specificationTypes'
+import { libraries } from '../../compiler/import/libs'
+import { generatedLibInfo } from '../../compiler/import/generated-lib-info'
 import { isArrayType, removeArraySuffix } from './arrays'
 
-const SYSTEM_CLASS = new ClassType('System')
-const PRINTSTREAM_CLASS = new ClassType('PrintStream')
-SYSTEM_CLASS.addField('out', PRINTSTREAM_CLASS, { startLine: -1, startOffset: -1 })
-const PRINTLN_METHOD_1 = new Method('println')
-PRINTLN_METHOD_1.addParameter(new Parameter('message', new NonPrimitives.String()))
-const PRINTLN_METHOD_2 = new Method('println')
-PRINTLN_METHOD_2.addParameter(new Parameter('message', new Primitives.Int()))
-PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_1, { startLine: -1, startOffset: -1 })
-PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_2, { startLine: -1, startOffset: -1 })
-
-const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
-  boolean: new Primitives.Boolean(),
-  byte: new Primitives.Byte(),
-  char: new Primitives.Char(),
-  double: new Primitives.Double(),
-  float: new Primitives.Float(),
-  int: new Primitives.Int(),
-  long: new Primitives.Long(),
-  short: new Primitives.Short(),
-  void: new NonPrimitives.Void(),
-  Boolean: new NonPrimitives.Boolean(),
-  Byte: new NonPrimitives.Byte(),
-  Character: new NonPrimitives.Character(),
-  Double: new NonPrimitives.Double(),
-  Float: new NonPrimitives.Float(),
-  Integer: new NonPrimitives.Integer(),
-  Long: new NonPrimitives.Long(),
-  Short: new NonPrimitives.Short(),
-  String: new NonPrimitives.String(),
-
-  // Hard coded variables
-  System: SYSTEM_CLASS,
-  Throwable: new NonPrimitives.Throwable(),
-  Exception: new NonPrimitives.Exception(),
-  // enum base type
-  Enum: new ClassType('Enum')
+const BUILT_IN_TYPE_FACTORIES: { [name: string]: () => Type } = {
+  boolean: () => new Primitives.Boolean(),
+  byte: () => new Primitives.Byte(),
+  char: () => new Primitives.Char(),
+  double: () => new Primitives.Double(),
+  float: () => new Primitives.Float(),
+  int: () => new Primitives.Int(),
+  long: () => new Primitives.Long(),
+  short: () => new Primitives.Short(),
+  void: () => new NonPrimitives.Void(),
+  Boolean: () => new NonPrimitives.Boolean(),
+  Byte: () => new NonPrimitives.Byte(),
+  Character: () => new NonPrimitives.Character(),
+  Double: () => new NonPrimitives.Double(),
+  Float: () => new NonPrimitives.Float(),
+  Integer: () => new NonPrimitives.Integer(),
+  Long: () => new NonPrimitives.Long(),
+  Short: () => new NonPrimitives.Short(),
+  String: () => new NonPrimitives.String(),
+  // Base type that all enum declarations implicitly extend.
+  Enum: () => new ClassType('Enum')
 }
+
+const simpleNameOf = (internalOrQualifiedName: string): string =>
+  internalOrQualifiedName.replaceAll('.', '/').split('/').pop() || internalOrQualifiedName
+
+const stdlibTypeMap = new Map<string, Type>()
+
+const createType = (typeName: string): Type => {
+  if (stdlibTypeMap.has(typeName)) return stdlibTypeMap.get(typeName)!
+
+  const factory = BUILT_IN_TYPE_FACTORIES[typeName]
+  const type = factory ? factory() : new ClassType(typeName)
+  stdlibTypeMap.set(typeName, type)
+  return type
+}
+
+const parseType = (typeName: string): Type => {
+  if (typeName.endsWith('[]')) {
+    return new Array(parseType(typeName.slice(0, -2)))
+  }
+  return createType(typeName.replaceAll('/', '.').split('.').pop() || typeName)
+}
+
+const buildStandardLibraryTypes = (): { [key: string]: Type } => {
+  // Preload built-in type objects
+  Object.keys(BUILT_IN_TYPE_FACTORIES).forEach(typeName => createType(typeName))
+
+  libraries.forEach(pkg => {
+    pkg.classes.forEach(clazz => {
+      const className = simpleNameOf(clazz.className)
+      createType(className)
+    })
+  })
+
+  libraries.forEach(pkg => {
+    pkg.classes.forEach(clazz => {
+      const className = simpleNameOf(clazz.className)
+      const classType = createType(className)
+      if (!(classType instanceof ClassType)) return
+
+      clazz.fields.forEach(field => {
+        const fieldType = parseType(field.typeName)
+        classType.addField(field.fieldName, fieldType, { startLine: -1, startOffset: -1 })
+      })
+
+      clazz.methods.forEach(methodInfo => {
+        const method = new Method(methodInfo.methodName, parseType(methodInfo.returnTypeName))
+        methodInfo.argsTypeName.forEach((argTypeName, index) => {
+          const parameter = new Parameter(`arg${index}`, parseType(argTypeName))
+          method.addParameter(parameter)
+        })
+        classType.addMethod(methodInfo.methodName, method, { startLine: -1, startOffset: -1 })
+      })
+    })
+  })
+
+  // Derive class inheritance from the extracted standard-library metadata
+  // instead of a hand-maintained table. Only edges between types the checker
+  // already knows about (created from `libraries` above) are wired up.
+  Object.values(generatedLibInfo).forEach(meta => {
+    if (meta.superClass === null) return
+    const childName = simpleNameOf(meta.name)
+    const parentName = simpleNameOf(meta.superClass)
+    if (childName === parentName) return
+    const childType = stdlibTypeMap.get(childName)
+    const parentType = stdlibTypeMap.get(parentName)
+    if (childType instanceof ClassType && parentType instanceof ClassType) {
+      childType.setParentClass(parentType)
+    }
+  })
+
+  return Object.fromEntries(stdlibTypeMap.entries())
+}
+
+const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = buildStandardLibraryTypes()
 
 export class Frame {
   private _currentClass: Class
