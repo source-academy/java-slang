@@ -58,15 +58,18 @@ export class Compiler {
       const className = decl.typeIdentifier
       const parentClassName = decl.sclass ? decl.sclass : 'java/lang/Object'
       const accessFlags = generateClassAccessFlags(decl.classModifier)
-      this.symbolTable.insertClassInfo(
-        { name: className, accessFlags: accessFlags, parentClassName: parentClassName })
+      this.symbolTable.insertClassInfo({
+        name: className,
+        accessFlags: accessFlags,
+        parentClassName: parentClassName
+      })
       this.symbolTable.returnToRoot()
     })
 
     ast.topLevelClassOrInterfaceDeclarations.forEach(decl => {
       this.resetClassFileState()
       const classFile = this.compileClass(decl)
-      classFiles.push({classFile: classFile, className: this.className})
+      classFiles.push({ classFile: classFile, className: this.className })
     })
 
     return classFiles
