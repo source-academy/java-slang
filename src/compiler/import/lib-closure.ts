@@ -43,6 +43,7 @@ export const SEED_CLASSES: string[] = [
   'java/lang/CharSequence',
   'java/lang/Iterable',
   'java/lang/Runnable',
+  'java/lang/Enum',
   'java/lang/Throwable',
   // java.io
   'java/io/PrintStream',

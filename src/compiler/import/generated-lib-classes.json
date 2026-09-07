@@ -25,6 +25,7 @@
   "java/lang/CloneNotSupportedException.class",
   "java/lang/Comparable.class",
   "java/lang/Double.class",
+  "java/lang/Enum.class",
   "java/lang/EnumConstantNotPresentException.class",
   "java/lang/Error.class",
   "java/lang/Exception.class",

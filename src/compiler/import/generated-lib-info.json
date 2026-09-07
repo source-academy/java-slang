@@ -2388,6 +2388,79 @@
       }
     ]
   },
+  "java/lang/Enum": {
+    "name": "java/lang/Enum",
+    "accessFlags": 1057,
+    "superClass": "java/lang/Object",
+    "interfaces": [
+      "java/io/Serializable",
+      "java/lang/Comparable",
+      "java/lang/constant/Constable"
+    ],
+    "fields": [],
+    "methods": [
+      {
+        "name": "<init>",
+        "descriptor": "(Ljava/lang/String;I)V",
+        "accessFlags": 4
+      },
+      {
+        "name": "clone",
+        "descriptor": "()Ljava/lang/Object;",
+        "accessFlags": 20
+      },
+      {
+        "name": "compareTo",
+        "descriptor": "(Ljava/lang/Enum;)I",
+        "accessFlags": 17
+      },
+      {
+        "name": "describeConstable",
+        "descriptor": "()Ljava/util/Optional;",
+        "accessFlags": 17
+      },
+      {
+        "name": "equals",
+        "descriptor": "(Ljava/lang/Object;)Z",
+        "accessFlags": 17
+      },
+      {
+        "name": "finalize",
+        "descriptor": "()V",
+        "accessFlags": 20
+      },
+      {
+        "name": "getDeclaringClass",
+        "descriptor": "()Ljava/lang/Class;",
+        "accessFlags": 17
+      },
+      {
+        "name": "hashCode",
+        "descriptor": "()I",
+        "accessFlags": 17
+      },
+      {
+        "name": "name",
+        "descriptor": "()Ljava/lang/String;",
+        "accessFlags": 17
+      },
+      {
+        "name": "ordinal",
+        "descriptor": "()I",
+        "accessFlags": 17
+      },
+      {
+        "name": "toString",
+        "descriptor": "()Ljava/lang/String;",
+        "accessFlags": 1
+      },
+      {
+        "name": "valueOf",
+        "descriptor": "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;",
+        "accessFlags": 9
+      }
+    ]
+  },
   "java/lang/EnumConstantNotPresentException": {
     "name": "java/lang/EnumConstantNotPresentException",
     "accessFlags": 33,
