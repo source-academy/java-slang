@@ -21,6 +21,17 @@ import {
   PrimaryPrefixCtx,
   PrimarySuffixCtx,
   ReturnStatementCtx,
+  SwitchStatementCtx,
+  SwitchBlockCtx,
+  SwitchLabelCtx,
+  SwitchBlockStatementGroupCtx,
+  ThrowStatementCtx,
+  TryStatementCtx,
+  CatchClauseCtx,
+  CatchFormalParameterCtx,
+  CatchTypeCtx,
+  CatchesCtx,
+  FinallyCtx,
   StatementCstNode,
   StatementExpressionCtx,
   StatementWithoutTrailingSubstatementCtx,
@@ -32,13 +43,17 @@ import {
   ExpressionStatementCtx,
   LocalVariableTypeCtx,
   VariableDeclaratorListCtx,
-  VariableDeclaratorCtx,
-} from "java-parser";
+  VariableDeclaratorCtx
+} from 'java-parser'
 import {
   BasicForStatement,
   ExpressionStatement,
   IfStatement,
   MethodInvocation,
+  SwitchStatement,
+  SwitchCase,
+  CaseLabel,
+  DefaultLabel,
   Statement,
   StatementExpression,
   VariableDeclarator,
@@ -80,6 +95,8 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
       return { kind: "BreakStatement" };
     } else if (ctx.continueStatement) {
       return { kind: "ContinueStatement" };
+    } else if (ctx.switchStatement) {
+      return this.visit(ctx.switchStatement);
     } else if (ctx.returnStatement) {
       const returnStatementExp = this.visit(ctx.returnStatement);
       return {
@@ -87,7 +104,126 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
         exp: returnStatementExp,
         location: ctx.returnStatement[0].location,
       };
+    } else if (ctx.throwStatement) {
+      return this.visit(ctx.throwStatement);
+    } else if (ctx.tryStatement) {
+      return this.visit(ctx.tryStatement);
     }
+  }
+
+  switchStatement(ctx: SwitchStatementCtx): SwitchStatement {
+    const expressionExtractor = new ExpressionExtractor();
+
+    return {
+      kind: "SwitchStatement",
+      expression: expressionExtractor.extract(ctx.expression[0]),
+      cases: ctx.switchBlock
+        ? this.visit(ctx.switchBlock)
+        : [],
+      location: ctx.Switch[0]
+    };
+  }
+
+  switchBlock(ctx: SwitchBlockCtx): Array<SwitchCase> {
+    const cases: Array<SwitchCase> = [];
+    let currentCase: SwitchCase;
+
+    ctx.switchBlockStatementGroup?.forEach((group) => {
+      const extractedCase = this.visit(group);
+
+      if (!currentCase) {
+        // First case in the switch block
+        currentCase = extractedCase;
+        cases.push(currentCase);
+      } else if (currentCase.statements && currentCase.statements.length === 0) {
+        // Fallthrough case, merge labels
+        currentCase.labels.push(...extractedCase.labels);
+      } else {
+        // New case with statements starts, push previous case and start new one
+        currentCase = extractedCase;
+        cases.push(currentCase);
+      }
+    });
+
+    return cases;
+  }
+
+  switchBlockStatementGroup(ctx: SwitchBlockStatementGroupCtx): SwitchCase {
+    const blockStatementExtractor = new BlockStatementExtractor();
+
+
+    return {
+      kind: "SwitchCase",
+      labels: ctx.switchLabel.flatMap((label) => this.visit(label)),
+      statements: ctx.blockStatements
+        ? ctx.blockStatements.flatMap((blockStatements) =>
+          blockStatements.children.blockStatement.map((stmt) =>
+            blockStatementExtractor.extract(stmt)
+          )
+        )
+        : [],
+    };
+  }
+
+  // switchLabel(ctx: SwitchLabelCtx): CaseLabel | DefaultLabel {
+  //   // Check if the context contains a "case" label
+  //   if (ctx.caseOrDefaultLabel?.[0]?.children?.Case) {
+  //     const expressionExtractor = new ExpressionExtractor();
+  //     // @ts-ignore
+  //     const expressionCtx = ctx.caseOrDefaultLabel[0].children.caseLabelElement[0]
+  //       .children.caseConstant[0].children.ternaryExpression[0].children;
+  //
+  //     // Ensure the expression context is valid before proceeding
+  //     if (!expressionCtx) {
+  //       throw new Error("Invalid Case expression in switch label");
+  //     }
+  //
+  //     const expression = expressionExtractor.ternaryExpression(expressionCtx);
+  //
+  //     return {
+  //       kind: "CaseLabel",
+  //       expression: expression,
+  //     };
+  //   }
+  //
+  //   // Check if the context contains a "default" label
+  //   if (ctx.caseOrDefaultLabel?.[0]?.children?.Default) {
+  //     return { kind: "DefaultLabel" };
+  //   }
+  //
+  //   // Throw an error if the context does not match expected patterns
+  //   throw new Error("Invalid switch label: Neither 'case' nor 'default' found");
+  // }
+
+  switchLabel(ctx: SwitchLabelCtx): Array<CaseLabel | DefaultLabel> {
+    const expressionExtractor = new ExpressionExtractor();
+    const labels: Array<CaseLabel | DefaultLabel> = [];
+
+    // Process all case or default labels
+    for (const labelCtx of ctx.caseOrDefaultLabel) {
+      if (labelCtx.children.Case) {
+        // Extract the expression for the case label
+        const expressionCtx = labelCtx.children.caseLabelElement?.[0]
+          ?.children.caseConstant?.[0]?.children.ternaryExpression?.[0]?.children;
+
+        if (!expressionCtx) {
+          throw new Error("Invalid Case expression in switch label");
+        }
+
+        labels.push({
+          kind: "CaseLabel",
+          expression: expressionExtractor.ternaryExpression(expressionCtx),
+        });
+      } else if (labelCtx.children.Default) {
+        labels.push({ kind: "DefaultLabel" });
+      }
+    }
+
+    if (labels.length === 0) {
+      throw new Error("Invalid switch label: Neither 'case' nor 'default' found");
+    }
+
+    return labels;
   }
 
   expressionStatement(ctx: ExpressionStatementCtx): ExpressionStatement {
@@ -231,6 +367,69 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
     return ctx.expression.map((e) => expressionExtractor.extract(e));
   }
 
+  throwStatement(ctx: ThrowStatementCtx) {
+    const expressionExtractor = new ExpressionExtractor();
+    return {
+      kind: "ThrowStatement",
+      expression: expressionExtractor.extract(ctx.expression[0]),
+      location: ctx.Throw[0],
+    };
+  }
+
+  tryStatement(ctx: TryStatementCtx) {
+    return {
+      kind: "TryStatement",
+      block: ctx.block ? this.visit(ctx.block) : { kind: "Block", blockStatements: [], location: ctx.Try![0] },
+      catches: ctx.catches ? this.visit(ctx.catches) : undefined,
+      finally: ctx.finally ? this.visit(ctx.finally) : undefined,
+      location: ctx.Try![0],
+    };
+  }
+
+  catches(ctx: CatchesCtx) {
+    return {
+      kind: "Catches",
+      catchClauses: ctx.catchClause.map((catchClause) => this.visit(catchClause)),
+      location: ctx.catchClause[0].location,
+    };
+  }
+
+  catchClause(ctx: CatchClauseCtx) {
+    return {
+      kind: "CatchClause",
+      catchFormalParameter: this.visit(ctx.catchFormalParameter),
+      block: this.visit(ctx.block),
+      location: ctx.Catch[0],
+    };
+  }
+
+  catchFormalParameter(ctx: CatchFormalParameterCtx) {
+    return {
+      kind: "CatchFormalParameter",
+      catchType: this.visit(ctx.catchType[0]),
+      variableDeclaratorId:
+        ctx.variableDeclaratorId[0].children.Identifier[0].image,
+      location: ctx.catchType[0].location,
+    };
+  }
+
+  catchType(ctx: CatchTypeCtx) {
+    const result = new TypeExtractor().visit(ctx.unannClassType[0] as any);
+      return {
+        kind: "CatchType",
+        unannClassType: result,
+        location: ctx.unannClassType[0].location,
+      };
+  }
+
+  finally(ctx: FinallyCtx) {
+    return {
+      kind: "Finally",
+      block: this.visit(ctx.block),
+      location: ctx.Finally[0],
+    };
+  }
+
   fqnOrRefType(ctx: FqnOrRefTypeCtx) {
     // Assignment LHS, MethodInvocation identifier
     let { name, location } = this.visit(ctx.fqnOrRefTypePartFirst);
@@ -294,8 +493,15 @@ export class StatementExtractor extends BaseJavaCstVisitorWithDefaults {
   }
 
   block(ctx: BlockCtx): Statement {
-    if (ctx.blockStatements) return this.visit(ctx.blockStatements);
-    return { kind: "EmptyStatement" };
+    const location =
+      (ctx.blockStatements?.[0] as any)?.location ||
+      (ctx.LCurly?.[0] as any)?.location ||
+      (ctx.RCurly?.[0] as any)?.location;
+    if (ctx.blockStatements) {
+      const block = this.visit(ctx.blockStatements) as Statement;
+      return { ...block, location };
+    }
+    return { kind: "EmptyStatement", location };
   }
 
   blockStatements(ctx: BlockStatementsCtx): Statement {

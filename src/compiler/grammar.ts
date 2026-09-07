@@ -661,7 +661,21 @@ VariableModifier
   = final
 
 Throws
-  = throw TO_BE_ADDED
+  = throws et:ExceptionTypeList {
+    return addLocInfo({
+      kind: "Throws",
+      exceptionTypeList: et,
+    })
+  }
+
+ExceptionTypeList
+  = e:ExceptionType es:(comma @ExceptionType)* {
+    return [e, ...es];
+  }
+
+ExceptionType
+  = ClassType
+  / TypeIdentifier
 
 ConstructorDeclaration
   = cm:ConstructorModifier* cd:ConstructorDeclarator Throws? cb:ConstructorBody {
@@ -776,7 +790,42 @@ AssertStatement
   = assert Expression (colon Expression) semicolon
 
 SwitchStatement
-  = TO_BE_ADDED
+  = switch lparen expr:Expression rparen lcurly
+      cases:SwitchBlock?
+    rcurly {
+      return addLocInfo({
+        kind: "SwitchStatement",
+        expression: expr,
+        cases: cases ?? [],
+      });
+    }
+
+SwitchBlock
+  = cases:SwitchBlockStatementGroup* {
+      return cases;
+    }
+
+SwitchBlockStatementGroup
+  = labels:SwitchLabel+ stmts:BlockStatement* {
+      return {
+        kind: "SwitchBlockStatementGroup",
+        labels: labels,
+        statements: stmts,
+      };
+    }
+
+SwitchLabel
+  = case expr:Expression colon {
+      return {
+        kind: "CaseLabel",
+        expression: expr,
+      };
+    }
+  / default colon {
+      return {
+        kind: "DefaultLabel",
+      };
+    }
 
 DoStatement
   = do body:Statement while lparen expr:Expression rparen semicolon {
@@ -821,8 +870,74 @@ ThrowStatement
 SynchronizedStatement
   = synchronized lparen Expression rparen Block
 
+Catches
+  = catchClauses:CatchClause+ {
+      return addLocInfo({
+        kind: "Catches",
+        catchClauses,
+      })
+    }
+
+CatchClause
+  = catch lparen catchFormalParameter:CatchFormalParameter rparen block:Block {
+      return addLocInfo({
+        kind: "CatchClause",
+        catchFormalParameter,
+        block,
+      })
+    }
+
+CatchFormalParameter
+  = variableModifiers:VariableModifier* catchType:CatchType variableDeclaratorId:VariableDeclaratorId {
+      return addLocInfo({
+        kind: "CatchFormalParameter",
+        variableModifiers,
+        catchType,
+        variableDeclaratorId,
+      })
+    }
+
+CatchType
+  = unannClassType:UnannClassType classTypes:( _ '|' _ c:ClassType { return c })* {
+      return addLocInfo({
+        kind: "CatchType",
+        unannClassType,
+        classTypes: classTypes.length ? classTypes : undefined,
+      })
+    }
+
+UnannClassType
+  = typeIdentifier:TypeIdentifier {
+      return addLocInfo({
+        kind: "UnannClassType",
+        typeIdentifier: { identifier: typeIdentifier },
+      })
+    }
+
+Finally
+  = finally block:Block {
+      return addLocInfo({
+        kind: "Finally",
+        block,
+      })
+    }
+
 TryStatement
-  = TO_BE_ADDED
+  = try block:Block catches:Catches finallyNode:Finally? {
+      return addLocInfo({
+        kind: "TryStatement",
+        block,
+        catches,
+        finally: finallyNode,
+      })
+    }
+  / try block:Block finallyNode:Finally {
+      return addLocInfo({
+        kind: "TryStatement",
+        block,
+        finally: finallyNode,
+      })
+    }
 
 IfStatement
   = if lparen expr:Expression rparen c:Statement a:(else @Statement)? {
@@ -1081,7 +1196,8 @@ MultiplicativeExpression
   }
 
 UnaryExpression
-  = PostfixExpression
+  = CastExpression
+  / PostfixExpression
   / op:PrefixOp expr:UnaryExpression {
     return addLocInfo({
       kind: "PrefixExpression",
@@ -1089,7 +1205,6 @@ UnaryExpression
       expression: expr,
     })
   }
-  / CastExpression
   / SwitchExpression
 
 PrefixOp
@@ -1109,8 +1224,22 @@ PostfixExpression
   }
 
 CastExpression
-  = lparen PrimitiveType rparen UnaryExpression
-  / lparen ReferenceType rparen (LambdaExpression / !(PlusMinus) UnaryExpression)
+  = lparen t:PrimitiveType rparen expr:UnaryExpression {
+    return addLocInfo({
+      kind: "CastExpression",
+      castType: t,
+      expression: expr,
+      isPrimitiveCast: true,
+    });
+  }
+  / lparen t:ReferenceType rparen expr:(LambdaExpression / !(PlusMinus) UnaryExpression) {
+    return addLocInfo({
+      kind: "CastExpression",
+      castType: t,
+      expression: expr,
+      isPrimitiveCast: false,
+    });
+  }
 
 SwitchExpression
   = SwitchStatement

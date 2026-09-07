@@ -15,6 +15,7 @@ import {
   SourceFileAttribute,
   StackMapFrame
 } from '../../../ClassFile/types/attributes'
+import { ExceptionTable } from '../../exception-table'
 import { ConstantPool } from '../../constant-pool'
 import {
   ConstantClass,
@@ -45,7 +46,8 @@ export const info2Attribute = (info: AttributeInfo, constantPool: ConstantPool):
     case 'Code':
       const code = info as CodeAttribute
       const attr: { [attributeName: string]: IAttribute } = {}
-      const exceptionTable = code.exceptionTable.map(handler => {
+      const exceptionTable = new ExceptionTable(
+        code.exceptionTable.map(handler => {
         return {
           startPc: handler.startPc,
           endPc: handler.endPc,
@@ -54,6 +56,7 @@ export const info2Attribute = (info: AttributeInfo, constantPool: ConstantPool):
             handler.catchType === 0 ? null : (constantPool.get(handler.catchType) as ConstantClass)
         }
       })
+        )
       code.attributes.forEach(element => {
         attr[(constantPool.get(element.attributeNameIndex) as ConstantUtf8).get()] = info2Attribute(
           element,
@@ -244,12 +247,7 @@ export interface Code extends IAttribute {
   codeLength: number
   code: DataView
   exceptionTableLength: number
-  exceptionTable: Array<{
-    startPc: number
-    endPc: number
-    handlerPc: number
-    catchType: ConstantClass | null
-  }>
+  exceptionTable: ExceptionTable
   attributes: {
     [attributeName: string]: IAttribute
   }

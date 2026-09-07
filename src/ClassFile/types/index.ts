@@ -3,6 +3,11 @@ import { ConstantInfo } from './constants'
 import { FieldInfo } from './fields'
 import { MethodInfo } from './methods'
 
+export interface Class {
+  classFile: ClassFile
+  className: string
+}
+
 export interface ClassFile {
   magic: number
   minorVersion: number

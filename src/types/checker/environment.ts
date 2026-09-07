@@ -51,6 +51,8 @@ export class Frame {
   private _variables = new Map<string, Type>()
 
   private _returnType: Type | null = null
+  private _throws: any[] = []
+  private _activeCaughtExceptions: any[] = []
 
   private _parentFrame: Frame | null = null
   private _childrenFrames: Frame[] = []
@@ -69,6 +71,25 @@ export class Frame {
     if (this._returnType) return this._returnType
     if (this._parentFrame) return this._parentFrame.getReturn()
     throw new Error('cannot find return type')
+  }
+
+  public setThrows(exceptions: any[]): void {
+    this._throws = exceptions.slice()
+  }
+
+  public getThrows(): any[] {
+    if (this._throws && this._throws.length > 0) return this._throws.slice()
+    if (this._parentFrame) return this._parentFrame.getThrows()
+    return []
+  }
+
+  public setActiveCaughtExceptions(exceptions: any[]): void {
+    this._activeCaughtExceptions = exceptions.slice()
+  }
+
+  public getActiveCaughtExceptions(): any[] {
+    const parentCaught = this._parentFrame ? this._parentFrame.getActiveCaughtExceptions() : []
+    return parentCaught.concat(this._activeCaughtExceptions)
   }
 
   public getType(name: string, location: Location): Type | TypeCheckerError {

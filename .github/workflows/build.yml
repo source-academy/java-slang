@@ -15,6 +15,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,5 +42,10 @@ jobs:
           distribution: 'oracle'
           java-version: '17'
       - uses: ArtiomTr/jest-coverage-report-action@v2
+        if: github.event_name == 'pull_request'
         with:
           test-script: yarn test
+          annotations: none
+      - name: Run tests
+        if: github.event_name != 'pull_request'
+        run: yarn test

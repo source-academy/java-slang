@@ -12,21 +12,26 @@ This is a bookkeeping of the planned scope of the compiler. It will be updated f
 - Method invocation
 - Non-static import statements
 - Single dimension array declaration/initialization
-
-**Features that are planned to support**
-
-- Class fields (with `public static` access flag)
 - Primitive type variables
+- Class fields (with `public static` access flag)
 - Object instantiation (with `new` keyword)
+- Instance fields/methods
+- Class inheritance
+- Method overloading/overriding
+- Type casting
 
-**Features that will not be supported**
+
+**Features that can possibly be supported in the future**
 
 - Annotations
 - Multiple files, modules, packages
-- Instance fields/methods
 - Interfaces
-- Class inheritance
-- Method overloading/overriding
 - Generics
-- Type casting
+- Exceptions
 
+
+**Testing**
+Unit tests are located in the "__tests__/tests" folder. The main testing file is "__tests__/index.ts", in which the tests to be run can be specified. To run, navigate to the main java-slang folder and run:
+```bash
+$ yarn test src/compiler/__tests__/index.ts
+```
