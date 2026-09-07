@@ -29,8 +29,19 @@ const BUILT_IN_TYPE_FACTORIES: { [name: string]: () => Type } = {
   Long: () => new NonPrimitives.Long(),
   Short: () => new NonPrimitives.Short(),
   String: () => new NonPrimitives.String(),
-  // Base type that all enum declarations implicitly extend.
-  Enum: () => new ClassType('Enum')
+  // Base type that all enum declarations implicitly extend. Carries the
+  // java.lang.Enum instance methods reachable from Source programs.
+  Enum: () => {
+    const enumType = new ClassType('Enum')
+    const loc: Location = { startLine: -1, startOffset: -1 }
+    enumType.addMethod('name', new Method('name', new NonPrimitives.String()), loc)
+    enumType.addMethod('ordinal', new Method('ordinal', new Primitives.Int()), loc)
+    enumType.addMethod('toString', new Method('toString', new NonPrimitives.String()), loc)
+    const compareTo = new Method('compareTo', new Primitives.Int())
+    compareTo.addParameter(new Parameter('o', enumType))
+    enumType.addMethod('compareTo', compareTo, loc)
+    return enumType
+  }
 }
 
 const simpleNameOf = (internalOrQualifiedName: string): string =>

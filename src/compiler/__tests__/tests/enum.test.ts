@@ -1,12 +1,9 @@
-import {
-  runTest,
-  testCase,
-} from "../__utils__/test-utils";
-import { compileFromSource } from "../../index";
+import { runTest, testCase } from '../__utils__/test-utils'
+import { compileFromSource } from '../../index'
 
 const testCases: testCase[] = [
   {
-    comment: "member enum constant access",
+    comment: 'member enum constant access',
     program: `
       public class Main {
         public enum Day {
@@ -24,10 +21,10 @@ const testCases: testCase[] = [
         }
       }
     `,
-    expectedLines: [],
+    expectedLines: []
   },
   {
-    comment: "member enum switch selects the matching constant",
+    comment: 'member enum switch selects the matching constant',
     program: `
       public class Main {
         public enum Light { RED, YELLOW, GREEN }
@@ -47,10 +44,10 @@ const testCases: testCase[] = [
         }
       }
     `,
-    expectedLines: ["go"],
+    expectedLines: ['go']
   },
   {
-    comment: "member enum switch matches the first of seven constants",
+    comment: 'member enum switch matches the first of seven constants',
     program: `
       class Main {
         public enum Day {
@@ -89,19 +86,51 @@ const testCases: testCase[] = [
         }
       }
     `,
-    expectedLines: ["10", "0"],
+    expectedLines: ['10', '0']
   },
-];
+  {
+    comment: 'inherited java.lang.Enum methods: ordinal(), name(), toString()',
+    program: `
+      class Main {
+        public enum Color { RED, GREEN, BLUE }
 
-export const enumTest = () => describe("enums", () => {
-  for (let testCase of testCases) {
-    const { comment: comment, program: program, expectedLines: expectedLines } = testCase;
-    it(comment, () => runTest(program, expectedLines));
+        public static void main(String[] args) {
+          Color c = Color.GREEN;
+          System.out.println(c.ordinal());
+          System.out.println(c.name());
+          System.out.println(c);
+        }
+      }
+    `,
+    expectedLines: ['1', 'GREEN', 'GREEN']
+  },
+  {
+    comment: 'Enum.valueOf round-trips a constant name',
+    program: `
+      class Main {
+        public enum Size { S, M, L }
+
+        public static void main(String[] args) {
+          Size s = Size.valueOf("L");
+          System.out.println(s.ordinal());
+          System.out.println(s.name());
+        }
+      }
+    `,
+    expectedLines: ['2', 'L']
   }
+]
 
-  it("rejects qualified enum switch labels", () => {
-    expect(() =>
-      compileFromSource(`
+export const enumTest = () =>
+  describe('enums', () => {
+    for (let testCase of testCases) {
+      const { comment: comment, program: program, expectedLines: expectedLines } = testCase
+      it(comment, () => runTest(program, expectedLines))
+    }
+
+    it('rejects qualified enum switch labels', () => {
+      expect(() =>
+        compileFromSource(`
         class Main {
           enum Day { SUNDAY }
 
@@ -114,6 +143,6 @@ export const enumTest = () => describe("enums", () => {
           }
         }
       `)
-    ).toThrow(SyntaxError);
-  });
-});
+      ).toThrow(SyntaxError)
+    })
+  })

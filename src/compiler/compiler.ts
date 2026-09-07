@@ -141,8 +141,10 @@ export class Compiler {
 
   private compileEnum(enumNode: any): ClassFile {
     this.className = enumNode.typeIdentifier
-    this.parentClassName = 'java/lang/Object'
-    const accessFlags = generateClassAccessFlags(enumNode.classModifier)
+    // Generated enums genuinely extend java.lang.Enum: the constructor chains to
+    // Enum.<init>(String, int) and name()/ordinal()/compareTo() are inherited.
+    this.parentClassName = 'java/lang/Enum'
+    const accessFlags = generateClassAccessFlags(enumNode.classModifier) | 0x4000 // ACC_ENUM
     this.symbolTable.extend()
     this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
 
@@ -186,17 +188,12 @@ export class Compiler {
       attributes: []
     })
 
-    this.fields.push({
-      accessFlags: 0x1002,
-      nameIndex: this.constantPoolManager.indexUtf8Info('$ordinal'),
-      descriptorIndex: this.constantPoolManager.indexUtf8Info('I'),
-      attributesCount: 0,
-      attributes: []
-    })
+    // name(), ordinal(), compareTo() etc. are inherited from java.lang.Enum;
+    // register the ones reachable from Source programs so calls resolve.
+    this.registerInheritedEnumMethods()
 
     if (bodyMembers.length === 0) {
       this.addEnumConstructor()
-      this.addEnumOrdinalMethod()
     } else {
       this.handleClassBody(bodyMembers)
     }
@@ -228,33 +225,28 @@ export class Compiler {
   }
 
   private addEnumConstructor() {
-    const bytecode = [0x19, 0x00, 0xb7]
-    const constructorRef = this.constantPoolManager.indexMethodrefInfo(
-      'java/lang/Object',
+    // <init>(String name, int ordinal) { super(name, ordinal); }
+    const superInitRef = this.constantPoolManager.indexMethodrefInfo(
+      'java/lang/Enum',
       '<init>',
-      '()V'
+      '(Ljava/lang/String;I)V'
     )
-    const ordinalFieldRef = this.constantPoolManager.indexFieldrefInfo(
-      this.className,
-      '$ordinal',
-      'I'
-    )
-    bytecode.push(
-      (constructorRef >> 8) & 0xff,
-      constructorRef & 0xff,
+    const bytecode = [
       0x19,
-      0x00,
+      0x00, // aload_0  (this)
+      0x19,
+      0x01, // aload_1  (name)
       0x15,
-      0x02,
-      0xb5,
-      (ordinalFieldRef >> 8) & 0xff,
-      ordinalFieldRef & 0xff,
-      0xb1
-    )
-    const codeAttribute = this.createEnumCodeAttribute(bytecode, 2, 3)
+      0x02, // iload_2  (ordinal)
+      0xb7,
+      (superInitRef >> 8) & 0xff,
+      superInitRef & 0xff, // invokespecial java/lang/Enum.<init>(String,I)V
+      0xb1 // return
+    ]
+    const codeAttribute = this.createEnumCodeAttribute(bytecode, 3, 3)
 
     this.methods.push({
-      accessFlags: 0x0002,
+      accessFlags: 0x0002, // private
       nameIndex: this.constantPoolManager.indexUtf8Info('<init>'),
       descriptorIndex: this.constantPoolManager.indexUtf8Info('(Ljava/lang/String;I)V'),
       attributesCount: 1,
@@ -262,28 +254,28 @@ export class Compiler {
     })
   }
 
-  private addEnumOrdinalMethod() {
-    const fieldRef = this.constantPoolManager.indexFieldrefInfo(this.className, '$ordinal', 'I')
-    const codeAttribute = this.createEnumCodeAttribute(
-      [0x19, 0x00, 0xb4, fieldRef >> 8, fieldRef & 0xff, 0xac],
-      1,
-      1
-    )
-
-    this.methods.push({
-      accessFlags: 0x0001,
-      nameIndex: this.constantPoolManager.indexUtf8Info('ordinal'),
-      descriptorIndex: this.constantPoolManager.indexUtf8Info('()I'),
-      attributesCount: 1,
-      attributes: [codeAttribute]
-    })
-    this.symbolTable.insertMethodInfo({
-      name: 'ordinal',
-      accessFlags: 0x0001,
-      parentClassName: this.className,
-      typeDescriptor: '()I',
-      className: this.className
-    })
+  /**
+   * Registers the java.lang.Enum instance methods that Source programs can call
+   * on an enum value. No bytecode is generated - the methods are inherited; the
+   * symbol-table entries just let `enumValue.ordinal()` / `.name()` resolve.
+   * The method owner is the enum class so `invokevirtual` dispatches correctly.
+   */
+  private registerInheritedEnumMethods() {
+    const inherited: Array<[string, string]> = [
+      ['name', '()Ljava/lang/String;'],
+      ['ordinal', '()I'],
+      ['compareTo', '(Ljava/lang/Enum;)I'],
+      ['toString', '()Ljava/lang/String;']
+    ]
+    for (const [name, typeDescriptor] of inherited) {
+      this.symbolTable.insertMethodInfo({
+        name,
+        accessFlags: 0x0001, // public
+        parentClassName: this.className,
+        typeDescriptor,
+        className: this.className
+      })
+    }
   }
 
   private createEnumCodeAttribute(bytecode: number[], maxStack: number, maxLocals: number): any {

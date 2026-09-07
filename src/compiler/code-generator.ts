@@ -1717,7 +1717,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       try {
         const classInfo = cg.symbolTable.queryClass(clean)
         if (classInfo.isEnum) {
-          // Generated enums provide their own ordinal() method so they run without java.lang.Enum.
+          // ordinal() is inherited from java.lang.Enum; invokevirtual on the
+          // enum class dispatches to it.
           cg.code.push(
             OPCODE.INVOKEVIRTUAL,
             0,
