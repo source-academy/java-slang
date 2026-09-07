@@ -5,16 +5,20 @@ import { closureClassFilePaths, computeClosure } from './lib-closure'
 
 /**
  * Regenerates `generated-lib-info.json` (descriptor-level metadata for the
- * supported standard-library classes) from the `std-lib` submodule.
+ * supported standard-library classes) from a JDK class tree.
  *
- *   node dist/compiler/import/build-lib-info.js [path/to/std-lib]
+ *   node dist/compiler/import/build-lib-info.js [path/to/class-tree]
+ *
+ * Defaults to `rt/` (an extracted Java 8 rt.jar) so the compiler's view of the
+ * standard library matches the class file version it emits and the classes the
+ * JVM runs.
  *
  * Also writes `generated-lib-classes.json`: the same class list as
  * `pkg/Name.class` paths, for the JVM class-file bundling step to consume so the
  * compiler and the JVM stay in lock-step.
  */
 
-const STD_LIB_ROOT = process.argv[2] ?? 'std-lib'
+const CLASS_ROOT = process.argv[2] ?? 'rt'
 const OUT_DIR = 'src/compiler/import'
 const METADATA_OUT = path.join(OUT_DIR, 'generated-lib-info.json')
 const CLASSLIST_OUT = path.join(OUT_DIR, 'generated-lib-classes.json')
@@ -36,14 +40,14 @@ function sortMetadata(metadata: LibInfoMap): LibInfoMap {
 }
 
 export default function buildLibInfo(): void {
-  if (!fs.existsSync(STD_LIB_ROOT)) {
+  if (!fs.existsSync(CLASS_ROOT)) {
     throw new Error(
-      `std-lib not found at "${STD_LIB_ROOT}". Pass its path as an argument or ` +
-        `run "git submodule update --init --recursive".`
+      `class tree not found at "${CLASS_ROOT}". Pass the path to an extracted ` +
+        `Java 8 rt.jar tree as an argument.`
     )
   }
 
-  const closure = computeClosure(STD_LIB_ROOT)
+  const closure = computeClosure(CLASS_ROOT)
   const metadata = sortMetadata(closure.metadata)
 
   fs.writeFileSync(METADATA_OUT, JSON.stringify(metadata, null, 2) + '\n')

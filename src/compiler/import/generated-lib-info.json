@@ -100,11 +100,6 @@
         "accessFlags": 1
       },
       {
-        "name": "nullOutputStream",
-        "descriptor": "()Ljava/io/OutputStream;",
-        "accessFlags": 9
-      },
-      {
         "name": "write",
         "descriptor": "(I)V",
         "accessFlags": 1025
@@ -148,11 +143,6 @@
       },
       {
         "name": "<init>",
-        "descriptor": "(Ljava/io/OutputStream;ZLjava/nio/charset/Charset;)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
         "accessFlags": 1
       },
@@ -163,22 +153,12 @@
       },
       {
         "name": "<init>",
-        "descriptor": "(Ljava/lang/String;Ljava/nio/charset/Charset;)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
         "descriptor": "(Ljava/io/File;)V",
         "accessFlags": 1
       },
       {
         "name": "<init>",
         "descriptor": "(Ljava/io/File;Ljava/lang/String;)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/io/File;Ljava/nio/charset/Charset;)V",
         "accessFlags": 1
       },
       {
@@ -194,11 +174,6 @@
       {
         "name": "append",
         "descriptor": "(C)Ljava/io/PrintStream;",
-        "accessFlags": 1
-      },
-      {
-        "name": "charset",
-        "descriptor": "()Ljava/nio/charset/Charset;",
         "accessFlags": 1
       },
       {
@@ -350,16 +325,6 @@
         "name": "write",
         "descriptor": "([BII)V",
         "accessFlags": 1
-      },
-      {
-        "name": "write",
-        "descriptor": "([B)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "writeBytes",
-        "descriptor": "([B)V",
-        "accessFlags": 1
       }
     ]
   },
@@ -481,11 +446,6 @@
         "accessFlags": 1
       },
       {
-        "name": "chars",
-        "descriptor": "()Ljava/util/stream/IntStream;",
-        "accessFlags": 1
-      },
-      {
         "name": "codePointAt",
         "descriptor": "(I)I",
         "accessFlags": 1
@@ -498,11 +458,6 @@
       {
         "name": "codePointCount",
         "descriptor": "(II)I",
-        "accessFlags": 1
-      },
-      {
-        "name": "codePoints",
-        "descriptor": "()Ljava/util/stream/IntStream;",
         "accessFlags": 1
       },
       {
@@ -616,16 +571,6 @@
         "accessFlags": 1
       },
       {
-        "name": "repeat",
-        "descriptor": "(II)Ljava/lang/AbstractStringBuilder;",
-        "accessFlags": 1
-      },
-      {
-        "name": "repeat",
-        "descriptor": "(Ljava/lang/CharSequence;I)Ljava/lang/AbstractStringBuilder;",
-        "accessFlags": 1
-      },
-      {
         "name": "replace",
         "descriptor": "(IILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
         "accessFlags": 1
@@ -729,12 +674,12 @@
       },
       {
         "name": "<init>",
-        "descriptor": "(Ljava/lang/String;)V",
+        "descriptor": "(I)V",
         "accessFlags": 1
       },
       {
         "name": "<init>",
-        "descriptor": "(I)V",
+        "descriptor": "(Ljava/lang/String;)V",
         "accessFlags": 1
       }
     ]
@@ -832,8 +777,7 @@
     "superClass": "java/lang/Object",
     "interfaces": [
       "java/io/Serializable",
-      "java/lang/Comparable",
-      "java/lang/constant/Constable"
+      "java/lang/Comparable"
     ],
     "fields": [
       {
@@ -876,11 +820,6 @@
       {
         "name": "compareTo",
         "descriptor": "(Ljava/lang/Boolean;)I",
-        "accessFlags": 1
-      },
-      {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
         "accessFlags": 1
       },
       {
@@ -979,8 +918,7 @@
     "accessFlags": 49,
     "superClass": "java/lang/Number",
     "interfaces": [
-      "java/lang/Comparable",
-      "java/lang/constant/Constable"
+      "java/lang/Comparable"
     ],
     "fields": [
       {
@@ -1036,19 +974,9 @@
         "accessFlags": 1
       },
       {
-        "name": "compareUnsigned",
-        "descriptor": "(BB)I",
-        "accessFlags": 9
-      },
-      {
         "name": "decode",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Byte;",
         "accessFlags": 9
-      },
-      {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
-        "accessFlags": 1
       },
       {
         "name": "doubleValue",
@@ -1160,21 +1088,6 @@
         "accessFlags": 1
       },
       {
-        "name": "compare",
-        "descriptor": "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "getChars",
-        "descriptor": "(II[CI)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "isEmpty",
-        "descriptor": "()Z",
-        "accessFlags": 1
-      },
-      {
         "name": "length",
         "descriptor": "()I",
         "accessFlags": 1025
@@ -1197,8 +1110,7 @@
     "superClass": "java/lang/Object",
     "interfaces": [
       "java/io/Serializable",
-      "java/lang/Comparable",
-      "java/lang/constant/Constable"
+      "java/lang/Comparable"
     ],
     "fields": [
       {
@@ -1267,22 +1179,12 @@
         "accessFlags": 25
       },
       {
-        "name": "DIRECTIONALITY_FIRST_STRONG_ISOLATE",
-        "descriptor": "B",
-        "accessFlags": 25
-      },
-      {
         "name": "DIRECTIONALITY_LEFT_TO_RIGHT",
         "descriptor": "B",
         "accessFlags": 25
       },
       {
         "name": "DIRECTIONALITY_LEFT_TO_RIGHT_EMBEDDING",
-        "descriptor": "B",
-        "accessFlags": 25
-      },
-      {
-        "name": "DIRECTIONALITY_LEFT_TO_RIGHT_ISOLATE",
         "descriptor": "B",
         "accessFlags": 25
       },
@@ -1312,11 +1214,6 @@
         "accessFlags": 25
       },
       {
-        "name": "DIRECTIONALITY_POP_DIRECTIONAL_ISOLATE",
-        "descriptor": "B",
-        "accessFlags": 25
-      },
-      {
         "name": "DIRECTIONALITY_RIGHT_TO_LEFT",
         "descriptor": "B",
         "accessFlags": 25
@@ -1328,11 +1225,6 @@
       },
       {
         "name": "DIRECTIONALITY_RIGHT_TO_LEFT_EMBEDDING",
-        "descriptor": "B",
-        "accessFlags": 25
-      },
-      {
-        "name": "DIRECTIONALITY_RIGHT_TO_LEFT_ISOLATE",
         "descriptor": "B",
         "accessFlags": 25
       },
@@ -1609,11 +1501,6 @@
         "accessFlags": 9
       },
       {
-        "name": "codePointOf",
-        "descriptor": "(Ljava/lang/String;)I",
-        "accessFlags": 9
-      },
-      {
         "name": "compare",
         "descriptor": "(CC)I",
         "accessFlags": 9
@@ -1621,11 +1508,6 @@
       {
         "name": "compareTo",
         "descriptor": "(Ljava/lang/Character;)I",
-        "accessFlags": 1
-      },
-      {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
         "accessFlags": 1
       },
       {
@@ -1725,36 +1607,6 @@
       },
       {
         "name": "isDigit",
-        "descriptor": "(I)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "isEmoji",
-        "descriptor": "(I)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "isEmojiComponent",
-        "descriptor": "(I)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "isEmojiModifier",
-        "descriptor": "(I)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "isEmojiModifierBase",
-        "descriptor": "(I)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "isEmojiPresentation",
-        "descriptor": "(I)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "isExtendedPictographic",
         "descriptor": "(I)Z",
         "accessFlags": 9
       },
@@ -2004,11 +1856,6 @@
         "accessFlags": 9
       },
       {
-        "name": "toString",
-        "descriptor": "(I)Ljava/lang/String;",
-        "accessFlags": 9
-      },
-      {
         "name": "toTitleCase",
         "descriptor": "(C)C",
         "accessFlags": 9
@@ -2115,6 +1962,11 @@
         "accessFlags": 1
       },
       {
+        "name": "getCause",
+        "descriptor": "()Ljava/lang/Throwable;",
+        "accessFlags": 1
+      },
+      {
         "name": "getException",
         "descriptor": "()Ljava/lang/Throwable;",
         "accessFlags": 1
@@ -2159,9 +2011,7 @@
     "accessFlags": 49,
     "superClass": "java/lang/Number",
     "interfaces": [
-      "java/lang/Comparable",
-      "java/lang/constant/Constable",
-      "java/lang/constant/ConstantDesc"
+      "java/lang/Comparable"
     ],
     "fields": [
       {
@@ -2210,11 +2060,6 @@
         "accessFlags": 25
       },
       {
-        "name": "PRECISION",
-        "descriptor": "I",
-        "accessFlags": 25
-      },
-      {
         "name": "SIZE",
         "descriptor": "I",
         "accessFlags": 25
@@ -2249,11 +2094,6 @@
       {
         "name": "compareTo",
         "descriptor": "(Ljava/lang/Double;)I",
-        "accessFlags": 1
-      },
-      {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
         "accessFlags": 1
       },
       {
@@ -2347,11 +2187,6 @@
         "accessFlags": 9
       },
       {
-        "name": "resolveConstantDesc",
-        "descriptor": "(Ljava/lang/invoke/MethodHandles$Lookup;)Ljava/lang/Double;",
-        "accessFlags": 1
-      },
-      {
         "name": "shortValue",
         "descriptor": "()S",
         "accessFlags": 1
@@ -2394,8 +2229,7 @@
     "superClass": "java/lang/Object",
     "interfaces": [
       "java/io/Serializable",
-      "java/lang/Comparable",
-      "java/lang/constant/Constable"
+      "java/lang/Comparable"
     ],
     "fields": [],
     "methods": [
@@ -2412,11 +2246,6 @@
       {
         "name": "compareTo",
         "descriptor": "(Ljava/lang/Enum;)I",
-        "accessFlags": 17
-      },
-      {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
         "accessFlags": 17
       },
       {
@@ -2576,6 +2405,11 @@
         "accessFlags": 1
       },
       {
+        "name": "getCause",
+        "descriptor": "()Ljava/lang/Throwable;",
+        "accessFlags": 1
+      },
+      {
         "name": "getException",
         "descriptor": "()Ljava/lang/Throwable;",
         "accessFlags": 1
@@ -2587,9 +2421,7 @@
     "accessFlags": 49,
     "superClass": "java/lang/Number",
     "interfaces": [
-      "java/lang/Comparable",
-      "java/lang/constant/Constable",
-      "java/lang/constant/ConstantDesc"
+      "java/lang/Comparable"
     ],
     "fields": [
       {
@@ -2638,11 +2470,6 @@
         "accessFlags": 25
       },
       {
-        "name": "PRECISION",
-        "descriptor": "I",
-        "accessFlags": 25
-      },
-      {
         "name": "SIZE",
         "descriptor": "I",
         "accessFlags": 25
@@ -2685,11 +2512,6 @@
         "accessFlags": 1
       },
       {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
-        "accessFlags": 1
-      },
-      {
         "name": "doubleValue",
         "descriptor": "()D",
         "accessFlags": 1
@@ -2698,16 +2520,6 @@
         "name": "equals",
         "descriptor": "(Ljava/lang/Object;)Z",
         "accessFlags": 1
-      },
-      {
-        "name": "float16ToFloat",
-        "descriptor": "(S)F",
-        "accessFlags": 9
-      },
-      {
-        "name": "floatToFloat16",
-        "descriptor": "(F)S",
-        "accessFlags": 9
       },
       {
         "name": "floatToIntBits",
@@ -2790,11 +2602,6 @@
         "accessFlags": 9
       },
       {
-        "name": "resolveConstantDesc",
-        "descriptor": "(Ljava/lang/invoke/MethodHandles$Lookup;)Ljava/lang/Float;",
-        "accessFlags": 1
-      },
-      {
         "name": "shortValue",
         "descriptor": "()S",
         "accessFlags": 1
@@ -2871,35 +2678,6 @@
   },
   "java/lang/IllegalArgumentException": {
     "name": "java/lang/IllegalArgumentException",
-    "accessFlags": 33,
-    "superClass": "java/lang/RuntimeException",
-    "interfaces": [],
-    "fields": [],
-    "methods": [
-      {
-        "name": "<init>",
-        "descriptor": "()V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/String;Ljava/lang/Throwable;)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/Throwable;)V",
-        "accessFlags": 1
-      }
-    ]
-  },
-  "java/lang/IllegalCallerException": {
-    "name": "java/lang/IllegalCallerException",
     "accessFlags": 33,
     "superClass": "java/lang/RuntimeException",
     "interfaces": [],
@@ -3029,16 +2807,6 @@
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
         "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(I)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(J)V",
-        "accessFlags": 1
       }
     ]
   },
@@ -3085,9 +2853,7 @@
     "accessFlags": 49,
     "superClass": "java/lang/Number",
     "interfaces": [
-      "java/lang/Comparable",
-      "java/lang/constant/Constable",
-      "java/lang/constant/ConstantDesc"
+      "java/lang/Comparable"
     ],
     "fields": [
       {
@@ -3153,19 +2919,9 @@
         "accessFlags": 9
       },
       {
-        "name": "compress",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
         "name": "decode",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Integer;",
         "accessFlags": 9
-      },
-      {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
-        "accessFlags": 1
       },
       {
         "name": "divideUnsigned",
@@ -3181,11 +2937,6 @@
         "name": "equals",
         "descriptor": "(Ljava/lang/Object;)Z",
         "accessFlags": 1
-      },
-      {
-        "name": "expand",
-        "descriptor": "(II)I",
-        "accessFlags": 9
       },
       {
         "name": "floatValue",
@@ -3264,22 +3015,12 @@
       },
       {
         "name": "parseInt",
-        "descriptor": "(Ljava/lang/CharSequence;III)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "parseInt",
         "descriptor": "(Ljava/lang/String;)I",
         "accessFlags": 9
       },
       {
         "name": "parseUnsignedInt",
         "descriptor": "(Ljava/lang/String;I)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "parseUnsignedInt",
-        "descriptor": "(Ljava/lang/CharSequence;III)I",
         "accessFlags": 9
       },
       {
@@ -3291,11 +3032,6 @@
         "name": "remainderUnsigned",
         "descriptor": "(II)I",
         "accessFlags": 9
-      },
-      {
-        "name": "resolveConstantDesc",
-        "descriptor": "(Ljava/lang/invoke/MethodHandles$Lookup;)Ljava/lang/Integer;",
-        "accessFlags": 1
       },
       {
         "name": "reverse",
@@ -3466,35 +3202,6 @@
       }
     ]
   },
-  "java/lang/LayerInstantiationException": {
-    "name": "java/lang/LayerInstantiationException",
-    "accessFlags": 33,
-    "superClass": "java/lang/RuntimeException",
-    "interfaces": [],
-    "fields": [],
-    "methods": [
-      {
-        "name": "<init>",
-        "descriptor": "()V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/Throwable;)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/String;Ljava/lang/Throwable;)V",
-        "accessFlags": 1
-      }
-    ]
-  },
   "java/lang/LinkageError": {
     "name": "java/lang/LinkageError",
     "accessFlags": 33,
@@ -3524,9 +3231,7 @@
     "accessFlags": 49,
     "superClass": "java/lang/Number",
     "interfaces": [
-      "java/lang/Comparable",
-      "java/lang/constant/Constable",
-      "java/lang/constant/ConstantDesc"
+      "java/lang/Comparable"
     ],
     "fields": [
       {
@@ -3592,19 +3297,9 @@
         "accessFlags": 9
       },
       {
-        "name": "compress",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
         "name": "decode",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Long;",
         "accessFlags": 9
-      },
-      {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
-        "accessFlags": 1
       },
       {
         "name": "divideUnsigned",
@@ -3620,11 +3315,6 @@
         "name": "equals",
         "descriptor": "(Ljava/lang/Object;)Z",
         "accessFlags": 1
-      },
-      {
-        "name": "expand",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
       },
       {
         "name": "floatValue",
@@ -3703,22 +3393,12 @@
       },
       {
         "name": "parseLong",
-        "descriptor": "(Ljava/lang/CharSequence;III)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "parseLong",
         "descriptor": "(Ljava/lang/String;)J",
         "accessFlags": 9
       },
       {
         "name": "parseUnsignedLong",
         "descriptor": "(Ljava/lang/String;I)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "parseUnsignedLong",
-        "descriptor": "(Ljava/lang/CharSequence;III)J",
         "accessFlags": 9
       },
       {
@@ -3730,11 +3410,6 @@
         "name": "remainderUnsigned",
         "descriptor": "(JJ)J",
         "accessFlags": 9
-      },
-      {
-        "name": "resolveConstantDesc",
-        "descriptor": "(Ljava/lang/invoke/MethodHandles$Lookup;)Ljava/lang/Long;",
-        "accessFlags": 1
       },
       {
         "name": "reverse",
@@ -3828,20 +3503,6 @@
       }
     ]
   },
-  "java/lang/MatchException": {
-    "name": "java/lang/MatchException",
-    "accessFlags": 49,
-    "superClass": "java/lang/RuntimeException",
-    "interfaces": [],
-    "fields": [],
-    "methods": [
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/String;Ljava/lang/Throwable;)V",
-        "accessFlags": 1
-      }
-    ]
-  },
   "java/lang/Math": {
     "name": "java/lang/Math",
     "accessFlags": 49,
@@ -3855,11 +3516,6 @@
       },
       {
         "name": "PI",
-        "descriptor": "D",
-        "accessFlags": 25
-      },
-      {
-        "name": "TAU",
         "descriptor": "D",
         "accessFlags": 25
       }
@@ -3883,16 +3539,6 @@
       {
         "name": "abs",
         "descriptor": "(D)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "absExact",
-        "descriptor": "(I)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "absExact",
-        "descriptor": "(J)J",
         "accessFlags": 9
       },
       {
@@ -3936,66 +3582,6 @@
         "accessFlags": 9
       },
       {
-        "name": "ceilDiv",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilDiv",
-        "descriptor": "(JI)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilDiv",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilDivExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilDivExact",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilMod",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilMod",
-        "descriptor": "(JI)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilMod",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "clamp",
-        "descriptor": "(JII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "clamp",
-        "descriptor": "(JJJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "clamp",
-        "descriptor": "(DDD)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "clamp",
-        "descriptor": "(FFF)F",
-        "accessFlags": 9
-      },
-      {
         "name": "copySign",
         "descriptor": "(DD)D",
         "accessFlags": 9
@@ -4026,16 +3612,6 @@
         "accessFlags": 9
       },
       {
-        "name": "divideExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "divideExact",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
         "name": "exp",
         "descriptor": "(D)D",
         "accessFlags": 9
@@ -4057,21 +3633,6 @@
       },
       {
         "name": "floorDiv",
-        "descriptor": "(JI)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "floorDiv",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "floorDivExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "floorDivExact",
         "descriptor": "(JJ)J",
         "accessFlags": 9
       },
@@ -4082,22 +3643,7 @@
       },
       {
         "name": "floorMod",
-        "descriptor": "(JI)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "floorMod",
         "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "fma",
-        "descriptor": "(DDD)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "fma",
-        "descriptor": "(FFF)F",
         "accessFlags": 9
       },
       {
@@ -4192,21 +3738,6 @@
       },
       {
         "name": "multiplyExact",
-        "descriptor": "(JI)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "multiplyExact",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "multiplyFull",
-        "descriptor": "(II)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "multiplyHigh",
         "descriptor": "(JJ)J",
         "accessFlags": 9
       },
@@ -4253,16 +3784,6 @@
       {
         "name": "pow",
         "descriptor": "(DD)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "powExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "powExact",
-        "descriptor": "(JI)J",
         "accessFlags": 9
       },
       {
@@ -4363,36 +3884,6 @@
       {
         "name": "ulp",
         "descriptor": "(F)F",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedMultiplyExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedMultiplyExact",
-        "descriptor": "(JI)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedMultiplyExact",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedMultiplyHigh",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedPowExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedPowExact",
-        "descriptor": "(JI)J",
         "accessFlags": 9
       }
     ]
@@ -4527,16 +4018,6 @@
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
         "accessFlags": 1
-      },
-      {
-        "name": "fillInStackTrace",
-        "descriptor": "()Ljava/lang/Throwable;",
-        "accessFlags": 33
-      },
-      {
-        "name": "getMessage",
-        "descriptor": "()Ljava/lang/String;",
-        "accessFlags": 1
       }
     ]
   },
@@ -4659,17 +4140,17 @@
       },
       {
         "name": "wait",
-        "descriptor": "()V",
-        "accessFlags": 17
-      },
-      {
-        "name": "wait",
         "descriptor": "(J)V",
-        "accessFlags": 17
+        "accessFlags": 273
       },
       {
         "name": "wait",
         "descriptor": "(JI)V",
+        "accessFlags": 17
+      },
+      {
+        "name": "wait",
+        "descriptor": "()V",
         "accessFlags": 17
       }
     ]
@@ -4804,8 +4285,7 @@
     "accessFlags": 49,
     "superClass": "java/lang/Number",
     "interfaces": [
-      "java/lang/Comparable",
-      "java/lang/constant/Constable"
+      "java/lang/Comparable"
     ],
     "fields": [
       {
@@ -4861,19 +4341,9 @@
         "accessFlags": 1
       },
       {
-        "name": "compareUnsigned",
-        "descriptor": "(SS)I",
-        "accessFlags": 9
-      },
-      {
         "name": "decode",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Short;",
         "accessFlags": 9
-      },
-      {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
-        "accessFlags": 1
       },
       {
         "name": "doubleValue",
@@ -5001,11 +4471,6 @@
         "name": "PI",
         "descriptor": "D",
         "accessFlags": 25
-      },
-      {
-        "name": "TAU",
-        "descriptor": "D",
-        "accessFlags": 25
       }
     ],
     "methods": [
@@ -5030,19 +4495,9 @@
         "accessFlags": 9
       },
       {
-        "name": "absExact",
-        "descriptor": "(I)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "absExact",
-        "descriptor": "(J)J",
-        "accessFlags": 9
-      },
-      {
         "name": "acos",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "addExact",
@@ -5057,86 +4512,26 @@
       {
         "name": "asin",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "atan",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "atan2",
         "descriptor": "(DD)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "cbrt",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "ceil",
         "descriptor": "(D)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilDiv",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilDiv",
-        "descriptor": "(JI)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilDiv",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilDivExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilDivExact",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilMod",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilMod",
-        "descriptor": "(JI)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "ceilMod",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "clamp",
-        "descriptor": "(JII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "clamp",
-        "descriptor": "(JJJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "clamp",
-        "descriptor": "(DDD)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "clamp",
-        "descriptor": "(FFF)F",
         "accessFlags": 9
       },
       {
@@ -5152,42 +4547,22 @@
       {
         "name": "cos",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "cosh",
         "descriptor": "(D)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "decrementExact",
-        "descriptor": "(I)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "decrementExact",
-        "descriptor": "(J)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "divideExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "divideExact",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "exp",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "expm1",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "floor",
@@ -5201,21 +4576,6 @@
       },
       {
         "name": "floorDiv",
-        "descriptor": "(JI)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "floorDiv",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "floorDivExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "floorDivExact",
         "descriptor": "(JJ)J",
         "accessFlags": 9
       },
@@ -5226,22 +4586,7 @@
       },
       {
         "name": "floorMod",
-        "descriptor": "(JI)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "floorMod",
         "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "fma",
-        "descriptor": "(DDD)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "fma",
-        "descriptor": "(FFF)F",
         "accessFlags": 9
       },
       {
@@ -5257,37 +4602,27 @@
       {
         "name": "hypot",
         "descriptor": "(DD)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "IEEEremainder",
         "descriptor": "(DD)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "incrementExact",
-        "descriptor": "(I)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "incrementExact",
-        "descriptor": "(J)J",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "log",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "log10",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "log1p",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "max",
@@ -5336,32 +4671,7 @@
       },
       {
         "name": "multiplyExact",
-        "descriptor": "(JI)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "multiplyExact",
         "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "multiplyFull",
-        "descriptor": "(II)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "multiplyHigh",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "negateExact",
-        "descriptor": "(I)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "negateExact",
-        "descriptor": "(J)J",
         "accessFlags": 9
       },
       {
@@ -5397,17 +4707,7 @@
       {
         "name": "pow",
         "descriptor": "(DD)D",
-        "accessFlags": 9
-      },
-      {
-        "name": "powExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "powExact",
-        "descriptor": "(JI)J",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "random",
@@ -5452,17 +4752,17 @@
       {
         "name": "sin",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "sinh",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "sqrt",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "subtractExact",
@@ -5477,17 +4777,17 @@
       {
         "name": "tan",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "tanh",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 265
       },
       {
         "name": "toDegrees",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 2057
       },
       {
         "name": "toIntExact",
@@ -5497,7 +4797,7 @@
       {
         "name": "toRadians",
         "descriptor": "(D)D",
-        "accessFlags": 9
+        "accessFlags": 2057
       },
       {
         "name": "ulp",
@@ -5507,36 +4807,6 @@
       {
         "name": "ulp",
         "descriptor": "(F)F",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedMultiplyExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedMultiplyExact",
-        "descriptor": "(JI)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedMultiplyExact",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedMultiplyHigh",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedPowExact",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "unsignedPowExact",
-        "descriptor": "(JI)J",
         "accessFlags": 9
       }
     ]
@@ -5548,9 +4818,7 @@
     "interfaces": [
       "java/io/Serializable",
       "java/lang/CharSequence",
-      "java/lang/Comparable",
-      "java/lang/constant/Constable",
-      "java/lang/constant/ConstantDesc"
+      "java/lang/Comparable"
     ],
     "fields": [
       {
@@ -5641,11 +4909,6 @@
         "accessFlags": 1
       },
       {
-        "name": "chars",
-        "descriptor": "()Ljava/util/stream/IntStream;",
-        "accessFlags": 1
-      },
-      {
         "name": "codePointAt",
         "descriptor": "(I)I",
         "accessFlags": 1
@@ -5658,11 +4921,6 @@
       {
         "name": "codePointCount",
         "descriptor": "(II)I",
-        "accessFlags": 1
-      },
-      {
-        "name": "codePoints",
-        "descriptor": "()Ljava/util/stream/IntStream;",
         "accessFlags": 1
       },
       {
@@ -5706,11 +4964,6 @@
         "accessFlags": 9
       },
       {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
-        "accessFlags": 1
-      },
-      {
         "name": "endsWith",
         "descriptor": "(Ljava/lang/String;)Z",
         "accessFlags": 1
@@ -5734,11 +4987,6 @@
         "name": "format",
         "descriptor": "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;",
         "accessFlags": 137
-      },
-      {
-        "name": "formatted",
-        "descriptor": "([Ljava/lang/Object;)Ljava/lang/String;",
-        "accessFlags": 129
       },
       {
         "name": "getBytes",
@@ -5771,11 +5019,6 @@
         "accessFlags": 1
       },
       {
-        "name": "indent",
-        "descriptor": "(I)Ljava/lang/String;",
-        "accessFlags": 1
-      },
-      {
         "name": "indexOf",
         "descriptor": "(I)I",
         "accessFlags": 1
@@ -5783,11 +5026,6 @@
       {
         "name": "indexOf",
         "descriptor": "(II)I",
-        "accessFlags": 1
-      },
-      {
-        "name": "indexOf",
-        "descriptor": "(III)I",
         "accessFlags": 1
       },
       {
@@ -5801,19 +5039,9 @@
         "accessFlags": 1
       },
       {
-        "name": "indexOf",
-        "descriptor": "(Ljava/lang/String;II)I",
-        "accessFlags": 1
-      },
-      {
         "name": "intern",
         "descriptor": "()Ljava/lang/String;",
         "accessFlags": 257
-      },
-      {
-        "name": "isBlank",
-        "descriptor": "()Z",
-        "accessFlags": 1
       },
       {
         "name": "isEmpty",
@@ -5856,11 +5084,6 @@
         "accessFlags": 1
       },
       {
-        "name": "lines",
-        "descriptor": "()Ljava/util/stream/Stream;",
-        "accessFlags": 1
-      },
-      {
         "name": "matches",
         "descriptor": "(Ljava/lang/String;)Z",
         "accessFlags": 1
@@ -5878,11 +5101,6 @@
       {
         "name": "regionMatches",
         "descriptor": "(ZILjava/lang/String;II)Z",
-        "accessFlags": 1
-      },
-      {
-        "name": "repeat",
-        "descriptor": "(I)Ljava/lang/String;",
         "accessFlags": 1
       },
       {
@@ -5906,11 +5124,6 @@
         "accessFlags": 1
       },
       {
-        "name": "resolveConstantDesc",
-        "descriptor": "(Ljava/lang/invoke/MethodHandles$Lookup;)Ljava/lang/String;",
-        "accessFlags": 1
-      },
-      {
         "name": "split",
         "descriptor": "(Ljava/lang/String;I)[Ljava/lang/String;",
         "accessFlags": 1
@@ -5921,11 +5134,6 @@
         "accessFlags": 1
       },
       {
-        "name": "splitWithDelimiters",
-        "descriptor": "(Ljava/lang/String;I)[Ljava/lang/String;",
-        "accessFlags": 1
-      },
-      {
         "name": "startsWith",
         "descriptor": "(Ljava/lang/String;I)Z",
         "accessFlags": 1
@@ -5933,26 +5141,6 @@
       {
         "name": "startsWith",
         "descriptor": "(Ljava/lang/String;)Z",
-        "accessFlags": 1
-      },
-      {
-        "name": "strip",
-        "descriptor": "()Ljava/lang/String;",
-        "accessFlags": 1
-      },
-      {
-        "name": "stripIndent",
-        "descriptor": "()Ljava/lang/String;",
-        "accessFlags": 1
-      },
-      {
-        "name": "stripLeading",
-        "descriptor": "()Ljava/lang/String;",
-        "accessFlags": 1
-      },
-      {
-        "name": "stripTrailing",
-        "descriptor": "()Ljava/lang/String;",
         "accessFlags": 1
       },
       {
@@ -5997,16 +5185,6 @@
       },
       {
         "name": "toUpperCase",
-        "descriptor": "()Ljava/lang/String;",
-        "accessFlags": 1
-      },
-      {
-        "name": "transform",
-        "descriptor": "(Ljava/util/function/Function;)Ljava/lang/Object;",
-        "accessFlags": 1
-      },
-      {
-        "name": "translateEscapes",
         "descriptor": "()Ljava/lang/String;",
         "accessFlags": 1
       },
@@ -6068,9 +5246,7 @@
     "superClass": "java/lang/AbstractStringBuilder",
     "interfaces": [
       "java/io/Serializable",
-      "java/lang/Appendable",
-      "java/lang/CharSequence",
-      "java/lang/Comparable"
+      "java/lang/CharSequence"
     ],
     "fields": [],
     "methods": [
@@ -6190,11 +5366,6 @@
         "accessFlags": 33
       },
       {
-        "name": "compareTo",
-        "descriptor": "(Ljava/lang/StringBuffer;)I",
-        "accessFlags": 33
-      },
-      {
         "name": "delete",
         "descriptor": "(II)Ljava/lang/StringBuffer;",
         "accessFlags": 33
@@ -6305,16 +5476,6 @@
         "accessFlags": 33
       },
       {
-        "name": "repeat",
-        "descriptor": "(II)Ljava/lang/StringBuffer;",
-        "accessFlags": 33
-      },
-      {
-        "name": "repeat",
-        "descriptor": "(Ljava/lang/CharSequence;I)Ljava/lang/StringBuffer;",
-        "accessFlags": 33
-      },
-      {
         "name": "replace",
         "descriptor": "(IILjava/lang/String;)Ljava/lang/StringBuffer;",
         "accessFlags": 33
@@ -6367,9 +5528,7 @@
     "superClass": "java/lang/AbstractStringBuilder",
     "interfaces": [
       "java/io/Serializable",
-      "java/lang/Appendable",
-      "java/lang/CharSequence",
-      "java/lang/Comparable"
+      "java/lang/CharSequence"
     ],
     "fields": [],
     "methods": [
@@ -6464,11 +5623,6 @@
         "accessFlags": 1
       },
       {
-        "name": "compareTo",
-        "descriptor": "(Ljava/lang/StringBuilder;)I",
-        "accessFlags": 1
-      },
-      {
         "name": "delete",
         "descriptor": "(II)Ljava/lang/StringBuilder;",
         "accessFlags": 1
@@ -6556,16 +5710,6 @@
       {
         "name": "lastIndexOf",
         "descriptor": "(Ljava/lang/String;I)I",
-        "accessFlags": 1
-      },
-      {
-        "name": "repeat",
-        "descriptor": "(II)Ljava/lang/StringBuilder;",
-        "accessFlags": 1
-      },
-      {
-        "name": "repeat",
-        "descriptor": "(Ljava/lang/CharSequence;I)Ljava/lang/StringBuilder;",
         "accessFlags": 1
       },
       {
@@ -6673,16 +5817,6 @@
         "accessFlags": 9
       },
       {
-        "name": "getLogger",
-        "descriptor": "(Ljava/lang/String;)Ljava/lang/System$Logger;",
-        "accessFlags": 9
-      },
-      {
-        "name": "getLogger",
-        "descriptor": "(Ljava/lang/String;Ljava/util/ResourceBundle;)Ljava/lang/System$Logger;",
-        "accessFlags": 9
-      },
-      {
         "name": "getProperties",
         "descriptor": "()Ljava/util/Properties;",
         "accessFlags": 9
@@ -6740,6 +5874,11 @@
       {
         "name": "runFinalization",
         "descriptor": "()V",
+        "accessFlags": 9
+      },
+      {
+        "name": "runFinalizersOnExit",
+        "descriptor": "(Z)V",
         "accessFlags": 9
       },
       {
@@ -7042,66 +6181,9 @@
     ],
     "methods": []
   },
-  "java/lang/WrongThreadException": {
-    "name": "java/lang/WrongThreadException",
-    "accessFlags": 49,
-    "superClass": "java/lang/RuntimeException",
-    "interfaces": [],
-    "fields": [],
-    "methods": [
-      {
-        "name": "<init>",
-        "descriptor": "()V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/String;Ljava/lang/Throwable;)V",
-        "accessFlags": 1
-      },
-      {
-        "name": "<init>",
-        "descriptor": "(Ljava/lang/Throwable;)V",
-        "accessFlags": 1
-      }
-    ]
-  },
-  "java/lang/constant/Constable": {
-    "name": "java/lang/constant/Constable",
-    "accessFlags": 1537,
-    "superClass": "java/lang/Object",
-    "interfaces": [],
-    "fields": [],
-    "methods": [
-      {
-        "name": "describeConstable",
-        "descriptor": "()Ljava/util/Optional;",
-        "accessFlags": 1025
-      }
-    ]
-  },
-  "java/lang/constant/ConstantDesc": {
-    "name": "java/lang/constant/ConstantDesc",
-    "accessFlags": 1537,
-    "superClass": "java/lang/Object",
-    "interfaces": [],
-    "fields": [],
-    "methods": [
-      {
-        "name": "resolveConstantDesc",
-        "descriptor": "(Ljava/lang/invoke/MethodHandles$Lookup;)Ljava/lang/Object;",
-        "accessFlags": 1025
-      }
-    ]
-  },
   "java/util/Arrays": {
     "name": "java/util/Arrays",
-    "accessFlags": 49,
+    "accessFlags": 33,
     "superClass": "java/lang/Object",
     "interfaces": [],
     "fields": [],
@@ -7199,146 +6281,6 @@
       {
         "name": "binarySearch",
         "descriptor": "([Ljava/lang/Object;IILjava/lang/Object;Ljava/util/Comparator;)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([Z[Z)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([ZII[ZII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([B[B)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([BII[BII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([S[S)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([SII[SII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([C[C)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([CII[CII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([I[I)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([III[III)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([J[J)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([JII[JII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([F[F)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([FII[FII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([D[D)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([DII[DII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([Ljava/lang/Comparable;[Ljava/lang/Comparable;)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([Ljava/lang/Comparable;II[Ljava/lang/Comparable;II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([Ljava/lang/Object;[Ljava/lang/Object;Ljava/util/Comparator;)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compare",
-        "descriptor": "([Ljava/lang/Object;II[Ljava/lang/Object;IILjava/util/Comparator;)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compareUnsigned",
-        "descriptor": "([B[B)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compareUnsigned",
-        "descriptor": "([BII[BII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compareUnsigned",
-        "descriptor": "([S[S)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compareUnsigned",
-        "descriptor": "([SII[SII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compareUnsigned",
-        "descriptor": "([I[I)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compareUnsigned",
-        "descriptor": "([III[III)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compareUnsigned",
-        "descriptor": "([J[J)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "compareUnsigned",
-        "descriptor": "([JII[JII)I",
         "accessFlags": 9
       },
       {
@@ -7463,17 +6405,7 @@
       },
       {
         "name": "equals",
-        "descriptor": "([JII[JII)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
         "descriptor": "([I[I)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
-        "descriptor": "([III[III)Z",
         "accessFlags": 9
       },
       {
@@ -7483,17 +6415,7 @@
       },
       {
         "name": "equals",
-        "descriptor": "([SII[SII)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
         "descriptor": "([C[C)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
-        "descriptor": "([CII[CII)Z",
         "accessFlags": 9
       },
       {
@@ -7503,17 +6425,7 @@
       },
       {
         "name": "equals",
-        "descriptor": "([BII[BII)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
         "descriptor": "([Z[Z)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
-        "descriptor": "([ZII[ZII)Z",
         "accessFlags": 9
       },
       {
@@ -7523,37 +6435,12 @@
       },
       {
         "name": "equals",
-        "descriptor": "([DII[DII)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
         "descriptor": "([F[F)Z",
         "accessFlags": 9
       },
       {
         "name": "equals",
-        "descriptor": "([FII[FII)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
         "descriptor": "([Ljava/lang/Object;[Ljava/lang/Object;)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
-        "descriptor": "([Ljava/lang/Object;II[Ljava/lang/Object;II)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
-        "descriptor": "([Ljava/lang/Object;[Ljava/lang/Object;Ljava/util/Comparator;)Z",
-        "accessFlags": 9
-      },
-      {
-        "name": "equals",
-        "descriptor": "([Ljava/lang/Object;II[Ljava/lang/Object;IILjava/util/Comparator;)Z",
         "accessFlags": 9
       },
       {
@@ -7689,106 +6576,6 @@
       {
         "name": "hashCode",
         "descriptor": "([Ljava/lang/Object;)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([Z[Z)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([ZII[ZII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([B[B)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([BII[BII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([C[C)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([CII[CII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([S[S)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([SII[SII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([I[I)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([III[III)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([J[J)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([JII[JII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([F[F)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([FII[FII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([D[D)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([DII[DII)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([Ljava/lang/Object;[Ljava/lang/Object;)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([Ljava/lang/Object;II[Ljava/lang/Object;II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([Ljava/lang/Object;[Ljava/lang/Object;Ljava/util/Comparator;)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "mismatch",
-        "descriptor": "([Ljava/lang/Object;II[Ljava/lang/Object;IILjava/util/Comparator;)I",
         "accessFlags": 9
       },
       {
@@ -8186,36 +6973,6 @@
     "fields": [],
     "methods": [
       {
-        "name": "checkFromIndexSize",
-        "descriptor": "(III)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "checkFromIndexSize",
-        "descriptor": "(JJJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "checkFromToIndex",
-        "descriptor": "(III)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "checkFromToIndex",
-        "descriptor": "(JJJ)J",
-        "accessFlags": 9
-      },
-      {
-        "name": "checkIndex",
-        "descriptor": "(II)I",
-        "accessFlags": 9
-      },
-      {
-        "name": "checkIndex",
-        "descriptor": "(JJ)J",
-        "accessFlags": 9
-      },
-      {
         "name": "compare",
         "descriptor": "(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/Comparator;)I",
         "accessFlags": 9
@@ -8263,21 +7020,6 @@
       {
         "name": "requireNonNull",
         "descriptor": "(Ljava/lang/Object;Ljava/util/function/Supplier;)Ljava/lang/Object;",
-        "accessFlags": 9
-      },
-      {
-        "name": "requireNonNullElse",
-        "descriptor": "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-        "accessFlags": 9
-      },
-      {
-        "name": "requireNonNullElseGet",
-        "descriptor": "(Ljava/lang/Object;Ljava/util/function/Supplier;)Ljava/lang/Object;",
-        "accessFlags": 9
-      },
-      {
-        "name": "toIdentityString",
-        "descriptor": "(Ljava/lang/Object;)Ljava/lang/String;",
         "accessFlags": 9
       },
       {

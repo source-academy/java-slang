@@ -4,9 +4,9 @@ import { generatedLibInfo as libInfo } from '../import/generated-lib-info'
 import { extractClassMetaFromBuffer } from '../import/extract-metadata'
 import { computeClosure, resolveClassFile } from '../import/lib-closure'
 
-const STD_LIB_ROOT = 'std-lib'
-const hasStdLib = fs.existsSync(STD_LIB_ROOT)
-const describeWithStdLib = hasStdLib ? describe : describe.skip
+const CLASS_ROOT = 'rt'
+const hasClassRoot = fs.existsSync(CLASS_ROOT)
+const describeWithClassRoot = hasClassRoot ? describe : describe.skip
 
 describe('generated-lib-info.json', () => {
   it('contains the java.lang exception hierarchy', () => {
@@ -58,9 +58,9 @@ describe('generated-lib-info.json', () => {
   })
 })
 
-describeWithStdLib('extractClassMeta (against std-lib)', () => {
+describeWithClassRoot('extractClassMeta (against the class tree)', () => {
   it('parses NullPointerException.class directly', () => {
-    const file = resolveClassFile(STD_LIB_ROOT, 'java/lang/NullPointerException')
+    const file = resolveClassFile(CLASS_ROOT, 'java/lang/NullPointerException')
     expect(file).not.toBeNull()
 
     const meta = extractClassMetaFromBuffer(fs.readFileSync(file as string))
@@ -73,7 +73,7 @@ describeWithStdLib('extractClassMeta (against std-lib)', () => {
   })
 
   it('parses every class file in the java.lang package without desyncing', () => {
-    const dir = path.join(STD_LIB_ROOT, 'java.base', 'java', 'lang')
+    const dir = resolveClassFile(CLASS_ROOT, 'java/lang/Object')!.replace(/\/Object\.class$/, '')
     const classFiles = fs.readdirSync(dir).filter(f => f.endsWith('.class'))
     expect(classFiles.length).toBeGreaterThan(0)
 
@@ -84,7 +84,7 @@ describeWithStdLib('extractClassMeta (against std-lib)', () => {
   })
 
   it('regenerates a closure that matches the committed metadata', () => {
-    const { metadata, unresolved } = computeClosure(STD_LIB_ROOT)
+    const { metadata, unresolved } = computeClosure(CLASS_ROOT)
     expect(unresolved).toEqual([])
     expect(new Set(Object.keys(metadata))).toEqual(new Set(Object.keys(libInfo)))
   })
