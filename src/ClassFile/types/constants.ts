@@ -89,6 +89,22 @@ export interface ConstantInvokeDynamicInfo {
   nameAndTypeIndex: number
 }
 
+export interface ConstantDynamicInfo {
+  tag: CONSTANT_TAG
+  bootstrapMethodAttrIndex: number
+  nameAndTypeIndex: number
+}
+
+export interface ConstantModuleInfo {
+  tag: CONSTANT_TAG
+  nameIndex: number
+}
+
+export interface ConstantPackageInfo {
+  tag: CONSTANT_TAG
+  nameIndex: number
+}
+
 export type ConstantInfo =
   | ConstantClassInfo
   | ConstantFieldrefInfo
@@ -104,3 +120,6 @@ export type ConstantInfo =
   | ConstantMethodHandleInfo
   | ConstantMethodTypeInfo
   | ConstantInvokeDynamicInfo
+  | ConstantDynamicInfo
+  | ConstantModuleInfo
+  | ConstantPackageInfo

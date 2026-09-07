@@ -11,9 +11,10 @@ import {
   OverrideFinalMethodError,
   SymbolCannotBeResolvedError,
   SymbolNotFoundError,
-  SymbolRedeclarationError
+  SymbolRedeclarationError,
+  UnresolvedImportError
 } from './error'
-import { libraries } from './import/libs'
+import { knownClasses, knownPackages, libraries } from './import/libs'
 
 export const typeMap = new Map([
   ['byte', 'B'],
@@ -150,10 +151,20 @@ export class SymbolTable {
     imports.forEach(i => {
       const id = i.identifier
       if (id.endsWith('*')) {
-        this.importedPackages.push(id.slice(0, id.length - 1).replaceAll('.', '/'))
+        const packageName = id.slice(0, id.lastIndexOf('.')).replaceAll('.', '/')
+        // `java.lang` is always in scope; any other on-demand import must name a
+        // package that holds at least one recognised standard-library class.
+        if (packageName !== 'java/lang' && !knownPackages.has(packageName)) {
+          throw new UnresolvedImportError(id)
+        }
+        this.importedPackages.push(packageName + '/')
       } else {
+        const className = id.replaceAll('.', '/')
+        if (!knownClasses.has(className)) {
+          throw new UnresolvedImportError(id)
+        }
         const typeName = id.slice(id.lastIndexOf('.') + 1)
-        this.importedClassMap.set(typeName, id.replaceAll('.', '/'))
+        this.importedClassMap.set(typeName, className)
       }
     })
 

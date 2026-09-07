@@ -6,8 +6,9 @@ import { CannotFindSymbolError, TypeCheckerError, VariableAlreadyDefinedError } 
 import { Array } from '../types/arrays'
 import { Class, ClassType } from '../types/classes'
 import { Location } from '../ast/specificationTypes'
-import { isArrayType, removeArraySuffix } from './arrays'
 import { libraries } from '../../compiler/import/libs'
+import { generatedLibInfo } from '../../compiler/import/generated-lib-info'
+import { isArrayType, removeArraySuffix } from './arrays'
 
 const BUILT_IN_TYPE_FACTORIES: { [name: string]: () => Type } = {
   boolean: () => new Primitives.Boolean(),
@@ -30,26 +31,8 @@ const BUILT_IN_TYPE_FACTORIES: { [name: string]: () => Type } = {
   String: () => new NonPrimitives.String()
 }
 
-const EXCEPTION_INHERITANCE: { [child: string]: string } = {
-  Error: 'Throwable',
-  Exception: 'Throwable',
-  RuntimeException: 'Exception',
-  ArithmeticException: 'RuntimeException',
-  ArrayIndexOutOfBoundsException: 'RuntimeException',
-  ArrayStoreException: 'RuntimeException',
-  ClassCastException: 'RuntimeException',
-  IllegalArgumentException: 'RuntimeException',
-  IllegalMonitorStateException: 'RuntimeException',
-  IllegalStateException: 'RuntimeException',
-  IndexOutOfBoundsException: 'RuntimeException',
-  NegativeArraySizeException: 'RuntimeException',
-  NullPointerException: 'RuntimeException',
-  NumberFormatException: 'RuntimeException',
-  StringIndexOutOfBoundsException: 'IndexOutOfBoundsException',
-  UnsupportedOperationException: 'RuntimeException',
-  SecurityException: 'RuntimeException',
-  IllegalThreadStateException: 'RuntimeException'
-}
+const simpleNameOf = (internalOrQualifiedName: string): string =>
+  internalOrQualifiedName.replaceAll('.', '/').split('/').pop() || internalOrQualifiedName
 
 const stdlibTypeMap = new Map<string, Type>()
 
@@ -73,21 +56,16 @@ const buildStandardLibraryTypes = (): { [key: string]: Type } => {
   // Preload built-in type objects
   Object.keys(BUILT_IN_TYPE_FACTORIES).forEach(typeName => createType(typeName))
 
-  const getSimpleName = (qualifiedName: string) => {
-    const lastToken = qualifiedName.replaceAll('.', '/').split('/').pop() || qualifiedName
-    return lastToken
-  }
-
   libraries.forEach(pkg => {
     pkg.classes.forEach(clazz => {
-      const className = getSimpleName(clazz.className)
+      const className = simpleNameOf(clazz.className)
       createType(className)
     })
   })
 
   libraries.forEach(pkg => {
     pkg.classes.forEach(clazz => {
-      const className = getSimpleName(clazz.className)
+      const className = simpleNameOf(clazz.className)
       const classType = createType(className)
       if (!(classType instanceof ClassType)) return
 
@@ -107,9 +85,16 @@ const buildStandardLibraryTypes = (): { [key: string]: Type } => {
     })
   })
 
-  Object.entries(EXCEPTION_INHERITANCE).forEach(([child, parent]) => {
-    const childType = createType(child)
-    const parentType = createType(parent)
+  // Derive class inheritance from the extracted standard-library metadata
+  // instead of a hand-maintained table. Only edges between types the checker
+  // already knows about (created from `libraries` above) are wired up.
+  Object.values(generatedLibInfo).forEach(meta => {
+    if (meta.superClass === null) return
+    const childName = simpleNameOf(meta.name)
+    const parentName = simpleNameOf(meta.superClass)
+    if (childName === parentName) return
+    const childType = stdlibTypeMap.get(childName)
+    const parentType = stdlibTypeMap.get(parentName)
     if (childType instanceof ClassType && parentType instanceof ClassType) {
       childType.setParentClass(parentType)
     }
