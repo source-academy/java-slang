@@ -36,7 +36,8 @@ import { ConstantPoolManager } from './constant-pool-manager'
 import {
   AmbiguousMethodCallError,
   ConstructNotSupportedError,
-  NoMethodMatchingSignatureError
+  NoMethodMatchingSignatureError,
+  NonStaticReferenceInStaticContextError
 } from './error'
 import { FieldInfo, MethodInfos, SymbolInfo, SymbolTable, VariableInfo } from './symbol-table'
 
@@ -1242,6 +1243,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     if (unqualifiedCall && !(selectedMethod.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+      if (cg.currentMethodIsStatic) {
+        throw new NonStaticReferenceInStaticContextError('method', selectedMethod.name)
+      }
       cg.code.push(OPCODE.ALOAD, 0)
     }
 
@@ -1619,6 +1623,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           fieldInfo.typeDescriptor
         )
         if (i === 0 && !(fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+          if (cg.currentMethodIsStatic) {
+            throw new NonStaticReferenceInStaticContextError('field', fieldInfo.name)
+          }
           // load "this"
           cg.code.push(OPCODE.ALOAD, 0)
         }
@@ -2109,6 +2116,7 @@ class CodeGenerator {
   finallyBlockStack: Node[] = []
   code: number[] = []
   currentClass: string
+  currentMethodIsStatic: boolean = false
 
   constructor(symbolTable: SymbolTable, constantPoolManager: ConstantPoolManager) {
     this.symbolTable = symbolTable
@@ -2142,8 +2150,9 @@ class CodeGenerator {
   generateCode(currentClass: string, methodNode: MethodDeclaration) {
     this.symbolTable.extend()
     this.currentClass = currentClass
+    this.currentMethodIsStatic = methodNode.methodModifier.includes('static')
     this.exceptionTable = []
-    if (!methodNode.methodModifier.includes('static')) {
+    if (!this.currentMethodIsStatic) {
       this.maxLocals++
     }
 

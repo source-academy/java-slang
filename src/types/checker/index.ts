@@ -11,8 +11,8 @@ import {
   NotApplicableToExpressionTypeError,
   TypeCheckerError,
   TypeCheckerInternalError,
-  VariableAlreadyDefinedError
-  ,UnhandledExceptionError
+  VariableAlreadyDefinedError,
+  UnhandledExceptionError
 } from '../errors'
 import {
   Boolean,
@@ -26,7 +26,7 @@ import {
   getNumberType
 } from '../types/primitives'
 import { createArrayType } from '../typeFactories/arrayFactory'
-import { ClassType } from '../types/classes'
+import { ClassType, EnumClass } from '../types/classes'
 import { Argument, Arguments, Method } from '../types/methods'
 import { unannTypeToString } from '../ast/utils'
 import { Frame } from './environment'
@@ -68,28 +68,27 @@ export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result =>
 const isCastCompatible = (fromType: Type, toType: Type): boolean => {
   // Handle primitive type compatibility
   if (fromType instanceof PrimitiveType && toType instanceof PrimitiveType) {
-    const fromName = fromType.constructor.name;
-    const toName = toType.constructor.name;
+    const fromName = fromType.constructor.name
+    const toName = toType.constructor.name
 
-
-    return !(fromName === 'char' && toName !== 'int');
+    return !(fromName === 'char' && toName !== 'int')
   }
 
   // Handle class type compatibility
   if (fromType instanceof ClassType && toType instanceof ClassType) {
     // Allow upcasts (base class to derived class) or downcasts (derived class to base class)
-    return fromType.canBeAssigned(toType) || toType.canBeAssigned(fromType);
+    return fromType.canBeAssigned(toType) || toType.canBeAssigned(fromType)
   }
 
   // Handle array type compatibility
   if (fromType instanceof ArrayType && toType instanceof ArrayType) {
     // Ensure the content types are compatible
-    return isCastCompatible(fromType.getContentType(), toType.getContentType());
+    return isCastCompatible(fromType.getContentType(), toType.getContentType())
   }
 
   // Disallow other cases by default
-  return false;
-};
+  return false
+}
 
 export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): Result => {
   switch (node.kind) {
@@ -221,32 +220,32 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       return OK_RESULT
     }
     case 'CastExpression': {
-      let castTypeNode, expressionNode;
+      let castTypeNode, expressionNode
       if ('primitiveType' in node) {
-        castTypeNode = node.primitiveType;
-        expressionNode = node.unaryExpression;
+        castTypeNode = node.primitiveType
+        expressionNode = node.unaryExpression
       } else if ('referenceType' in node && 'unaryExpressionNotPlusMinus' in node) {
-        castTypeNode = node.referenceType;
-        expressionNode = node.unaryExpressionNotPlusMinus;
+        castTypeNode = node.referenceType
+        expressionNode = node.unaryExpressionNotPlusMinus
       } else if ('referenceType' in node && 'lambdaExpression' in node) {
-        castTypeNode = node.referenceType;
-        expressionNode = node.lambdaExpression;
+        castTypeNode = node.referenceType
+        expressionNode = node.lambdaExpression
       } else {
-        throw new Error('Invalid typecast.');
+        throw new Error('Invalid typecast.')
       }
 
-      const castType = frame.getType(unannTypeToString(castTypeNode), castTypeNode.location);
-      if (castType instanceof TypeCheckerError) return newResult(null, [castType]);
+      const castType = frame.getType(unannTypeToString(castTypeNode), castTypeNode.location)
+      if (castType instanceof TypeCheckerError) return newResult(null, [castType])
 
-      const { currentType, errors } = typeCheckBody(expressionNode, frame);
-      if (errors.length > 0) return newResult(null, errors);
-      if (!currentType) throw new Error('Target of cast expression should return a type.');
+      const { currentType, errors } = typeCheckBody(expressionNode, frame)
+      if (errors.length > 0) return newResult(null, errors)
+      if (!currentType) throw new Error('Target of cast expression should return a type.')
 
       if (!castType.canBeAssigned(currentType) && !currentType.canBeAssigned(castType)) {
-        return newResult(null, [new IncompatibleTypesError(node.location)]);
+        return newResult(null, [new IncompatibleTypesError(node.location)])
       }
 
-      return newResult(castType);
+      return newResult(castType)
     }
     case 'ClassInstanceCreationExpression': {
       const classIdentifier =
@@ -495,14 +494,14 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
         // If there was exactly one candidate and it produced a specific
         // type-check error (e.g. incompatible types), surface that error
         // instead of the generic "method cannot be applied" message.
-        if (methods.length === 1 && lastInvokeError) return newResult(null, [...errors, lastInvokeError])
+        if (methods.length === 1 && lastInvokeError)
+          return newResult(null, [...errors, lastInvokeError])
         return newResult(null, [...errors, new MethodCannotBeAppliedError(node.location)])
       }
 
       // Enforce declared exceptions from the invoked method: any checked exception
       // must either be caught by an enclosing try/catch or declared by the current method.
-      const declaredExceptions: any[] =
-        (selectedMethod as any).getThrownExceptions?.() || []
+      const declaredExceptions: any[] = (selectedMethod as any).getThrownExceptions?.() || []
       if (declaredExceptions.length > 0) {
         const exceptionBase = frame.getType('Exception', node.location)
         for (const declaredException of declaredExceptions) {
@@ -516,12 +515,16 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
 
           // check if caught by any active catch in scope
           const activeCaught = frame.getActiveCaughtExceptions()
-          const isCaught = activeCaught.some(caughtType => caughtType.canBeAssigned(declaredException))
+          const isCaught = activeCaught.some(caughtType =>
+            caughtType.canBeAssigned(declaredException)
+          )
           if (isCaught) continue
 
           // check if current method declares it
           const declaredByCurrent = frame.getThrows()
-          const isDeclared = declaredByCurrent.some(declared => declared.canBeAssigned(declaredException))
+          const isDeclared = declaredByCurrent.some(declared =>
+            declared.canBeAssigned(declaredException)
+          )
           if (isDeclared) continue
 
           return newResult(null, [new UnhandledExceptionError(node.location)])
@@ -642,7 +645,8 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
       const errors: TypeCheckerError[] = []
       const classType = frame.getType(node.typeIdentifier.identifier, node.typeIdentifier.location)
       if (classType instanceof TypeCheckerError) return newResult(null, [classType])
-      if (!(classType instanceof ClassType)) throw new Error('enum type retrieved should be ClassImpl')
+      if (!(classType instanceof ClassType))
+        throw new Error('enum type retrieved should be ClassImpl')
 
       const classFrame = frame.newChildFrame()
       classFrame.setClass(classType)
@@ -660,7 +664,9 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
         switch (bodyDeclaration.kind) {
           case 'ConstructorDeclaration': {
             const methodFrame = classFrame.newChildFrame()
-            const constructor = classType.getConstructor(i - numFieldDeclarations - numMethodDeclarations)
+            const constructor = classType.getConstructor(
+              i - numFieldDeclarations - numMethodDeclarations
+            )
             const constructorMethodErrors: TypeCheckerError[] = []
             constructor.mapParameters((name, type, isVarargs) => {
               const error = methodFrame.setVariable(name, type, { startLine: -1, startOffset: -1 })
@@ -670,20 +676,28 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
               errors.push(...constructorMethodErrors)
               break
             }
-            const { errors: checkErrors } = typeCheckBody(bodyDeclaration.constructorBody, methodFrame)
+            const { errors: checkErrors } = typeCheckBody(
+              bodyDeclaration.constructorBody,
+              methodFrame
+            )
             if (checkErrors.length > 0) errors.push(...checkErrors)
             break
           }
           case 'FieldDeclaration': {
-            for (const variableDeclarator of (bodyDeclaration as any).variableDeclaratorList.variableDeclarators) {
-              const field = classType.accessField(variableDeclarator.variableDeclaratorId.identifier.identifier, variableDeclarator.variableDeclaratorId.identifier.location)
+            for (const variableDeclarator of (bodyDeclaration as any).variableDeclaratorList
+              .variableDeclarators) {
+              const field = classType.accessField(
+                variableDeclarator.variableDeclaratorId.identifier.identifier,
+                variableDeclarator.variableDeclaratorId.identifier.location
+              )
               if (field instanceof TypeCheckerError) throw new Error('field should exist in enum')
               const initializer = variableDeclarator.variableInitializer
               if (initializer) {
                 const type = createArrayType(field, initializer, expression => {
                   const result = typeCheckBody(expression, frame)
                   if (result.errors.length > 0) return result.errors[0]
-                  if (!result.currentType) throw new Error('array initializer expression should have a type')
+                  if (!result.currentType)
+                    throw new Error('array initializer expression should have a type')
                   return result.currentType
                 })
                 if (type instanceof TypeCheckerError) errors.push(type)
@@ -692,10 +706,15 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
             break
           }
           case 'MethodDeclaration': {
-            const methodIdentifier = (bodyDeclaration as any).methodHeader.methodDeclarator.identifier
+            const methodIdentifier = (bodyDeclaration as any).methodHeader.methodDeclarator
+              .identifier
             const methodName = methodIdentifier.identifier
             const overloadIndex = bodyDecls
-              .filter((n: any) => n.kind === 'MethodDeclaration' && (n).methodHeader.methodDeclarator.identifier.identifier === methodName)
+              .filter(
+                (n: any) =>
+                  n.kind === 'MethodDeclaration' &&
+                  n.methodHeader.methodDeclarator.identifier.identifier === methodName
+              )
               .findIndex(n => n === bodyDeclaration)
             const method = classType.getMethod(methodName)[overloadIndex]
             const methodFrame = classFrame.newChildFrame()
@@ -709,7 +728,10 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
               errors.push(...methodErrors)
               break
             }
-            const { errors: checkErrors } = typeCheckBody((bodyDeclaration as any).methodBody, methodFrame)
+            const { errors: checkErrors } = typeCheckBody(
+              (bodyDeclaration as any).methodBody,
+              methodFrame
+            )
             if (checkErrors.length > 0) errors.push(...checkErrors)
             break
           }
@@ -782,10 +804,35 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
         for (const switchLabel of group.switchLabels) {
           // Support both singular 'caseConstant' and plural 'caseConstants' AST shapes
           const caseConstants: CaseConstant[] = []
-          if ('caseConstant' in switchLabel && (switchLabel as any).caseConstant) caseConstants.push((switchLabel as any).caseConstant as CaseConstant)
-          if ('caseConstants' in switchLabel && (switchLabel as any).caseConstants) caseConstants.push(...((switchLabel as any).caseConstants as CaseConstant[]))
+          if ('caseConstant' in switchLabel && (switchLabel as any).caseConstant)
+            caseConstants.push((switchLabel as any).caseConstant as CaseConstant)
+          if ('caseConstants' in switchLabel && (switchLabel as any).caseConstants)
+            caseConstants.push(...((switchLabel as any).caseConstants as CaseConstant[]))
           if (caseConstants.length > 0) {
             for (const caseConst of caseConstants) {
+              // In an enum switch the case label is the bare constant name,
+              // resolved as a field of the enum type rather than as a variable.
+              // The parser emits an `Identifier` / `ExpressionName` node here,
+              // which `CaseConstant` (typed as `ConditionalExpression`) doesn't
+              // cover. Other forms fall through to the generic check below.
+              if (expressionCheck.currentType instanceof EnumClass) {
+                const label = caseConst as any
+                const constantName =
+                  label.kind === 'Identifier'
+                    ? label.identifier
+                    : label.kind === 'ExpressionName'
+                      ? label.identifier.identifier
+                      : null
+                if (typeof constantName === 'string') {
+                  const constantType = expressionCheck.currentType.accessField(
+                    constantName,
+                    switchLabel.location
+                  )
+                  if (constantType instanceof TypeCheckerError)
+                    return newResult(null, [constantType])
+                  continue
+                }
+              }
               const checkResult = typeCheckBody(caseConst, switchBlockFrame)
               if (checkResult.hasErrors) return checkResult
               if (!checkResult.currentType)
@@ -857,7 +904,8 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
           )
           if (catchType instanceof TypeCheckerError) continue
           const catchFrame = frame.newChildFrame()
-          const catchTypeParameter = catchClause.catchFormalParameter.variableDeclaratorId.identifier
+          const catchTypeParameter =
+            catchClause.catchFormalParameter.variableDeclaratorId.identifier
           const error = catchFrame.setVariable(
             catchTypeParameter.identifier,
             catchType,

@@ -535,7 +535,38 @@ export class Compiler {
     nonStaticMethods.forEach(m => this.recordMethodInfo(m))
     nonStaticMethods.forEach(m => this.compileMethod(m))
     staticMethods.forEach(m => this.compileMethod(m))
+    this.compileStaticFieldInitializers(staticFields)
     constructors.forEach(c => this.compileConstructor(c))
+  }
+
+  /**
+   * Emits a `<clinit>` that runs the initialiser expression of each static
+   * field, in declaration order (`static T f = expr;` -> `f = expr;`).
+   */
+  private compileStaticFieldInitializers(staticFields: Array<FieldDeclaration>) {
+    const blockStatements: any[] = []
+    for (const field of staticFields) {
+      for (const declarator of field.variableDeclaratorList) {
+        if (declarator.variableInitializer === undefined) continue
+        blockStatements.push({
+          kind: 'ExpressionStatement',
+          stmtExp: {
+            kind: 'Assignment',
+            left: { kind: 'ExpressionName', name: declarator.variableDeclaratorId },
+            operator: '=',
+            right: declarator.variableInitializer
+          }
+        })
+      }
+    }
+    if (blockStatements.length === 0) return
+
+    this.compileMethod({
+      kind: 'MethodDeclaration',
+      methodModifier: ['static'],
+      methodHeader: { identifier: '<clinit>', formalParameterList: [], result: 'void' },
+      methodBody: { kind: 'Block', blockStatements }
+    } as unknown as MethodDeclaration)
   }
 
   private recordFieldInfo(fieldNode: FieldDeclaration) {
