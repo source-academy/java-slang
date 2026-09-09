@@ -1767,7 +1767,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
                       throw new Error(`Invalid enum switch label: ${label.expression.name}`)
                     return field.ordinal
                   })()
-                : parseInt((label.expression as Literal).literalType.value)
+                : label.expression.kind === 'ExpressionName'
+                  ? (() => { throw new Error(`Identifier case labels are only supported for enum switch selectors: ${label.expression.name}`) })()
+                  : parseInt((label.expression as Literal).literalType.value)
             caseValues.push(value)
             caseLabelMap.set(value, caseLabels[index])
           } else if (label.kind === 'DefaultLabel') {
