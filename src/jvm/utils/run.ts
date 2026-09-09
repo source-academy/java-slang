@@ -1,9 +1,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileFromSource } from '../../compiler'
-import { BinaryWriter } from '../../compiler/binary-writer'
 import { ClassFile } from '../../ClassFile/types'
-import setupJVM, { parseBin } from '../index'
+import setupJVM, { parseBin, userClassFiles } from '../index'
 
 /**
  * Runs a Java source file through the java-slang compiler + JVM from Node.
@@ -27,20 +26,12 @@ const b64ToDataView = (b64: string): DataView => {
 
 export default function run(sourcePath: string): Promise<{ stdout: string; stderr: string }> {
   const source = fs.readFileSync(sourcePath, 'utf8')
-  const writer = new BinaryWriter()
-
-  const userClasses: { [name: string]: ClassFile } = {}
-  for (const cls of compileFromSource(source)) {
-    const bytes = writer.generateBinary(cls.classFile)
-    userClasses[cls.className] = parseBin(
-      new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-    )
-  }
+  const userFiles = userClassFiles(compileFromSource(source))
 
   const parsedCache: { [name: string]: ClassFile } = {}
   const readFileSync = (p: string): ClassFile => {
     const name = p.replace(/\.class$/, '')
-    if (userClasses[name]) return userClasses[name]
+    if (userFiles[name + '.class']) return userFiles[name + '.class']
     if (parsedCache[name]) return parsedCache[name]
     const encoded = bundle[name + '.class']
     if (!encoded) throw new Error(`class not found in bundle: ${name}`)

@@ -144,6 +144,8 @@ export class ClassType extends ClassOrInterfaceType implements Class {
   }
 }
 
+export class EnumClass extends ClassType {}
+
 export class ObjectClass extends ClassOrInterfaceType implements Class {
   public readonly name: string = 'Object'
   public constructor() {

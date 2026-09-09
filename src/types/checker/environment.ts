@@ -10,6 +10,44 @@ import { libraries } from '../../compiler/import/libs'
 import { generatedLibInfo } from '../../compiler/import/generated-lib-info'
 import { isArrayType, removeArraySuffix } from './arrays'
 
+const PRIMITIVE_DESCRIPTORS: { [code: string]: string } = {
+  B: 'byte',
+  C: 'char',
+  D: 'double',
+  F: 'float',
+  I: 'int',
+  J: 'long',
+  S: 'short',
+  Z: 'boolean',
+  V: 'void'
+}
+
+/** JVM field descriptor -> the type name `parseType` understands. */
+const descriptorToTypeName = (descriptor: string): string => {
+  let dims = 0
+  while (descriptor[dims] === '[') dims++
+  const base = descriptor.slice(dims)
+  const suffix = '[]'.repeat(dims)
+  if (base.startsWith('L') && base.endsWith(';')) return base.slice(1, -1) + suffix
+  return (PRIMITIVE_DESCRIPTORS[base] ?? base) + suffix
+}
+
+/** Splits a JVM method descriptor into its parameter and return descriptors. */
+const splitMethodDescriptor = (descriptor: string): { params: string[]; returns: string } => {
+  const end = descriptor.indexOf(')')
+  const paramSection = descriptor.slice(1, end)
+  const params: string[] = []
+  let i = 0
+  while (i < paramSection.length) {
+    const start = i
+    while (paramSection[i] === '[') i++
+    if (paramSection[i] === 'L') i = paramSection.indexOf(';', i) + 1
+    else i++
+    params.push(paramSection.slice(start, i))
+  }
+  return { params, returns: descriptor.slice(end + 1) }
+}
+
 const BUILT_IN_TYPE_FACTORIES: { [name: string]: () => Type } = {
   boolean: () => new Primitives.Boolean(),
   byte: () => new Primitives.Byte(),
@@ -28,7 +66,28 @@ const BUILT_IN_TYPE_FACTORIES: { [name: string]: () => Type } = {
   Integer: () => new NonPrimitives.Integer(),
   Long: () => new NonPrimitives.Long(),
   Short: () => new NonPrimitives.Short(),
-  String: () => new NonPrimitives.String()
+  String: () => new NonPrimitives.String(),
+  // Base type that all enum declarations implicitly extend. Its methods are
+  // derived from the real java.lang.Enum metadata rather than hand-listed.
+  Enum: () => {
+    const enumType = new ClassType('Enum')
+    const loc: Location = { startLine: -1, startOffset: -1 }
+    // `Ljava/lang/Enum;` in a descriptor refers back to this type, which is not
+    // yet registered in `stdlibTypeMap` while this factory runs.
+    const resolve = (descriptor: string): Type =>
+      descriptor === 'Ljava/lang/Enum;' ? enumType : parseType(descriptorToTypeName(descriptor))
+
+    for (const member of generatedLibInfo['java/lang/Enum']?.methods ?? []) {
+      if (member.name === '<init>' || member.name === '<clinit>') continue
+      const { params, returns } = splitMethodDescriptor(member.descriptor)
+      const method = new Method(member.name, resolve(returns))
+      params.forEach((param, index) =>
+        method.addParameter(new Parameter(`arg${index}`, resolve(param)))
+      )
+      enumType.addMethod(member.name, method, loc)
+    }
+    return enumType
+  }
 }
 
 const simpleNameOf = (internalOrQualifiedName: string): string =>
