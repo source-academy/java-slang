@@ -1,11 +1,15 @@
 import * as fs from 'node:fs'
 
 /**
- * Build script to convert all classfiles in a directory to base64 and write them to a file.
+ * Build script to convert classfiles to base64 and write them to a file.
  * e.g. node dist/jvm/utils/build path/to/classfiles
  *
- * only includes classfiles with package names starting with the strings in the include array
- * writes to $OUTDIR/classfiles.js. OUTDIR can be changed by setting the OUTDIR variable below.
+ * $OUTDIR/classfiles.js is a recursive walk of argv[2], including every
+ * classfile whose package name starts with one of the `include` prefixes. Point
+ * argv[2] at one JDK's class tree (an extracted Java 8 `rt/`) so the bundle is a
+ * single, version-consistent class set - that is what the JVM targets.
+ *
+ * OUTDIR can be changed by setting the OUTDIR variable below.
  */
 
 const CLASSFILE_PATH = process.argv[2] ?? ''
@@ -38,7 +42,8 @@ function _readAll(currentPath: string) {
 
 export default function build() {
   console.log(process.argv)
-  _readAll(CLASSFILE_PATH)
+  if (CLASSFILE_PATH) _readAll(CLASSFILE_PATH)
+
   fs.writeFileSync(
     OUTDIR + '/classfiles.js',
     `"use strict";

@@ -22,6 +22,12 @@ export class SymbolCannotBeResolvedError extends CompileError {
   }
 }
 
+export class UnresolvedImportError extends CompileError {
+  constructor(identifier: string) {
+    super('the import ' + '"' + identifier + '"' + ' cannot be resolved')
+  }
+}
+
 export class InvalidMethodCallError extends CompileError {
   constructor(name: string) {
     super('"' + name + '"' + ' is not a valid method')
