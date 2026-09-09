@@ -27,7 +27,7 @@ export const addClasses = (node: Node, frame: Frame): Result => {
           try {
             const enumType = new EnumClass(obj.typeIdentifier.identifier)
             const err = frame.setType(obj.typeIdentifier.identifier, enumType, obj.typeIdentifier.location)
-                  if (err instanceof Error) {
+            if (err) {
               // duplicate class — add as error
               typeCheckErrors.push(new DuplicateClassError(obj.location))
             }
