@@ -1,11 +1,11 @@
 import { BaseJavaCstVisitorWithDefaults, CstNode, TypeDeclarationCtx } from "java-parser";
 
-import { NormalClassDeclaration } from "../types/classes";
+import { ClassDeclaration } from "../types/classes";
 import { AST } from "../types/packages-and-modules";
 import { ClassExtractor } from "./class-extractor";
 
 export class ASTExtractor extends BaseJavaCstVisitorWithDefaults {
-  private topLevelClassOrInterfaceDeclarations: NormalClassDeclaration[] = [];
+  private topLevelClassOrInterfaceDeclarations: ClassDeclaration[] = [];
 
   extract(cst: CstNode): AST {
     this.visit(cst);
