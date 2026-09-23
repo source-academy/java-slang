@@ -202,6 +202,15 @@ export class Method implements Type {
     }
   }
 
+  public addThrownException(exception: any): void {
+    // `exception` is expected to be a Class (ClassType). We avoid strong coupling here.
+    this.throws.addException(exception)
+  }
+
+  public getThrownExceptions(): any[] {
+    return this.throws.getExceptions()
+  }
+
   public toString(): string {
     return `${this.modifiers.toString()} ${this.returnType.toString()} ${this.methodName}${this.parameters.toString()} ${this.throws.toString()}`
   }

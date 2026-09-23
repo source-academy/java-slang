@@ -186,7 +186,7 @@ function readCodeAttribute(
     throw new Error('Class format error: Code attribute invalid length')
   }
 
-  const code = new DataView(view.buffer, offset, codeLength)
+  const code = new DataView(view.buffer, view.byteOffset + offset, codeLength)
   offset += codeLength
 
   const exceptionTableLength = view.getUint16(offset)

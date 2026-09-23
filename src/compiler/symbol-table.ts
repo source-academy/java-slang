@@ -7,12 +7,15 @@ import {
   generateMethodAccessFlags
 } from './compiler-utils'
 import {
-  InvalidMethodCallError, OverrideFinalMethodError,
+  InvalidMethodCallError,
+  OverrideFinalMethodError,
   SymbolCannotBeResolvedError,
   SymbolNotFoundError,
-  SymbolRedeclarationError
+  SymbolRedeclarationError,
+  UnresolvedImportError
 } from './error'
-import { libraries } from './import/libs'
+import { generatedLibInfo } from './import/generated-lib-info'
+import { knownClasses, knownPackages, libraries } from './import/libs'
 
 export const typeMap = new Map([
   ['byte', 'B'],
@@ -47,6 +50,7 @@ export interface ClassInfo {
   name: string
   accessFlags: number
   parentClassName?: string
+  isEnum?: boolean
 }
 
 export interface FieldInfo {
@@ -55,6 +59,7 @@ export interface FieldInfo {
   parentClassName: string
   typeName: string
   typeDescriptor: string
+  ordinal?: number
 }
 
 export type MethodInfos = Array<MethodInfo>
@@ -83,6 +88,18 @@ function generateSymbol(name: string, type: SymbolType) {
   return JSON.stringify(symbol)
 }
 
+/**
+ * Extracts the symbol-table `typeName` for a field from its JVM descriptor:
+ * the internal class name for object types, or the raw descriptor for
+ * primitives and arrays (which are not used as lookup keys).
+ */
+function descriptorToTypeName(descriptor: string): string {
+  let d = descriptor
+  while (d.startsWith('[')) d = d.slice(1)
+  if (d.startsWith('L') && d.endsWith(';')) return d.slice(1, -1)
+  return descriptor
+}
+
 export class SymbolTable {
   private tables: Array<Table>
   private curTable: Table
@@ -100,10 +117,17 @@ export class SymbolTable {
   }
 
   private setup() {
+    // The extracted class-file metadata is authoritative; it is registered
+    // first so its full signatures win over the curated `lib-info.ts` stubs.
+    this.setupGeneratedLibrary()
+
     libraries.forEach(p => {
       if (this.importedPackages.findIndex(e => e == p.packageName + '/') == -1)
         this.importedPackages.push(p.packageName + '/')
       p.classes.forEach(c => {
+        if (this.tables[0].has(generateSymbol(c.className, SymbolType.CLASS))) {
+          return
+        }
         this.insertClassInfo({
           name: c.className,
           accessFlags: generateClassAccessFlags(c.accessFlags)
@@ -131,6 +155,45 @@ export class SymbolTable {
     })
   }
 
+  /**
+   * Registers every standard-library class from the extracted class-file
+   * metadata. Descriptors and access flags come straight from the `.class`
+   * files, so no hand-written signatures are involved.
+   */
+  private setupGeneratedLibrary() {
+    Object.values(generatedLibInfo).forEach(meta => {
+      const classKey = generateSymbol(meta.name, SymbolType.CLASS)
+      if (this.tables[0].has(classKey)) {
+        return
+      }
+
+      this.insertClassInfo({
+        name: meta.name,
+        accessFlags: meta.accessFlags,
+        parentClassName: meta.superClass ?? undefined
+      })
+      meta.fields.forEach(f =>
+        this.insertFieldInfo({
+          name: f.name,
+          accessFlags: f.accessFlags,
+          parentClassName: meta.name,
+          typeName: descriptorToTypeName(f.descriptor),
+          typeDescriptor: f.descriptor
+        })
+      )
+      meta.methods.forEach(m =>
+        this.insertMethodInfo({
+          name: m.name,
+          accessFlags: m.accessFlags,
+          parentClassName: meta.name,
+          typeDescriptor: m.descriptor,
+          className: meta.name
+        })
+      )
+      this.returnToRoot()
+    })
+  }
+
   private getNewTable() {
     return new Map<Symbol, SymbolNode>()
   }
@@ -149,10 +212,20 @@ export class SymbolTable {
     imports.forEach(i => {
       const id = i.identifier
       if (id.endsWith('*')) {
-        this.importedPackages.push(id.slice(0, id.length - 1).replaceAll('.', '/'))
+        const packageName = id.slice(0, id.lastIndexOf('.')).replaceAll('.', '/')
+        // `java.lang` is always in scope; any other on-demand import must name a
+        // package that holds at least one recognised standard-library class.
+        if (packageName !== 'java/lang' && !knownPackages.has(packageName)) {
+          throw new UnresolvedImportError(id)
+        }
+        this.importedPackages.push(packageName + '/')
       } else {
+        const className = id.replaceAll('.', '/')
+        if (!knownClasses.has(className)) {
+          throw new UnresolvedImportError(id)
+        }
         const typeName = id.slice(id.lastIndexOf('.') + 1)
-        this.importedClassMap.set(typeName, id.replaceAll('.', '/'))
+        this.importedClassMap.set(typeName, className)
       }
     })
 
@@ -209,14 +282,17 @@ export class SymbolTable {
     const key = generateSymbol(info.name, SymbolType.METHOD)
 
     for (let i = this.curClassIdx - 1; i > 0; i--) {
-      const parentTable = this.tables[i];
+      const parentTable = this.tables[i]
       if (parentTable.has(key)) {
-        const parentMethods = parentTable.get(key)!.info;
+        const parentMethods = parentTable.get(key)!.info
         if (Array.isArray(parentMethods)) {
           for (const m of parentMethods) {
-            if (m.typeDescriptor === info.typeDescriptor && (m.accessFlags & METHOD_FLAGS.ACC_FINAL)
-              && m.className == info.parentClassName) {
-              throw new OverrideFinalMethodError(info.name);
+            if (
+              m.typeDescriptor === info.typeDescriptor &&
+              m.accessFlags & METHOD_FLAGS.ACC_FINAL &&
+              m.className == info.parentClassName
+            ) {
+              throw new OverrideFinalMethodError(info.name)
             }
           }
         }

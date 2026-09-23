@@ -1,6 +1,6 @@
+import BasicEvaluator, { IRunnerPlugin } from '@sourceacademy/conductor/runner'
 import setupJVM from '../jvm/index'
 import parseBin, { a2ab } from '../jvm/utils/disassembler'
-import BasicEvaluator, { IRunnerPlugin } from '@sourceacademy/conductor/runner'
 
 /**
  * Minimal Java conductor evaluator stub.

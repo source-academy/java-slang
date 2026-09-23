@@ -165,3 +165,9 @@ export class VariableAlreadyDefinedError extends TypeCheckerError {
     super('variable is already defined', location)
   }
 }
+
+export class UnhandledExceptionError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('unhandled exception', location)
+  }
+}

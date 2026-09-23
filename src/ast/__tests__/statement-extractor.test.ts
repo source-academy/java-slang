@@ -20,6 +20,7 @@ describe("extract ExpressionStatement correctly", () => {
             kind: "NormalClassDeclaration",
             classModifier: [],
             typeIdentifier: "Test",
+            sclass: undefined,
             classBody: [
               {
                 kind: "MethodDeclaration",
@@ -203,8 +204,7 @@ describe("extract ExpressionStatement correctly", () => {
       const ast = parse(programStr);
       expect(ast).toEqual(expectedAst);
     });
-
-    it("extract Assignment Expression simple ExpressionName correctly", () => {
+    it("extract Assignment LeftHandSide qualified ExpressionName correctly", () => {
       const programStr = `
         class Test {
           void test() {
@@ -716,6 +716,7 @@ describe("extract ReturnStatement correctly", () => {
           kind: "NormalClassDeclaration",
           classModifier: [],
           typeIdentifier: "Test",
+          sclass: undefined,
           classBody: [
             {
               kind: "MethodDeclaration",
@@ -790,6 +791,115 @@ describe("extract ReturnStatement correctly", () => {
                       },
                       location: expect.anything(),
                     },
+                    location: expect.anything(),
+                  },
+                ],
+                location: expect.anything(),
+              },
+              location: expect.anything(),
+            },
+          ],
+          location: expect.anything(),
+        },
+      ],
+      location: expect.anything(),
+    };
+
+    const ast = parse(programStr);
+    console.log(JSON.stringify(ast, null, 2));
+    expect(ast).toEqual(expectedAst);
+  });
+});
+
+describe("extract TryStatement and ThrowStatement correctly", () => {
+  it("extract ThrowStatement inside catch block correctly", () => {
+    const programStr = `
+      class Test {
+        void test() {
+          try {
+            throw new Exception();
+          } catch (Exception e) {
+            throw new Exception();
+          }
+        }
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      importDeclarations: [],
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Test",
+          classBody: [
+            {
+              kind: "MethodDeclaration",
+              methodModifier: [],
+              methodHeader: {
+                result: "void",
+                identifier: "test",
+                formalParameterList: [],
+              },
+              methodBody: {
+                kind: "Block",
+                blockStatements: [
+                  {
+                    kind: "TryStatement",
+                    block: {
+                      kind: "Block",
+                      blockStatements: [
+                        {
+                          kind: "ThrowStatement",
+                          expression: {
+                            kind: "ClassInstanceCreationExpression",
+                            identifier: "Exception",
+                            argumentList: [],
+                            location: expect.anything(),
+                          },
+                          location: expect.anything(),
+                        },
+                      ],
+                      location: expect.anything(),
+                    },
+                    catches: {
+                      kind: "Catches",
+                      catchClauses: [
+                        {
+                          kind: "CatchClause",
+                          catchFormalParameter: {
+                            kind: "CatchFormalParameter",
+                            catchType: {
+                              kind: "CatchType",
+                              unannClassType: "Exception",
+                              location: expect.anything(),
+                            },
+                            variableDeclaratorId: "e",
+                            location: expect.anything(),
+                          },
+                            block: {
+                              kind: "Block",
+                              blockStatements: [
+                                {
+                                  kind: "ThrowStatement",
+                                  expression: {
+                                    kind: "ClassInstanceCreationExpression",
+                                    identifier: "Exception",
+                                    argumentList: [],
+                                    location: expect.anything(),
+                                  },
+                                  location: expect.anything(),
+                                },
+                              ],
+                            location: expect.anything(),
+                          },
+                          location: expect.anything(),
+                        },
+                      ],
+                      location: expect.anything(),
+                    },
+                    finally: undefined,
                     location: expect.anything(),
                   },
                 ],

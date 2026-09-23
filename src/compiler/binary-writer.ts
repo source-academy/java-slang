@@ -49,7 +49,9 @@ export class BinaryWriter {
     fs.writeFileSync(filename, binary)
   }
 
-  private normalizeClassFile(classFile: ClassFile | Class | Array<ClassFile> | Array<Class>): ClassFile {
+  private normalizeClassFile(
+    classFile: ClassFile | Class | Array<ClassFile> | Array<Class>
+  ): ClassFile {
     if (Array.isArray(classFile)) {
       if (classFile.length === 0) {
         throw new Error('BinaryWriter expected a non-empty array of classes')

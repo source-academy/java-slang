@@ -31,11 +31,13 @@ import {
   CaseLabel
 } from '../ast/types/blocks-and-statements'
 import { MethodDeclaration, UnannType } from '../ast/types/classes'
+import { unannTypeToString } from '../types/ast/utils'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
   AmbiguousMethodCallError,
   ConstructNotSupportedError,
-  NoMethodMatchingSignatureError
+  NoMethodMatchingSignatureError,
+  NonStaticReferenceInStaticContextError
 } from './error'
 import { FieldInfo, MethodInfos, SymbolInfo, SymbolTable, VariableInfo } from './symbol-table'
 
@@ -190,19 +192,107 @@ const EMPTY_TYPE: string = ''
 function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGenerator): boolean {
   const cleanFrom = fromType.replace(/^L|;$/g, '')
   const cleanTo = toType.replace(/^L|;$/g, '')
-  if (cleanFrom === cleanTo) return true;
+  if (cleanFrom === cleanTo) return true
 
   try {
-    let current = cg.symbolTable.queryClass(cleanFrom);
+    let current = cg.symbolTable.queryClass(cleanFrom)
     while (current.parentClassName) {
-      const parentClean = current.parentClassName;
-      if (parentClean === cleanTo) return true;
-      current = cg.symbolTable.queryClass(parentClean);
+      const parentClean = current.parentClassName
+      if (parentClean === cleanTo) return true
+      current = cg.symbolTable.queryClass(parentClean)
     }
   } catch (e) {
-    return false;
+    return false
   }
-  return false;
+  return false
+}
+
+// Primitive descriptor -> its wrapper class' internal name.
+const PRIMITIVE_WRAPPERS: { [primitive: string]: string } = {
+  Z: 'java/lang/Boolean',
+  B: 'java/lang/Byte',
+  S: 'java/lang/Short',
+  C: 'java/lang/Character',
+  I: 'java/lang/Integer',
+  J: 'java/lang/Long',
+  F: 'java/lang/Float',
+  D: 'java/lang/Double'
+}
+
+// Primitive descriptor -> the wrapper accessor that unboxes it.
+const WRAPPER_UNBOX_METHODS: { [primitive: string]: string } = {
+  Z: 'booleanValue',
+  B: 'byteValue',
+  S: 'shortValue',
+  C: 'charValue',
+  I: 'intValue',
+  J: 'longValue',
+  F: 'floatValue',
+  D: 'doubleValue'
+}
+
+// Wrapper class descriptor -> the primitive it unboxes to.
+const WRAPPER_DESCRIPTOR_TO_PRIMITIVE: { [descriptor: string]: string } = {
+  'Ljava/lang/Boolean;': 'Z',
+  'Ljava/lang/Byte;': 'B',
+  'Ljava/lang/Short;': 'S',
+  'Ljava/lang/Character;': 'C',
+  'Ljava/lang/Integer;': 'I',
+  'Ljava/lang/Long;': 'J',
+  'Ljava/lang/Float;': 'F',
+  'Ljava/lang/Double;': 'D'
+}
+
+/**
+ * If `type` is a wrapper class descriptor, emits the unbox call (assuming the
+ * wrapper reference is on top of the stack) and returns the primitive
+ * descriptor. Otherwise returns `type` unchanged and emits nothing.
+ */
+function unboxIfWrapper(type: string, cg: CodeGenerator): string {
+  const primitive = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[type]
+  if (!primitive) return type
+  const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+    type.replace(/^L|;$/g, ''),
+    WRAPPER_UNBOX_METHODS[primitive],
+    `()${primitive}`
+  )
+  cg.code.push(OPCODE.INVOKEVIRTUAL, 0, methodRef)
+  return primitive
+}
+
+/**
+ * Emits an autobox (`Wrapper.valueOf`) or unbox (`wrapper.xxxValue()`) call when
+ * converting between a primitive and its exact wrapper class. Returns the net
+ * operand-stack size change, or `null` if this is not a boxing conversion.
+ */
+function tryBoxingConversion(fromType: string, toType: string, cg: CodeGenerator): number | null {
+  const isWide = (primitive: string) => primitive === 'J' || primitive === 'D'
+
+  // primitive -> wrapper
+  const boxTarget = PRIMITIVE_WRAPPERS[fromType]
+  if (boxTarget && toType.replace(/^L|;$/g, '') === boxTarget) {
+    const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+      boxTarget,
+      'valueOf',
+      `(${fromType})L${boxTarget};`
+    )
+    cg.code.push(OPCODE.INVOKESTATIC, 0, methodRef)
+    return isWide(fromType) ? -1 : 0
+  }
+
+  // wrapper -> primitive
+  const unboxSource = PRIMITIVE_WRAPPERS[toType]
+  if (unboxSource && fromType.replace(/^L|;$/g, '') === unboxSource) {
+    const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+      unboxSource,
+      WRAPPER_UNBOX_METHODS[toType],
+      `()${toType}`
+    )
+    cg.code.push(OPCODE.INVOKEVIRTUAL, 0, methodRef)
+    return isWide(toType) ? 1 : 0
+  }
+
+  return null
 }
 
 function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator): number {
@@ -213,6 +303,10 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
   if (fromType.startsWith('L') || toType.startsWith('L')) {
     if (areClassTypesCompatible(fromType, toType, cg) || fromType === '') {
       return 0
+    }
+    const boxingStackChange = tryBoxingConversion(fromType, toType, cg)
+    if (boxingStackChange !== null) {
+      return boxingStackChange
     }
     throw new Error(`Unsupported class type conversion: ${fromType} -> ${toType}`)
   }
@@ -442,10 +536,34 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   ReturnStatement: (node: Node, cg: CodeGenerator) => {
     const { exp: expr } = node as ReturnStatement
+
     if (expr) {
       const { stackSize: stackSize, resultType: resultType } = compile(expr, cg)
+      if (cg.finallyBlockStack.length > 0) {
+        const tempIndex = cg.maxLocals
+        cg.maxLocals += ['J', 'D'].includes(resultType) ? 2 : 1
+        cg.code.push(
+          resultType in normalStoreOp ? normalStoreOp[resultType] : OPCODE.ASTORE,
+          tempIndex
+        )
+
+        for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
+          const finallyBlock = cg.finallyBlockStack[i] as any
+          finallyBlock.blockStatements.forEach((stmt: any) => compile(stmt, cg))
+        }
+
+        cg.code.push(
+          resultType in normalLoadOp ? normalLoadOp[resultType] : OPCODE.ALOAD,
+          tempIndex
+        )
+      }
       cg.code.push(resultType in returnOp ? returnOp[resultType] : OPCODE.ARETURN)
       return { stackSize, resultType }
+    }
+
+    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
+      const finallyBlock = cg.finallyBlockStack[i] as any
+      finallyBlock.blockStatements.forEach((stmt: any) => compile(stmt, cg))
     }
 
     cg.code.push(OPCODE.RETURN)
@@ -453,6 +571,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   BreakStatement: (node: Node, cg: CodeGenerator) => {
+    // Emit finally blocks from innermost to outermost before breaking
+    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
+      const finallyBlock = cg.finallyBlockStack[i] as any
+      finallyBlock.blockStatements.forEach((stmt: any) => {
+        compile(stmt, cg)
+      })
+    }
+
     if (cg.loopLabels.length > 0) {
       // If inside a loop, break jumps to the end of the loop
       cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][1])
@@ -466,6 +592,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   ContinueStatement: (node: Node, cg: CodeGenerator) => {
+    // Emit finally blocks from innermost to outermost before continuing
+    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
+      const finallyBlock = cg.finallyBlockStack[i] as any
+      finallyBlock.blockStatements.forEach((stmt: any) => {
+        compile(stmt, cg)
+      })
+    }
+
     cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][0])
     return { stackSize: 0, resultType: EMPTY_TYPE }
   },
@@ -574,6 +708,196 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     return { stackSize: maxStack, resultType: resType }
+  },
+
+  TryStatement: (node: Node, cg: CodeGenerator) => {
+    let maxStack = 0
+    const { block, catches } = node as any
+    const finallyNode: any = (node as any).finally
+
+    const hasCatches = catches && catches.catchClauses && catches.catchClauses.length > 0
+
+    if (!hasCatches && !finallyNode) {
+      return { stackSize: compile(block, cg).stackSize, resultType: EMPTY_TYPE }
+    }
+
+    if (hasCatches || finallyNode) {
+      maxStack = Math.max(maxStack, 1)
+    }
+
+    const localExceptionTable: Array<{
+      startPc: number
+      endPc: number
+      handlerLabel: Label
+      catchType: number
+    }> = []
+
+    // Push finally block onto stack so return/break/continue can access it
+    if (finallyNode) {
+      cg.finallyBlockStack.push(finallyNode.block)
+    }
+
+    try {
+      // mark start of protected region
+      const tryStart = cg.generateNewLabel()
+      tryStart.offset = cg.code.length
+
+      // compile try block
+      maxStack = Math.max(maxStack, compile(block, cg).stackSize)
+
+      // end of protected region (first instruction after try block)
+      const tryEnd = cg.generateNewLabel()
+      tryEnd.offset = cg.code.length
+
+      const catchAllLabel = finallyNode ? cg.generateNewLabel() : null
+
+      // For normal path: run finally block if it exists
+      if (finallyNode) {
+        finallyNode.block.blockStatements.forEach((stmt: any) => {
+          const { stackSize } = compile(stmt, cg)
+          maxStack = Math.max(maxStack, stackSize)
+        })
+      }
+
+      // jump over handlers when try completes normally
+      const afterHandlers = cg.generateNewLabel()
+      cg.addBranchInstr(OPCODE.GOTO, afterHandlers)
+
+      // For each catch clause, emit a handler and an exception table entry
+      if (hasCatches) {
+        for (const catchClause of catches.catchClauses) {
+          const handlerLabel = cg.generateNewLabel()
+          handlerLabel.offset = cg.code.length
+
+          // determine catch type index (constant pool)
+          const catchTypeNode = catchClause.catchFormalParameter.catchType
+          const catchTypeName = unannTypeToString(catchTypeNode.unannClassType)
+          let catchClassName = 'java/lang/Throwable'
+          try {
+            catchClassName = cg.symbolTable.queryClass(catchTypeName).name
+          } catch (e) {
+            catchClassName = catchTypeName.includes('/')
+              ? catchTypeName
+              : catchTypeName.replace(/\./g, '/')
+          }
+          const catchTypeIndex = cg.constantPoolManager.indexClassInfo(catchClassName)
+
+          // add exception table entry (startPc, endPc, handlerPc, catchType)
+          localExceptionTable.push({
+            startPc: tryStart.offset,
+            endPc: tryEnd.offset,
+            handlerLabel: handlerLabel,
+            catchType: catchTypeIndex
+          })
+
+          // create scope for catch variable
+          cg.symbolTable.extend()
+          const varName = catchClause.catchFormalParameter.variableDeclaratorId
+          const varTypeStr = unannTypeToString(catchTypeNode.unannClassType)
+          const varInfo = {
+            name: varName,
+            accessFlags: 0,
+            index: cg.maxLocals,
+            typeName: varTypeStr,
+            typeDescriptor: cg.symbolTable.generateFieldDescriptor(varTypeStr)
+          }
+          cg.symbolTable.insertVariableInfo(varInfo)
+          if (['J', 'D'].includes(varInfo.typeDescriptor)) {
+            cg.maxLocals += 2
+          } else {
+            cg.maxLocals++
+          }
+
+          // at handler entry, the exception object is on the stack; store it into the local
+          cg.code.push(OPCODE.ASTORE, varInfo.index)
+
+          const catchStartOffset = cg.code.length
+
+          // compile catch block statements
+          const catchBlock = catchClause.block
+          catchBlock.blockStatements.forEach((stmt: any) => {
+            const { stackSize } = compile(stmt, cg)
+            maxStack = Math.max(maxStack, stackSize)
+          })
+
+          const catchEndOffset = cg.code.length
+
+          // teardown catch scope
+          cg.symbolTable.teardown()
+
+          // If finally exists, add catch-all entry for this catch block
+          if (finallyNode && catchAllLabel && catchStartOffset < catchEndOffset) {
+            localExceptionTable.push({
+              startPc: catchStartOffset,
+              endPc: catchEndOffset,
+              handlerLabel: catchAllLabel,
+              catchType: 0
+            })
+          }
+
+          // For caught path: run finally block if it exists
+          if (finallyNode) {
+            finallyNode.block.blockStatements.forEach((stmt: any) => {
+              const { stackSize } = compile(stmt, cg)
+              maxStack = Math.max(maxStack, stackSize)
+            })
+          }
+
+          // after handler, jump to afterHandlers
+          cg.addBranchInstr(OPCODE.GOTO, afterHandlers)
+        }
+      }
+
+      // If finally exists, add catch-all entry for the try block after all specific catch handlers.
+      // This ensures the catch clauses are matched before the generic finally rethrow path.
+      if (finallyNode && catchAllLabel) {
+        localExceptionTable.push({
+          startPc: tryStart.offset,
+          endPc: tryEnd.offset,
+          handlerLabel: catchAllLabel,
+          catchType: 0
+        })
+      }
+
+      // If finally exists, add a catch-all handler that runs finally then rethrows
+      if (finallyNode && catchAllLabel) {
+        catchAllLabel.offset = cg.code.length
+
+        // allocate temp local to store exception
+        const tempIndex = cg.maxLocals
+        cg.maxLocals += 1
+        cg.code.push(OPCODE.ASTORE, tempIndex)
+
+        // compile finally block inside catch-all
+        finallyNode.block.blockStatements.forEach((stmt: any) => {
+          const { stackSize } = compile(stmt, cg)
+          maxStack = Math.max(maxStack, stackSize)
+        })
+
+        // reload exception and rethrow
+        cg.code.push(OPCODE.ALOAD, tempIndex, OPCODE.ATHROW)
+      }
+
+      // place after-handlers label
+      afterHandlers.offset = cg.code.length
+
+      // Now that all labels are resolved, push to cg.exceptionTable
+      localExceptionTable.forEach(entry => {
+        cg.exceptionTable.push({
+          startPc: entry.startPc,
+          endPc: entry.endPc,
+          handlerPc: entry.handlerLabel.offset,
+          catchType: entry.catchType
+        })
+      })
+
+      return { stackSize: maxStack, resultType: EMPTY_TYPE }
+    } finally {
+      // Pop finally block from stack when exiting
+      if (finallyNode) {
+        cg.finallyBlockStack.pop()
+      }
+    }
   },
 
   TernaryExpression: (node: Node, cg: CodeGenerator) => {
@@ -838,30 +1162,30 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     // --- Handle super. calls ---
     if (n.identifier.startsWith('super.')) {
       candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(6)) as MethodInfos
-      candidateMethods = candidateMethods.filter(method =>
-        method.className == cg.symbolTable.queryClass(cg.currentClass).parentClassName)
-      cg.code.push(OPCODE.ALOAD, 0);
+      candidateMethods = candidateMethods.filter(
+        method => method.className == cg.symbolTable.queryClass(cg.currentClass).parentClassName
+      )
+      cg.code.push(OPCODE.ALOAD, 0)
     }
     // --- Handle qualified calls (e.g. System.out.println or p.show) ---
     else if (n.identifier.includes('.')) {
-      const lastDot = n.identifier.lastIndexOf('.');
-      const receiverStr = n.identifier.slice(0, lastDot);
+      const lastDot = n.identifier.lastIndexOf('.')
+      const receiverStr = n.identifier.slice(0, lastDot)
 
       if (receiverStr === 'this') {
         candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(5)) as MethodInfos
-        candidateMethods = candidateMethods.filter(method =>
-          method.className == cg.currentClass)
-        cg.code.push(OPCODE.ALOAD, 0);
+        candidateMethods = candidateMethods.filter(method => method.className == cg.currentClass)
+        cg.code.push(OPCODE.ALOAD, 0)
       } else {
-        const recvRes = compile({ kind: 'ExpressionName', name: receiverStr }, cg);
-        maxStack = Math.max(maxStack, recvRes.stackSize);
+        const recvRes = compile({ kind: 'ExpressionName', name: receiverStr }, cg)
+        maxStack = Math.max(maxStack, recvRes.stackSize)
         candidateMethods = cg.symbolTable.queryMethod(n.identifier).pop() as MethodInfos
       }
     }
     // --- Handle unqualified calls ---
     else {
       candidateMethods = cg.symbolTable.queryMethod(n.identifier) as MethodInfos
-      unqualifiedCall = true;
+      unqualifiedCall = true
     }
 
     // Filter candidate methods by matching the argument list.
@@ -903,11 +1227,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             .slice(1, methodMatches[i].typeDescriptor.indexOf(')'))
             .match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
         if (
-          candParams.map((p, idx) => isSubtype(p, currParams[idx], cg)).reduce((a, b) => a && b, true)
+          candParams
+            .map((p, idx) => isSubtype(p, currParams[idx], cg))
+            .reduce((a, b) => a && b, true)
         ) {
           selectedMethod = methodMatches[i]
         } else if (
-          !currParams.map((p, idx) => isSubtype(p, candParams[idx], cg)).reduce((a, b) => a && b, true)
+          !currParams
+            .map((p, idx) => isSubtype(p, candParams[idx], cg))
+            .reduce((a, b) => a && b, true)
         ) {
           throw new AmbiguousMethodCallError(n.identifier + argDescs.join(','))
         }
@@ -915,6 +1243,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     if (unqualifiedCall && !(selectedMethod.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+      if (cg.currentMethodIsStatic) {
+        throw new NonStaticReferenceInStaticContextError('method', selectedMethod.name)
+      }
       cg.code.push(OPCODE.ALOAD, 0)
     }
 
@@ -1040,7 +1371,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         cg.addBranchInstr(op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
       } else {
         l = compile(left, cg)
+        l.resultType = unboxIfWrapper(l.resultType, cg)
         r = compile(right, cg)
+        r.resultType = unboxIfWrapper(r.resultType, cg)
         cg.addBranchInstr(reverseLogicalOp[op], targetLabel)
       }
       cg.code.push(OPCODE.ICONST_1)
@@ -1055,10 +1388,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     }
 
-    const { stackSize: size1, resultType: leftType } = compile(left, cg)
+    const leftCompiled = compile(left, cg)
+    // Unbox a wrapper operand to its primitive before arithmetic / comparison.
+    const leftType = unboxIfWrapper(leftCompiled.resultType, cg)
+    const size1 = Math.max(leftCompiled.stackSize, ['J', 'D'].includes(leftType) ? 2 : 1)
     const insertConversionIndex = cg.code.length
     cg.code.push(OPCODE.NOP)
-    const { stackSize: size2, resultType: rightType } = compile(right, cg)
+    const rightCompiled = compile(right, cg)
+    const rightType = unboxIfWrapper(rightCompiled.resultType, cg)
+    const size2 = Math.max(rightCompiled.stackSize, ['J', 'D'].includes(rightType) ? 2 : 1)
 
     if (op === '+' && (leftType === 'Ljava/lang/String;' || rightType === 'Ljava/lang/String;')) {
       if (leftType !== 'Ljava/lang/String;') {
@@ -1266,7 +1604,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     try {
       info = cg.symbolTable.queryVariable(name)
     } catch (e) {
-      return { stackSize: 1, resultType: 'Ljava/lang/Class;' };
+      return { stackSize: 1, resultType: 'Ljava/lang/Class;' }
     }
     if (Array.isArray(info)) {
       const fieldInfos = info
@@ -1285,6 +1623,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           fieldInfo.typeDescriptor
         )
         if (i === 0 && !(fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+          if (cg.currentMethodIsStatic) {
+            throw new NonStaticReferenceInStaticContextError('field', fieldInfo.name)
+          }
           // load "this"
           cg.code.push(OPCODE.ALOAD, 0)
         }
@@ -1375,6 +1716,30 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { stackSize: exprStackSize, resultType } = compile(expression, cg)
     let maxStack = exprStackSize
 
+    // If the expression is an enum type, invoke ordinal() to convert to int and then continue
+    let _resultType = resultType
+    let enumTypeName: string | null = null
+    if (_resultType && _resultType.startsWith('L') && _resultType !== 'Ljava/lang/String;') {
+      const clean = _resultType.replace(/^L|;$/g, '')
+      try {
+        const classInfo = cg.symbolTable.queryClass(clean)
+        if (classInfo.isEnum) {
+          // ordinal() is inherited from java.lang.Enum; invokevirtual on the
+          // enum class dispatches to it.
+          cg.code.push(
+            OPCODE.INVOKEVIRTUAL,
+            0,
+            cg.constantPoolManager.indexMethodrefInfo(clean, 'ordinal', '()I')
+          )
+          _resultType = 'I'
+          enumTypeName = clean
+          maxStack = Math.max(maxStack, exprStackSize + 1)
+        }
+      } catch (e) {
+        // ignore: not a known class
+      }
+    }
+
     const caseLabels: Label[] = cases.map(() => cg.generateNewLabel())
     const defaultLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
@@ -1382,7 +1747,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     // Track the switch statement's end label
     cg.switchLabels.push(endLabel)
 
-    if (['I', 'B', 'S', 'C'].includes(resultType)) {
+    if (['I', 'B', 'S', 'C'].includes(_resultType)) {
       const caseValues: number[] = []
       const caseLabelMap: Map<number, Label> = new Map()
       let hasDefault = false
@@ -1391,7 +1756,20 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       cases.forEach((caseGroup, index) => {
         caseGroup.labels.forEach(label => {
           if (label.kind === 'CaseLabel') {
-            const value = parseInt((label.expression as Literal).literalType.value)
+            const value =
+              label.expression.kind === 'ExpressionName' && enumTypeName
+                ? (() => {
+                    const fields = cg.symbolTable.queryField(
+                      `${enumTypeName}.${label.expression.name}`
+                    )
+                    const field = fields[fields.length - 1] as FieldInfo
+                    if (field.parentClassName !== enumTypeName || field.ordinal === undefined)
+                      throw new Error(`Invalid enum switch label: ${label.expression.name}`)
+                    return field.ordinal
+                  })()
+                : label.expression.kind === 'ExpressionName'
+                  ? (() => { throw new Error(`Identifier case labels are only supported for enum switch selectors: ${label.expression.name}`) })()
+                  : parseInt((label.expression as Literal).literalType.value)
             caseValues.push(value)
             caseLabelMap.set(value, caseLabels[index])
           } else if (label.kind === 'DefaultLabel') {
@@ -1416,9 +1794,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           indexTracker++
         }
 
-        // Add default branch (jump to default label)
-        cg.code.push(0, 0, 0, defaultLabel.offset)
-        caseLabelIndex.push(indexTracker + 3)
+        // Add default branch (reserve 4 bytes for default label offset)
+        cg.code.push(0, 0, 0, 0)
+        caseLabelIndex.push(indexTracker)
         indexTracker += 4
 
         // Push low and high values (min and max case values)
@@ -1436,16 +1814,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         )
         indexTracker += 8
 
-        // Generate branch table (map each value to a case label)
+        // Generate branch table (reserve 4 bytes per entry and record start indices)
         for (let i = minValue; i <= maxValue; i++) {
-          const caseIndex = caseValues.indexOf(i)
-          cg.code.push(
-            0,
-            0,
-            0,
-            caseIndex !== -1 ? caseLabels[caseIndex].offset : defaultLabel.offset
-          )
-          caseLabelIndex.push(indexTracker + 3)
+          // push the 4-byte placeholder for the branch target
+          cg.code.push(0, 0, 0, 0)
+          caseLabelIndex.push(indexTracker)
           indexTracker += 4
         }
       } else {
@@ -1458,9 +1831,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           indexTracker++
         }
 
-        // Add default branch (jump to default label)
-        cg.code.push(0, 0, 0, defaultLabel.offset)
-        caseLabelIndex.push(indexTracker + 3)
+        // Add default branch (reserve 4 bytes for default label offset)
+        cg.code.push(0, 0, 0, 0)
+        caseLabelIndex.push(indexTracker)
         indexTracker += 4
 
         // Push the number of case-value pairs
@@ -1474,9 +1847,17 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
         // Generate lookup table (pairs of case values and corresponding labels)
         caseValues.forEach((value, index) => {
-          cg.code.push(value >> 24, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff)
-          cg.code.push(0, 0, 0, caseLabels[index].offset)
-          caseLabelIndex.push(indexTracker + 7)
+          // push 4-byte key
+          cg.code.push(
+            (value >> 24) & 0xff,
+            (value >> 16) & 0xff,
+            (value >> 8) & 0xff,
+            value & 0xff
+          )
+          // reserve 4 bytes for the branch target
+          cg.code.push(0, 0, 0, 0)
+          // label offset starts after the 4-byte key
+          caseLabelIndex.push(indexTracker + 4)
           indexTracker += 8
         })
       }
@@ -1523,14 +1904,42 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         }
       }
 
-      cg.code[caseLabelIndex[0]] = caseLabels[caseLabels.length - 1].offset - positionOffset
+      // Patch switch target offsets (write full 4-byte signed offsets, big-endian)
+      // Patch default target
+      {
+        const idx = caseLabelIndex[0]
+        const defOff = defaultLabel.offset - positionOffset
+        cg.code[idx] = (defOff >> 24) & 0xff
+        cg.code[idx + 1] = (defOff >> 16) & 0xff
+        cg.code[idx + 2] = (defOff >> 8) & 0xff
+        cg.code[idx + 3] = defOff & 0xff
+      }
 
-      for (let i = 1; i < caseLabelIndex.length; i++) {
-        cg.code[caseLabelIndex[i]] = caseLabels[i - 1].offset - positionOffset
+      if (useTableSwitch) {
+        const range = maxValue - minValue + 1
+        for (let j = 0; j < range; j++) {
+          const idx = caseLabelIndex[1 + j]
+          const lbl = caseLabelMap.get(minValue + j) || defaultLabel
+          const off = lbl.offset - positionOffset
+          cg.code[idx] = (off >> 24) & 0xff
+          cg.code[idx + 1] = (off >> 16) & 0xff
+          cg.code[idx + 2] = (off >> 8) & 0xff
+          cg.code[idx + 3] = off & 0xff
+        }
+      } else {
+        for (let k = 0; k < caseValues.length; k++) {
+          const idx = caseLabelIndex[1 + k]
+          const lbl = caseLabelMap.get(caseValues[k]) || defaultLabel
+          const off = lbl.offset - positionOffset
+          cg.code[idx] = (off >> 24) & 0xff
+          cg.code[idx + 1] = (off >> 16) & 0xff
+          cg.code[idx + 2] = (off >> 8) & 0xff
+          cg.code[idx + 3] = off & 0xff
+        }
       }
 
       endLabel.offset = cg.code.length
-    } else if (resultType === 'Ljava/lang/String;') {
+    } else if (_resultType === 'Ljava/lang/String;') {
       // **String Switch Handling**
       const hashCaseMap: Map<number, Label> = new Map()
 
@@ -1570,9 +1979,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         indexTracker++
       }
 
-      // Default jump target
-      cg.code.push(0, 0, 0, defaultLabel.offset)
-      caseLabelIndex.push(indexTracker + 3)
+      // Default jump target (reserve 4 bytes)
+      cg.code.push(0, 0, 0, 0)
+      caseLabelIndex.push(indexTracker)
       indexTracker += 4
 
       // Number of case-value pairs
@@ -1585,15 +1994,19 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       indexTracker += 4
 
       // Populate LOOKUPSWITCH
+      const hashLabels: Label[] = []
       hashCaseMap.forEach((label, hashCode) => {
         cg.code.push(
-          hashCode >> 24,
+          (hashCode >> 24) & 0xff,
           (hashCode >> 16) & 0xff,
           (hashCode >> 8) & 0xff,
           hashCode & 0xff
         )
-        cg.code.push(0, 0, 0, label.offset)
-        caseLabelIndex.push(indexTracker + 7)
+        // reserve 4 bytes for the branch target
+        cg.code.push(0, 0, 0, 0)
+        // label offset starts after the 4-byte key
+        caseLabelIndex.push(indexTracker + 4)
+        hashLabels.push(label)
         indexTracker += 8
       })
 
@@ -1660,16 +2073,30 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         })
       }
 
-      cg.code[caseLabelIndex[0]] = caseLabels[caseLabels.length - 1].offset - positionOffset
+      // Patch default target
+      {
+        const idx = caseLabelIndex[0]
+        const defOff = defaultLabel.offset - positionOffset
+        cg.code[idx] = (defOff >> 24) & 0xff
+        cg.code[idx + 1] = (defOff >> 16) & 0xff
+        cg.code[idx + 2] = (defOff >> 8) & 0xff
+        cg.code[idx + 3] = defOff & 0xff
+      }
 
-      for (let i = 1; i < caseLabelIndex.length; i++) {
-        cg.code[caseLabelIndex[i]] = caseLabels[i - 1].offset - positionOffset
+      // Patch hash-case entries in insertion order
+      for (let k = 0; k < hashLabels.length; k++) {
+        const idx = caseLabelIndex[1 + k]
+        const off = hashLabels[k].offset - positionOffset
+        cg.code[idx] = (off >> 24) & 0xff
+        cg.code[idx + 1] = (off >> 16) & 0xff
+        cg.code[idx + 2] = (off >> 8) & 0xff
+        cg.code[idx + 3] = off & 0xff
       }
 
       endLabel.offset = cg.code.length
     } else {
       throw new Error(
-        `Switch statements only support byte, short, int, char, or String types. Found: ${resultType}`
+        `Switch statements only support byte, short, int, char, String, or enum types. Found: ${_resultType}`
       )
     }
 
@@ -1684,11 +2111,14 @@ class CodeGenerator {
   constantPoolManager: ConstantPoolManager
   maxLocals: number = 0
   stackSize: number = 0
+  exceptionTable: Array<ExceptionHandler> = []
   labels: Label[] = []
   loopLabels: Label[][] = []
   switchLabels: Label[] = []
+  finallyBlockStack: Node[] = []
   code: number[] = []
   currentClass: string
+  currentMethodIsStatic: boolean = false
 
   constructor(symbolTable: SymbolTable, constantPoolManager: ConstantPoolManager) {
     this.symbolTable = symbolTable
@@ -1722,7 +2152,9 @@ class CodeGenerator {
   generateCode(currentClass: string, methodNode: MethodDeclaration) {
     this.symbolTable.extend()
     this.currentClass = currentClass
-    if (!methodNode.methodModifier.includes('static')) {
+    this.currentMethodIsStatic = methodNode.methodModifier.includes('static')
+    this.exceptionTable = []
+    if (!this.currentMethodIsStatic) {
       this.maxLocals++
     }
 
@@ -1760,7 +2192,6 @@ class CodeGenerator {
     }
     this.resolveLabels()
 
-    const exceptionTable: Array<ExceptionHandler> = []
     const attributes: Array<AttributeInfo> = []
     const codeBuf = new Uint8Array(this.code).buffer
     const dataView = new DataView(codeBuf)
@@ -1769,7 +2200,7 @@ class CodeGenerator {
     const attributeLength =
       12 +
       this.code.length +
-      8 * exceptionTable.length +
+      8 * this.exceptionTable.length +
       attributes.map(attr => attr.attributeLength + 6).reduce((acc, val) => acc + val, 0)
     this.symbolTable.teardown()
 
@@ -1780,8 +2211,8 @@ class CodeGenerator {
       maxLocals: this.maxLocals,
       codeLength: this.code.length,
       code: dataView,
-      exceptionTableLength: exceptionTable.length,
-      exceptionTable: exceptionTable,
+      exceptionTableLength: this.exceptionTable.length,
+      exceptionTable: this.exceptionTable,
       attributesCount: attributes.length,
       attributes: attributes
     }

@@ -335,6 +335,23 @@ function readConstantInvokeDynamic(
   }
 }
 
+function readConstantModuleOrPackage(
+  view: DataView,
+  offset: number,
+  tag: CONSTANT_TAG
+): { result: { tag: CONSTANT_TAG; nameIndex: number }; offset: number } {
+  const nameIndex = view.getUint16(offset)
+  offset += 2
+
+  return {
+    result: {
+      tag,
+      nameIndex
+    },
+    offset
+  }
+}
+
 function readConstant(
   view: DataView,
   offset: number,
@@ -367,13 +384,17 @@ function readConstant(
       return readConstantMethodHandle(view, offset, tag)
     case CONSTANT_TAG.MethodType:
       return readConstantMethodType(view, offset, tag)
+    case CONSTANT_TAG.Dynamic:
     case CONSTANT_TAG.InvokeDynamic:
+      // CONSTANT_Dynamic and CONSTANT_InvokeDynamic share the same layout.
       return readConstantInvokeDynamic(view, offset, tag)
+    case CONSTANT_TAG.Module:
+    case CONSTANT_TAG.Package:
+      return readConstantModuleOrPackage(view, offset, tag)
     default:
-      return {
-        result: {},
-        offset: offset
-      }
+      // An unrecognised tag means the constant pool walk has desynced; every
+      // subsequent entry would be read at the wrong offset. Fail loudly.
+      throw new Error(`Unknown constant pool tag: ${String(tag as unknown)}`)
   }
 }
 
