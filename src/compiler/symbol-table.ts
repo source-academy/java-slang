@@ -50,6 +50,7 @@ export interface ClassInfo {
   name: string
   accessFlags: number
   parentClassName?: string
+  isEnum?: boolean
 }
 
 export interface FieldInfo {
@@ -58,6 +59,7 @@ export interface FieldInfo {
   parentClassName: string
   typeName: string
   typeDescriptor: string
+  ordinal?: number
 }
 
 export type MethodInfos = Array<MethodInfo>

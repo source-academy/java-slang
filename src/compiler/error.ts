@@ -34,6 +34,12 @@ export class InvalidMethodCallError extends CompileError {
   }
 }
 
+export class NonStaticReferenceInStaticContextError extends CompileError {
+  constructor(kind: 'field' | 'method', name: string) {
+    super('non-static ' + kind + ' "' + name + '" cannot be referenced from a static context')
+  }
+}
+
 export class ConstructNotSupportedError extends CompileError {
   constructor(name: string) {
     super('"' + name + '"' + ' is currently not supported by the compiler')
