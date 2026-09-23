@@ -1119,7 +1119,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     } catch (e) {
       instantiatedClassName = id.includes('/') ? id : id.replace(/\./g, '/')
     }
-    cg.code.push(OPCODE.NEW, 0, cg.constantPoolManager.indexClassInfo(instantiatedClassName), OPCODE.DUP)
+    cg.code.push(
+      OPCODE.NEW,
+      0,
+      cg.constantPoolManager.indexClassInfo(instantiatedClassName),
+      OPCODE.DUP
+    )
 
     const argTypes: Array<UnannType> = []
     argLst.forEach((x, i) => {
@@ -1783,7 +1788,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
                     return field.ordinal
                   })()
                 : label.expression.kind === 'ExpressionName'
-                  ? (() => { throw new Error(`Identifier case labels are only supported for enum switch selectors: ${label.expression.name}`) })()
+                  ? (() => {
+                      throw new Error(
+                        `Identifier case labels are only supported for enum switch selectors: ${label.expression.name}`
+                      )
+                    })()
                   : parseInt((label.expression as Literal).literalType.value)
             caseValues.push(value)
             caseLabelMap.set(value, caseLabels[index])

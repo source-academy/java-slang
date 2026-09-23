@@ -9,10 +9,10 @@ import {
   MethodDeclaration,
   NormalClassDeclaration
 } from '../ast/types/classes'
-import { ConstructNotSupportedError } from './error'
 import { AttributeInfo } from '../ClassFile/types/attributes'
 import { FieldInfo } from '../ClassFile/types/fields'
 import { MethodInfo } from '../ClassFile/types/methods'
+import { ConstructNotSupportedError } from './error'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
   generateClassAccessFlags,
@@ -133,10 +133,7 @@ export class Compiler {
           ...declaration,
           typeIdentifier: enclosingBinaryName + '$' + declaration.typeIdentifier
         }
-        return [
-          qualified,
-          ...this.getMemberTypes(qualified.classBody, qualified.typeIdentifier)
-        ]
+        return [qualified, ...this.getMemberTypes(qualified.classBody, qualified.typeIdentifier)]
       }
       return []
     })
@@ -148,10 +145,10 @@ export class Compiler {
     this.parentClassName = sclass ? sclass : 'java/lang/Object'
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
     this.symbolTable.extend()
-    this.symbolTable.insertClassInfo(
-      { name: this.className, accessFlags: accessFlags },
-      [this.className.split('$').pop() as string, this.className]
-    )
+    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags }, [
+      this.className.split('$').pop() as string,
+      this.className
+    ])
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
@@ -187,10 +184,10 @@ export class Compiler {
     this.parentClassName = 'java/lang/Enum'
     const accessFlags = generateClassAccessFlags(enumNode.classModifier) | 0x4000 // ACC_ENUM
     this.symbolTable.extend()
-    this.symbolTable.insertClassInfo(
-      { name: this.className, accessFlags: accessFlags },
-      [this.className.split('$').pop() as string, this.className]
-    )
+    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags }, [
+      this.className.split('$').pop() as string,
+      this.className
+    ])
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
