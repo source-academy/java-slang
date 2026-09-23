@@ -36,7 +36,8 @@ import { ConstantPoolManager } from './constant-pool-manager'
 import {
   AmbiguousMethodCallError,
   ConstructNotSupportedError,
-  NoMethodMatchingSignatureError
+  NoMethodMatchingSignatureError,
+  NonStaticReferenceInStaticContextError
 } from './error'
 import { FieldInfo, MethodInfos, SymbolInfo, SymbolTable, VariableInfo } from './symbol-table'
 
@@ -206,6 +207,94 @@ function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGener
   return false
 }
 
+// Primitive descriptor -> its wrapper class' internal name.
+const PRIMITIVE_WRAPPERS: { [primitive: string]: string } = {
+  Z: 'java/lang/Boolean',
+  B: 'java/lang/Byte',
+  S: 'java/lang/Short',
+  C: 'java/lang/Character',
+  I: 'java/lang/Integer',
+  J: 'java/lang/Long',
+  F: 'java/lang/Float',
+  D: 'java/lang/Double'
+}
+
+// Primitive descriptor -> the wrapper accessor that unboxes it.
+const WRAPPER_UNBOX_METHODS: { [primitive: string]: string } = {
+  Z: 'booleanValue',
+  B: 'byteValue',
+  S: 'shortValue',
+  C: 'charValue',
+  I: 'intValue',
+  J: 'longValue',
+  F: 'floatValue',
+  D: 'doubleValue'
+}
+
+// Wrapper class descriptor -> the primitive it unboxes to.
+const WRAPPER_DESCRIPTOR_TO_PRIMITIVE: { [descriptor: string]: string } = {
+  'Ljava/lang/Boolean;': 'Z',
+  'Ljava/lang/Byte;': 'B',
+  'Ljava/lang/Short;': 'S',
+  'Ljava/lang/Character;': 'C',
+  'Ljava/lang/Integer;': 'I',
+  'Ljava/lang/Long;': 'J',
+  'Ljava/lang/Float;': 'F',
+  'Ljava/lang/Double;': 'D'
+}
+
+/**
+ * If `type` is a wrapper class descriptor, emits the unbox call (assuming the
+ * wrapper reference is on top of the stack) and returns the primitive
+ * descriptor. Otherwise returns `type` unchanged and emits nothing.
+ */
+function unboxIfWrapper(type: string, cg: CodeGenerator): string {
+  const primitive = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[type]
+  if (!primitive) return type
+  const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+    type.replace(/^L|;$/g, ''),
+    WRAPPER_UNBOX_METHODS[primitive],
+    `()${primitive}`
+  )
+  cg.code.push(OPCODE.INVOKEVIRTUAL, 0, methodRef)
+  return primitive
+}
+
+/**
+ * Emits an autobox (`Wrapper.valueOf`) or unbox (`wrapper.xxxValue()`) call when
+ * converting between a primitive and its exact wrapper class. Returns the net
+ * operand-stack size change, or `null` if this is not a boxing conversion.
+ */
+function tryBoxingConversion(fromType: string, toType: string, cg: CodeGenerator): number | null {
+  const isWide = (primitive: string) => primitive === 'J' || primitive === 'D'
+
+  // primitive -> wrapper
+  const boxTarget = PRIMITIVE_WRAPPERS[fromType]
+  if (boxTarget && toType.replace(/^L|;$/g, '') === boxTarget) {
+    const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+      boxTarget,
+      'valueOf',
+      `(${fromType})L${boxTarget};`
+    )
+    cg.code.push(OPCODE.INVOKESTATIC, 0, methodRef)
+    return isWide(fromType) ? -1 : 0
+  }
+
+  // wrapper -> primitive
+  const unboxSource = PRIMITIVE_WRAPPERS[toType]
+  if (unboxSource && fromType.replace(/^L|;$/g, '') === unboxSource) {
+    const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+      unboxSource,
+      WRAPPER_UNBOX_METHODS[toType],
+      `()${toType}`
+    )
+    cg.code.push(OPCODE.INVOKEVIRTUAL, 0, methodRef)
+    return isWide(toType) ? 1 : 0
+  }
+
+  return null
+}
+
 function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator): number {
   if (fromType === toType || toType.replace(/^L|;$/g, '') === 'java/lang/String') {
     return 0
@@ -214,6 +303,10 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
   if (fromType.startsWith('L') || toType.startsWith('L')) {
     if (areClassTypesCompatible(fromType, toType, cg) || fromType === '') {
       return 0
+    }
+    const boxingStackChange = tryBoxingConversion(fromType, toType, cg)
+    if (boxingStackChange !== null) {
+      return boxingStackChange
     }
     throw new Error(`Unsupported class type conversion: ${fromType} -> ${toType}`)
   }
@@ -449,14 +542,20 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       if (cg.finallyBlockStack.length > 0) {
         const tempIndex = cg.maxLocals
         cg.maxLocals += ['J', 'D'].includes(resultType) ? 2 : 1
-        cg.code.push(resultType in normalStoreOp ? normalStoreOp[resultType] : OPCODE.ASTORE, tempIndex)
+        cg.code.push(
+          resultType in normalStoreOp ? normalStoreOp[resultType] : OPCODE.ASTORE,
+          tempIndex
+        )
 
         for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
           const finallyBlock = cg.finallyBlockStack[i] as any
           finallyBlock.blockStatements.forEach((stmt: any) => compile(stmt, cg))
         }
 
-        cg.code.push(resultType in normalLoadOp ? normalLoadOp[resultType] : OPCODE.ALOAD, tempIndex)
+        cg.code.push(
+          resultType in normalLoadOp ? normalLoadOp[resultType] : OPCODE.ALOAD,
+          tempIndex
+        )
       }
       cg.code.push(resultType in returnOp ? returnOp[resultType] : OPCODE.ARETURN)
       return { stackSize, resultType }
@@ -1144,6 +1243,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     if (unqualifiedCall && !(selectedMethod.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+      if (cg.currentMethodIsStatic) {
+        throw new NonStaticReferenceInStaticContextError('method', selectedMethod.name)
+      }
       cg.code.push(OPCODE.ALOAD, 0)
     }
 
@@ -1269,7 +1371,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         cg.addBranchInstr(op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
       } else {
         l = compile(left, cg)
+        l.resultType = unboxIfWrapper(l.resultType, cg)
         r = compile(right, cg)
+        r.resultType = unboxIfWrapper(r.resultType, cg)
         cg.addBranchInstr(reverseLogicalOp[op], targetLabel)
       }
       cg.code.push(OPCODE.ICONST_1)
@@ -1284,10 +1388,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     }
 
-    const { stackSize: size1, resultType: leftType } = compile(left, cg)
+    const leftCompiled = compile(left, cg)
+    // Unbox a wrapper operand to its primitive before arithmetic / comparison.
+    const leftType = unboxIfWrapper(leftCompiled.resultType, cg)
+    const size1 = Math.max(leftCompiled.stackSize, ['J', 'D'].includes(leftType) ? 2 : 1)
     const insertConversionIndex = cg.code.length
     cg.code.push(OPCODE.NOP)
-    const { stackSize: size2, resultType: rightType } = compile(right, cg)
+    const rightCompiled = compile(right, cg)
+    const rightType = unboxIfWrapper(rightCompiled.resultType, cg)
+    const size2 = Math.max(rightCompiled.stackSize, ['J', 'D'].includes(rightType) ? 2 : 1)
 
     if (op === '+' && (leftType === 'Ljava/lang/String;' || rightType === 'Ljava/lang/String;')) {
       if (leftType !== 'Ljava/lang/String;') {
@@ -1514,6 +1623,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           fieldInfo.typeDescriptor
         )
         if (i === 0 && !(fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+          if (cg.currentMethodIsStatic) {
+            throw new NonStaticReferenceInStaticContextError('field', fieldInfo.name)
+          }
           // load "this"
           cg.code.push(OPCODE.ALOAD, 0)
         }
@@ -1604,6 +1716,30 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { stackSize: exprStackSize, resultType } = compile(expression, cg)
     let maxStack = exprStackSize
 
+    // If the expression is an enum type, invoke ordinal() to convert to int and then continue
+    let _resultType = resultType
+    let enumTypeName: string | null = null
+    if (_resultType && _resultType.startsWith('L') && _resultType !== 'Ljava/lang/String;') {
+      const clean = _resultType.replace(/^L|;$/g, '')
+      try {
+        const classInfo = cg.symbolTable.queryClass(clean)
+        if (classInfo.isEnum) {
+          // ordinal() is inherited from java.lang.Enum; invokevirtual on the
+          // enum class dispatches to it.
+          cg.code.push(
+            OPCODE.INVOKEVIRTUAL,
+            0,
+            cg.constantPoolManager.indexMethodrefInfo(clean, 'ordinal', '()I')
+          )
+          _resultType = 'I'
+          enumTypeName = clean
+          maxStack = Math.max(maxStack, exprStackSize + 1)
+        }
+      } catch (e) {
+        // ignore: not a known class
+      }
+    }
+
     const caseLabels: Label[] = cases.map(() => cg.generateNewLabel())
     const defaultLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
@@ -1611,7 +1747,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     // Track the switch statement's end label
     cg.switchLabels.push(endLabel)
 
-    if (['I', 'B', 'S', 'C'].includes(resultType)) {
+    if (['I', 'B', 'S', 'C'].includes(_resultType)) {
       const caseValues: number[] = []
       const caseLabelMap: Map<number, Label> = new Map()
       let hasDefault = false
@@ -1620,7 +1756,20 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       cases.forEach((caseGroup, index) => {
         caseGroup.labels.forEach(label => {
           if (label.kind === 'CaseLabel') {
-            const value = parseInt((label.expression as Literal).literalType.value)
+            const value =
+              label.expression.kind === 'ExpressionName' && enumTypeName
+                ? (() => {
+                    const fields = cg.symbolTable.queryField(
+                      `${enumTypeName}.${label.expression.name}`
+                    )
+                    const field = fields[fields.length - 1] as FieldInfo
+                    if (field.parentClassName !== enumTypeName || field.ordinal === undefined)
+                      throw new Error(`Invalid enum switch label: ${label.expression.name}`)
+                    return field.ordinal
+                  })()
+                : label.expression.kind === 'ExpressionName'
+                  ? (() => { throw new Error(`Identifier case labels are only supported for enum switch selectors: ${label.expression.name}`) })()
+                  : parseInt((label.expression as Literal).literalType.value)
             caseValues.push(value)
             caseLabelMap.set(value, caseLabels[index])
           } else if (label.kind === 'DefaultLabel') {
@@ -1790,7 +1939,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
 
       endLabel.offset = cg.code.length
-    } else if (resultType === 'Ljava/lang/String;') {
+    } else if (_resultType === 'Ljava/lang/String;') {
       // **String Switch Handling**
       const hashCaseMap: Map<number, Label> = new Map()
 
@@ -1947,7 +2096,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       endLabel.offset = cg.code.length
     } else {
       throw new Error(
-        `Switch statements only support byte, short, int, char, or String types. Found: ${resultType}`
+        `Switch statements only support byte, short, int, char, String, or enum types. Found: ${_resultType}`
       )
     }
 
@@ -1969,6 +2118,7 @@ class CodeGenerator {
   finallyBlockStack: Node[] = []
   code: number[] = []
   currentClass: string
+  currentMethodIsStatic: boolean = false
 
   constructor(symbolTable: SymbolTable, constantPoolManager: ConstantPoolManager) {
     this.symbolTable = symbolTable
@@ -2002,8 +2152,9 @@ class CodeGenerator {
   generateCode(currentClass: string, methodNode: MethodDeclaration) {
     this.symbolTable.extend()
     this.currentClass = currentClass
+    this.currentMethodIsStatic = methodNode.methodModifier.includes('static')
     this.exceptionTable = []
-    if (!methodNode.methodModifier.includes('static')) {
+    if (!this.currentMethodIsStatic) {
       this.maxLocals++
     }
 

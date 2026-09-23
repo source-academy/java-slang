@@ -6,43 +6,163 @@ import { CannotFindSymbolError, TypeCheckerError, VariableAlreadyDefinedError } 
 import { Array } from '../types/arrays'
 import { Class, ClassType } from '../types/classes'
 import { Location } from '../ast/specificationTypes'
+import { libraries } from '../../compiler/import/libs'
+import { generatedLibInfo } from '../../compiler/import/generated-lib-info'
 import { isArrayType, removeArraySuffix } from './arrays'
 
-const SYSTEM_CLASS = new ClassType('System')
-const PRINTSTREAM_CLASS = new ClassType('PrintStream')
-SYSTEM_CLASS.addField('out', PRINTSTREAM_CLASS, { startLine: -1, startOffset: -1 })
-const PRINTLN_METHOD_1 = new Method('println')
-PRINTLN_METHOD_1.addParameter(new Parameter('message', new NonPrimitives.String()))
-const PRINTLN_METHOD_2 = new Method('println')
-PRINTLN_METHOD_2.addParameter(new Parameter('message', new Primitives.Int()))
-PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_1, { startLine: -1, startOffset: -1 })
-PRINTSTREAM_CLASS.addMethod('println', PRINTLN_METHOD_2, { startLine: -1, startOffset: -1 })
-
-const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = {
-  boolean: new Primitives.Boolean(),
-  byte: new Primitives.Byte(),
-  char: new Primitives.Char(),
-  double: new Primitives.Double(),
-  float: new Primitives.Float(),
-  int: new Primitives.Int(),
-  long: new Primitives.Long(),
-  short: new Primitives.Short(),
-  void: new NonPrimitives.Void(),
-  Boolean: new NonPrimitives.Boolean(),
-  Byte: new NonPrimitives.Byte(),
-  Character: new NonPrimitives.Character(),
-  Double: new NonPrimitives.Double(),
-  Float: new NonPrimitives.Float(),
-  Integer: new NonPrimitives.Integer(),
-  Long: new NonPrimitives.Long(),
-  Short: new NonPrimitives.Short(),
-  String: new NonPrimitives.String(),
-
-  // Hard coded variables
-  System: SYSTEM_CLASS,
-  Throwable: new NonPrimitives.Throwable(),
-  Exception: new NonPrimitives.Exception()
+const PRIMITIVE_DESCRIPTORS: { [code: string]: string } = {
+  B: 'byte',
+  C: 'char',
+  D: 'double',
+  F: 'float',
+  I: 'int',
+  J: 'long',
+  S: 'short',
+  Z: 'boolean',
+  V: 'void'
 }
+
+/** JVM field descriptor -> the type name `parseType` understands. */
+const descriptorToTypeName = (descriptor: string): string => {
+  let dims = 0
+  while (descriptor[dims] === '[') dims++
+  const base = descriptor.slice(dims)
+  const suffix = '[]'.repeat(dims)
+  if (base.startsWith('L') && base.endsWith(';')) return base.slice(1, -1) + suffix
+  return (PRIMITIVE_DESCRIPTORS[base] ?? base) + suffix
+}
+
+/** Splits a JVM method descriptor into its parameter and return descriptors. */
+const splitMethodDescriptor = (descriptor: string): { params: string[]; returns: string } => {
+  const end = descriptor.indexOf(')')
+  const paramSection = descriptor.slice(1, end)
+  const params: string[] = []
+  let i = 0
+  while (i < paramSection.length) {
+    const start = i
+    while (paramSection[i] === '[') i++
+    if (paramSection[i] === 'L') i = paramSection.indexOf(';', i) + 1
+    else i++
+    params.push(paramSection.slice(start, i))
+  }
+  return { params, returns: descriptor.slice(end + 1) }
+}
+
+const BUILT_IN_TYPE_FACTORIES: { [name: string]: () => Type } = {
+  boolean: () => new Primitives.Boolean(),
+  byte: () => new Primitives.Byte(),
+  char: () => new Primitives.Char(),
+  double: () => new Primitives.Double(),
+  float: () => new Primitives.Float(),
+  int: () => new Primitives.Int(),
+  long: () => new Primitives.Long(),
+  short: () => new Primitives.Short(),
+  void: () => new NonPrimitives.Void(),
+  Boolean: () => new NonPrimitives.Boolean(),
+  Byte: () => new NonPrimitives.Byte(),
+  Character: () => new NonPrimitives.Character(),
+  Double: () => new NonPrimitives.Double(),
+  Float: () => new NonPrimitives.Float(),
+  Integer: () => new NonPrimitives.Integer(),
+  Long: () => new NonPrimitives.Long(),
+  Short: () => new NonPrimitives.Short(),
+  String: () => new NonPrimitives.String(),
+  // Base type that all enum declarations implicitly extend. Its methods are
+  // derived from the real java.lang.Enum metadata rather than hand-listed.
+  Enum: () => {
+    const enumType = new ClassType('Enum')
+    const loc: Location = { startLine: -1, startOffset: -1 }
+    // `Ljava/lang/Enum;` in a descriptor refers back to this type, which is not
+    // yet registered in `stdlibTypeMap` while this factory runs.
+    const resolve = (descriptor: string): Type =>
+      descriptor === 'Ljava/lang/Enum;' ? enumType : parseType(descriptorToTypeName(descriptor))
+
+    for (const member of generatedLibInfo['java/lang/Enum']?.methods ?? []) {
+      if (member.name === '<init>' || member.name === '<clinit>') continue
+      const { params, returns } = splitMethodDescriptor(member.descriptor)
+      const method = new Method(member.name, resolve(returns))
+      params.forEach((param, index) =>
+        method.addParameter(new Parameter(`arg${index}`, resolve(param)))
+      )
+      enumType.addMethod(member.name, method, loc)
+    }
+    return enumType
+  }
+}
+
+const simpleNameOf = (internalOrQualifiedName: string): string =>
+  internalOrQualifiedName.replaceAll('.', '/').split('/').pop() || internalOrQualifiedName
+
+const stdlibTypeMap = new Map<string, Type>()
+
+const createType = (typeName: string): Type => {
+  if (stdlibTypeMap.has(typeName)) return stdlibTypeMap.get(typeName)!
+
+  const factory = BUILT_IN_TYPE_FACTORIES[typeName]
+  const type = factory ? factory() : new ClassType(typeName)
+  stdlibTypeMap.set(typeName, type)
+  return type
+}
+
+const parseType = (typeName: string): Type => {
+  if (typeName.endsWith('[]')) {
+    return new Array(parseType(typeName.slice(0, -2)))
+  }
+  return createType(typeName.replaceAll('/', '.').split('.').pop() || typeName)
+}
+
+const buildStandardLibraryTypes = (): { [key: string]: Type } => {
+  // Preload built-in type objects
+  Object.keys(BUILT_IN_TYPE_FACTORIES).forEach(typeName => createType(typeName))
+
+  libraries.forEach(pkg => {
+    pkg.classes.forEach(clazz => {
+      const className = simpleNameOf(clazz.className)
+      createType(className)
+    })
+  })
+
+  libraries.forEach(pkg => {
+    pkg.classes.forEach(clazz => {
+      const className = simpleNameOf(clazz.className)
+      const classType = createType(className)
+      if (!(classType instanceof ClassType)) return
+
+      clazz.fields.forEach(field => {
+        const fieldType = parseType(field.typeName)
+        classType.addField(field.fieldName, fieldType, { startLine: -1, startOffset: -1 })
+      })
+
+      clazz.methods.forEach(methodInfo => {
+        const method = new Method(methodInfo.methodName, parseType(methodInfo.returnTypeName))
+        methodInfo.argsTypeName.forEach((argTypeName, index) => {
+          const parameter = new Parameter(`arg${index}`, parseType(argTypeName))
+          method.addParameter(parameter)
+        })
+        classType.addMethod(methodInfo.methodName, method, { startLine: -1, startOffset: -1 })
+      })
+    })
+  })
+
+  // Derive class inheritance from the extracted standard-library metadata
+  // instead of a hand-maintained table. Only edges between types the checker
+  // already knows about (created from `libraries` above) are wired up.
+  Object.values(generatedLibInfo).forEach(meta => {
+    if (meta.superClass === null) return
+    const childName = simpleNameOf(meta.name)
+    const parentName = simpleNameOf(meta.superClass)
+    if (childName === parentName) return
+    const childType = stdlibTypeMap.get(childName)
+    const parentType = stdlibTypeMap.get(parentName)
+    if (childType instanceof ClassType && parentType instanceof ClassType) {
+      childType.setParentClass(parentType)
+    }
+  })
+
+  return Object.fromEntries(stdlibTypeMap.entries())
+}
+
+const GLOBAL_TYPE_ENVIRONMENT: { [key: string]: Type } = buildStandardLibraryTypes()
 
 export class Frame {
   private _currentClass: Class

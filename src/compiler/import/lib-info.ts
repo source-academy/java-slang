@@ -17,7 +17,58 @@ export const rawLibInfo = {
           name: 'public class java.lang.Throwable'
         },
         {
+          name: 'public class java.lang.Error'
+        },
+        {
           name: 'public class java.lang.Exception'
+        },
+        {
+          name: 'public class java.lang.RuntimeException'
+        },
+        {
+          name: 'public class java.lang.ArithmeticException'
+        },
+        {
+          name: 'public class java.lang.ArrayIndexOutOfBoundsException'
+        },
+        {
+          name: 'public class java.lang.ArrayStoreException'
+        },
+        {
+          name: 'public class java.lang.ClassCastException'
+        },
+        {
+          name: 'public class java.lang.IllegalArgumentException'
+        },
+        {
+          name: 'public class java.lang.IllegalMonitorStateException'
+        },
+        {
+          name: 'public class java.lang.IllegalStateException'
+        },
+        {
+          name: 'public class java.lang.IndexOutOfBoundsException'
+        },
+        {
+          name: 'public class java.lang.NegativeArraySizeException'
+        },
+        {
+          name: 'public class java.lang.NullPointerException'
+        },
+        {
+          name: 'public class java.lang.NumberFormatException'
+        },
+        {
+          name: 'public class java.lang.StringIndexOutOfBoundsException'
+        },
+        {
+          name: 'public class java.lang.UnsupportedOperationException'
+        },
+        {
+          name: 'public class java.lang.SecurityException'
+        },
+        {
+          name: 'public class java.lang.IllegalThreadStateException'
         },
         {
           name: 'public final java.lang.Math',
