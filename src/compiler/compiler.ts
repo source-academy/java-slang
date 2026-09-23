@@ -6,11 +6,13 @@ import {
   ConstructorDeclaration,
   EnumDeclaration,
   FieldDeclaration,
-  MethodDeclaration
+  MethodDeclaration,
+  NormalClassDeclaration
 } from '../ast/types/classes'
 import { AttributeInfo } from '../ClassFile/types/attributes'
 import { FieldInfo } from '../ClassFile/types/fields'
 import { MethodInfo } from '../ClassFile/types/methods'
+import { ConstructNotSupportedError } from './error'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
   generateClassAccessFlags,
@@ -55,32 +57,37 @@ export class Compiler {
   compile(ast: AST) {
     this.setup()
     this.symbolTable.handleImports(ast.importDeclarations)
-    const declarations = [
-      ...ast.topLevelClassOrInterfaceDeclarations,
-      ...ast.topLevelClassOrInterfaceDeclarations.flatMap(declaration =>
-        declaration.kind === 'NormalClassDeclaration'
-          ? this.getMemberEnums(declaration.classBody)
-          : []
-      )
-    ]
+    const topLevelDeclarations = ast.topLevelClassOrInterfaceDeclarations
+    const memberDeclarations = topLevelDeclarations.flatMap(declaration =>
+      declaration.kind === 'NormalClassDeclaration'
+        ? this.getMemberTypes(declaration.classBody, declaration.typeIdentifier)
+        : []
+    )
+    const declarations = [...topLevelDeclarations, ...memberDeclarations]
 
-    // Enums are compiled first so their synthetic members are in the symbol
-    // table before the classes that reference them are compiled.
-    const compilationOrder = [
-      ...declarations.filter(declaration => declaration.kind === 'EnumDeclaration'),
-      ...declarations.filter(declaration => declaration.kind !== 'EnumDeclaration')
-    ]
+    // Member (nested) declarations are compiled before the top-level
+    // declarations that may reference them, so their fields/methods are
+    // already in the symbol table by the time the enclosing class compiles.
+    const compilationOrder = [...memberDeclarations, ...topLevelDeclarations]
 
     declarations.forEach(decl => {
       const className = decl.typeIdentifier
       const parentClassName = 'sclass' in decl && decl.sclass ? decl.sclass : 'java/lang/Object'
       const accessFlags = generateClassAccessFlags(decl.classModifier)
-      this.symbolTable.insertClassInfo({
-        name: className,
-        accessFlags: accessFlags,
-        parentClassName: parentClassName,
-        isEnum: decl.kind === 'EnumDeclaration'
-      })
+      // Nested types are registered under both their simple name (so
+      // unqualified references from within the compilation unit resolve) and
+      // their qualified binary name (so a descriptor like `LOuter$Inner;`
+      // can be resolved back to this class's info via queryClass(...)).
+      const simpleName = className.split('$').pop() as string
+      this.symbolTable.insertClassInfo(
+        {
+          name: className,
+          accessFlags: accessFlags,
+          parentClassName: parentClassName,
+          isEnum: decl.kind === 'EnumDeclaration'
+        },
+        [simpleName, className]
+      )
       this.symbolTable.returnToRoot()
     })
 
@@ -97,10 +104,38 @@ export class Compiler {
     return declarations.map(decl => compiled.get(decl) as Class)
   }
 
-  private getMemberEnums(classBody: Array<ClassBodyDeclaration>): Array<EnumDeclaration> {
+  /**
+   * Flattens nested enum and static nested class declarations out of a class
+   * body, rewriting each `typeIdentifier` to its JVM binary name
+   * (`Outer$Inner`, `Outer$Middle$Inner`, ...) so the rest of the compiler can
+   * treat them exactly like top-level declarations.
+   */
+  private getMemberTypes(
+    classBody: Array<ClassBodyDeclaration>,
+    enclosingBinaryName: string
+  ): Array<EnumDeclaration | NormalClassDeclaration> {
     return classBody.flatMap(declaration => {
-      if (declaration.kind !== 'EnumDeclaration') return []
-      return [declaration, ...this.getMemberEnums(declaration.enumBody.bodyMembers || [])]
+      if (declaration.kind === 'EnumDeclaration') {
+        const qualified = {
+          ...declaration,
+          typeIdentifier: enclosingBinaryName + '$' + declaration.typeIdentifier
+        }
+        return [
+          qualified,
+          ...this.getMemberTypes(qualified.enumBody.bodyMembers || [], qualified.typeIdentifier)
+        ]
+      }
+      if (declaration.kind === 'NormalClassDeclaration') {
+        if (!declaration.classModifier.includes('static')) {
+          throw new ConstructNotSupportedError('non-static nested class')
+        }
+        const qualified = {
+          ...declaration,
+          typeIdentifier: enclosingBinaryName + '$' + declaration.typeIdentifier
+        }
+        return [qualified, ...this.getMemberTypes(qualified.classBody, qualified.typeIdentifier)]
+      }
+      return []
     })
   }
 
@@ -110,7 +145,10 @@ export class Compiler {
     this.parentClassName = sclass ? sclass : 'java/lang/Object'
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
     this.symbolTable.extend()
-    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
+    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags }, [
+      this.className.split('$').pop() as string,
+      this.className
+    ])
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
@@ -146,7 +184,10 @@ export class Compiler {
     this.parentClassName = 'java/lang/Enum'
     const accessFlags = generateClassAccessFlags(enumNode.classModifier) | 0x4000 // ACC_ENUM
     this.symbolTable.extend()
-    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags })
+    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags }, [
+      this.className.split('$').pop() as string,
+      this.className
+    ])
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
@@ -536,7 +577,39 @@ export class Compiler {
     nonStaticMethods.forEach(m => this.compileMethod(m))
     staticMethods.forEach(m => this.compileMethod(m))
     this.compileStaticFieldInitializers(staticFields)
-    constructors.forEach(c => this.compileConstructor(c))
+    constructors.forEach(c => this.compileConstructor(c, nonStaticFields))
+  }
+
+  /**
+   * Builds synthetic `f = expr;` assignment statements from each field's
+   * initialiser, in declaration order. Instance-field targets are qualified
+   * as `this.f` - the Assignment code generator only emits the ALOAD_0
+   * needed before PUTFIELD when it sees that prefix; a bare name silently
+   * skips loading the receiver.
+   */
+  private buildFieldInitializerStatements(
+    fields: Array<FieldDeclaration>,
+    qualifyWithThis: boolean = false
+  ): any[] {
+    const blockStatements: any[] = []
+    for (const field of fields) {
+      for (const declarator of field.variableDeclaratorList) {
+        if (declarator.variableInitializer === undefined) continue
+        const name = qualifyWithThis
+          ? 'this.' + declarator.variableDeclaratorId
+          : declarator.variableDeclaratorId
+        blockStatements.push({
+          kind: 'ExpressionStatement',
+          stmtExp: {
+            kind: 'Assignment',
+            left: { kind: 'ExpressionName', name },
+            operator: '=',
+            right: declarator.variableInitializer
+          }
+        })
+      }
+    }
+    return blockStatements
   }
 
   /**
@@ -544,21 +617,7 @@ export class Compiler {
    * field, in declaration order (`static T f = expr;` -> `f = expr;`).
    */
   private compileStaticFieldInitializers(staticFields: Array<FieldDeclaration>) {
-    const blockStatements: any[] = []
-    for (const field of staticFields) {
-      for (const declarator of field.variableDeclaratorList) {
-        if (declarator.variableInitializer === undefined) continue
-        blockStatements.push({
-          kind: 'ExpressionStatement',
-          stmtExp: {
-            kind: 'Assignment',
-            left: { kind: 'ExpressionName', name: declarator.variableDeclaratorId },
-            operator: '=',
-            right: declarator.variableInitializer
-          }
-        })
-      }
-    }
+    const blockStatements = this.buildFieldInitializerStatements(staticFields)
     if (blockStatements.length === 0) return
 
     this.compileMethod({
@@ -646,7 +705,14 @@ export class Compiler {
     })
   }
 
-  private compileConstructor(constructor: ConstructorDeclaration) {
+  private compileConstructor(
+    constructor: ConstructorDeclaration,
+    instanceFields: Array<FieldDeclaration> = []
+  ) {
+    // Instance field initialisers run at the start of every constructor body
+    // (right after the implicit super() call that generateCode() emits),
+    // mirroring how compileStaticFieldInitializers seeds <clinit>.
+    const fieldInitializers = this.buildFieldInitializerStatements(instanceFields, true)
     const methodNode: MethodDeclaration = {
       kind: 'MethodDeclaration',
       methodModifier: constructor.constructorModifier,
@@ -655,7 +721,10 @@ export class Compiler {
         formalParameterList: constructor.constructorDeclarator.formalParameterList,
         result: 'void'
       },
-      methodBody: constructor.constructorBody
+      methodBody: {
+        kind: 'Block',
+        blockStatements: [...fieldInitializers, ...constructor.constructorBody.blockStatements]
+      }
     }
 
     this.compileMethod(methodNode)
