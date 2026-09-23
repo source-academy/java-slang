@@ -215,6 +215,64 @@ export const addClassMethods = (node: Node, frame: Frame): Result => {
 
       return newResult(classType)
     }
+    case 'EnumDeclaration': {
+      const createMethodLocal = (
+        node: ConstructorDeclaration | MethodDeclaration
+      ): Method | TypeCheckerError => {
+        const result = addClassMethods(node, frame)
+        if (result.errors.length > 0) return result.errors[0]
+        return result.currentType as Method
+      }
+
+      // Populate enum constants and any class-body declarations (fields/methods/constructors)
+      const classType = frame.getType(node.typeIdentifier.identifier, node.typeIdentifier.location)
+      if (classType instanceof TypeCheckerError) return newResult(null, [classType])
+      if (!(classType instanceof ClassType)) throw new Error('enum type should be a ClassImpl')
+
+      // Add enum constants as fields of the enum type
+      const enumConstants = node.enumBody.enumConstantList?.enumConstants || []
+      for (const constant of enumConstants) {
+        const fieldError = classType.addField(constant.identifier.identifier, classType, constant.location)
+        if (fieldError instanceof TypeCheckerError) return newResult(null, [fieldError])
+      }
+
+      // Process body declarations similar to class body
+      const bodyDecls = node.enumBody.enumBodyDeclarations?.classBodyDeclaration || []
+      for (const bodyNode of bodyDecls) {
+        switch (bodyNode.kind) {
+          case 'ConstructorDeclaration': {
+            const constructorMethod = createMethodLocal(bodyNode)
+            if (constructorMethod instanceof TypeCheckerError) return newResult(null, [constructorMethod])
+            const error = classType.addConstructor(constructorMethod, bodyNode.location)
+            if (error instanceof TypeCheckerError) return newResult(null, [error])
+            break
+          }
+          case 'FieldDeclaration': {
+            const fieldType = frame.getType(
+              (bodyNode as any).unannType ? (bodyNode as any).unannType : (bodyNode as any).fieldType,
+              bodyNode.location
+            )
+            if (fieldType instanceof TypeCheckerError) return newResult(null, [fieldType])
+            for (const declarator of (bodyNode as any).variableDeclaratorList.variableDeclarators) {
+              const fieldIdentifier = declarator.variableDeclaratorId.identifier
+              const error = classType.addField(fieldIdentifier.identifier, fieldType, fieldIdentifier.location)
+              if (error instanceof TypeCheckerError) return newResult(null, [error])
+            }
+            break
+          }
+          case 'MethodDeclaration': {
+            const methodSignature = createMethodLocal(bodyNode)
+            if (methodSignature instanceof TypeCheckerError) return newResult(null, [methodSignature])
+            const methodName = (bodyNode).methodHeader.methodDeclarator.identifier
+            const error = classType.addMethod(methodName.identifier, methodSignature, methodName.location)
+            if (error instanceof TypeCheckerError) return newResult(null, [error])
+            break
+          }
+        }
+      }
+
+      return newResult(classType)
+    }
     default:
       return OK_RESULT
   }
@@ -259,6 +317,18 @@ export const addClassParents = (node: Node, frame: Frame): Result => {
       }
       if (errors.length > 0) return newResult(null, errors)
 
+      return newResult(classType)
+    }
+    case 'EnumDeclaration': {
+      const classType = frame.getType(node.typeIdentifier.identifier, node.typeIdentifier.location)
+      if (classType instanceof Error) return newResult(null, [classType])
+      if (!(classType instanceof ClassType)) throw new Error('enum type should be a ClassImpl')
+
+      // Enums implicitly extend java.lang.Enum (represented here as 'Enum' in the type environment)
+      const enumBase = frame.getType('Enum', node.typeIdentifier.location)
+      if (enumBase instanceof Error) return newResult(null, [enumBase])
+      if (!(enumBase instanceof ClassType)) throw new Error('Enum base should be a ClassImpl')
+      classType.setParentClass(enumBase)
       return newResult(classType)
     }
     case 'EnumDeclaration': {
