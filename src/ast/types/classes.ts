@@ -1,7 +1,7 @@
 import { BaseNode } from "./ast";
 import { Block, VariableDeclarator } from "./blocks-and-statements";
 
-export type ClassDeclaration = NormalClassDeclaration;
+export type ClassDeclaration = NormalClassDeclaration | EnumDeclaration;
 
 export interface NormalClassDeclaration extends BaseNode {
   kind: "NormalClassDeclaration";
@@ -9,6 +9,26 @@ export interface NormalClassDeclaration extends BaseNode {
   typeIdentifier: Identifier;
   sclass?: Identifier;
   classBody: Array<ClassBodyDeclaration>;
+}
+
+export interface EnumDeclaration extends BaseNode {
+  kind: "EnumDeclaration";
+  classModifier: Array<ClassModifier>;
+  typeIdentifier: Identifier;
+  enumBody: EnumBody;
+}
+
+export interface EnumBody extends BaseNode {
+  kind: "EnumBody";
+  constants: Array<EnumConstant>;
+  bodyMembers?: Array<ClassBodyDeclaration>;
+}
+
+export interface EnumConstant extends BaseNode {
+  kind: "EnumConstant";
+  name: Identifier;
+  arguments?: Array<any>;
+  classBody?: Array<ClassBodyDeclaration>;
 }
 
 export type ClassModifier =
@@ -20,9 +40,10 @@ export type ClassModifier =
   | "final"
   | "sealed"
   | "non-sealed"
-  | "strictfp";
+  | "strictfp"
+  | "enum";
 
-export type ClassBodyDeclaration = ClassMemberDeclaration | ConstructorDeclaration;
+export type ClassBodyDeclaration = ClassMemberDeclaration | ConstructorDeclaration | EnumDeclaration;
 export type ClassMemberDeclaration = MethodDeclaration | FieldDeclaration;
 
 export interface ConstructorDeclaration extends BaseNode {
