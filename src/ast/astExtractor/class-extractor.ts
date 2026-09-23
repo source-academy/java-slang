@@ -91,5 +91,12 @@ export class ClassExtractor extends BaseJavaCstVisitorWithDefaults {
         this.body.push(methodNode);
       })
     }
+    if (ctx.classDeclaration) {
+      ctx.classDeclaration.forEach(x => {
+        const classExtractor = new ClassExtractor();
+        const classNode = classExtractor.extract(x);
+        this.body.push(classNode);
+      })
+    }
   }
 }

@@ -245,18 +245,24 @@ export class SymbolTable {
     this.curTable = this.tables[this.curIdx]
   }
 
-  insertClassInfo(info: ClassInfo) {
-    const key = generateSymbol(info.name, SymbolType.CLASS)
-
-    if (this.curTable.has(key)) {
-      throw new SymbolRedeclarationError(info.name)
-    }
-
+  // A nested class is registered under both its simple name (so unqualified
+  // source references like `Inner` resolve) and its qualified binary name
+  // (so a `Ljava/lang/Outer$Inner;`-style descriptor can be resolved back to
+  // its member table) - both keys share the same SymbolNode/children table.
+  insertClassInfo(info: ClassInfo, lookupNames: Array<string> = [info.name]) {
+    const names = [...new Set(lookupNames)]
     const symbolNode: SymbolNode = {
       info: info,
       children: this.getNewTable()
     }
-    this.curTable.set(key, symbolNode)
+
+    for (const name of names) {
+      const key = generateSymbol(name, SymbolType.CLASS)
+      if (this.curTable.has(key)) {
+        throw new SymbolRedeclarationError(info.name)
+      }
+      this.curTable.set(key, symbolNode)
+    }
 
     this.tables[++this.curIdx] = symbolNode.children
     this.curTable = this.tables[this.curIdx]

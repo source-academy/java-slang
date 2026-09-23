@@ -1098,7 +1098,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     }
     const res = compile(expr, cg)
-    const classInfoIndex = cg.constantPoolManager.indexClassInfo(ct)
+    let castClassName = ct
+    try {
+      castClassName = cg.symbolTable.queryClass(ct).name
+    } catch (e) {
+      castClassName = ct.includes('/') ? ct : ct.replace(/\./g, '/')
+    }
+    const classInfoIndex = cg.constantPoolManager.indexClassInfo(castClassName)
     cg.code.push(OPCODE.CHECKCAST, 0, classInfoIndex)
     return res
   },
@@ -1107,7 +1113,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { identifier: id, argumentList: argLst } = node as ClassInstanceCreationExpression
     let maxStack = 2
 
-    cg.code.push(OPCODE.NEW, 0, cg.constantPoolManager.indexClassInfo(id), OPCODE.DUP)
+    let instantiatedClassName = id
+    try {
+      instantiatedClassName = cg.symbolTable.queryClass(id).name
+    } catch (e) {
+      instantiatedClassName = id.includes('/') ? id : id.replace(/\./g, '/')
+    }
+    cg.code.push(OPCODE.NEW, 0, cg.constantPoolManager.indexClassInfo(instantiatedClassName), OPCODE.DUP)
 
     const argTypes: Array<UnannType> = []
     argLst.forEach((x, i) => {
@@ -1120,7 +1132,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const methodInfos = cg.symbolTable.queryMethod('<init>') as MethodInfos
     for (let i = 0; i < methodInfos.length; i++) {
       const methodInfo = methodInfos[i]
-      if (methodInfo.typeDescriptor.includes(argDescriptor) && methodInfo.className == id) {
+      if (
+        methodInfo.typeDescriptor.includes(argDescriptor) &&
+        methodInfo.className == instantiatedClassName
+      ) {
         const method = cg.constantPoolManager.indexMethodrefInfo(
           methodInfo.className,
           methodInfo.name,
@@ -1131,7 +1146,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     }
 
-    return { stackSize: maxStack, resultType: id }
+    return { stackSize: maxStack, resultType: instantiatedClassName }
   },
 
   ArrayAccess: (node: Node, cg: CodeGenerator) => {

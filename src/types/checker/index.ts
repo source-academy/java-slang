@@ -552,6 +552,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
 
       let numFieldDeclarations = 0
       let numMethodDeclarations = 0
+      let numNestedClassDeclarations = 0
       for (let i = 0; i < node.classBody.classBodyDeclarations.length; i++) {
         const bodyDeclaration = node.classBody.classBodyDeclarations[i]
 
@@ -559,7 +560,7 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
           case 'ConstructorDeclaration': {
             const methodFrame = classFrame.newChildFrame()
             const constructor = classType.getConstructor(
-              i - numFieldDeclarations - numMethodDeclarations
+              i - numFieldDeclarations - numMethodDeclarations - numNestedClassDeclarations
             )
             const constructorMethodErrors: TypeCheckerError[] = []
             constructor.mapParameters((name, type, isVarargs) => {
@@ -634,10 +635,16 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
             if (checkErrors.length > 0) errors.push(...checkErrors)
             break
           }
+          case 'NormalClassDeclaration': {
+            const { errors: checkErrors } = typeCheckBody(bodyDeclaration, classFrame)
+            if (checkErrors.length > 0) errors.push(...checkErrors)
+            break
+          }
         }
 
         if (bodyDeclaration.kind === 'FieldDeclaration') numFieldDeclarations += 1
         if (bodyDeclaration.kind === 'MethodDeclaration') numMethodDeclarations += 1
+        if (bodyDeclaration.kind === 'NormalClassDeclaration') numNestedClassDeclarations += 1
       }
       return newResult(null, errors)
     }
