@@ -1,4 +1,5 @@
-import BasicEvaluator, { IRunnerPlugin } from '@sourceacademy/conductor/runner'
+import { EvaluatorRuntimeError } from '@sourceacademy/conductor/common'
+import { BasicEvaluator, IRunnerPlugin } from '@sourceacademy/conductor/runner'
 import setupJVM from '../jvm/index'
 import parseBin, { a2ab } from '../jvm/utils/disassembler'
 
@@ -13,11 +14,12 @@ export class JavaEvaluator extends BasicEvaluator {
     super(conductor)
   }
 
-  async evaluateChunk(_chunk: string): Promise<void> {
+  evaluateChunk(_chunk: string): Promise<void> {
     this.conductor.sendOutput('JavaEvaluator: evaluateChunk not supported; use evaluateFile with a .class file encoded as base64')
+    return Promise.resolve()
   }
 
-  async evaluateFile(fileName: string, fileContent: string): Promise<void> {
+  evaluateFile(fileName: string, fileContent: string): Promise<void> {
     try {
       if (fileName.endsWith('.class')) {
         // Expect class file content as base64 to allow conductor transport via JSON
@@ -26,7 +28,7 @@ export class JavaEvaluator extends BasicEvaluator {
         // Try to parse the classfile bytes. If parsing fails, fall back to the
         // previous placeholder behaviour so tests that pass a minimal header
         // (e.g. CAFEBABE only) continue to work.
-        let classFile: any | null = null
+        let classFile: any = null
         try {
           const ab = a2ab(buf)
           const view = new DataView(ab)
@@ -35,7 +37,7 @@ export class JavaEvaluator extends BasicEvaluator {
           // parsing failed -> fall back to stub behaviour used previously by tests
           this.conductor.sendOutput('JavaEvaluator: running class via in-memory runner is not yet implemented')
           this.conductor.sendResult('')
-          return
+          return Promise.resolve()
         }
 
         // resolve class internal name (e.g. "com/example/Main")
@@ -103,15 +105,16 @@ export class JavaEvaluator extends BasicEvaluator {
         try {
           runFn()
         } catch (e) {
-          this.conductor.sendError(`${e instanceof Error ? e.message : String(e)}`)
+          this.conductor.sendError(new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e)))
         }
-        return
+        return Promise.resolve()
       }
 
       this.conductor.sendOutput('JavaEvaluator: unsupported file type')
     } catch (err) {
-      this.conductor.sendError(`${err instanceof Error ? err.message : String(err)}`)
+      this.conductor.sendError(new EvaluatorRuntimeError(err instanceof Error ? err.message : String(err)))
     }
+    return Promise.resolve()
   }
 }
 

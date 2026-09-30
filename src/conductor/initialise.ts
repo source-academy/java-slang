@@ -1,4 +1,4 @@
 import { initialise } from '@sourceacademy/conductor/runner'
-import { __EVALUATOR__ } from './index'
+import { JavaEvaluator } from './JavaEvaluator'
 
-initialise(__EVALUATOR__)
+initialise(JavaEvaluator)
