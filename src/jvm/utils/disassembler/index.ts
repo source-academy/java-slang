@@ -96,11 +96,11 @@ export default function parseBin(view: DataView) {
 }
 
 /**
- * Converts a NodeJS Buffer to an ArrayBuffer
+ * Converts a Uint8Array (e.g. a NodeJS Buffer) to an ArrayBuffer
  *
- * @param buffer nodejs buffer
+ * @param buffer typed-array view over the bytes
  * @returns ArrayBuffer equivalent
  */
-export function a2ab(buffer: Buffer) {
+export function a2ab(buffer: Uint8Array) {
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
 }

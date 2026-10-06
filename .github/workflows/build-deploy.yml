@@ -30,6 +30,9 @@ jobs:
       - name: Typecheck conductor evaluator
         run: yarn typecheck:conductor
 
+      - name: Test conductor evaluator
+        run: yarn test:conductor
+
       - name: Build conductor evaluator bundle
         run: yarn build:conductor
 

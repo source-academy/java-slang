@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2020",
+    "lib": ["es2020", "es2021.string", "dom"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,

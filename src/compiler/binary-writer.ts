@@ -1,4 +1,3 @@
-import * as fs from 'fs'
 import { CONSTANT_TAG } from '../ClassFile/constants/constants'
 import { Class, ClassFile } from '../ClassFile/types'
 import {
@@ -30,6 +29,45 @@ const u1 = 1
 const u2 = 2
 const u4 = 4
 
+/**
+ * Hand-rolled UTF-8 encode, used instead of `Buffer`/`TextEncoder` so this
+ * runs unchanged in every target this gets bundled/compiled for: Node, a
+ * browser Worker (Conductor evaluator), and Jest's jsdom environment (which,
+ * unlike real browsers, doesn't expose `TextEncoder` as a global).
+ */
+function utf8Encode(str: string): number[] {
+  const bytes: number[] = []
+  for (let i = 0; i < str.length; i++) {
+    let codePoint = str.charCodeAt(i)
+    if (codePoint >= 0xd800 && codePoint <= 0xdbff && i + 1 < str.length) {
+      const next = str.charCodeAt(i + 1)
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        codePoint = (codePoint - 0xd800) * 0x400 + (next - 0xdc00) + 0x10000
+        i++
+      }
+    }
+    if (codePoint < 0x80) {
+      bytes.push(codePoint)
+    } else if (codePoint < 0x800) {
+      bytes.push(0xc0 | (codePoint >> 6), 0x80 | (codePoint & 0x3f))
+    } else if (codePoint < 0x10000) {
+      bytes.push(
+        0xe0 | (codePoint >> 12),
+        0x80 | ((codePoint >> 6) & 0x3f),
+        0x80 | (codePoint & 0x3f)
+      )
+    } else {
+      bytes.push(
+        0xf0 | (codePoint >> 18),
+        0x80 | ((codePoint >> 12) & 0x3f),
+        0x80 | ((codePoint >> 6) & 0x3f),
+        0x80 | (codePoint & 0x3f)
+      )
+    }
+  }
+  return bytes
+}
+
 export class BinaryWriter {
   private byteArray: Array<number>
   private constantPool: Array<ConstantInfo>
@@ -43,10 +81,12 @@ export class BinaryWriter {
     return this.toBinary(this.normalizeClassFile(classFile))
   }
 
+  /** Node-only: writes a compiled class to disk. Not used by the browser Conductor evaluator. */
   writeBinary(classFile: ClassFile | Class | Array<ClassFile> | Array<Class>, filepath: string) {
     const filename = filepath + this.getClassName(classFile) + '.class'
     const binary = this.toBinary(this.normalizeClassFile(classFile))
-    fs.writeFileSync(filename, binary)
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require('fs').writeFileSync(filename, binary)
   }
 
   private normalizeClassFile(
@@ -119,8 +159,7 @@ export class BinaryWriter {
   }
 
   private writeString(str: string) {
-    const bytes = Array.from(Buffer.from(str, 'utf8'))
-    this.writeBytes(bytes)
+    this.writeBytes(utf8Encode(str))
   }
 
   private writeConstant(constant: ConstantInfo) {

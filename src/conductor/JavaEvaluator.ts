@@ -1,120 +1,132 @@
 import { EvaluatorRuntimeError } from '@sourceacademy/conductor/common'
 import { BasicEvaluator, IRunnerPlugin } from '@sourceacademy/conductor/runner'
-import setupJVM from '../jvm/index'
-import parseBin, { a2ab } from '../jvm/utils/disassembler'
+import { compileFromSource } from '../compiler'
+import { ClassFile } from '../ClassFile/types'
+import setupJVM, { parseBin, userClassFiles } from '../jvm/index'
+import { a2ab } from '../jvm/utils/disassembler'
+import stdlibClassfiles from '../jvm/utils/stdlib-classfiles'
+import stdlibNatives from '../jvm/utils/stdlib-natives'
 
 /**
- * Minimal Java conductor evaluator stub.
- * Currently this evaluator is a placeholder that demonstrates how to
- * integrate with the local JVM runner. It expects class file bytes
- * encoded as a base64 string when used via conductor channels.
+ * Decodes a base64 string to bytes without relying on Node's `Buffer`, which
+ * doesn't exist in the browser/Worker environment this evaluator is bundled
+ * for. `atob` is available on both `window` and `WorkerGlobalScope`.
+ */
+function base64ToUint8Array(b64: string): Uint8Array {
+  const binary = atob(b64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
+
+function base64ToClassFile(b64: string): ClassFile {
+  return parseBin(new DataView(a2ab(base64ToUint8Array(b64))))
+}
+
+/**
+ * Java conductor evaluator. Delivers Conductor's normal run-code flow
+ * (`evaluateChunk`, source text typed into the editor) by compiling the chunk
+ * with the java-slang compiler and running the result on the in-repo JVM.
+ * `evaluateFile` additionally accepts a single precompiled `.class` file,
+ * base64-encoded, for callers that already have a classfile in hand.
  */
 export class JavaEvaluator extends BasicEvaluator {
   constructor(conductor: IRunnerPlugin) {
     super(conductor)
   }
 
-  evaluateChunk(_chunk: string): Promise<void> {
-    this.conductor.sendOutput('JavaEvaluator: evaluateChunk not supported; use evaluateFile with a .class file encoded as base64')
-    return Promise.resolve()
+  async evaluateChunk(chunk: string): Promise<void> {
+    let userFiles: { [fileName: string]: ClassFile }
+    try {
+      userFiles = userClassFiles(compileFromSource(chunk))
+    } catch (e) {
+      this.conductor.sendError(new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e)))
+      return
+    }
+    await this.runClasses(userFiles, 'Main')
   }
 
-  evaluateFile(fileName: string, fileContent: string): Promise<void> {
+  async evaluateFile(fileName: string, fileContent: string): Promise<void> {
     try {
-      if (fileName.endsWith('.class')) {
-        // Expect class file content as base64 to allow conductor transport via JSON
-        const buf = Buffer.from(fileContent, 'base64')
-
-        // Try to parse the classfile bytes. If parsing fails, fall back to the
-        // previous placeholder behaviour so tests that pass a minimal header
-        // (e.g. CAFEBABE only) continue to work.
-        let classFile: any = null
-        try {
-          const ab = a2ab(buf)
-          const view = new DataView(ab)
-          classFile = parseBin(view)
-        } catch (e) {
-          // parsing failed -> fall back to stub behaviour used previously by tests
-          this.conductor.sendOutput('JavaEvaluator: running class via in-memory runner is not yet implemented')
-          this.conductor.sendResult('')
-          return Promise.resolve()
-        }
-
-        // resolve class internal name (e.g. "com/example/Main")
-        let mainClassName = 'Main'
-        try {
-          const clsInfo = classFile.constantPool[classFile.thisClass]
-          const nameConst = classFile.constantPool[clsInfo.nameIndex]
-          mainClassName = nameConst.value
-        } catch (e) {
-          // ignore and use default
-        }
-
-        // In-memory class registry (keyed by path used by loaders)
-        const mem: { [path: string]: any } = {}
-        // the AbstractClassLoader builds paths like (classPath ? classPath + '/' + className : className) + '.class'
-        // we'll use an empty userDir so loaders will request '<internalName>.class'
-        mem[`${mainClassName}.class`] = classFile
-
-        // attempt to load prebuilt stdlib classfiles mapping if available (optional)
-        let prebuilt: { [k: string]: string } | null = null
-        try {
-          // try a compiled mapping that some workflows generate
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const maybe = require('../../dist/jvm/utils/classfiles')
-          prebuilt = maybe && maybe.default ? maybe.default : maybe
-        } catch (e) {
-          prebuilt = null
-        }
-
-        const readFileSync = (path: string) => {
-          // direct in-memory hit
-          if (mem[path]) return mem[path]
-
-          // path might be prefixed with 'stdlib/' when requesting runtime classes
-          if (prebuilt && path.startsWith('stdlib/')) {
-            const key = path.slice('stdlib/'.length)
-            const b64 = prebuilt[key]
-            if (!b64) {
-              throw new Error(`class not found in prebuilt stdlib: ${key}`)
-            }
-            const buf2 = Buffer.from(b64, 'base64')
-            const classfile = parseBin(new DataView(a2ab(buf2)))
-            return classfile
-          }
-
-          // final fallback: error -> loader will translate to ClassNotFoundException
-          throw new Error(`readFileSync: class not found: ${path}`)
-        }
-
-        const runFn = setupJVM({
-          mainClass: mainClassName,
-          userDir: '',
-          callbacks: {
-            readFileSync,
-            readFile: () => Promise.reject('readFile not implemented'),
-            stdout: (m: string) => this.conductor.sendOutput(m),
-            stderr: (m: string) => this.conductor.sendOutput(`ERR: ${m}`),
-            onFinish: () => {
-              // when JVM finishes we don't currently capture any return value
-              this.conductor.sendResult('')
-            }
-          }
-        })
-
-        try {
-          runFn()
-        } catch (e) {
-          this.conductor.sendError(new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e)))
-        }
-        return Promise.resolve()
+      if (!fileName.endsWith('.class')) {
+        this.conductor.sendOutput('JavaEvaluator: unsupported file type')
+        return
       }
 
-      this.conductor.sendOutput('JavaEvaluator: unsupported file type')
+      // Expect class file content as base64 to allow conductor transport via JSON
+      const classFile = base64ToClassFile(fileContent)
+
+      // resolve class internal name (e.g. "com/example/Main")
+      let mainClassName = 'Main'
+      try {
+        const clsInfo = classFile.constantPool[classFile.thisClass]
+        const nameConst = classFile.constantPool[(clsInfo as any).nameIndex]
+        mainClassName = (nameConst as any).value
+      } catch (e) {
+        // ignore and use default
+      }
+
+      // the AbstractClassLoader builds paths like (classPath ? classPath + '/' + className : className) + '.class'
+      // we'll use an empty userDir so loaders will request '<internalName>.class'
+      await this.runClasses({ [`${mainClassName}.class`]: classFile }, mainClassName)
     } catch (err) {
       this.conductor.sendError(new EvaluatorRuntimeError(err instanceof Error ? err.message : String(err)))
     }
-    return Promise.resolve()
+  }
+
+  /**
+   * Runs a set of already-parsed classes on the JVM, backed by the bundled JDK
+   * stdlib for anything else requested. Resolves once the JVM actually
+   * finishes (or errors) - the JVM's thread pool schedules work via
+   * `setTimeout`, so `runFn()` itself only kicks execution off.
+   */
+  private runClasses(
+    userFiles: { [fileName: string]: ClassFile },
+    mainClassName: string
+  ): Promise<void> {
+    const parsedStdlibCache: { [fileName: string]: ClassFile } = {}
+
+    const readFileSync = (path: string): ClassFile => {
+      if (userFiles[path]) return userFiles[path]
+
+      if (parsedStdlibCache[path]) return parsedStdlibCache[path]
+      // path might be prefixed with 'stdlib/' when requesting runtime classes
+      const key = path.startsWith('stdlib/') ? path.slice('stdlib/'.length) : path
+      const b64 = stdlibClassfiles[key]
+      if (!b64) {
+        // final fallback: error -> loader will translate to ClassNotFoundException
+        throw new Error(`readFileSync: class not found: ${path}`)
+      }
+      return (parsedStdlibCache[path] = base64ToClassFile(b64))
+    }
+
+    return new Promise(resolve => {
+      const runFn = setupJVM({
+        mainClass: mainClassName,
+        userDir: '',
+        // Natives are bundled statically (no dynamic `require`/`readFile` in a
+        // browser Worker) - see stdlib-natives.ts.
+        natives: stdlibNatives,
+        callbacks: {
+          readFileSync,
+          readFile: () => Promise.reject('readFile not implemented'),
+          stdout: (m: string) => this.conductor.sendOutput(m),
+          stderr: (m: string) => this.conductor.sendOutput(`ERR: ${m}`),
+          onFinish: () => {
+            // when JVM finishes we don't currently capture any return value
+            this.conductor.sendResult('')
+            resolve()
+          }
+        }
+      })
+
+      try {
+        runFn()
+      } catch (e) {
+        this.conductor.sendError(new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e)))
+        resolve()
+      }
+    })
   }
 }
 
