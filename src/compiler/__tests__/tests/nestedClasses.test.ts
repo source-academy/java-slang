@@ -70,6 +70,41 @@ const testCases: testCase[] = [
     expectedLines: ["1"],
   },
   {
+    comment: "nested class forward-references a sibling class declared after it",
+    program: `
+      public class Main {
+        static class A {
+          int get() { return B.code; }
+        }
+        static class B {
+          static int code = 9;
+        }
+        public static void main(String[] args) {
+          A a = new A();
+          System.out.println(a.get());
+        }
+      }
+    `,
+    expectedLines: ["9"],
+  },
+  {
+    comment: "nested class forward-references a sibling enum declared after it",
+    program: `
+      public class Main {
+        static class Box {
+          Color get() { return Color.RED; }
+        }
+        enum Color { RED, BLUE }
+        public static void main(String[] args) {
+          Box box = new Box();
+          Color c = box.get();
+          System.out.println(c.name());
+        }
+      }
+    `,
+    expectedLines: ["RED"],
+  },
+  {
     comment: "two levels of static nested class",
     program: `
       public class Main {

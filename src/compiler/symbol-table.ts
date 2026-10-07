@@ -29,8 +29,8 @@ export const typeMap = new Map([
   ['void', 'V']
 ])
 
-type Symbol = string
-type Table = Map<Symbol, SymbolNode>
+export type Symbol = string
+export type Table = Map<Symbol, SymbolNode>
 
 export type SymbolNode = {
   info: SymbolInfo
@@ -249,7 +249,11 @@ export class SymbolTable {
   // source references like `Inner` resolve) and its qualified binary name
   // (so a `Ljava/lang/Outer$Inner;`-style descriptor can be resolved back to
   // its member table) - both keys share the same SymbolNode/children table.
-  insertClassInfo(info: ClassInfo, lookupNames: Array<string> = [info.name]) {
+  // Returns the class's own member table (the `children` scope), so a caller
+  // compiling in two passes can register every class's signature up front
+  // (pass 1) and later re-enter each class's scope to generate bytecode
+  // (pass 2) via restoreClassScope, once every sibling is already visible.
+  insertClassInfo(info: ClassInfo, lookupNames: Array<string> = [info.name]): Table {
     const names = [...new Set(lookupNames)]
     const symbolNode: SymbolNode = {
       info: info,
@@ -266,6 +270,19 @@ export class SymbolTable {
 
     this.tables[++this.curIdx] = symbolNode.children
     this.curTable = this.tables[this.curIdx]
+    this.curClassIdx = this.curIdx
+    return symbolNode.children
+  }
+
+  // Re-enters a class's own member scope (previously returned by
+  // insertClassInfo) so its method bodies can be compiled in a later pass,
+  // after every class's signature has already been registered. This always
+  // appends a fresh slot rather than rewinding to the scope's original
+  // index, so classes registered afterwards (whose tables occupy higher
+  // indices) remain reachable via getClassTable's scan from the new curIdx.
+  restoreClassScope(classScope: Table): void {
+    this.tables[++this.curIdx] = classScope
+    this.curTable = classScope
     this.curClassIdx = this.curIdx
   }
 

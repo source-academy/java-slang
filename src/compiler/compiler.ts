@@ -19,7 +19,7 @@ import {
   generateFieldAccessFlags,
   generateMethodAccessFlags
 } from './compiler-utils'
-import { SymbolTable } from './symbol-table'
+import { SymbolTable, Table } from './symbol-table'
 import { generateCode } from './code-generator'
 
 const MAGIC = 0xcafebabe
@@ -35,7 +35,6 @@ export class Compiler {
   private attributes: Array<AttributeInfo>
   private className: string
   private parentClassName: string
-  private enumOrdinals: Map<string, number>
 
   constructor() {
     this.setup()
@@ -51,7 +50,6 @@ export class Compiler {
     this.fields = []
     this.methods = []
     this.attributes = []
-    this.enumOrdinals = new Map()
   }
 
   compile(ast: AST) {
@@ -64,12 +62,11 @@ export class Compiler {
         : []
     )
     const declarations = [...topLevelDeclarations, ...memberDeclarations]
-
-    // Member (nested) declarations are compiled before the top-level
-    // declarations that may reference them, so their fields/methods are
-    // already in the symbol table by the time the enclosing class compiles.
     const compilationOrder = [...memberDeclarations, ...topLevelDeclarations]
 
+    // Pass 0: register every class's identity (name/parent/isEnum) up
+    // front, so a type name resolves via queryClass(...) regardless of
+    // declaration order.
     declarations.forEach(decl => {
       const className = decl.typeIdentifier
       const parentClassName = 'sclass' in decl && decl.sclass ? decl.sclass : 'java/lang/Object'
@@ -91,11 +88,30 @@ export class Compiler {
       this.symbolTable.returnToRoot()
     })
 
+    // Pass 1: register every class's own members (fields, methods,
+    // constructors, enum constants and synthetic members) with no bytecode
+    // generated yet. This makes member resolution order-independent: a
+    // sibling declared later in the same scope is already fully visible by
+    // the time pass 2 generates any bytecode that might reference it.
+    const classScopes = new Map<(typeof declarations)[number], Table>()
+    compilationOrder.forEach(decl => {
+      const scope =
+        decl.kind === 'EnumDeclaration'
+          ? this.registerEnumSignature(decl)
+          : this.registerClassSignature(decl)
+      classScopes.set(decl, scope)
+    })
+
+    // Pass 2: generate the actual bytecode for every class, re-entering
+    // each class's own member scope registered in pass 1.
     const compiled = new Map<(typeof declarations)[number], Class>()
     compilationOrder.forEach(decl => {
       this.resetClassFileState()
+      this.symbolTable.restoreClassScope(classScopes.get(decl) as Table)
       const classFile =
-        decl.kind === 'EnumDeclaration' ? this.compileEnum(decl) : this.compileClass(decl)
+        decl.kind === 'EnumDeclaration'
+          ? this.generateEnumClassFile(decl)
+          : this.generateClassFile(decl)
       compiled.set(decl, { classFile: classFile, className: this.className })
     })
 
@@ -139,22 +155,42 @@ export class Compiler {
     })
   }
 
-  private compileClass(classNode: ClassDeclaration): ClassFile {
+  /**
+   * Pass 1 for a class: registers its own member signatures (fields,
+   * methods, constructors) in a fresh scope, with no bytecode generated.
+   * Returns that scope so pass 2 can re-enter it via restoreClassScope.
+   */
+  private registerClassSignature(classNode: ClassDeclaration): Table {
     this.className = classNode.typeIdentifier
     const sclass = 'sclass' in classNode ? classNode.sclass : undefined
     this.parentClassName = sclass ? sclass : 'java/lang/Object'
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
     this.symbolTable.extend()
-    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags }, [
+    const scope = this.symbolTable.insertClassInfo({ name: this.className, accessFlags }, [
       this.className.split('$').pop() as string,
       this.className
     ])
+    const classBody = 'classBody' in classNode ? classNode.classBody : []
+    this.registerClassBodyMembers(classBody)
+    return scope
+  }
+
+  /**
+   * Pass 2 for a class: generates its bytecode, assuming its own scope has
+   * already been restored (via restoreClassScope) and every other class's
+   * members are already registered, regardless of declaration order.
+   */
+  private generateClassFile(classNode: ClassDeclaration): ClassFile {
+    this.className = classNode.typeIdentifier
+    const sclass = 'sclass' in classNode ? classNode.sclass : undefined
+    this.parentClassName = sclass ? sclass : 'java/lang/Object'
+    const accessFlags = generateClassAccessFlags(classNode.classModifier)
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
     const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
     this.constantPoolManager.indexUtf8Info('Code')
     const classBody = 'classBody' in classNode ? classNode.classBody : []
-    this.handleClassBody(classBody)
+    this.generateClassBody(classBody)
 
     const constantPool = this.constantPoolManager.getPool()
     return {
@@ -177,47 +213,64 @@ export class Compiler {
     }
   }
 
-  private compileEnum(enumNode: any): ClassFile {
+  /**
+   * Pass 1 for an enum: registers its constants, inherited/synthetic Enum
+   * methods, and any explicit body members, with no bytecode generated.
+   */
+  private registerEnumSignature(enumNode: any): Table {
     this.className = enumNode.typeIdentifier
-    // Generated enums genuinely extend java.lang.Enum: the constructor chains to
-    // Enum.<init>(String, int) and name()/ordinal()/compareTo() are inherited.
     this.parentClassName = 'java/lang/Enum'
     const accessFlags = generateClassAccessFlags(enumNode.classModifier) | 0x4000 // ACC_ENUM
     this.symbolTable.extend()
-    this.symbolTable.insertClassInfo({ name: this.className, accessFlags: accessFlags }, [
+    const scope = this.symbolTable.insertClassInfo({ name: this.className, accessFlags }, [
       this.className.split('$').pop() as string,
       this.className
     ])
 
-    const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
-    const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
-    this.constantPoolManager.indexUtf8Info('Code')
-
-    // Handle enum constants and body members
-    const enumBody = enumNode.enumBody
-    const enumConstants = enumBody.constants || []
-    const bodyMembers = enumBody.bodyMembers || []
-
-    // Add enum constants as static fields
+    const enumConstants = enumNode.enumBody.constants || []
     enumConstants.forEach((constant: any, ordinal: number) => {
-      const fieldDescriptor = 'L' + this.className + ';'
-      this.fields.push({
-        accessFlags: 0x0019, // public static final
-        nameIndex: this.constantPoolManager.indexUtf8Info(constant.name),
-        descriptorIndex: this.constantPoolManager.indexUtf8Info(fieldDescriptor),
-        attributesCount: 0,
-        attributes: []
-      })
       this.symbolTable.insertFieldInfo({
         name: constant.name,
         accessFlags: 0x0019,
         parentClassName: this.className,
         typeName: this.className,
-        typeDescriptor: fieldDescriptor,
+        typeDescriptor: 'L' + this.className + ';',
         ordinal
       })
-      this.enumOrdinals.set(constant.name, ordinal)
     })
+
+    // name(), ordinal(), compareTo() etc. are inherited from java.lang.Enum;
+    // register the ones reachable from Source programs so calls resolve.
+    this.registerInheritedEnumMethods()
+    this.registerEnumSyntheticMethodSignatures()
+
+    const bodyMembers = enumNode.enumBody.bodyMembers || []
+    if (bodyMembers.length > 0) {
+      this.registerClassBodyMembers(bodyMembers)
+    }
+    return scope
+  }
+
+  /**
+   * Pass 2 for an enum: generates its bytecode, assuming its own scope has
+   * already been restored and every other class's members are registered.
+   */
+  private generateEnumClassFile(enumNode: any): ClassFile {
+    this.className = enumNode.typeIdentifier
+    // Generated enums genuinely extend java.lang.Enum: the constructor chains to
+    // Enum.<init>(String, int) and name()/ordinal()/compareTo() are inherited.
+    this.parentClassName = 'java/lang/Enum'
+    const accessFlags = generateClassAccessFlags(enumNode.classModifier) | 0x4000 // ACC_ENUM
+
+    const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
+    const thisClassIndex = this.constantPoolManager.indexClassInfo(this.className)
+    this.constantPoolManager.indexUtf8Info('Code')
+
+    const enumBody = enumNode.enumBody
+    const enumConstants = enumBody.constants || []
+    const bodyMembers = enumBody.bodyMembers || []
+
+    this.buildEnumConstantFields(enumConstants)
 
     // Add synthetic $VALUES field (private static final)
     const valuesFieldDescriptor = '[L' + this.className + ';'
@@ -229,19 +282,15 @@ export class Compiler {
       attributes: []
     })
 
-    // name(), ordinal(), compareTo() etc. are inherited from java.lang.Enum;
-    // register the ones reachable from Source programs so calls resolve.
-    this.registerInheritedEnumMethods()
-
     if (bodyMembers.length === 0) {
       this.addEnumConstructor()
     } else {
-      this.handleClassBody(bodyMembers)
+      this.generateClassBody(bodyMembers)
     }
 
     // Add synthetic methods
-    this.addEnumValuesMethod(enumConstants)
-    this.addEnumValueOfMethod(enumConstants)
+    this.addEnumValuesMethod()
+    this.addEnumValueOfMethod()
     this.addEnumStaticInitializer(enumConstants)
 
     const constantPool = this.constantPoolManager.getPool()
@@ -263,6 +312,37 @@ export class Compiler {
       attributesCount: this.attributes.length,
       attributes: this.attributes
     }
+  }
+
+  /** Builds the enum constants' field-table entries (pass 2; no symbol-table work - that's pass 1's job). */
+  private buildEnumConstantFields(enumConstants: any[]) {
+    enumConstants.forEach((constant: any) => {
+      this.fields.push({
+        accessFlags: 0x0019, // public static final
+        nameIndex: this.constantPoolManager.indexUtf8Info(constant.name),
+        descriptorIndex: this.constantPoolManager.indexUtf8Info('L' + this.className + ';'),
+        attributesCount: 0,
+        attributes: []
+      })
+    })
+  }
+
+  /** Registers values()/valueOf()'s signatures (pass 1); their bytecode is emitted in pass 2. */
+  private registerEnumSyntheticMethodSignatures() {
+    this.symbolTable.insertMethodInfo({
+      name: 'values',
+      accessFlags: 0x0009, // public static
+      parentClassName: this.className,
+      typeDescriptor: '()[L' + this.className + ';',
+      className: this.className
+    })
+    this.symbolTable.insertMethodInfo({
+      name: 'valueOf',
+      accessFlags: 0x0009, // public static
+      parentClassName: this.className,
+      typeDescriptor: '(Ljava/lang/String;)L' + this.className + ';',
+      className: this.className
+    })
   }
 
   private addEnumConstructor() {
@@ -334,8 +414,9 @@ export class Compiler {
     }
   }
 
-  private addEnumValuesMethod(enumConstants: any[]) {
+  private addEnumValuesMethod() {
     // public static EnumClass[] values() { return $VALUES.clone(); }
+    // (its signature is already registered in pass 1, by registerEnumSyntheticMethodSignatures)
     const nameIndex = this.constantPoolManager.indexUtf8Info('values')
     const descriptorIndex = this.constantPoolManager.indexUtf8Info('()[L' + this.className + ';')
 
@@ -391,18 +472,11 @@ export class Compiler {
       attributesCount: 1,
       attributes: [codeAttribute]
     })
-    // Register in symbol table
-    this.symbolTable.insertMethodInfo({
-      name: 'values',
-      accessFlags: 0x0009, // public static
-      parentClassName: this.className,
-      typeDescriptor: '()[L' + this.className + ';',
-      className: this.className
-    })
   }
 
-  private addEnumValueOfMethod(enumConstants: any[]) {
+  private addEnumValueOfMethod() {
     // public static EnumClass valueOf(String name) { return (EnumClass) Enum.valueOf(EnumClass.class, name); }
+    // (its signature is already registered in pass 1, by registerEnumSyntheticMethodSignatures)
     const nameIndex = this.constantPoolManager.indexUtf8Info('valueOf')
     const descriptorIndex = this.constantPoolManager.indexUtf8Info(
       '(Ljava/lang/String;)L' + this.className + ';'
@@ -456,14 +530,6 @@ export class Compiler {
       descriptorIndex: descriptorIndex,
       attributesCount: 1,
       attributes: [codeAttribute]
-    })
-    // Register in symbol table
-    this.symbolTable.insertMethodInfo({
-      name: 'valueOf',
-      accessFlags: 0x0009, // public static
-      parentClassName: this.className,
-      typeDescriptor: '(Ljava/lang/String;)L' + this.className + ';',
-      className: this.className
     })
   }
 
@@ -527,7 +593,13 @@ export class Compiler {
     })
   }
 
-  private handleClassBody(classBody: Array<ClassBodyDeclaration>) {
+  /**
+   * Splits a class body into its member kinds, synthesising the default
+   * constructor if none was declared. Shared by both passes so they agree
+   * on exactly which members exist (in particular, the same synthetic
+   * default constructor) without either pass depending on the other.
+   */
+  private partitionClassBody(classBody: Array<ClassBodyDeclaration>) {
     const staticFields: Array<FieldDeclaration> = []
     const nonStaticFields: Array<FieldDeclaration> = []
     const staticMethods: Array<MethodDeclaration> = []
@@ -568,12 +640,28 @@ export class Compiler {
       })
     }
 
-    constructors.forEach(c => this.recordConstructorInfo(c))
-    staticFields.forEach(f => this.recordFieldInfo(f))
-    staticMethods.forEach(m => this.recordMethodInfo(m))
+    return { staticFields, nonStaticFields, staticMethods, nonStaticMethods, constructors }
+  }
 
-    nonStaticFields.forEach(f => this.recordFieldInfo(f))
+  /** Pass 1 for a class body: registers every member's signature, no bytecode. */
+  private registerClassBodyMembers(classBody: Array<ClassBodyDeclaration>) {
+    const { staticFields, nonStaticFields, staticMethods, nonStaticMethods, constructors } =
+      this.partitionClassBody(classBody)
+
+    constructors.forEach(c => this.recordConstructorInfo(c))
+    staticFields.forEach(f => this.registerFieldSignature(f))
+    nonStaticFields.forEach(f => this.registerFieldSignature(f))
+    staticMethods.forEach(m => this.recordMethodInfo(m))
     nonStaticMethods.forEach(m => this.recordMethodInfo(m))
+  }
+
+  /** Pass 2 for a class body: generates every member's bytecode. */
+  private generateClassBody(classBody: Array<ClassBodyDeclaration>) {
+    const { staticFields, nonStaticFields, staticMethods, nonStaticMethods, constructors } =
+      this.partitionClassBody(classBody)
+
+    staticFields.forEach(f => this.buildFieldEntry(f))
+    nonStaticFields.forEach(f => this.buildFieldEntry(f))
     nonStaticMethods.forEach(m => this.compileMethod(m))
     staticMethods.forEach(m => this.compileMethod(m))
     this.compileStaticFieldInitializers(staticFields)
@@ -628,7 +716,25 @@ export class Compiler {
     } as unknown as MethodDeclaration)
   }
 
-  private recordFieldInfo(fieldNode: FieldDeclaration) {
+  /** Pass 1: registers a field's signature in the symbol table only. */
+  private registerFieldSignature(fieldNode: FieldDeclaration) {
+    const accessFlags = generateFieldAccessFlags(fieldNode.fieldModifier)
+    const type = fieldNode.fieldType
+    fieldNode.variableDeclaratorList.forEach(v => {
+      const fullType = type + (v.dims ?? '')
+      const typeDescriptor = this.symbolTable.generateFieldDescriptor(fullType)
+      this.symbolTable.insertFieldInfo({
+        name: v.variableDeclaratorId,
+        accessFlags: accessFlags,
+        parentClassName: this.className,
+        typeName: fullType,
+        typeDescriptor: typeDescriptor
+      })
+    })
+  }
+
+  /** Pass 2: builds a field's class-file field-table entry. */
+  private buildFieldEntry(fieldNode: FieldDeclaration) {
     const accessFlags = generateFieldAccessFlags(fieldNode.fieldModifier)
     const type = fieldNode.fieldType
     fieldNode.variableDeclaratorList.forEach(v => {
@@ -640,13 +746,6 @@ export class Compiler {
         descriptorIndex: this.constantPoolManager.indexUtf8Info(typeDescriptor),
         attributesCount: 0,
         attributes: []
-      })
-      this.symbolTable.insertFieldInfo({
-        name: v.variableDeclaratorId,
-        accessFlags: accessFlags,
-        parentClassName: this.className,
-        typeName: fullType,
-        typeDescriptor: typeDescriptor
       })
     })
   }
