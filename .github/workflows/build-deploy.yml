@@ -1,0 +1,58 @@
+name: Build and deploy runner
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build runner
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Typecheck conductor evaluator
+        run: yarn typecheck:conductor
+
+      - name: Test conductor evaluator
+        run: yarn test:conductor
+
+      - name: Build conductor evaluator bundle
+        run: yarn build:conductor
+
+      - name: Upload artifacts
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-conductor/
+
+  deploy:
+    needs: build
+    name: Deploy runner
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
