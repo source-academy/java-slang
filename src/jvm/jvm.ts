@@ -168,14 +168,16 @@ export default class JVM {
     // convert args to Java String[]
     const mainRes = this.applicationClassLoader.getClass(className)
     if (mainRes.status === ResultType.ERROR) {
-      throw new Error('Main class not found')
+      throw new Error(`Main class not found: ${className}`)
     }
 
     const mainCls = mainRes.result
 
     const mainMethod = mainCls.getMethod('main([Ljava/lang/String;)V')
     if (!mainMethod) {
-      throw new Error('Main method not found')
+      throw new Error(
+        `Main method not found in class ${className}: expected public static void main(String[] args)`
+      )
     }
     tasks.push(() => {
       mainThread.invokeStackFrame(new JavaStackFrame(mainCls, mainMethod, 0, []))

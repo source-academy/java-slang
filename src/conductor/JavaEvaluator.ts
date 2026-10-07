@@ -1,6 +1,6 @@
 import { EvaluatorRuntimeError } from '@sourceacademy/conductor/common'
 import { BasicEvaluator, IRunnerPlugin } from '@sourceacademy/conductor/runner'
-import { compileFromSource } from '../compiler'
+import { compile, findMainClass, parseFromSource } from '../compiler'
 import { ClassFile } from '../ClassFile/types'
 import setupJVM, { parseBin, userClassFiles } from '../jvm/index'
 import { a2ab } from '../jvm/utils/disassembler'
@@ -26,7 +26,8 @@ function base64ToClassFile(b64: string): ClassFile {
 /**
  * Java conductor evaluator. Delivers Conductor's normal run-code flow
  * (`evaluateChunk`, source text typed into the editor) by compiling the chunk
- * with the java-slang compiler and running the result on the in-repo JVM.
+ * with the java-slang compiler and running the result on the in-repo JVM. The
+ * entry point is chosen by the compiler's `findMainClass`.
  * `evaluateFile` additionally accepts a single precompiled `.class` file,
  * base64-encoded, for callers that already have a classfile in hand.
  */
@@ -37,15 +38,18 @@ export class JavaEvaluator extends BasicEvaluator {
 
   async evaluateChunk(chunk: string): Promise<void> {
     let userFiles: { [fileName: string]: ClassFile }
+    let mainClassName: string
     try {
-      userFiles = userClassFiles(compileFromSource(chunk))
+      const ast = parseFromSource(chunk)
+      mainClassName = findMainClass(ast)
+      userFiles = userClassFiles(compile(ast))
     } catch (e) {
       this.conductor.sendError(
         new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
       )
       return
     }
-    await this.runClasses(userFiles, 'Main')
+    await this.runClasses(userFiles, mainClassName)
   }
 
   async evaluateFile(fileName: string, fileContent: string): Promise<void> {

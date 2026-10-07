@@ -63,3 +63,27 @@ export class OverrideFinalMethodError extends CompileError {
     super(`Cannot override final method ${name}`)
   }
 }
+
+export class MultiplePublicClassesError extends CompileError {
+  constructor(names: string[]) {
+    super(
+      `Multiple public classes found (${names.join(', ')}): a program may declare at most one public class`
+    )
+  }
+}
+
+export class MainMethodNotFoundError extends CompileError {
+  constructor(className: string) {
+    super(
+      `Main method not found in public class ${className}: expected public static void main(String[] args)`
+    )
+  }
+}
+
+export class NoMainClassError extends CompileError {
+  constructor() {
+    super(
+      'No main method found: with no public class, some class must declare public static void main(String[] args)'
+    )
+  }
+}

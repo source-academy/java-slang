@@ -21,6 +21,7 @@ import {
 } from './compiler-utils'
 import { SymbolTable, Table } from './symbol-table'
 import { generateCode } from './code-generator'
+import { findMainClass } from './main-class'
 
 const MAGIC = 0xcafebabe
 const MINOR_VERSION = 0
@@ -53,6 +54,8 @@ export class Compiler {
   }
 
   compile(ast: AST) {
+    // Validates the program's entry point (throws if there is none or it is ambiguous).
+    const mainClassName = findMainClass(ast)
     this.setup()
     this.symbolTable.handleImports(ast.importDeclarations)
     const topLevelDeclarations = ast.topLevelClassOrInterfaceDeclarations
@@ -115,9 +118,12 @@ export class Compiler {
       compiled.set(decl, { classFile: classFile, className: this.className })
     })
 
-    // Return in declaration order (top-level types first, then member enums) so
-    // the entry class stays at index 0 regardless of compilation order.
-    return declarations.map(decl => compiled.get(decl) as Class)
+    // Return the main class first (so callers can take index 0 as the entry
+    // class), then the rest in declaration order (top-level types, then member
+    // types), regardless of compilation order.
+    const classes = declarations.map(decl => compiled.get(decl) as Class)
+    const mainIndex = classes.findIndex(c => c.className === mainClassName)
+    return [classes[mainIndex], ...classes.filter((_, i) => i !== mainIndex)]
   }
 
   /**

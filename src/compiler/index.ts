@@ -3,6 +3,7 @@ import { AST } from '../ast/types/packages-and-modules'
 import { Class } from '../ClassFile/types'
 import { Compiler } from './compiler'
 import { javaPegGrammar } from './grammar'
+import { findMainClass } from './main-class'
 import { peggyFunctions } from './peggy-functions'
 
 // `peggy` is CJS-only. Under `module: commonjs` (the main build), TS's namespace
@@ -19,18 +20,20 @@ export const compile = (ast: AST): Array<Class> => {
   return compiler.compile(ast)
 }
 
-export const compileFromSource = (javaProgram: string): Array<Class> => {
+export { findMainClass }
+
+export const parseFromSource = (javaProgram: string): AST => {
   const parser = peggyGenerate(peggyFunctions + javaPegGrammar, {
     allowedStartRules: ['CompilationUnit'],
     cache: true
   })
 
-  let ast: AST
   try {
-    ast = parser.parse(javaProgram)
+    return parser.parse(javaProgram)
   } catch (e) {
     throw new SyntaxError(e)
   }
-
-  return compile(ast)
 }
+
+export const compileFromSource = (javaProgram: string): Array<Class> =>
+  compile(parseFromSource(javaProgram))
