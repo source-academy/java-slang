@@ -105,12 +105,17 @@ export interface ClosureResult {
 /**
  * Computes the set of standard-library classes reachable from the seeds by
  * following superclass and interface edges, and extracts metadata for each.
+ *
+ * @param extraSeeds Additional seed classes to include beyond `SEED_CLASSES` /
+ * `SEED_PACKAGES`, without affecting the compiler's own allow-list - e.g. the
+ * JVM's unconditional bootstrap classes (see `build.ts`), which the type
+ * checker has no reason to expose to user code.
  */
-export function computeClosure(classRoot: string): ClosureResult {
+export function computeClosure(classRoot: string, extraSeeds: string[] = []): ClosureResult {
   const metadata: LibInfoMap = {}
   const unresolved: string[] = []
 
-  const queue: string[] = [...SEED_CLASSES]
+  const queue: string[] = [...SEED_CLASSES, ...extraSeeds]
   for (const pkg of SEED_PACKAGES) {
     queue.push(...listPackageClasses(classRoot, pkg))
   }

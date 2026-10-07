@@ -171,3 +171,9 @@ export class UnhandledExceptionError extends TypeCheckerError {
     super('unhandled exception', location)
   }
 }
+
+export class UnsupportedNestedClassError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('only static nested classes are supported', location)
+  }
+}
