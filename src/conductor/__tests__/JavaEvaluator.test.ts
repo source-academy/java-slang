@@ -44,13 +44,24 @@ describe('JavaEvaluator', () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)
 
-    await ev.evaluateChunk(`
-      public class Main {
-        public static void main(String[] args) {
-          System.out.println("hello from conductor");
+    // The deployed evaluator runs inside a browser Worker, which has no
+    // `Buffer` global - remove it for this test so a stray `Buffer` usage
+    // anywhere in the JVM/stdlib call graph (e.g. System.out's native
+    // writeBytes) fails here instead of only in a real deployment, where
+    // Node's always-present `Buffer` would otherwise mask it.
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateChunk(`
+        public class Main {
+          public static void main(String[] args) {
+            System.out.println("hello from conductor");
+          }
         }
-      }
-    `)
+      `)
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
 
     expect(mock.errors).toHaveLength(0)
     expect(mock.outputs.join('')).toContain('hello from conductor')
