@@ -3,6 +3,13 @@ site_name: java-slang
 nav:
   - Introduction: index.md
   - Contributing: contributing.md
+  - CSEC Machine:
+    - csec-machine/index.md
+    - Architecture: csec-machine/architecture.md
+    - Control: csec-machine/control.md
+    - Stash: csec-machine/stash.md
+    - Environment: csec-machine/environment.md
+    - Classes: csec-machine/classes.md
 
 repo_url: https://github.com/source-academy/java-slang
 repo_name: source-academy/java-slang
@@ -22,3 +29,5 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+  features:
+    - navigation.indexes
