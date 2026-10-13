@@ -634,7 +634,6 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
 
             // skip type checking for bodies of native methods (admit empty body)
             if (bodyDeclaration.methodModifiers.map(i => i.identifier).includes('native')) {
-              console.log(bodyDeclaration)
               break
             }
 
@@ -742,6 +741,22 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
               errors.push(...methodErrors)
               break
             }
+
+            // skip type checking for bodies of native methods (admit empty body)
+            if (
+              (bodyDeclaration as any).methodModifiers
+                .map((i: any) => i.identifier)
+                .includes('native')
+            ) {
+              break
+            }
+
+            // empty body is error
+            if ((bodyDeclaration as any).methodBody === undefined) {
+              errors.push(new MissingMethodBodyError((bodyDeclaration as any).location))
+              break
+            }
+
             const { errors: checkErrors } = typeCheckBody(
               (bodyDeclaration as any).methodBody,
               methodFrame
