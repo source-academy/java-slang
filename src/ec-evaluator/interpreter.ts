@@ -513,9 +513,6 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
         throw new errors.UndefinedNativeMethod(nativeFnDescriptor)
       }
 
-      // call foreign fn
-      nativeFn({ control, stash, environment })
-
       // only because resetInstr demands one, never actually used
       const superfluousReturnStatement: ReturnStatement = {
         kind: 'ReturnStatement',
@@ -523,7 +520,11 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       }
 
       // handle return from native fn
+      // pushed before the call, so control items pushed by the foreign fn run before the reset
       control.push(instr.resetInstr(superfluousReturnStatement))
+
+      // call foreign fn
+      nativeFn({ control, stash, environment })
       return
     }
 

@@ -1,6 +1,7 @@
 import {
   IllegalCombinationOfModifiersError,
   MissingMethodBodyError,
+  NativeMethodHasBodyError,
   RepeatedModifierError,
   TypeCheckerError
 } from '../../errors'
@@ -51,9 +52,23 @@ const testcases: {
   },
   {
     input: `
+      public native void nativeMethodWithBody() {}
+    `,
+    result: { type: null, errors: [new NativeMethodHasBodyError()] }
+  },
+  {
+    input: `
       public void methodWithoutBody();
     `,
     result: { type: null, errors: [new MissingMethodBodyError()] }
+  },
+  {
+    input: `
+      public static void main(String[] args) {
+        enum Color { RED; native void nativeMethodWithBody() {} }
+      }
+    `,
+    result: { type: null, errors: [new NativeMethodHasBodyError()] }
   },
   {
     input: `

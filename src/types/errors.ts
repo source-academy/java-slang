@@ -130,6 +130,12 @@ export class ModifierNotAllowedHereError extends TypeCheckerError {
   }
 }
 
+export class NativeMethodHasBodyError extends TypeCheckerError {
+  constructor(location?: Location) {
+    super('native methods cannot have a body', location)
+  }
+}
+
 export class NotApplicableToExpressionTypeError extends TypeCheckerError {
   constructor(location?: Location) {
     super('not applicable to expression type', location)

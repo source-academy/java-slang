@@ -9,6 +9,7 @@ import {
   IncompatibleTypesError,
   MethodCannotBeAppliedError,
   MissingMethodBodyError,
+  NativeMethodHasBodyError,
   NotApplicableToExpressionTypeError,
   TypeCheckerError,
   TypeCheckerInternalError,
@@ -632,8 +633,11 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
               break
             }
 
-            // skip type checking for bodies of native methods (admit empty body)
+            // native methods (admit empty body)
             if (bodyDeclaration.methodModifiers.map(i => i.identifier).includes('native')) {
+              if (bodyDeclaration.methodBody !== undefined) {
+                errors.push(new NativeMethodHasBodyError(bodyDeclaration.location))
+              }
               break
             }
 
@@ -742,12 +746,15 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
               break
             }
 
-            // skip type checking for bodies of native methods (admit empty body)
+            // native methods (admit empty body)
             if (
               (bodyDeclaration as any).methodModifiers
                 .map((i: any) => i.identifier)
                 .includes('native')
             ) {
+              if ((bodyDeclaration as any).methodBody !== undefined) {
+                errors.push(new NativeMethodHasBodyError((bodyDeclaration as any).location))
+              }
               break
             }
 
