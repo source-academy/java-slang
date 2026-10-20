@@ -47,6 +47,23 @@ describe('library loading', () => {
     expect(err[0]).toMatch(/^TypeCheck: .*incompatible types/s)
   })
 
+  it('reports type errors only through the stderr callback', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await run(program(`int x = "s";`))
+      expect(consoleError).not.toHaveBeenCalled()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('resolves to an error when the type checker throws', async () => {
+    // the type checker throws 'Not implemented' on records
+    const { result } = await run('record P(int x) {}\n' + program(`int y = 1;`))
+    expect(result.status).toBe('error')
+    expect(result.context.errors).toHaveLength(1)
+  })
+
   it('rejects an unregistered native method when its class is declared', async () => {
     const { result } = await run(program(``, 'class Dog { native void bark(); }'))
     expect(result.status).toBe('error')

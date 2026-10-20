@@ -20,25 +20,24 @@ export const runECEvaluator = (
 ): Promise<Result> => {
   const context = createContext(code, ioCallbacks)
 
-  // type checking
-  const typeCheckResult = typeCheck(libraryClasses, code)
-  if (typeCheckResult.hasTypeErrors) {
-    const typeErrMsg = typeCheckResult.errorMsgs.join('\n')
-    context.interfaces.stderr('TypeCheck', typeErrMsg)
-    console.error(typeErrMsg)
-    return Promise.resolve({ status: 'error', context } as Error)
-  }
-
-  // load library
-  const libraryCompilationUnit = parse(libraryClasses)
-  context.control.push(
-    ...handleSequence(libraryCompilationUnit.topLevelClassOrInterfaceDeclarations)
-  )
-
-  // step size limit is irrelevant here, just makes injected library classes run to completion
-  evaluate(context, 100000)
-
   try {
+    // type checking; typeCheck() may also throw, e.g. on unsupported syntax
+    const typeCheckResult = typeCheck(libraryClasses, code)
+    if (typeCheckResult.hasTypeErrors) {
+      const typeErrMsg = typeCheckResult.errorMsgs.join('\n')
+      context.interfaces.stderr('TypeCheck', typeErrMsg)
+      return Promise.resolve({ status: 'error', context } as Error)
+    }
+
+    // load library
+    const libraryCompilationUnit = parse(libraryClasses)
+    context.control.push(
+      ...handleSequence(libraryCompilationUnit.topLevelClassOrInterfaceDeclarations)
+    )
+
+    // step size limit is irrelevant here, just makes injected library classes run to completion
+    evaluate(context, 100000)
+
     // parse() may throw SyntaxError.
     const compilationUnit = parse(code)
 
