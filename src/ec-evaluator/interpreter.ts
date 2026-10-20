@@ -531,12 +531,12 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const closure: Closure = stash.pop()! as Closure
 
     const params: FormalParameter[] =
-      closure.decl.kind === 'MethodDeclaration' || closure.decl.kind === 'NativeDeclaration'
-        ? cloneDeep(closure.decl.methodHeader.formalParameterList)
-        : cloneDeep(closure.decl.constructorDeclarator.formalParameterList)
+      closure.mtdOrCon.kind === 'MethodDeclaration' || closure.mtdOrCon.kind === 'NativeDeclaration'
+        ? cloneDeep(closure.mtdOrCon.methodHeader.formalParameterList)
+        : cloneDeep(closure.mtdOrCon.constructorDeclarator.formalParameterList)
 
     // Extend env from global frame.
-    const methodDescriptor = getDescriptor(closure.decl)
+    const methodDescriptor = getDescriptor(closure.mtdOrCon)
     environment.extendEnv(environment.global, methodDescriptor)
 
     const isInstanceMtdOrCon = args.length == params.length + 1
@@ -565,7 +565,7 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     }
 
     // Native functions
-    if (closure.decl.kind === 'NativeDeclaration') {
+    if (closure.mtdOrCon.kind === 'NativeDeclaration') {
       // only because resetInstr demands one, never actually used
       const superfluousReturnStatement: ReturnStatement = {
         kind: 'ReturnStatement',
@@ -577,13 +577,13 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
       control.push(instr.resetInstr(superfluousReturnStatement))
 
       // call foreign fn with CSE machine state
-      closure.decl.foreignFunction({ control, stash, environment, interfaces })
+      closure.mtdOrCon.foreignFunction({ control, stash, environment, interfaces })
     } else {
       // Push method/constructor body.
       const body =
-        closure.decl.kind === 'MethodDeclaration'
-          ? closure.decl.methodBody
-          : closure.decl.constructorBody
+        closure.mtdOrCon.kind === 'MethodDeclaration'
+          ? closure.mtdOrCon.methodBody
+          : closure.mtdOrCon.constructorBody
       control.push(body)
     }
   },
@@ -873,7 +873,7 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     stash.push(closure)
 
     // Post-processing required if overload resolved method is instance method.
-    if (isInstance(closure.decl as MethodDeclaration)) {
+    if (isInstance(closure.mtdOrCon as MethodDeclaration)) {
       // Increment arity of InvInstr on control.
       let n = 1
       while (
@@ -897,7 +897,7 @@ export const cmdEvaluators: { [type: string]: CmdEvaluator } = {
     const target = stash.pop()!
     const overloadResolvedClosure = stash.pop()! as Closure
 
-    if (isStatic(overloadResolvedClosure.decl as MethodDeclaration)) {
+    if (isStatic(overloadResolvedClosure.mtdOrCon as MethodDeclaration)) {
       // No method overriding resolution is required if resolved method is a static method.
       stash.push(overloadResolvedClosure)
       return

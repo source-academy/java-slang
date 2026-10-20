@@ -38,11 +38,11 @@ export const objStruct = (frame: EnvNode, c: Class): Object => ({
 })
 
 export const closureStruct = (
-  decl: MethodDeclaration | ConstructorDeclaration | NativeDeclaration,
+  mtdOrCon: MethodDeclaration | ConstructorDeclaration | NativeDeclaration,
   env: EnvNode
 ): Closure => ({
   kind: StructType.CLOSURE,
-  decl,
+  mtdOrCon,
   env
 })
 

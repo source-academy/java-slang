@@ -190,7 +190,7 @@ export interface NativeDeclaration {
 
 export interface Closure {
   kind: StructType.CLOSURE
-  decl: MethodDeclaration | ConstructorDeclaration | NativeDeclaration
+  mtdOrCon: MethodDeclaration | ConstructorDeclaration | NativeDeclaration
   env: EnvNode
 }
 

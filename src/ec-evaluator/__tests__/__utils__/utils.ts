@@ -53,9 +53,9 @@ export const getStashItemStr = (i: StashItem): string => {
   return i.kind === 'Literal'
     ? i.literalType.value
     : i.kind === StructType.CLOSURE
-      ? i.decl.kind === 'MethodDeclaration' || i.decl.kind === 'NativeDeclaration'
-        ? i.decl.methodHeader.identifier
-        : i.decl.constructorDeclarator.identifier
+      ? i.mtdOrCon.kind === 'MethodDeclaration' || i.mtdOrCon.kind === 'NativeDeclaration'
+        ? i.mtdOrCon.methodHeader.identifier
+        : i.mtdOrCon.constructorDeclarator.identifier
       : i.kind === StructType.VARIABLE
         ? i.name
         : i.kind === StructType.CLASS
