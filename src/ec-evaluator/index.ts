@@ -16,7 +16,7 @@ export { isInstr, isNode } from './utils'
 export const runECEvaluator = (
   code: string,
   targetStep: number = STEP_LIMIT,
-  ioCallbacks: IOCallbacks
+  ioCallbacks?: IOCallbacks
 ): Promise<Result> => {
   const context = createContext(code, ioCallbacks)
 
