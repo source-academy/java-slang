@@ -12,23 +12,25 @@ function fnv1a(s: string) {
 
   for (let i = 0; i < s.length; i++) {
     hash ^= s.charCodeAt(i)
-    hash *= FNV_PRIME
+    hash = Math.imul(hash, FNV_PRIME)
   }
 
-  return hash
+  return hash >>> 0
 }
 
+// 31-bit Fibonacci LFSR. The state is kept non-negative, since a sign bit would be smeared in by
+// the shift and the register would saturate to all ones.
 export class LFSR {
   #state: number
 
   constructor(init: string) {
-    this.#state = fnv1a(init) | 0 // convert to 32-bit integer
+    this.#state = fnv1a(init) & 0x7fffffff || 1 // all-zero state is a fixed point
   }
 
   next() {
     const state = this.#state
-    const bit = (state ^ (state >> 1) ^ (state >> 2) ^ (state >> 3)) & 1
-    this.#state = (state >> 1) | (bit << 30)
+    const bit = (state ^ (state >>> 1) ^ (state >>> 2) ^ (state >>> 3)) & 1
+    this.#state = (state >>> 1) | (bit << 30)
     return this.#state
   }
 }
@@ -49,7 +51,15 @@ class System {
 }
 `
 
-// const disabled = `class PrintStream extends Object {
+// Binary names of the library classes, as Class.getName() reports them; user classes are in the
+// default package, so their binary name is their simple name.
+export const libraryBinaryNames: { [className: string]: string } = {
+  Object: 'java.lang.Object',
+  PrintStream: 'java.io.PrintStream',
+  System: 'java.lang.System'
+}
+
+// const disabled =`class PrintStream extends Object {
 //   public native void println(String s);
 // }
 

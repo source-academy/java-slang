@@ -1,5 +1,7 @@
+import { Literal } from '../ast/types/blocks-and-statements'
 import { Control, Environment, Stash } from './components'
 import { RuntimeError } from './errors'
+import { libraryBinaryNames } from './lib'
 import { Interfaces, StashItem, StructType, VarValue } from './types'
 
 /*
@@ -46,9 +48,9 @@ export const foreigns: {
 
   'PrintStream::println(String s): void': ({ environment, interfaces }) => {
     // @ts-expect-error ts(2339): guaranteed valid by type checker
-    const s = environment.getVariable('s').value.literalType.value
+    const literal: Literal['literalType'] = environment.getVariable('s').value.literalType
 
-    interfaces.stdout(s)
+    interfaces.stdout(literal.kind === 'StringLiteral' ? unquote(literal.value) : literal.value)
   },
 
   'Object::toString(): String': ({ stash, environment, interfaces }) => {
@@ -58,14 +60,18 @@ export const foreigns: {
       throw new RuntimeError('Call to toString on non-Object')
     }
 
-    const className = instance.class.classDecl.typeIdentifier
-    const hashCodeToHex = getHashCode(instance, interfaces).toString(16)
+    // as getClass().getName()
+    const simpleName = instance.class.classDecl.typeIdentifier
+    const className = libraryBinaryNames[simpleName] ?? simpleName
+    // unsigned, as Integer.toHexString
+    const hashCodeToHex = (getHashCode(instance, interfaces) >>> 0).toString(16)
 
+    // string literal values keep their source quotes
     const stashItem: StashItem = {
       kind: 'Literal',
       literalType: {
         kind: 'StringLiteral',
-        value: `${className}@${hashCodeToHex}`
+        value: `"${className}@${hashCodeToHex}"`
       }
     }
 
@@ -75,6 +81,21 @@ export const foreigns: {
 }
 
 // Utility functions used by native methods
+const ESCAPES: { [c: string]: string } = {
+  b: '\b',
+  t: '\t',
+  n: '\n',
+  f: '\f',
+  r: '\r',
+  '"': '"',
+  "'": "'",
+  '\\': '\\'
+}
+
+// String literal source token -> its value: strip the quotes, decode escape sequences.
+const unquote = (token: string): string =>
+  token.slice(1, -1).replace(/\\([btnfr"'\\])/g, (_, c: string) => ESCAPES[c])
+
 const getHashCode = (obj: VarValue, interfaces: Interfaces): number => {
   if (obj.kind !== StructType.OBJECT) {
     // TODO: throw error here
