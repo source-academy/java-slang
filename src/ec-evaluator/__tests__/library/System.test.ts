@@ -1,4 +1,5 @@
 import { runECEvaluator } from '../..'
+import { NullPointerException } from '../../errors'
 import { expectStableAcrossSteps, program, run } from '../__utils__/library'
 
 describe('System.out.println', () => {
@@ -12,6 +13,11 @@ describe('System.out.println', () => {
   it('decodes escape sequences', async () => {
     const { out } = await run(program(`System.out.println("a\\tb\\"c\\\\d\\ne");`))
     expect(out).toEqual(['a\tb"c\\d\ne'])
+  })
+
+  it('decodes octal escape sequences', async () => {
+    const { out } = await run(program(`System.out.println("\\141|\\60|\\0x|\\377|\\400");`))
+    expect(out).toEqual(['a|0|\0x|\xff|\x200'])
   })
 
   it('prints the empty string', async () => {
@@ -46,6 +52,13 @@ describe('System.out.println', () => {
   it('works through a PrintStream variable', async () => {
     const { out } = await run(program(`PrintStream p = System.out; p.println("via p");`))
     expect(out).toEqual(['via p'])
+  })
+
+  it('throws NullPointerException through a null PrintStream', async () => {
+    const { result, out } = await run(program(`PrintStream p = null; p.println("x");`))
+    expect(result.status).toBe('error')
+    expect(result.context.errors[0]).toBeInstanceOf(NullPointerException)
+    expect(out).toEqual([])
   })
 
   it('prints only what a partial run reaches', async () => {

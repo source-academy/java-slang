@@ -58,7 +58,7 @@ export const runECEvaluator = (
   }
 }
 
-export const createContext = (code: string, ioCallbacks?: IOCallbacks): Context => ({
+export const createContext = (code: string = '', ioCallbacks?: IOCallbacks): Context => ({
   errors: [],
 
   control: new Control(),

@@ -93,8 +93,13 @@ const ESCAPES: { [c: string]: string } = {
 }
 
 // String literal source token -> its value: strip the quotes, decode escape sequences.
+// Octal escapes are \0 to \377, matched longest first.
 const unquote = (token: string): string =>
-  token.slice(1, -1).replace(/\\([btnfr"'\\])/g, (_, c: string) => ESCAPES[c])
+  token
+    .slice(1, -1)
+    .replace(/\\(?:([0-3][0-7]{2}|[0-7][0-7]?)|([btnfr"'\\]))/g, (_, octal: string, c: string) =>
+      octal ? String.fromCharCode(parseInt(octal, 8)) : ESCAPES[c]
+    )
 
 const getHashCode = (obj: VarValue, interfaces: Interfaces): number => {
   if (obj.kind !== StructType.OBJECT) {

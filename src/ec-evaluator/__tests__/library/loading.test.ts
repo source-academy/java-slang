@@ -1,4 +1,5 @@
 import { typeCheck } from '../../../types'
+import { createContext } from '../..'
 import { UndefinedNativeMethod } from '../../errors'
 import { LFSR, libraryClasses } from '../../lib'
 import { isNode } from '../../utils'
@@ -62,6 +63,10 @@ describe('library loading', () => {
     const { result } = await run('record P(int x) {}\n' + program(`int y = 1;`))
     expect(result.status).toBe('error')
     expect(result.context.errors).toHaveLength(1)
+  })
+
+  it('creates a context without arguments', () => {
+    expect(createContext().interfaces.statics.lfsr.next()).toBeGreaterThan(0)
   })
 
   it('rejects an unregistered native method when its class is declared', async () => {

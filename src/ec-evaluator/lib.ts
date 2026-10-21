@@ -43,7 +43,7 @@ class Object {
 }
 
 class PrintStream {
-  public static native void println(String s);
+  public native void println(String s);
 }
   
 class System {
