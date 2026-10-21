@@ -26,6 +26,30 @@ describe('method overriding through an intermediate class', () => {
     expect(out).toEqual(['3'])
   })
 
+  it('matches the method name exactly, not as a suffix', async () => {
+    const { out } = await run(
+      program(
+        `Base b = new C(); int r = b.f(); System.out.println(r);`,
+        `class Base { public int f() { return 1; } }
+         class B extends Base { public int wolf() { return 9; } }
+         class C extends B { public int elf() { return 8; } }`
+      )
+    )
+    expect(out).toEqual(['1'])
+  })
+
+  it('does not override a private method', async () => {
+    const { out } = await run(
+      program(
+        `C c = new C(); int r = c.g(); System.out.println(r);`,
+        `class A { private int f() { return 1; } public int g() { int r = f(); return r; } }
+         class B extends A { public int f() { return 2; } }
+         class C extends B {}`
+      )
+    )
+    expect(out).toEqual(['1'])
+  })
+
   it("runs an inherited override of Object's toString", async () => {
     const { out } = await run(
       program(

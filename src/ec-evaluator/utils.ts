@@ -502,13 +502,16 @@ export const resOverride = (classToSearchIn: Class, overloadResolvedClosure: Clo
   const name = overloadResolvedMtd.methodHeader.identifier
   const overloadResolvedClosureParams = overloadResolvedMtd.methodHeader.formalParameterList
 
+  // Private methods are not overridden.
+  if (overloadResolvedMtd.methodModifier.includes('private')) return overloadResolvedClosure
+
   // The runtime class first, then up its superclasses, so the nearest override wins: a class frame
   // holds only the methods its class declares, not inherited ones.
   const closures: Closure[] = []
   for (let c: Class | undefined = classToSearchIn; c; c = c.superclass) {
     for (const [closureName, closure] of c.frame.frame.entries()) {
-      // Methods contains parantheses and must have return type.
-      if (closureName.includes(name + '(') && closureName[closureName.length - 1] !== ')') {
+      // Methods contains parantheses and must have return type. Descriptors start with the name.
+      if (closureName.startsWith(name + '(') && closureName[closureName.length - 1] !== ')') {
         closures.push(closure as Closure)
       }
     }
