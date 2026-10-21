@@ -20,6 +20,19 @@ describe('System.out.println', () => {
     expect(out).toEqual(['a|0|\0x|\xff|\x200'])
   })
 
+  it('prints a text block with its incidental indentation stripped', async () => {
+    // closing delimiter on its own line: it sets the indentation, and the value ends in a newline
+    const block = '"""\n        hello  \n          world\n\n        """'
+    const { out } = await run(program(`String s = ${block}; System.out.println(s);`))
+    expect(out).toEqual(['hello\n  world\n\n'])
+  })
+
+  it('decodes escapes and line continuations in a text block', async () => {
+    const block = '"""\n    a\\tb \\\n    c\\""""'
+    const { out } = await run(program(`System.out.println(${block});`))
+    expect(out).toEqual(['a\tb c"'])
+  })
+
   it('prints the empty string', async () => {
     const { out } = await run(program(`System.out.println("");`))
     expect(out).toEqual([''])

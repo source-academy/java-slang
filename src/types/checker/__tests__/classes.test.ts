@@ -1,6 +1,6 @@
 import { check } from '..'
 import { parse } from '../../ast'
-import { CyclicInheritanceError, TypeCheckerError } from '../../errors'
+import { CannotFindSymbolError, CyclicInheritanceError, TypeCheckerError } from '../../errors'
 import { Type } from '../../types/type'
 
 const testcases: {
@@ -95,6 +95,16 @@ const testcases: {
         }
     `,
     result: { type: null, errors: [new CyclicInheritanceError()] }
+  },
+  {
+    input: `
+        class Object extends Missing {}
+
+        public class Main {
+          public static void main(String[] args) {}
+        }
+    `,
+    result: { type: null, errors: [new CannotFindSymbolError()] }
   },
   {
     input: `

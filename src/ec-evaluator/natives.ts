@@ -92,14 +92,31 @@ const ESCAPES: { [c: string]: string } = {
   '\\': '\\'
 }
 
-// String literal source token -> its value: strip the quotes, decode escape sequences.
-// Octal escapes are \0 to \377, matched longest first.
+// Octal escapes are \0 to \377, matched longest first. A backslash ending a line (text blocks
+// only) joins it to the next.
+const decodeEscapes = (content: string): string =>
+  content.replace(
+    /\\(?:([0-3][0-7]{2}|[0-7][0-7]?)|([btnfr"'\\])|\n)/g,
+    (_, octal: string, c: string) =>
+      octal ? String.fromCharCode(parseInt(octal, 8)) : c ? ESCAPES[c] : ''
+  )
+
+// Text block content, as JLS 3.10.6: drop the line break after the opening delimiter, normalise
+// line breaks, strip the indentation common to the lines and trailing white space, then decode
+// escapes. The closing delimiter's line counts towards the indentation even when blank.
+const decodeTextBlock = (content: string): string => {
+  const lines = content.replace(/\r\n?/g, '\n').split('\n').slice(1)
+  const indent = Math.min(
+    ...lines
+      .filter((line, i) => line.trim() !== '' || i === lines.length - 1)
+      .map(line => line.length - line.trimStart().length)
+  )
+  return decodeEscapes(lines.map(line => line.slice(indent).trimEnd()).join('\n'))
+}
+
+// String literal or text block source token -> its value.
 const unquote = (token: string): string =>
-  token
-    .slice(1, -1)
-    .replace(/\\(?:([0-3][0-7]{2}|[0-7][0-7]?)|([btnfr"'\\]))/g, (_, octal: string, c: string) =>
-      octal ? String.fromCharCode(parseInt(octal, 8)) : ESCAPES[c]
-    )
+  token.startsWith('"""') ? decodeTextBlock(token.slice(3, -3)) : decodeEscapes(token.slice(1, -1))
 
 const getHashCode = (obj: VarValue, interfaces: Interfaces): number => {
   if (obj.kind !== StructType.OBJECT) {
