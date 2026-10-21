@@ -209,6 +209,10 @@ export const addClassParents = (node: Node, frame: Frame): Result => {
             node.classExtends.classType.typeIdentifier.location
           )
           if (extendsType instanceof Error) return newResult(null, [extendsType])
+          if (extendsType === classType)
+            return newResult(null, [
+              new CyclicInheritanceError(node.classExtends.classType.location)
+            ])
         }
         return newResult(null)
       }

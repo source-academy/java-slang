@@ -108,6 +108,16 @@ const testcases: {
   },
   {
     input: `
+        class Object extends Object {}
+
+        public class Main {
+          public static void main(String[] args) {}
+        }
+    `,
+    result: { type: null, errors: [new CyclicInheritanceError()] }
+  },
+  {
+    input: `
         class A extends B {}
         class B {}
 
