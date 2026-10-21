@@ -27,6 +27,14 @@ describe('System.out.println', () => {
     expect(out).toEqual(['hello\n  world\n\n'])
   })
 
+  it('decodes the space escape, which survives trailing white space stripping', async () => {
+    const { out } = await run(program(`System.out.println("a\\sb");`))
+    expect(out).toEqual(['a b'])
+    const block = '"""\n    x\\s\n    """'
+    const { out: blockOut } = await run(program(`System.out.println(${block});`))
+    expect(blockOut).toEqual(['x \n'])
+  })
+
   it('decodes escapes and line continuations in a text block', async () => {
     const block = '"""\n    a\\tb \\\n    c\\""""'
     const { out } = await run(program(`System.out.println(${block});`))

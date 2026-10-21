@@ -87,6 +87,7 @@ const ESCAPES: { [c: string]: string } = {
   n: '\n',
   f: '\f',
   r: '\r',
+  s: ' ',
   '"': '"',
   "'": "'",
   '\\': '\\'
@@ -96,7 +97,7 @@ const ESCAPES: { [c: string]: string } = {
 // only) joins it to the next.
 const decodeEscapes = (content: string): string =>
   content.replace(
-    /\\(?:([0-3][0-7]{2}|[0-7][0-7]?)|([btnfr"'\\])|\n)/g,
+    /\\(?:([0-3][0-7]{2}|[0-7][0-7]?)|([btnfrs"'\\])|\n)/g,
     (_, octal: string, c: string) =>
       octal ? String.fromCharCode(parseInt(octal, 8)) : c ? ESCAPES[c] : ''
   )
