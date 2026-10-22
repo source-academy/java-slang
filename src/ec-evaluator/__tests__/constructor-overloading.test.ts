@@ -44,10 +44,6 @@ describe("evaluate constructor overloading resolution correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent(Parent p) {...}
@@ -265,10 +261,6 @@ describe("evaluate constructor overloading resolution correctly", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
   
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -454,10 +446,6 @@ describe("evaluate constructor overloading resolution correctly", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
   
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // Test Test(int x) {...}
@@ -644,10 +632,6 @@ describe("evaluate constructor overloading resolution correctly", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
   
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
