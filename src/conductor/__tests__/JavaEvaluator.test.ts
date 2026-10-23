@@ -1,9 +1,14 @@
+import { jest } from '@jest/globals'
+import { WEB_PLUGIN_ID } from '@sourceacademy/common-autocomplete'
 import JavaEvaluator from '../JavaEvaluator'
+import AutoCompletePlugin from '../plugins/autocomplete'
 
 class MockConductor {
   outputs: string[] = []
   results: string[] = []
   errors: string[] = []
+  registerPlugin = jest.fn()
+  hostLoadPlugin = jest.fn()
   sendOutput(message: string): void {
     this.outputs.push(message)
   }
@@ -16,15 +21,44 @@ class MockConductor {
 }
 
 describe('JavaEvaluator', () => {
-  test('reports unsupported file type for non-.class files', async () => {
+  test('registers the autocomplete plugin and tells the host to load it', () => {
+    const mock = new MockConductor()
+    new JavaEvaluator(mock as any)
+
+    expect(mock.registerPlugin).toHaveBeenCalledWith(AutoCompletePlugin)
+    expect(mock.hostLoadPlugin).toHaveBeenCalledWith(WEB_PLUGIN_ID)
+  })
+
+  test('evaluateFile with a non-.class filename runs the source as the program entry point', async () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)
 
-    await ev.evaluateFile('program.txt', 'ignored')
+    // Conductor's BasicEvaluator.startEvaluator calls evaluateFile exactly
+    // once per run, with the host's own name for the program being run (e.g.
+    // "program.txt" here, deliberately not ending in .class) and the
+    // program's Java source as fileContent - this is the real shape of every
+    // live "Run" click, not a precompiled classfile upload. It must be
+    // treated like a chunk, not rejected.
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateFile(
+        'program.txt',
+        `
+        public class Main {
+          public static void main(String[] args) {
+            System.out.println("hello from evaluateFile");
+          }
+        }
+      `
+      )
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
 
-    expect(mock.outputs).toContain('JavaEvaluator: unsupported file type')
-    expect(mock.results).toHaveLength(0)
     expect(mock.errors).toHaveLength(0)
+    expect(mock.outputs.join('')).toContain('hello from evaluateFile')
+    expect(mock.results).toHaveLength(1)
   })
 
   test('reports an error when the submitted class file is not valid', async () => {

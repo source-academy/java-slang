@@ -6,6 +6,7 @@ import setupJVM, { parseBin, userClassFiles } from '../jvm/index'
 import { a2ab } from '../jvm/utils/disassembler'
 import stdlibClassfiles from '../jvm/utils/stdlib-classfiles'
 import stdlibNatives from '../jvm/utils/stdlib-natives'
+import { registerAutoCompletePlugin } from './plugins/autocomplete'
 
 /**
  * Decodes a base64 string to bytes without relying on Node's `Buffer`, which
@@ -33,6 +34,7 @@ function base64ToClassFile(b64: string): ClassFile {
 export class JavaEvaluator extends BasicEvaluator {
   constructor(conductor: IRunnerPlugin) {
     super(conductor)
+    registerAutoCompletePlugin(conductor)
   }
 
   async evaluateChunk(chunk: string): Promise<void> {
@@ -40,19 +42,25 @@ export class JavaEvaluator extends BasicEvaluator {
     try {
       userFiles = userClassFiles(compileFromSource(chunk))
     } catch (e) {
-      this.conductor.sendError(new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e)))
+      this.conductor.sendError(
+        new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
+      )
       return
     }
     await this.runClasses(userFiles, 'Main')
   }
 
   async evaluateFile(fileName: string, fileContent: string): Promise<void> {
-    try {
-      if (!fileName.endsWith('.class')) {
-        this.conductor.sendOutput('JavaEvaluator: unsupported file type')
-        return
-      }
+    if (!fileName.endsWith('.class')) {
+      // The host's normal run flow calls evaluateFile once per run with the
+      // program's own source as the "entry point file" (see
+      // BasicEvaluator.startEvaluator in @sourceacademy/conductor) - treat it
+      // exactly like a chunk, matching BasicEvaluator's own default behavior.
+      await this.evaluateChunk(fileContent)
+      return
+    }
 
+    try {
       // Expect class file content as base64 to allow conductor transport via JSON
       const classFile = base64ToClassFile(fileContent)
 
@@ -70,7 +78,9 @@ export class JavaEvaluator extends BasicEvaluator {
       // we'll use an empty userDir so loaders will request '<internalName>.class'
       await this.runClasses({ [`${mainClassName}.class`]: classFile }, mainClassName)
     } catch (err) {
-      this.conductor.sendError(new EvaluatorRuntimeError(err instanceof Error ? err.message : String(err)))
+      this.conductor.sendError(
+        new EvaluatorRuntimeError(err instanceof Error ? err.message : String(err))
+      )
     }
   }
 
@@ -123,7 +133,9 @@ export class JavaEvaluator extends BasicEvaluator {
       try {
         runFn()
       } catch (e) {
-        this.conductor.sendError(new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e)))
+        this.conductor.sendError(
+          new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
+        )
         resolve()
       }
     })
