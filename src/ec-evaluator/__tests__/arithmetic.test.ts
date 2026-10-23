@@ -30,10 +30,6 @@ it("evaluate LocalVariableDeclarationStatement to a basic arithmetic operation c
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // public class Test {...}
-    "NormalClassDeclaration", // class Object {...}
-    
-    "Env", // from NormalClassDeclaration
-    "ConstructorDeclaration", // Object() {...}
 
     "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
@@ -124,10 +120,6 @@ it("evaluate LocalVariableDeclarationStatement to a complex arithmetic operation
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // public class Test {...}
-    "NormalClassDeclaration", // class Object {...}
-    
-    "Env", // from NormalClassDeclaration
-    "ConstructorDeclaration", // Object() {...}
 
     "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {...}
@@ -229,10 +221,6 @@ it("evaluate FieldDeclaration to a basic arithmetic expression without brackets 
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // public class Test {...}
-    "NormalClassDeclaration", // class Object {...}
-    
-    "Env", // from NormalClassDeclaration
-    "ConstructorDeclaration", // Object() {...}
 
     "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {}
@@ -323,10 +311,6 @@ it("evaluate FieldDeclaration to a complex arithmetic expression without bracket
 
     "ExpressionStatement", // Test.main([""]);
     "NormalClassDeclaration", // public class Test {...}
-    "NormalClassDeclaration", // class Object {...}
-    
-    "Env", // from NormalClassDeclaration
-    "ConstructorDeclaration", // Object() {...}
 
     "Env", // from NormalClassDeclaration
     "MethodDeclaration", // public static void main(String[] args) {}

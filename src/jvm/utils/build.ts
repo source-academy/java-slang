@@ -10,22 +10,36 @@ import { computeClosure } from '../../compiler/import/lib-closure'
  * Defaults to `rt/` (an extracted Java 8 rt.jar), matching build-lib-info.ts so
  * the compiler, type checker and JVM all target the same class file version.
  *
- * The bundle covers the compiler's supported closure (see lib-closure.ts)
- * plus `JVM_BOOTSTRAP_SEEDS` below: everything real JDK 8 bytecode pulls in
- * before user code ever runs, starting from the handful of classes
+ * The bundle covers the compiler's supported closure, this time also
+ * following implementation dependencies - classes referenced only from
+ * method/field bodies (`computeClosure`'s `followImplementationDependencies`
+ * option; see lib-closure.ts) - so e.g. `Arrays.sort`'s own
+ * `DualPivotQuicksort`/`TimSort`/`ComparableTimSort` helpers are included
+ * even though they're not superclasses/interfaces of anything seeded.
+ *
+ * It also covers `JVM_BOOTSTRAP_SEEDS` below: the handful of classes
  * `jvm.ts`'s `run()` loads directly (`java/lang/Thread`, `Class`,
- * `ClassLoader`, `ThreadGroup`, `sun/misc/Unsafe`) and fanning out through
- * `System.initializeSystemClass()` and `ClassLoader.getSystemClassLoader()`'s
- * real static-init chain (array superinterfaces, reflection, NIO charsets,
- * `sun.misc.Launcher`'s class-path scanning, ...). This list was discovered
+ * `ClassLoader`, `ThreadGroup`, `sun/misc/Unsafe`), needed before user code
+ * ever runs, which fan out through `System.initializeSystemClass()` and
+ * `ClassLoader.getSystemClassLoader()`'s real static-init chain (array
+ * superinterfaces, reflection, NIO charsets, `sun.misc.Launcher`'s
+ * class-path scanning, ...). These seeds themselves were discovered
  * empirically (run `node dist/jvm/utils/run.js` against a trivial Main.java
- * and add whatever "class not found in bundle" names) - there's no static
- * way to derive it since the compiler's own closure only follows
- * superclass/interface edges, not the classes a method body happens to
- * reference. Unlike `generated-lib-info.json`,
- * this output is consumed at runtime (statically imported by both the Node
- * `run.ts` CLI and the browser Conductor evaluator), so it's committed rather
- * than regenerated in CI, same as `generated-lib-info.json`.
+ * and add whatever "class not found in bundle" names surface) before
+ * implementation-dependency-following existed; now that it does, most of
+ * this list is likely redundant with what the BFS would discover on its own
+ * from a much smaller true-entry-point seed set, but it's left as-is since
+ * the redundant entries are harmless (the BFS dedups) and re-verifying them
+ * is out of scope here.
+ *
+ * Unlike `generated-lib-info.json` (produced by `build-lib-info.ts`, which
+ * calls `computeClosure` WITHOUT `followImplementationDependencies` - the
+ * type checker's allow-list must only ever contain classes user Java source
+ * can legally name, and implementation-only helpers like
+ * `java.util.DualPivotQuicksort` are never one of those), this output is
+ * consumed at runtime (statically imported by both the Node `run.ts` CLI and
+ * the browser Conductor evaluator), so it's committed rather than
+ * regenerated in CI, same as `generated-lib-info.json`.
  */
 
 const CLASS_ROOT = process.argv[2] ?? 'rt'
@@ -178,7 +192,9 @@ function cf2b64(filePath: string): string {
 }
 
 function build() {
-  const closure = computeClosure(CLASS_ROOT, JVM_BOOTSTRAP_SEEDS)
+  const closure = computeClosure(CLASS_ROOT, JVM_BOOTSTRAP_SEEDS, {
+    followImplementationDependencies: true
+  })
   if (closure.unresolved.length > 0) {
     console.warn(`Could not resolve under ${CLASS_ROOT}: ${closure.unresolved.join(', ')}`)
   }
