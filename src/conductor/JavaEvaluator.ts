@@ -42,7 +42,9 @@ export class JavaEvaluator extends BasicEvaluator {
     try {
       userFiles = userClassFiles(compileFromSource(chunk))
     } catch (e) {
-      this.conductor.sendError(new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e)))
+      this.conductor.sendError(
+        new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
+      )
       return
     }
     await this.runClasses(userFiles, 'Main')
@@ -76,7 +78,9 @@ export class JavaEvaluator extends BasicEvaluator {
       // we'll use an empty userDir so loaders will request '<internalName>.class'
       await this.runClasses({ [`${mainClassName}.class`]: classFile }, mainClassName)
     } catch (err) {
-      this.conductor.sendError(new EvaluatorRuntimeError(err instanceof Error ? err.message : String(err)))
+      this.conductor.sendError(
+        new EvaluatorRuntimeError(err instanceof Error ? err.message : String(err))
+      )
     }
   }
 
@@ -129,7 +133,9 @@ export class JavaEvaluator extends BasicEvaluator {
       try {
         runFn()
       } catch (e) {
-        this.conductor.sendError(new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e)))
+        this.conductor.sendError(
+          new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
+        )
         resolve()
       }
     })

@@ -1768,7 +1768,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
                     return field.ordinal
                   })()
                 : label.expression.kind === 'ExpressionName'
-                  ? (() => { throw new Error(`Identifier case labels are only supported for enum switch selectors: ${label.expression.name}`) })()
+                  ? (() => {
+                      throw new Error(
+                        `Identifier case labels are only supported for enum switch selectors: ${label.expression.name}`
+                      )
+                    })()
                   : parseInt((label.expression as Literal).literalType.value)
             caseValues.push(value)
             caseLabelMap.set(value, caseLabels[index])
