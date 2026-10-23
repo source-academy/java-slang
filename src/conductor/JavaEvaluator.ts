@@ -47,12 +47,16 @@ export class JavaEvaluator extends BasicEvaluator {
   }
 
   async evaluateFile(fileName: string, fileContent: string): Promise<void> {
-    try {
-      if (!fileName.endsWith('.class')) {
-        this.conductor.sendOutput('JavaEvaluator: unsupported file type')
-        return
-      }
+    if (!fileName.endsWith('.class')) {
+      // The host's normal run flow calls evaluateFile once per run with the
+      // program's own source as the "entry point file" (see
+      // BasicEvaluator.startEvaluator in @sourceacademy/conductor) - treat it
+      // exactly like a chunk, matching BasicEvaluator's own default behavior.
+      await this.evaluateChunk(fileContent)
+      return
+    }
 
+    try {
       // Expect class file content as base64 to allow conductor transport via JSON
       const classFile = base64ToClassFile(fileContent)
 
