@@ -6,6 +6,7 @@ import setupJVM, { parseBin, userClassFiles } from '../jvm/index'
 import { a2ab } from '../jvm/utils/disassembler'
 import stdlibClassfiles from '../jvm/utils/stdlib-classfiles'
 import stdlibNatives from '../jvm/utils/stdlib-natives'
+import { registerAutoCompletePlugin } from './plugins/autocomplete'
 
 /**
  * Decodes a base64 string to bytes without relying on Node's `Buffer`, which
@@ -33,6 +34,7 @@ function base64ToClassFile(b64: string): ClassFile {
 export class JavaEvaluator extends BasicEvaluator {
   constructor(conductor: IRunnerPlugin) {
     super(conductor)
+    registerAutoCompletePlugin(conductor)
   }
 
   async evaluateChunk(chunk: string): Promise<void> {

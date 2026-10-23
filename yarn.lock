@@ -856,10 +856,22 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
+"@sourceacademy/common-autocomplete@^0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@sourceacademy/common-autocomplete/-/common-autocomplete-0.0.1.tgz#ee5a320d6aa093b11885e9db3a4656daf33b79e6"
+  integrity sha512-UM1W5KH+okk9GplmOvJZmG03/7gkBGpV11/7R4NDmT+zQAv0xOLEOHO49e/AnQQ6eF3sHoY0eeUGWme044ly2Q==
+
 "@sourceacademy/conductor@^0.8.3":
   version "0.8.3"
   resolved "https://registry.yarnpkg.com/@sourceacademy/conductor/-/conductor-0.8.3.tgz#e4af1b16c90bbf2ccd73161893291854bf535c6b"
   integrity sha512-z7t6PVhaPBtxBPj6kS60gKdNL9x/DZZngjgqpLk9/j0h6TjtI9AJns5T2OtaB24B+afHY6ogw8XOdzzwd0v8hg==
+
+"@sourceacademy/runner-autocomplete@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@sourceacademy/runner-autocomplete/-/runner-autocomplete-0.0.2.tgz#bee5adf57c8dc589deb42f1efc5ea02fe4ca3378"
+  integrity sha512-NV+1wOER+2bjtCZjjpAGmgmGNVf6k6NssWk2IikrYeiiJhG6KlLTZFAaaoeJebhT2U9agWEJN/Lbp+EvNe/RHg==
+  dependencies:
+    "@sourceacademy/common-autocomplete" "^0.0.1"
 
 "@tootallnate/once@2":
   version "2.0.0"

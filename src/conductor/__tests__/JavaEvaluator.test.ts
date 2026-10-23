@@ -1,9 +1,14 @@
+import { jest } from '@jest/globals'
+import { WEB_PLUGIN_ID } from '@sourceacademy/common-autocomplete'
 import JavaEvaluator from '../JavaEvaluator'
+import AutoCompletePlugin from '../plugins/autocomplete'
 
 class MockConductor {
   outputs: string[] = []
   results: string[] = []
   errors: string[] = []
+  registerPlugin = jest.fn()
+  hostLoadPlugin = jest.fn()
   sendOutput(message: string): void {
     this.outputs.push(message)
   }
@@ -16,6 +21,14 @@ class MockConductor {
 }
 
 describe('JavaEvaluator', () => {
+  test('registers the autocomplete plugin and tells the host to load it', () => {
+    const mock = new MockConductor()
+    new JavaEvaluator(mock as any)
+
+    expect(mock.registerPlugin).toHaveBeenCalledWith(AutoCompletePlugin)
+    expect(mock.hostLoadPlugin).toHaveBeenCalledWith(WEB_PLUGIN_ID)
+  })
+
   test('evaluateFile with a non-.class filename runs the source as the program entry point', async () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)
