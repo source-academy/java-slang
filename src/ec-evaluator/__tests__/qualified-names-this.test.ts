@@ -32,10 +32,6 @@ describe("evaluate simple qualified names correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -132,10 +128,6 @@ describe("evaluate simple qualified names correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -306,10 +298,6 @@ describe("evaluate simple qualified names correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -413,10 +401,6 @@ describe("evaluate simple qualified names correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -597,10 +581,6 @@ describe("evaluate complex qualified names correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // public static void main(String[] args) {...}

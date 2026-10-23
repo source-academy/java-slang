@@ -36,10 +36,6 @@ describe("evaluate static fields with inheritance", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -149,10 +145,6 @@ describe("evaluate static fields with inheritance", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -271,10 +263,6 @@ describe("evaluate static fields with inheritance", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -485,10 +473,6 @@ describe("evaluate static fields with inheritance", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
@@ -708,10 +692,6 @@ describe("evaluate static fields with inheritance", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}

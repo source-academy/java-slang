@@ -8,6 +8,8 @@ import {
   CannotFindSymbolError,
   IncompatibleTypesError,
   MethodCannotBeAppliedError,
+  MissingMethodBodyError,
+  NativeMethodHasBodyError,
   NotApplicableToExpressionTypeError,
   TypeCheckerError,
   TypeCheckerInternalError,
@@ -54,8 +56,8 @@ export const newResult = (
 
 export const OK_RESULT: Result = newResult(null)
 
-export const check = (node: Node, frame: Frame = Frame.globalFrame()): Result => {
-  const typeCheckingFrame = frame.newChildFrame()
+export const check = (node: Node, frame: Frame = Frame.globalFrame().newChildFrame()): Result => {
+  const typeCheckingFrame = frame
   const addClassesResult = addClasses(node, typeCheckingFrame)
   if (addClassesResult.hasErrors) return addClassesResult
   const addClassParentsResult = addClassParents(node, typeCheckingFrame)
@@ -630,6 +632,21 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
               errors.push(...methodErrors)
               break
             }
+
+            // native methods (admit empty body)
+            if (bodyDeclaration.methodModifiers.map(i => i.identifier).includes('native')) {
+              if (bodyDeclaration.methodBody !== undefined) {
+                errors.push(new NativeMethodHasBodyError(bodyDeclaration.location))
+              }
+              break
+            }
+
+            // empty body is error
+            if (bodyDeclaration.methodBody === undefined) {
+              errors.push(new MissingMethodBodyError(bodyDeclaration.location))
+              break
+            }
+
             const { errors: checkErrors } = typeCheckBody(bodyDeclaration.methodBody, methodFrame)
             if (checkErrors.length > 0) errors.push(...checkErrors)
             break
@@ -728,6 +745,25 @@ export const typeCheckBody = (node: Node, frame: Frame = Frame.globalFrame()): R
               errors.push(...methodErrors)
               break
             }
+
+            // native methods (admit empty body)
+            if (
+              (bodyDeclaration as any).methodModifiers
+                .map((i: any) => i.identifier)
+                .includes('native')
+            ) {
+              if ((bodyDeclaration as any).methodBody !== undefined) {
+                errors.push(new NativeMethodHasBodyError((bodyDeclaration as any).location))
+              }
+              break
+            }
+
+            // empty body is error
+            if ((bodyDeclaration as any).methodBody === undefined) {
+              errors.push(new MissingMethodBodyError((bodyDeclaration as any).location))
+              break
+            }
+
             const { errors: checkErrors } = typeCheckBody(
               (bodyDeclaration as any).methodBody,
               methodFrame
