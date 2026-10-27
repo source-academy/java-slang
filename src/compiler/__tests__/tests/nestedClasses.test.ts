@@ -196,6 +196,53 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["1"],
   },
+  {
+    comment: "unqualified declaration, qualified instantiation (new Outer.Inner())",
+    program: `
+      public class Main {
+        static class Inner {
+          public int get() { return 1; }
+        }
+        public static void main(String[] args) {
+          Inner inner = new Main.Inner();
+          System.out.println(inner.get());
+        }
+      }
+    `,
+    expectedLines: ["1"],
+  },
+  {
+    comment: "qualified declaration and instantiation (Outer.Inner on both sides)",
+    program: `
+      public class Main {
+        static class Inner {
+          public int get() { return 1; }
+        }
+        public static void main(String[] args) {
+          Main.Inner inner = new Main.Inner();
+          System.out.println(inner.get());
+        }
+      }
+    `,
+    expectedLines: ["1"],
+  },
+  {
+    comment: "two levels deep, fully qualified (Outer.Middle.Inner)",
+    program: `
+      public class Main {
+        static class Middle {
+          static class Inner {
+            public int get() { return 1; }
+          }
+        }
+        public static void main(String[] args) {
+          Main.Middle.Inner inner = new Main.Middle.Inner();
+          System.out.println(inner.get());
+        }
+      }
+    `,
+    expectedLines: ["1"],
+  },
 ];
 
 export const nestedClassesTest = () => describe("static nested classes", () => {

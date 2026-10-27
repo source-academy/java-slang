@@ -388,6 +388,17 @@ export class SymbolTable {
       return root.get(key)!.info as ClassInfo
     }
 
+    // A dotted name (e.g. "Outer.Inner") may be a source-qualified reference
+    // to a nested type, whose registered binary name joins segments with
+    // '$' instead of '.' - try that before falling through to import/package
+    // resolution (which treats dots as package separators instead).
+    if (name.includes('.')) {
+      key = generateSymbol(name.replace(/\./g, '$'), SymbolType.CLASS)
+      if (root.has(key)) {
+        return root.get(key)!.info as ClassInfo
+      }
+    }
+
     if (this.importedClassMap.has(name)) {
       const fullName = this.importedClassMap.get(name)!
       key = generateSymbol(fullName, SymbolType.CLASS)
@@ -414,6 +425,22 @@ export class SymbolTable {
       const table = this.tables[i]
       if (table.has(key)) {
         return table.get(key)!.children
+      }
+    }
+
+    // A dotted name (e.g. "Outer.Inner") may be a source-qualified reference
+    // to a nested type, whose registered binary name joins segments with
+    // '$' instead of '.' - try that before falling through to import/package
+    // resolution (which treats dots as package separators instead). This is
+    // also how a qualified-typed local variable/field resolves its own
+    // member table when dispatching a method/field access on it.
+    if (name.includes('.')) {
+      key = generateSymbol(name.replace(/\./g, '$'), SymbolType.CLASS)
+      for (let i = this.curIdx; i >= 0; i--) {
+        const table = this.tables[i]
+        if (table.has(key)) {
+          return table.get(key)!.children
+        }
       }
     }
 
