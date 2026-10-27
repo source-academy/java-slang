@@ -174,6 +174,24 @@ describe('JavaEvaluator', () => {
     expect(mock.results).toHaveLength(1)
   })
 
+  test('reports an uncaught exception once, naming the main thread and the exception', async () => {
+    const mock = new MockConductor()
+    const ev = new JavaEvaluator(mock as any)
+
+    await ev.evaluateChunk(`
+      public class Main {
+        public static void main(String[] args) {
+          int i = 1 / 0;
+        }
+      }
+    `)
+
+    expect(mock.errors).toHaveLength(0)
+    expect(mock.outputs).toEqual([
+      'ERR: Exception in thread "main" java.lang.ArithmeticException: / by zero\n'
+    ])
+  })
+
   test('evaluateChunk reports a compile error instead of silently discarding it', async () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)
