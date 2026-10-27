@@ -5,6 +5,7 @@ module.exports = {
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/src/compiler/__tests__/tests/',
+    '<rootDir>/src/conductor/',
     '__utils__'
   ]
 }

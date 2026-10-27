@@ -2,6 +2,7 @@ import { ClassFile } from '../ClassFile/types'
 import { Lib } from './jni'
 import JVM from './jvm'
 import parseBin from './utils/disassembler'
+import { userClassFiles } from './utils/user-classes'
 import CustomSystem from './utils/CustomSystem'
 
 const setupJVM = (options: {
@@ -34,6 +35,6 @@ const setupJVM = (options: {
   return () => jvm.run(options.mainClass ?? 'Main', options.callbacks.onFinish)
 }
 
-export { parseBin }
+export { parseBin, userClassFiles }
 
 export default setupJVM

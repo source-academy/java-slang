@@ -1,18 +1,21 @@
 import { UnannType } from '../ast/types/classes'
 import { ImportDeclaration } from '../ast/types/packages-and-modules'
+import { METHOD_FLAGS } from '../ClassFile/types/methods'
 import {
   generateClassAccessFlags,
   generateFieldAccessFlags,
   generateMethodAccessFlags
 } from './compiler-utils'
 import {
-  InvalidMethodCallError, OverrideFinalMethodError,
+  InvalidMethodCallError,
+  OverrideFinalMethodError,
   SymbolCannotBeResolvedError,
   SymbolNotFoundError,
-  SymbolRedeclarationError
+  SymbolRedeclarationError,
+  UnresolvedImportError
 } from './error'
-import { libraries } from './import/libs'
-import { METHOD_FLAGS } from '../ClassFile/types/methods'
+import { generatedLibInfo } from './import/generated-lib-info'
+import { knownClasses, knownPackages, libraries } from './import/libs'
 
 export const typeMap = new Map([
   ['byte', 'B'],
@@ -26,8 +29,8 @@ export const typeMap = new Map([
   ['void', 'V']
 ])
 
-type Symbol = string
-type Table = Map<Symbol, SymbolNode>
+export type Symbol = string
+export type Table = Map<Symbol, SymbolNode>
 
 export type SymbolNode = {
   info: SymbolInfo
@@ -47,6 +50,7 @@ export interface ClassInfo {
   name: string
   accessFlags: number
   parentClassName?: string
+  isEnum?: boolean
 }
 
 export interface FieldInfo {
@@ -55,6 +59,7 @@ export interface FieldInfo {
   parentClassName: string
   typeName: string
   typeDescriptor: string
+  ordinal?: number
 }
 
 export type MethodInfos = Array<MethodInfo>
@@ -83,6 +88,18 @@ function generateSymbol(name: string, type: SymbolType) {
   return JSON.stringify(symbol)
 }
 
+/**
+ * Extracts the symbol-table `typeName` for a field from its JVM descriptor:
+ * the internal class name for object types, or the raw descriptor for
+ * primitives and arrays (which are not used as lookup keys).
+ */
+function descriptorToTypeName(descriptor: string): string {
+  let d = descriptor
+  while (d.startsWith('[')) d = d.slice(1)
+  if (d.startsWith('L') && d.endsWith(';')) return d.slice(1, -1)
+  return descriptor
+}
+
 export class SymbolTable {
   private tables: Array<Table>
   private curTable: Table
@@ -90,6 +107,12 @@ export class SymbolTable {
   private curClassIdx: number
   private importedPackages: Array<string>
   private importedClassMap: Map<string, string>
+  // Class-name keys that were ambiguous (shared by two unrelated
+  // declarations - e.g. two different enclosing classes each with a nested
+  // class of the same simple name) and have been evicted. Tracked
+  // separately from the tables themselves so a later declaration can't
+  // silently reclaim the bare name once it's known to be ambiguous.
+  private poisonedClassKeys: Set<string>
 
   constructor() {
     this.tables = [this.getNewTable()]
@@ -97,13 +120,21 @@ export class SymbolTable {
     this.curIdx = 0
     this.importedPackages = []
     this.importedClassMap = new Map()
+    this.poisonedClassKeys = new Set()
   }
 
   private setup() {
+    // The extracted class-file metadata is authoritative; it is registered
+    // first so its full signatures win over the curated `lib-info.ts` stubs.
+    this.setupGeneratedLibrary()
+
     libraries.forEach(p => {
       if (this.importedPackages.findIndex(e => e == p.packageName + '/') == -1)
         this.importedPackages.push(p.packageName + '/')
       p.classes.forEach(c => {
+        if (this.tables[0].has(generateSymbol(c.className, SymbolType.CLASS))) {
+          return
+        }
         this.insertClassInfo({
           name: c.className,
           accessFlags: generateClassAccessFlags(c.accessFlags)
@@ -131,6 +162,45 @@ export class SymbolTable {
     })
   }
 
+  /**
+   * Registers every standard-library class from the extracted class-file
+   * metadata. Descriptors and access flags come straight from the `.class`
+   * files, so no hand-written signatures are involved.
+   */
+  private setupGeneratedLibrary() {
+    Object.values(generatedLibInfo).forEach(meta => {
+      const classKey = generateSymbol(meta.name, SymbolType.CLASS)
+      if (this.tables[0].has(classKey)) {
+        return
+      }
+
+      this.insertClassInfo({
+        name: meta.name,
+        accessFlags: meta.accessFlags,
+        parentClassName: meta.superClass ?? undefined
+      })
+      meta.fields.forEach(f =>
+        this.insertFieldInfo({
+          name: f.name,
+          accessFlags: f.accessFlags,
+          parentClassName: meta.name,
+          typeName: descriptorToTypeName(f.descriptor),
+          typeDescriptor: f.descriptor
+        })
+      )
+      meta.methods.forEach(m =>
+        this.insertMethodInfo({
+          name: m.name,
+          accessFlags: m.accessFlags,
+          parentClassName: meta.name,
+          typeDescriptor: m.descriptor,
+          className: meta.name
+        })
+      )
+      this.returnToRoot()
+    })
+  }
+
   private getNewTable() {
     return new Map<Symbol, SymbolNode>()
   }
@@ -149,10 +219,20 @@ export class SymbolTable {
     imports.forEach(i => {
       const id = i.identifier
       if (id.endsWith('*')) {
-        this.importedPackages.push(id.slice(0, id.length - 1).replaceAll('.', '/'))
+        const packageName = id.slice(0, id.lastIndexOf('.')).replaceAll('.', '/')
+        // `java.lang` is always in scope; any other on-demand import must name a
+        // package that holds at least one recognised standard-library class.
+        if (packageName !== 'java/lang' && !knownPackages.has(packageName)) {
+          throw new UnresolvedImportError(id)
+        }
+        this.importedPackages.push(packageName + '/')
       } else {
+        const className = id.replaceAll('.', '/')
+        if (!knownClasses.has(className)) {
+          throw new UnresolvedImportError(id)
+        }
         const typeName = id.slice(id.lastIndexOf('.') + 1)
-        this.importedClassMap.set(typeName, id.replaceAll('.', '/'))
+        this.importedClassMap.set(typeName, className)
       }
     })
 
@@ -172,21 +252,58 @@ export class SymbolTable {
     this.curTable = this.tables[this.curIdx]
   }
 
-  insertClassInfo(info: ClassInfo) {
-    const key = generateSymbol(info.name, SymbolType.CLASS)
-
-    if (this.curTable.has(key)) {
-      throw new SymbolRedeclarationError(info.name)
-    }
-
+  // A nested class is registered under both its simple name (so unqualified
+  // source references like `Inner` resolve) and its qualified binary name
+  // (so a `Ljava/lang/Outer$Inner;`-style descriptor can be resolved back to
+  // its member table) - both keys share the same SymbolNode/children table.
+  // Returns the class's own member table (the `children` scope), so a caller
+  // compiling in two passes can register every class's signature up front
+  // (pass 1) and later re-enter each class's scope to generate bytecode
+  // (pass 2) via restoreClassScope, once every sibling is already visible.
+  insertClassInfo(info: ClassInfo, lookupNames: Array<string> = [info.name]): Table {
+    const names = [...new Set(lookupNames)]
     const symbolNode: SymbolNode = {
       info: info,
       children: this.getNewTable()
     }
-    this.curTable.set(key, symbolNode)
+
+    for (const name of names) {
+      const key = generateSymbol(name, SymbolType.CLASS)
+      const isPrimaryKey = name === info.name
+      if (this.curTable.has(key) || this.poisonedClassKeys.has(key)) {
+        if (isPrimaryKey) {
+          // The qualified binary name is built from a unique nesting path,
+          // so a collision here is a genuine redeclaration, not ambiguity.
+          throw new SymbolRedeclarationError(info.name)
+        }
+        // A secondary alias (e.g. a nested class's bare simple name) shared
+        // by two unrelated declarations is permanently ambiguous - evict it
+        // rather than letting whichever registered first silently win every
+        // future unqualified lookup. Each declaration stays fully reachable
+        // by its own unique qualified binary name; only the bare alias is
+        // lost, for both the earlier and any later registrant.
+        this.curTable.delete(key)
+        this.poisonedClassKeys.add(key)
+        continue
+      }
+      this.curTable.set(key, symbolNode)
+    }
 
     this.tables[++this.curIdx] = symbolNode.children
     this.curTable = this.tables[this.curIdx]
+    this.curClassIdx = this.curIdx
+    return symbolNode.children
+  }
+
+  // Re-enters a class's own member scope (previously returned by
+  // insertClassInfo) so its method bodies can be compiled in a later pass,
+  // after every class's signature has already been registered. This always
+  // appends a fresh slot rather than rewinding to the scope's original
+  // index, so classes registered afterwards (whose tables occupy higher
+  // indices) remain reachable via getClassTable's scan from the new curIdx.
+  restoreClassScope(classScope: Table): void {
+    this.tables[++this.curIdx] = classScope
+    this.curTable = classScope
     this.curClassIdx = this.curIdx
   }
 
@@ -209,14 +326,17 @@ export class SymbolTable {
     const key = generateSymbol(info.name, SymbolType.METHOD)
 
     for (let i = this.curClassIdx - 1; i > 0; i--) {
-      const parentTable = this.tables[i];
+      const parentTable = this.tables[i]
       if (parentTable.has(key)) {
-        const parentMethods = parentTable.get(key)!.info;
+        const parentMethods = parentTable.get(key)!.info
         if (Array.isArray(parentMethods)) {
           for (const m of parentMethods) {
-            if (m.typeDescriptor === info.typeDescriptor && (m.accessFlags & METHOD_FLAGS.ACC_FINAL)
-              && m.className == info.parentClassName) {
-              throw new OverrideFinalMethodError(info.name);
+            if (
+              m.typeDescriptor === info.typeDescriptor &&
+              m.accessFlags & METHOD_FLAGS.ACC_FINAL &&
+              m.className == info.parentClassName
+            ) {
+              throw new OverrideFinalMethodError(info.name)
             }
           }
         }
@@ -268,6 +388,17 @@ export class SymbolTable {
       return root.get(key)!.info as ClassInfo
     }
 
+    // A dotted name (e.g. "Outer.Inner") may be a source-qualified reference
+    // to a nested type, whose registered binary name joins segments with
+    // '$' instead of '.' - try that before falling through to import/package
+    // resolution (which treats dots as package separators instead).
+    if (name.includes('.')) {
+      key = generateSymbol(name.replace(/\./g, '$'), SymbolType.CLASS)
+      if (root.has(key)) {
+        return root.get(key)!.info as ClassInfo
+      }
+    }
+
     if (this.importedClassMap.has(name)) {
       const fullName = this.importedClassMap.get(name)!
       key = generateSymbol(fullName, SymbolType.CLASS)
@@ -294,6 +425,22 @@ export class SymbolTable {
       const table = this.tables[i]
       if (table.has(key)) {
         return table.get(key)!.children
+      }
+    }
+
+    // A dotted name (e.g. "Outer.Inner") may be a source-qualified reference
+    // to a nested type, whose registered binary name joins segments with
+    // '$' instead of '.' - try that before falling through to import/package
+    // resolution (which treats dots as package separators instead). This is
+    // also how a qualified-typed local variable/field resolves its own
+    // member table when dispatching a method/field access on it.
+    if (name.includes('.')) {
+      key = generateSymbol(name.replace(/\./g, '$'), SymbolType.CLASS)
+      for (let i = this.curIdx; i >= 0; i--) {
+        const table = this.tables[i]
+        if (table.has(key)) {
+          return table.get(key)!.children
+        }
       }
     }
 

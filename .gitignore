@@ -1,5 +1,6 @@
 # compiled output
 /dist
+/dist-conductor
 /node_modules
 tsconfig.tsbuildinfo
 
@@ -47,3 +48,6 @@ lerna-debug.log*
 
 # generated class files
 *.class
+
+# extracted JDK runtime (Java 8 rt.jar) used to build the JVM class bundle
+/rt

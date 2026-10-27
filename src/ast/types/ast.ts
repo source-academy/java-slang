@@ -12,6 +12,7 @@ import {
 } from "./blocks-and-statements";
 import {
   ConstructorDeclaration,
+  EnumDeclaration,
   FieldDeclaration,
   MethodDeclaration,
   NormalClassDeclaration,
@@ -29,6 +30,7 @@ interface NodeMap {
   MethodInvocation: MethodInvocation;
   ReturnStatement: ReturnStatement;
   NormalClassDeclaration: NormalClassDeclaration;
+  EnumDeclaration: EnumDeclaration;
   ClassInstanceCreationExpression: ClassInstanceCreationExpression;
   ConstructorDeclaration: ConstructorDeclaration;
   ExplicitConstructorInvocation: ExplicitConstructorInvocation;

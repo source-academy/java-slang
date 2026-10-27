@@ -32,10 +32,6 @@ describe("evaluate default constructor", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
   
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -191,10 +187,6 @@ describe("evaluate default constructor", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
   
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -353,10 +345,6 @@ describe("evaluate default constructor", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
   
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -530,10 +518,6 @@ describe("evaluate default constructor", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
   
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -707,10 +691,6 @@ describe("evaluate default constructor", () => {
   
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
   
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}

@@ -32,10 +32,6 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // static void test() {...}
@@ -140,10 +136,6 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // static void test() {...}
@@ -320,10 +312,6 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -536,10 +524,6 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // int test() {...}
@@ -729,10 +713,6 @@ describe("evaluate simple qualified MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-      
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // void test() {...}
@@ -1019,10 +999,6 @@ describe("evaluate complex qualified MethodInvocation correctly", () => {
 
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env",
       "MethodDeclaration", // static void test() {...}
@@ -1148,10 +1124,6 @@ describe("evaluate complex qualified MethodInvocation correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class AnotherTest {...}
       "NormalClassDeclaration", // class Test {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "MethodDeclaration", // public static void main(String[] args) {...}
@@ -1355,10 +1327,6 @@ describe("evaluate complex qualified MethodInvocation correctly", () => {
       "ExpressionStatement", // Test.main([""]);
       "NormalClassDeclaration", // class Test extends Parent {...}
       "NormalClassDeclaration", // class Parent {...}
-      "NormalClassDeclaration", // class Object {...}
-
-      "Env", // from NormalClassDeclaration
-      "ConstructorDeclaration", // Object() {...}
 
       "Env", // from NormalClassDeclaration
       "ConstructorDeclaration", // Parent() {...}
