@@ -42,7 +42,16 @@ function buildPool(): CompletionPool {
   return cachedPool
 }
 
-/** The identifier prefix ending at (row, column), and whether it's preceded by a `.`. */
+/**
+ * The identifier prefix ending at (row, column), and whether it's preceded by
+ * a `.`. `row` is 1-indexed but `column` is 0-indexed, despite both being
+ * documented as 1-indexed in `@sourceacademy/common-autocomplete` - confirmed
+ * against py-slang's own working `convertPosToIndex`, which uses `column`
+ * directly with no subtraction. Subtracting 1 from `column` here would make
+ * every lookup trail the real cursor by one character: the prefix would be
+ * truncated (empty after typing just the first character of a word), and
+ * longer prefixes would match one character short of what's actually typed.
+ */
 function currentWordAndContext(
   code: string,
   row: number,
@@ -53,7 +62,7 @@ function currentWordAndContext(
   if (lineIndex < 0 || lineIndex >= lines.length) return { prefix: '', afterDot: false }
 
   const line = lines[lineIndex]
-  const col = Math.max(0, Math.min(column - 1, line.length))
+  const col = Math.max(0, Math.min(column, line.length))
 
   let start = col
   while (start > 0 && /[A-Za-z0-9_]/.test(line[start - 1])) start--
@@ -75,11 +84,12 @@ function matchEntries(prefix: string, candidates: string[], meta: CompletionItem
 }
 
 /**
- * Java autocomplete suggestions for the given code and (1-indexed) cursor
- * position. Deliberately simple: Java keywords and stdlib class/method/field
- * names filtered by the identifier prefix at the cursor, not real AST-based
- * scope resolution (no local variables/user-defined symbols) - see the
- * autocomplete plan for the reasoning and how this could be upgraded later.
+ * Java autocomplete suggestions for the given code and cursor position
+ * (`row` 1-indexed, `column` 0-indexed - see `currentWordAndContext`).
+ * Deliberately simple: Java keywords and stdlib class/method/field names
+ * filtered by the identifier prefix at the cursor, not real AST-based scope
+ * resolution (no local variables/user-defined symbols) - see the autocomplete
+ * plan for the reasoning and how this could be upgraded later.
  */
 export function computeCompletions(code: string, row: number, column: number): AutoCompleteEntry[] {
   const { prefix, afterDot } = currentWordAndContext(code, row, column)

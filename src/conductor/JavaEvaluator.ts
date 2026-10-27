@@ -37,7 +37,7 @@ export class JavaEvaluator extends BasicEvaluator {
     registerAutoCompletePlugin(conductor)
   }
 
-  async evaluateChunk(chunk: string): Promise<void> {
+  async evaluateChunk(chunk: string): Promise<string> {
     let userFiles: { [fileName: string]: ClassFile }
     try {
       userFiles = userClassFiles(compileFromSource(chunk))
@@ -45,19 +45,18 @@ export class JavaEvaluator extends BasicEvaluator {
       this.conductor.sendError(
         new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
       )
-      return
+      return ''
     }
-    await this.runClasses(userFiles, 'Main')
+    return this.runClasses(userFiles, 'Main')
   }
 
-  async evaluateFile(fileName: string, fileContent: string): Promise<void> {
+  async evaluateFile(fileName: string, fileContent: string): Promise<string> {
     if (!fileName.endsWith('.class')) {
       // The host's normal run flow calls evaluateFile once per run with the
       // program's own source as the "entry point file" (see
       // BasicEvaluator.startEvaluator in @sourceacademy/conductor) - treat it
       // exactly like a chunk, matching BasicEvaluator's own default behavior.
-      await this.evaluateChunk(fileContent)
-      return
+      return this.evaluateChunk(fileContent)
     }
 
     try {
@@ -76,11 +75,12 @@ export class JavaEvaluator extends BasicEvaluator {
 
       // the AbstractClassLoader builds paths like (classPath ? classPath + '/' + className : className) + '.class'
       // we'll use an empty userDir so loaders will request '<internalName>.class'
-      await this.runClasses({ [`${mainClassName}.class`]: classFile }, mainClassName)
+      return await this.runClasses({ [`${mainClassName}.class`]: classFile }, mainClassName)
     } catch (err) {
       this.conductor.sendError(
         new EvaluatorRuntimeError(err instanceof Error ? err.message : String(err))
       )
+      return ''
     }
   }
 
@@ -89,11 +89,17 @@ export class JavaEvaluator extends BasicEvaluator {
    * stdlib for anything else requested. Resolves once the JVM actually
    * finishes (or errors) - the JVM's thread pool schedules work via
    * `setTimeout`, so `runFn()` itself only kicks execution off.
+   *
+   * Returns the result rather than calling `this.conductor.sendResult`
+   * itself: `BasicEvaluator.startEvaluator` (in `@sourceacademy/conductor`)
+   * already does `sendResult(await evaluateChunk(...))` /
+   * `sendResult(await evaluateFile(...))` for every run, so sending here too
+   * would report the same successful run twice.
    */
   private runClasses(
     userFiles: { [fileName: string]: ClassFile },
     mainClassName: string
-  ): Promise<void> {
+  ): Promise<string> {
     const parsedStdlibCache: { [fileName: string]: ClassFile } = {}
 
     const readFileSync = (path: string): ClassFile => {
@@ -110,7 +116,7 @@ export class JavaEvaluator extends BasicEvaluator {
       return (parsedStdlibCache[path] = base64ToClassFile(b64))
     }
 
-    return new Promise(resolve => {
+    return new Promise<string>(resolve => {
       const runFn = setupJVM({
         mainClass: mainClassName,
         userDir: '',
@@ -124,8 +130,7 @@ export class JavaEvaluator extends BasicEvaluator {
           stderr: (m: string) => this.conductor.sendOutput(`ERR: ${m}`),
           onFinish: () => {
             // when JVM finishes we don't currently capture any return value
-            this.conductor.sendResult('')
-            resolve()
+            resolve('')
           }
         }
       })
@@ -136,7 +141,7 @@ export class JavaEvaluator extends BasicEvaluator {
         this.conductor.sendError(
           new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
         )
-        resolve()
+        resolve('')
       }
     })
   }
