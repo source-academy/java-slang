@@ -37,7 +37,7 @@ export class JavaEvaluator extends BasicEvaluator {
     registerAutoCompletePlugin(conductor)
   }
 
-  async evaluateChunk(chunk: string): Promise<void> {
+  async evaluateChunk(chunk: string): Promise<string> {
     let userFiles: { [fileName: string]: ClassFile }
     try {
       userFiles = userClassFiles(compileFromSource(chunk))
@@ -99,7 +99,7 @@ export class JavaEvaluator extends BasicEvaluator {
   private runClasses(
     userFiles: { [fileName: string]: ClassFile },
     mainClassName: string
-  ): Promise<void> {
+  ): Promise<string> {
     const parsedStdlibCache: { [fileName: string]: ClassFile } = {}
 
     const readFileSync = (path: string): ClassFile => {
