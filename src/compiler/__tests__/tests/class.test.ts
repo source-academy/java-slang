@@ -104,6 +104,19 @@ const testCases: testCase[] = [
     expectedLines: ["in f"],
   },
   {
+    comment: "instance field with an inline initializer",
+    program: `
+      public class Main {
+        public int one = 1;
+        public static void main(String[] args) {
+          Main m = new Main();
+          System.out.println(m.one);
+        }
+      }
+    `,
+    expectedLines: ["1"],
+  },
+  {
     comment: "instance field",
     program: `
       public class Main {
