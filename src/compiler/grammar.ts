@@ -1274,7 +1274,7 @@ CastExpression
       isPrimitiveCast: true,
     });
   }
-  / lparen t:ReferenceType rparen expr:(LambdaExpression / !(PlusMinus) UnaryExpression) {
+  / lparen t:ReferenceType rparen expr:(LambdaExpression / !(PlusMinus) @UnaryExpression) {
     return addLocInfo({
       kind: "CastExpression",
       castType: t,

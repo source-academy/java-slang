@@ -11,6 +11,7 @@ import { arrayTest } from "./tests/array.test";
 import { classTest } from "./tests/class.test";
 import { enumTest } from "./tests/enum.test";
 import { typeConversionTest } from "./tests/typeConversion.test";
+import { castExpressionTest } from "./tests/castExpression.test";
 
 describe("compiler tests", () => {
   printlnTest();
@@ -26,4 +27,5 @@ describe("compiler tests", () => {
   classTest();
   enumTest();
   typeConversionTest();
+  castExpressionTest();
 })

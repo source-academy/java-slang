@@ -810,7 +810,12 @@ function _checkCast(thread: Thread, indexbyte: number, isCC: boolean = true): vo
   } else {
     value === 1
       ? thread.pushStack(objectref)
-      : thread.throwNewException('java/lang/ClassCastException', '')
+      : thread.throwNewException(
+          'java/lang/ClassCastException',
+          `class ${objClsS.getName().replace(/\//g, '.')} cannot be cast to class ${targetClsT
+            .getName()
+            .replace(/\//g, '.')}`
+        )
   }
   return
 }
