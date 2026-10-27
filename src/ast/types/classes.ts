@@ -43,7 +43,7 @@ export type ClassModifier =
   | "strictfp"
   | "enum";
 
-export type ClassBodyDeclaration = ClassMemberDeclaration | ConstructorDeclaration | EnumDeclaration;
+export type ClassBodyDeclaration = ClassMemberDeclaration | ConstructorDeclaration | EnumDeclaration | NormalClassDeclaration;
 export type ClassMemberDeclaration = MethodDeclaration | FieldDeclaration;
 
 export interface ConstructorDeclaration extends BaseNode {

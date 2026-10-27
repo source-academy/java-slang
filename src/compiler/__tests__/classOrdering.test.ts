@@ -11,7 +11,7 @@ describe('compiled class ordering', () => {
       }
     `
     const classes = compileFromSource(program)
-    expect(classes.map(c => c.className)).toEqual(['Main', 'Day'])
+    expect(classes.map(c => c.className)).toEqual(['Main', 'Main$Day'])
   })
 
   it('keeps top-level declaration order, with member enums appended', () => {
@@ -24,7 +24,9 @@ describe('compiled class ordering', () => {
     `
     const classes = compileFromSource(program)
     expect(classes[0].className).toBe('Main')
-    expect(new Set(classes.map(c => c.className))).toEqual(new Set(['Main', 'A', 'B']))
+    expect(new Set(classes.map(c => c.className))).toEqual(
+      new Set(['Main', 'Main$A', 'Main$B'])
+    )
   })
 
   it('is unchanged when there is no enum', () => {

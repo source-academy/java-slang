@@ -381,9 +381,9 @@ ReferenceType
 
 ClassType
   = head:(pn:(PackageName dot Annotation*)? id:TypeIdentifier TypeArguments?
-      { return (pn ?? "") + id; })
-    tail:(dot Annotation* @TypeIdentifier TypeArguments?)* {
-      return head + tail.join();
+      { return (pn ? pn + "." : "") + id; })
+    tail:(dot Annotation* i:TypeIdentifier TypeArguments? { return "." + i; })* {
+      return head + tail.join("");
     }
 
 Dims
