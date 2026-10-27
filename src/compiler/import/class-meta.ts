@@ -23,6 +23,14 @@ export interface ClassMeta {
   superClass: string | null
   /** Internal names of directly implemented interfaces. */
   interfaces: string[]
+  /**
+   * Every class referenced anywhere in this class's constant pool
+   * (deduplicated, sorted) - a superset of `superClass`/`interfaces` that
+   * also covers classes touched only from method/field bodies (e.g.
+   * `Arrays.sort` -> `DualPivotQuicksort`). Only present when extraction is
+   * asked for it (see `ExtractClassMetaOptions.includeReferencedClasses`).
+   */
+  referencedClasses?: string[]
   fields: MemberMeta[]
   methods: MemberMeta[]
 }

@@ -2,7 +2,12 @@ import { Class, ClassType, EnumClass, ObjectClass } from '../types/classes'
 import { ConstructorDeclaration, MethodDeclaration, Node } from '../ast/specificationTypes'
 import { createClassFieldsAndMethods } from '../typeFactories/classFactory'
 import { createMethod } from '../typeFactories/methodFactory'
-import { CyclicInheritanceError, DuplicateClassError, TypeCheckerError } from '../errors'
+import {
+  CyclicInheritanceError,
+  DuplicateClassError,
+  TypeCheckerError,
+  UnsupportedNestedClassError
+} from '../errors'
 import { Method } from '../types/methods'
 import { Frame } from './environment'
 import { newResult, OK_RESULT, Result } from '.'
@@ -57,6 +62,24 @@ export const addClasses = (node: Node, frame: Frame): Result => {
         node.typeIdentifier.location
       )
       if (error instanceof Error) return newResult(null, [new DuplicateClassError(node.location)])
+
+      // Register static nested class declarations found directly in this class's body.
+      for (const bodyDeclaration of node.classBody.classBodyDeclarations) {
+        if (bodyDeclaration.kind !== 'NormalClassDeclaration') continue
+        const isStatic = bodyDeclaration.classModifiers.some(
+          modifier => modifier.identifier === 'static'
+        )
+        if (!isStatic) {
+          errors.push(new UnsupportedNestedClassError(bodyDeclaration.location))
+          continue
+        }
+        const nestedResult = addClasses(bodyDeclaration, frame)
+        if (nestedResult.hasErrors) errors.push(...nestedResult.errors)
+        else if (nestedResult.currentType instanceof ClassType)
+          nestedResult.currentType.setEnclosingClass(classType)
+      }
+      if (errors.length > 0) return newResult(null, errors)
+
       return newResult(classType)
     }
     case 'EnumDeclaration': {
@@ -123,6 +146,15 @@ export const addClassMethods = (node: Node, frame: Frame): Result => {
       }
       const classType = createClassFieldsAndMethods(node, frame, createMethod, createMethod)
       if (classType instanceof TypeCheckerError) return newResult(null, [classType])
+
+      const errors: TypeCheckerError[] = []
+      for (const bodyDeclaration of node.classBody.classBodyDeclarations) {
+        if (bodyDeclaration.kind !== 'NormalClassDeclaration') continue
+        const nestedResult = addClassMethods(bodyDeclaration, frame)
+        if (nestedResult.hasErrors) errors.push(...nestedResult.errors)
+      }
+      if (errors.length > 0) return newResult(null, errors)
+
       return newResult(classType)
     }
     case 'EnumDeclaration': {
@@ -200,6 +232,22 @@ export const addClassParents = (node: Node, frame: Frame): Result => {
       const classType = frame.getType(node.typeIdentifier.identifier, node.typeIdentifier.location)
       if (classType instanceof Error) return newResult(null, [classType])
       if (!(classType instanceof ClassType)) throw new Error('class type should be a ClassImpl')
+      if (node.typeIdentifier.identifier === 'Object') {
+        // The declared Object is the root and gets no parent, but its extends clause must still
+        // name a type. Linking it to a parent could leave a cycle the check below cannot see.
+        if (node.classExtends) {
+          const extendsType = frame.getType(
+            node.classExtends.classType.typeIdentifier.identifier,
+            node.classExtends.classType.typeIdentifier.location
+          )
+          if (extendsType instanceof Error) return newResult(null, [extendsType])
+          if (extendsType === classType)
+            return newResult(null, [
+              new CyclicInheritanceError(node.classExtends.classType.location)
+            ])
+        }
+        return newResult(null)
+      }
       if (node.classExtends) {
         const extendsType = frame.getType(
           node.classExtends.classType.typeIdentifier.identifier,
@@ -217,7 +265,22 @@ export const addClassParents = (node: Node, frame: Frame): Result => {
           type = type.getParentClass()
         }
         classType.setParentClass(extendsType)
+      } else {
+        const objectType = frame.getType('Object', { startOffset: -1, startLine: -1 })
+        // if Object is declared explicitly, use that
+        if (!(objectType instanceof TypeCheckerError)) {
+          classType.setParentClass(objectType as ObjectClass)
+        }
       }
+
+      const errors: TypeCheckerError[] = []
+      for (const bodyDeclaration of node.classBody.classBodyDeclarations) {
+        if (bodyDeclaration.kind !== 'NormalClassDeclaration') continue
+        const nestedResult = addClassParents(bodyDeclaration, frame)
+        if (nestedResult.hasErrors) errors.push(...nestedResult.errors)
+      }
+      if (errors.length > 0) return newResult(null, errors)
+
       return newResult(classType)
     }
     case 'EnumDeclaration': {

@@ -1,12 +1,86 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { CONSTANT_TAG } from '../../ClassFile/constants/constants'
+import { ClassFile } from '../../ClassFile/types'
+import { ConstantInfo } from '../../ClassFile/types/constants'
 import { generatedLibInfo as libInfo } from '../import/generated-lib-info'
 import { extractClassMetaFromBuffer } from '../import/extract-metadata'
 import { computeClosure, resolveClassFile } from '../import/lib-closure'
+import { collectReferencedClassNames } from '../import/referenced-classes'
 
 const CLASS_ROOT = 'rt'
 const hasClassRoot = fs.existsSync(CLASS_ROOT)
 const describeWithClassRoot = hasClassRoot ? describe : describe.skip
+
+/** Minimal fake ClassFile with just a constant pool, for collectReferencedClassNames tests. */
+function fakeClassFile(constantPool: ConstantInfo[]): ClassFile {
+  return {
+    magic: 0xcafebabe,
+    minorVersion: 0,
+    majorVersion: 52,
+    constantPoolCount: constantPool.length,
+    constantPool,
+    accessFlags: 0,
+    thisClass: 0,
+    superClass: 0,
+    interfacesCount: 0,
+    interfaces: [],
+    fieldsCount: 0,
+    fields: [],
+    methodsCount: 0,
+    methods: [],
+    attributesCount: 0,
+    attributes: []
+  }
+}
+
+describe('collectReferencedClassNames', () => {
+  it('collects a plain (non-array) class entry', () => {
+    const cf = fakeClassFile([
+      { tag: CONSTANT_TAG.Class, nameIndex: 0 }, // dummy at index 0
+      { tag: CONSTANT_TAG.Utf8, length: 0, value: 'java/util/Arrays' },
+      { tag: CONSTANT_TAG.Class, nameIndex: 1 }
+    ])
+    expect(collectReferencedClassNames(cf)).toEqual(['java/util/Arrays'])
+  })
+
+  it('unwraps a single-dimension object array descriptor to its component class', () => {
+    const cf = fakeClassFile([
+      { tag: CONSTANT_TAG.Class, nameIndex: 0 },
+      { tag: CONSTANT_TAG.Utf8, length: 0, value: '[Ljava/lang/String;' },
+      { tag: CONSTANT_TAG.Class, nameIndex: 1 }
+    ])
+    expect(collectReferencedClassNames(cf)).toEqual(['java/lang/String'])
+  })
+
+  it('unwraps a multi-dimension object array descriptor to its component class', () => {
+    const cf = fakeClassFile([
+      { tag: CONSTANT_TAG.Class, nameIndex: 0 },
+      { tag: CONSTANT_TAG.Utf8, length: 0, value: '[[Ljava/lang/String;' },
+      { tag: CONSTANT_TAG.Class, nameIndex: 1 }
+    ])
+    expect(collectReferencedClassNames(cf)).toEqual(['java/lang/String'])
+  })
+
+  it('drops a primitive array descriptor (no classfile needed)', () => {
+    const cf = fakeClassFile([
+      { tag: CONSTANT_TAG.Class, nameIndex: 0 },
+      { tag: CONSTANT_TAG.Utf8, length: 0, value: '[I' },
+      { tag: CONSTANT_TAG.Class, nameIndex: 1 }
+    ])
+    expect(collectReferencedClassNames(cf)).toEqual([])
+  })
+
+  it('ignores the dummy sentinel at index 0 and deduplicates', () => {
+    const cf = fakeClassFile([
+      { tag: CONSTANT_TAG.Class, nameIndex: 0 }, // dummy - would crash if not skipped
+      { tag: CONSTANT_TAG.Utf8, length: 0, value: 'java/lang/Object' },
+      { tag: CONSTANT_TAG.Class, nameIndex: 1 },
+      { tag: CONSTANT_TAG.Class, nameIndex: 1 } // same class referenced twice
+    ])
+    expect(collectReferencedClassNames(cf)).toEqual(['java/lang/Object'])
+  })
+})
 
 describe('generated-lib-info.json', () => {
   it('contains the java.lang exception hierarchy', () => {
@@ -87,5 +161,33 @@ describeWithClassRoot('extractClassMeta (against the class tree)', () => {
     const { metadata, unresolved } = computeClosure(CLASS_ROOT)
     expect(unresolved).toEqual([])
     expect(new Set(Object.keys(metadata))).toEqual(new Set(Object.keys(libInfo)))
+  })
+
+  it('omits referencedClasses entirely unless asked for it', () => {
+    const file = resolveClassFile(CLASS_ROOT, 'java/util/Arrays')
+    const defaultMeta = extractClassMetaFromBuffer(fs.readFileSync(file as string))
+    expect('referencedClasses' in defaultMeta).toBe(false)
+
+    const withRefs = extractClassMetaFromBuffer(fs.readFileSync(file as string), {
+      includeReferencedClasses: true
+    })
+    expect(withRefs.referencedClasses).toContain('java/util/DualPivotQuicksort')
+  })
+
+  it('does not follow implementation dependencies by default (type-checker allow-list)', () => {
+    const { metadata } = computeClosure(CLASS_ROOT)
+    expect(metadata['java/util/DualPivotQuicksort']).toBeUndefined()
+    expect(metadata['java/util/TimSort']).toBeUndefined()
+    expect(metadata['java/util/ComparableTimSort']).toBeUndefined()
+  })
+
+  it('follows implementation dependencies when asked (JVM runtime bundle) - Arrays.sort helpers', () => {
+    const { metadata, unresolved } = computeClosure(CLASS_ROOT, [], {
+      followImplementationDependencies: true
+    })
+    expect(unresolved).toEqual([])
+    expect(metadata['java/util/DualPivotQuicksort']).toBeDefined()
+    expect(metadata['java/util/TimSort']).toBeDefined()
+    expect(metadata['java/util/ComparableTimSort']).toBeDefined()
   })
 })

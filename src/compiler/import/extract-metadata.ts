@@ -3,6 +3,7 @@ import { ConstantClassInfo, ConstantUtf8Info } from '../../ClassFile/types/const
 import { METHOD_FLAGS } from '../../ClassFile/types/methods'
 import parseBin from '../../jvm/utils/disassembler'
 import { ClassMeta, MemberMeta } from './class-meta'
+import { collectReferencedClassNames } from './referenced-classes'
 
 /** Members that are part of a class's usable public API. */
 const VISIBLE = METHOD_FLAGS.ACC_PUBLIC | METHOD_FLAGS.ACC_PROTECTED
@@ -31,12 +32,21 @@ const collectMembers = (cf: ClassFile, members: RawMember[]): MemberMeta[] =>
     // `<clinit>` is never public/protected, but guard anyway; keep `<init>`.
     .filter(m => m.name !== '<clinit>')
 
+export interface ExtractClassMetaOptions {
+  /**
+   * Populate `ClassMeta.referencedClasses`. Off by default so callers that
+   * don't ask for it (the type checker's `generated-lib-info.json` build)
+   * get the exact same `ClassMeta` shape as before this option existed.
+   */
+  includeReferencedClasses?: boolean
+}
+
 /**
  * Reads a class file and returns descriptor-level metadata for it. Only the
  * constant pool and the field / method tables are inspected; `Code` and other
  * attributes are parsed by `parseBin` but ignored here.
  */
-export function extractClassMeta(bytes: DataView): ClassMeta {
+export function extractClassMeta(bytes: DataView, options: ExtractClassMetaOptions = {}): ClassMeta {
   const cf = parseBin(bytes)
 
   const name = classNameAt(cf, cf.thisClass)
@@ -49,12 +59,16 @@ export function extractClassMeta(bytes: DataView): ClassMeta {
     accessFlags: cf.accessFlags,
     superClass: classNameAt(cf, cf.superClass),
     interfaces: cf.interfaces.map(i => classNameAt(cf, i)).filter((n): n is string => n !== null),
+    ...(options.includeReferencedClasses ? { referencedClasses: collectReferencedClassNames(cf) } : {}),
     fields: collectMembers(cf, cf.fields),
     methods: collectMembers(cf, cf.methods)
   }
 }
 
 /** Convenience wrapper for Node build scripts working with `Buffer`s. */
-export function extractClassMetaFromBuffer(buffer: Uint8Array): ClassMeta {
-  return extractClassMeta(new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength))
+export function extractClassMetaFromBuffer(
+  buffer: Uint8Array,
+  options: ExtractClassMetaOptions = {}
+): ClassMeta {
+  return extractClassMeta(new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength), options)
 }

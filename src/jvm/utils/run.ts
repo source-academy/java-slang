@@ -3,19 +3,17 @@ import * as path from 'node:path'
 import { compileFromSource } from '../../compiler'
 import { ClassFile } from '../../ClassFile/types'
 import setupJVM, { parseBin, userClassFiles } from '../index'
+import bundle from './stdlib-classfiles'
 
 /**
  * Runs a Java source file through the java-slang compiler + JVM from Node.
  *
  *   node dist/jvm/utils/run.js path/to/Main.java
  *
- * Requires a class bundle at dist/jvm/utils/classfiles.js (build it first with
- * `node dist/jvm/utils/build.js <rt-or-classpath>` — see build.ts). The bundle
- * must be a single JDK's classes; a Java 8 rt/ tree is what the JVM targets.
+ * Uses the committed `stdlib-classfiles.ts` bundle (regenerate it with
+ * `node dist/jvm/utils/build.js <rt-or-classpath>` — see build.ts — after a
+ * compiler stdlib-closure change).
  */
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const bundle: { [relPath: string]: string } = require('./classfiles').default
 
 const NATIVES_DIR = path.join(__dirname, '..', 'stdlib')
 

@@ -102,19 +102,65 @@ export interface ClosureResult {
   unresolved: string[]
 }
 
+export interface ComputeClosureOptions {
+  /**
+   * Also follow class references found anywhere a *seed* class's constant
+   * pool (not just `superClass`/`interfaces`) - i.e. follow "implementation
+   * dependencies": classes a seed's method body happens to call into (e.g.
+   * `Arrays.sort` -> `DualPivotQuicksort`/`TimSort`/`ComparableTimSort`) that
+   * are not part of any supertype relationship.
+   *
+   * Deliberately depth-1: only applied to the initial seed set
+   * (`SEED_CLASSES`/`SEED_PACKAGES`/`extraSeeds`), never to classes
+   * discovered transitively (via superclass/interface *or* a previous
+   * implementation dependency). A real JDK classfile's constant pool
+   * references far more than any single simplified-JVM program ever
+   * executes - `java/lang/String`/`Throwable`/`Class`'s method bodies alone
+   * transitively touch HTTP, X.509 certificates, serialization, NIO files,
+   * and `java.time`/`java.util.stream` once followed without a depth limit
+   * (empirically: ~3500 classes, most of them never reachable at runtime
+   * through this JVM's actual execution paths). One hop from the classes the
+   * compiler/JVM already knows are entry points keeps this bounded while
+   * still fixing the reported class of bug (a seed's own direct helper is
+   * missing), since those helpers are themselves small and self-contained.
+   *
+   * Must stay `false` (the default) for `build-lib-info.ts`: the type
+   * checker's allow-list may only contain classes user Java source can
+   * legally name, and `java.util.DualPivotQuicksort` is never one of those.
+   * `build.ts` opts in, since the JVM bundle must contain every class the
+   * JDK bytecode it ships might execute, named or not.
+   */
+  followImplementationDependencies?: boolean
+}
+
 /**
  * Computes the set of standard-library classes reachable from the seeds by
- * following superclass and interface edges, and extracts metadata for each.
+ * following superclass and interface edges (and, if asked, each seed's own
+ * direct implementation dependencies - see `ComputeClosureOptions`), and
+ * extracts metadata for each.
+ *
+ * @param extraSeeds Additional seed classes to include beyond `SEED_CLASSES` /
+ * `SEED_PACKAGES`, without affecting the compiler's own allow-list - e.g. the
+ * JVM's unconditional bootstrap classes (see `build.ts`), which the type
+ * checker has no reason to expose to user code.
  */
-export function computeClosure(classRoot: string): ClosureResult {
+export function computeClosure(
+  classRoot: string,
+  extraSeeds: string[] = [],
+  options: ComputeClosureOptions = {}
+): ClosureResult {
   const metadata: LibInfoMap = {}
   const unresolved: string[] = []
 
-  const queue: string[] = [...SEED_CLASSES]
+  const initialSeeds = [...SEED_CLASSES, ...extraSeeds]
   for (const pkg of SEED_PACKAGES) {
-    queue.push(...listPackageClasses(classRoot, pkg))
+    initialSeeds.push(...listPackageClasses(classRoot, pkg))
   }
+  // Fixed up front, independent of traversal order, so "is this class a seed"
+  // doesn't depend on which edge happens to reach it first.
+  const seedSet = new Set(initialSeeds)
 
+  const queue: string[] = [...initialSeeds]
   const seen = new Set<string>()
   while (queue.length > 0) {
     const internalName = queue.shift() as string
@@ -127,15 +173,21 @@ export function computeClosure(classRoot: string): ClosureResult {
       continue
     }
 
+    const followImplementationDeps =
+      options.followImplementationDependencies && seedSet.has(internalName)
+
     let meta: ClassMeta
     try {
-      meta = extractClassMetaFromBuffer(fs.readFileSync(file))
+      meta = extractClassMetaFromBuffer(fs.readFileSync(file), {
+        includeReferencedClasses: followImplementationDeps
+      })
     } catch (e) {
       throw new Error(`Failed to parse ${file}: ${(e as Error).message}`)
     }
 
     metadata[internalName] = meta
-    for (const dep of [meta.superClass, ...meta.interfaces]) {
+    const implementationDeps = followImplementationDeps ? meta.referencedClasses ?? [] : []
+    for (const dep of [meta.superClass, ...meta.interfaces, ...implementationDeps]) {
       if (dep !== null && !seen.has(dep)) queue.push(dep)
     }
   }
