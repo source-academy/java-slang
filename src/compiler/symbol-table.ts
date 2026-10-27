@@ -107,6 +107,12 @@ export class SymbolTable {
   private curClassIdx: number
   private importedPackages: Array<string>
   private importedClassMap: Map<string, string>
+  // Class-name keys that were ambiguous (shared by two unrelated
+  // declarations - e.g. two different enclosing classes each with a nested
+  // class of the same simple name) and have been evicted. Tracked
+  // separately from the tables themselves so a later declaration can't
+  // silently reclaim the bare name once it's known to be ambiguous.
+  private poisonedClassKeys: Set<string>
 
   constructor() {
     this.tables = [this.getNewTable()]
@@ -114,6 +120,7 @@ export class SymbolTable {
     this.curIdx = 0
     this.importedPackages = []
     this.importedClassMap = new Map()
+    this.poisonedClassKeys = new Set()
   }
 
   private setup() {
@@ -262,8 +269,22 @@ export class SymbolTable {
 
     for (const name of names) {
       const key = generateSymbol(name, SymbolType.CLASS)
-      if (this.curTable.has(key)) {
-        throw new SymbolRedeclarationError(info.name)
+      const isPrimaryKey = name === info.name
+      if (this.curTable.has(key) || this.poisonedClassKeys.has(key)) {
+        if (isPrimaryKey) {
+          // The qualified binary name is built from a unique nesting path,
+          // so a collision here is a genuine redeclaration, not ambiguity.
+          throw new SymbolRedeclarationError(info.name)
+        }
+        // A secondary alias (e.g. a nested class's bare simple name) shared
+        // by two unrelated declarations is permanently ambiguous - evict it
+        // rather than letting whichever registered first silently win every
+        // future unqualified lookup. Each declaration stays fully reachable
+        // by its own unique qualified binary name; only the bare alias is
+        // lost, for both the earlier and any later registrant.
+        this.curTable.delete(key)
+        this.poisonedClassKeys.add(key)
+        continue
       }
       this.curTable.set(key, symbolNode)
     }

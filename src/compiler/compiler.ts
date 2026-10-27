@@ -125,11 +125,32 @@ export class Compiler {
    * body, rewriting each `typeIdentifier` to its JVM binary name
    * (`Outer$Inner`, `Outer$Middle$Inner`, ...) so the rest of the compiler can
    * treat them exactly like top-level declarations.
+   *
+   * `ancestorBinaryNames` maps the simple name of every enclosing class (and
+   * its siblings, transitively) to its binary name. It lets an `extends`
+   * clause that targets a sibling nested type - or the enclosing class
+   * itself, if that's also nested - get rewritten to the right binary name
+   * too (see the `sclass` rewrite below); without it the emitted class file
+   * would reference a nonexistent top-level class.
    */
   private getMemberTypes(
     classBody: Array<ClassBodyDeclaration>,
-    enclosingBinaryName: string
+    enclosingBinaryName: string,
+    ancestorBinaryNames: Map<string, string> = new Map()
   ): Array<EnumDeclaration | NormalClassDeclaration> {
+    // Built before flat-mapping (so a forward-declared sibling's `extends`
+    // target still resolves) and passed down to every child's recursive
+    // call, so deeper nesting levels also see this level's siblings.
+    const siblingBinaryNames = new Map(ancestorBinaryNames)
+    for (const declaration of classBody) {
+      if (declaration.kind === 'EnumDeclaration' || declaration.kind === 'NormalClassDeclaration') {
+        siblingBinaryNames.set(
+          declaration.typeIdentifier,
+          enclosingBinaryName + '$' + declaration.typeIdentifier
+        )
+      }
+    }
+
     return classBody.flatMap(declaration => {
       if (declaration.kind === 'EnumDeclaration') {
         const qualified = {
@@ -138,7 +159,11 @@ export class Compiler {
         }
         return [
           qualified,
-          ...this.getMemberTypes(qualified.enumBody.bodyMembers || [], qualified.typeIdentifier)
+          ...this.getMemberTypes(
+            qualified.enumBody.bodyMembers || [],
+            qualified.typeIdentifier,
+            siblingBinaryNames
+          )
         ]
       }
       if (declaration.kind === 'NormalClassDeclaration') {
@@ -147,9 +172,15 @@ export class Compiler {
         }
         const qualified = {
           ...declaration,
-          typeIdentifier: enclosingBinaryName + '$' + declaration.typeIdentifier
+          typeIdentifier: enclosingBinaryName + '$' + declaration.typeIdentifier,
+          ...(declaration.sclass && siblingBinaryNames.has(declaration.sclass)
+            ? { sclass: siblingBinaryNames.get(declaration.sclass) }
+            : {})
         }
-        return [qualified, ...this.getMemberTypes(qualified.classBody, qualified.typeIdentifier)]
+        return [
+          qualified,
+          ...this.getMemberTypes(qualified.classBody, qualified.typeIdentifier, siblingBinaryNames)
+        ]
       }
       return []
     })

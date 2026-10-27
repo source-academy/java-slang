@@ -2,6 +2,7 @@ import {
   runTest,
   testCase,
 } from "../__utils__/test-utils";
+import { compileFromSource } from "../../index";
 
 const testCases: testCase[] = [
   {
@@ -124,6 +125,77 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["hello"],
   },
+  {
+    comment: "two unrelated top-level classes each have a nested class with the same simple name",
+    program: `
+      class A {
+        static class Item {}
+      }
+      class B {
+        static class Item {}
+      }
+      public class Main {
+        public static void main(String[] args) {
+          System.out.println(0);
+        }
+      }
+    `,
+    expectedLines: ["0"],
+  },
+  {
+    comment: "nested class extends a sibling nested class",
+    program: `
+      public class Main {
+        static class Base {}
+        static class Child extends Base {
+          public int get() { return 1; }
+        }
+
+        public static void main(String[] args) {
+          Child child = new Child();
+          System.out.println(child.get());
+        }
+      }
+    `,
+    expectedLines: ["1"],
+  },
+  {
+    comment: "two levels deep: nested class extends a sibling nested class",
+    program: `
+      public class Main {
+        static class Middle {
+          static class Base {}
+          static class Child extends Base {
+            public int get() { return 1; }
+          }
+        }
+
+        public static void main(String[] args) {
+          Child child = new Child();
+          System.out.println(child.get());
+        }
+      }
+    `,
+    expectedLines: ["1"],
+  },
+  {
+    comment: "nested class extends its own (nested) enclosing class",
+    program: `
+      public class Main {
+        static class Middle {
+          static class Child extends Middle {
+            public int get() { return 1; }
+          }
+        }
+
+        public static void main(String[] args) {
+          Child child = new Child();
+          System.out.println(child.get());
+        }
+      }
+    `,
+    expectedLines: ["1"],
+  },
 ];
 
 export const nestedClassesTest = () => describe("static nested classes", () => {
@@ -131,4 +203,16 @@ export const nestedClassesTest = () => describe("static nested classes", () => {
     const { comment: comment, program: program, expectedLines: expectedLines } = testCase;
     it(comment, () => runTest(program, expectedLines));
   }
+
+  it("still rejects two top-level classes sharing the same name", () => {
+    expect(() =>
+      compileFromSource(`
+        class Item {}
+        class Item {}
+        public class Main {
+          public static void main(String[] args) {}
+        }
+      `)
+    ).toThrow('"Item" has already been declared')
+  })
 });
