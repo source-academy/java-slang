@@ -10,6 +10,7 @@ import { importTest } from "./tests/import.test";
 import { arrayTest } from "./tests/array.test";
 import { classTest } from "./tests/class.test";
 import { enumTest } from "./tests/enum.test";
+import { nestedClassesTest } from "./tests/nestedClasses.test";
 import { typeConversionTest } from "./tests/typeConversion.test";
 
 describe("compiler tests", () => {
@@ -25,5 +26,6 @@ describe("compiler tests", () => {
   arrayTest();
   classTest();
   enumTest();
+  nestedClassesTest();
   typeConversionTest();
 })
