@@ -45,12 +45,12 @@ export class JavaEvaluator extends BasicEvaluator {
       this.conductor.sendError(
         new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
       )
-      return ''
+      return
     }
     return this.runClasses(userFiles, 'Main')
   }
 
-  async evaluateFile(fileName: string, fileContent: string): Promise<string> {
+  async evaluateFile(fileName: string, fileContent: string): Promise<void> {
     if (!fileName.endsWith('.class')) {
       // The host's normal run flow calls evaluateFile once per run with the
       // program's own source as the "entry point file" (see
@@ -80,7 +80,7 @@ export class JavaEvaluator extends BasicEvaluator {
       this.conductor.sendError(
         new EvaluatorRuntimeError(err instanceof Error ? err.message : String(err))
       )
-      return ''
+      return
     }
   }
 
@@ -116,7 +116,7 @@ export class JavaEvaluator extends BasicEvaluator {
       return (parsedStdlibCache[path] = base64ToClassFile(b64))
     }
 
-    return new Promise<string>(resolve => {
+    return new Promise<void>(resolve => {
       const runFn = setupJVM({
         mainClass: mainClassName,
         userDir: '',
@@ -129,8 +129,13 @@ export class JavaEvaluator extends BasicEvaluator {
           stdout: (m: string) => this.conductor.sendOutput(m),
           stderr: (m: string) => this.conductor.sendOutput(`ERR: ${m}`),
           onFinish: () => {
-            // when JVM finishes we don't currently capture any return value
-            resolve('')
+            // Resolve with no value: a Java `void main` has no result to
+            // report, and the host only suppresses display for `undefined`
+            // (see @sourceacademy/conductor's `BasicEvaluator.startEvaluator`,
+            // which does `sendResult(await evaluateChunk(...))`, and the
+            // frontend's `if (result !== undefined)` display gate) - `''`
+            // would be shown as a spurious `""` after every successful run.
+            resolve()
           }
         }
       })
@@ -141,7 +146,7 @@ export class JavaEvaluator extends BasicEvaluator {
         this.conductor.sendError(
           new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
         )
-        resolve('')
+        resolve()
       }
     })
   }
