@@ -5,14 +5,14 @@ import AutoCompletePlugin from '../plugins/autocomplete'
 
 class MockConductor {
   outputs: string[] = []
-  results: string[] = []
+  results: (string | undefined)[] = []
   errors: string[] = []
   registerPlugin = jest.fn()
   hostLoadPlugin = jest.fn()
   sendOutput(message: string): void {
     this.outputs.push(message)
   }
-  sendResult(result: string): void {
+  sendResult(result: string | undefined): void {
     this.results.push(result)
   }
   sendError(error: Error): void {
@@ -41,7 +41,7 @@ describe('JavaEvaluator', () => {
     // treated like a chunk, not rejected.
     const originalBuffer = (globalThis as any).Buffer
     delete (globalThis as any).Buffer
-    let result: string
+    let result: void
     try {
       result = await ev.evaluateFile(
         'program.txt',
@@ -60,8 +60,10 @@ describe('JavaEvaluator', () => {
     expect(mock.errors).toHaveLength(0)
     expect(mock.outputs.join('')).toContain('hello from evaluateFile')
     // The result is returned, not sent directly - BasicEvaluator.startEvaluator
-    // sends it itself (see the "does not send the result twice" test below).
-    expect(result).toBe('')
+    // sends it itself (see the "does not report a spurious result" test below).
+    // `undefined`, not '' - a void main() has nothing to report, and the host
+    // only suppresses display for undefined (see that same test).
+    expect(result).toBeUndefined()
     expect(mock.results).toHaveLength(0)
   })
 
@@ -89,7 +91,7 @@ describe('JavaEvaluator', () => {
     // Node's always-present `Buffer` would otherwise mask it.
     const originalBuffer = (globalThis as any).Buffer
     delete (globalThis as any).Buffer
-    let result: string
+    let result: void
     try {
       result = await ev.evaluateChunk(`
         public class Main {
@@ -104,7 +106,7 @@ describe('JavaEvaluator', () => {
 
     expect(mock.errors).toHaveLength(0)
     expect(mock.outputs.join('')).toContain('hello from conductor')
-    expect(result).toBe('')
+    expect(result).toBeUndefined()
     expect(mock.results).toHaveLength(0)
   })
 
@@ -120,7 +122,7 @@ describe('JavaEvaluator', () => {
     // at runtime with a missing-class error instead of printing the result.
     const originalBuffer = (globalThis as any).Buffer
     delete (globalThis as any).Buffer
-    let result: string
+    let result: void
     try {
       result = await ev.evaluateChunk(`
         import java.util.Arrays;
@@ -142,22 +144,29 @@ describe('JavaEvaluator', () => {
 
     expect(mock.errors).toHaveLength(0)
     expect(mock.outputs.join('')).toBe('1\n2\n3\n4\n5\n')
-    expect(result).toBe('')
+    expect(result).toBeUndefined()
     expect(mock.results).toHaveLength(0)
   })
 
-  test('does not send the result twice when the framework also sends it', async () => {
-    // BasicEvaluator.startEvaluator (in @sourceacademy/conductor) always does
-    // `sendResult(await evaluateChunk(...))` itself for every run - simulate
-    // that wrapping here. If evaluateChunk/runClasses *also* called
-    // sendResult internally (the regression this guards against), this would
-    // see two results instead of one.
+  test('does not report a spurious result for a successful run with nothing to show', async () => {
+    // Mirrors the real end-to-end pipeline, not just our own method call:
+    //  - BasicEvaluator.startEvaluator (@sourceacademy/conductor) always does
+    //    `sendResult(await evaluateChunk(...))` itself for every run - calling
+    //    sendResult internally too (the first regression this guarded
+    //    against) would double-report.
+    //  - The frontend's own display gate (WorkspaceSaga/helpers/evalCode.ts,
+    //    handleResults) only suppresses display when the result is exactly
+    //    `undefined` - `if (result !== undefined) dispatch(...)`. A Java
+    //    `void main()` has no value, so returning '' instead of undefined (the
+    //    second regression) made every successful run show a spurious `""`.
+    // Together: a successful run must both return undefined AND, once passed
+    // through the host's real gate, add nothing to what's displayed.
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)
 
     const originalBuffer = (globalThis as any).Buffer
     delete (globalThis as any).Buffer
-    let result: string
+    let result: void
     try {
       result = await ev.evaluateChunk(`
         public class Main {
@@ -169,9 +178,10 @@ describe('JavaEvaluator', () => {
     } finally {
       ;(globalThis as any).Buffer = originalBuffer
     }
-    mock.sendResult(result)
+    if (result !== undefined) mock.sendResult(result)
 
-    expect(mock.results).toHaveLength(1)
+    expect(result).toBeUndefined()
+    expect(mock.results).toHaveLength(0)
   })
 
   test('reports an uncaught exception once, naming the main thread and the exception', async () => {
