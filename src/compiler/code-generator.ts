@@ -1425,7 +1425,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     // Reference cast (JLS 5.5): the result has the cast type
     const res = compile(expr, cg)
-    const target = cg.symbolTable.generateFieldDescriptor(ct)
+    let target: string
+    try {
+      target = cg.symbolTable.generateFieldDescriptor(ct)
+    } catch (e) {
+      // Class not known to the symbol table: fall back to the name as written
+      const dims = (ct.match(/\[/g) || []).length
+      const base = dims > 0 ? ct.slice(0, ct.indexOf('[')) : ct
+      target = '['.repeat(dims) + 'L' + (base.includes('/') ? base : base.replace(/\./g, '/')) + ';'
+    }
     if (res.resultType.length === 1) {
       // primitive operand: boxing, followed by widening reference conversion if needed
       if (target === 'Ljava/lang/String;') {
@@ -1453,7 +1461,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { identifier: id, argumentList: argLst } = node as ClassInstanceCreationExpression
     let maxStack = 2
 
-    cg.code.push(OPCODE.NEW, 0, cg.constantPoolManager.indexClassInfo(id), OPCODE.DUP)
+    let instantiatedClassName = id
+    try {
+      instantiatedClassName = cg.symbolTable.queryClass(id).name
+    } catch (e) {
+      instantiatedClassName = id.includes('/') ? id : id.replace(/\./g, '/')
+    }
+    cg.code.push(
+      OPCODE.NEW,
+      0,
+      cg.constantPoolManager.indexClassInfo(instantiatedClassName),
+      OPCODE.DUP
+    )
 
     const methodInfos = cg.symbolTable.queryMethod('<init>') as MethodInfos
     const parseParams = (descriptor: string) =>
@@ -1467,7 +1486,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let applicable: MethodInfos = []
     for (const isApplicable of [isSubtype, isLooselyInvocable]) {
       applicable = methodInfos.filter(m => {
-        if (m.className !== id) return false
+        if (m.className !== instantiatedClassName) return false
         const params = parseParams(m.typeDescriptor)
         return (
           params.length === argTypes.length &&
@@ -1503,7 +1522,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         chosen.typeDescriptor
       )
       cg.code.push(OPCODE.INVOKESPECIAL, 0, method)
-      return { stackSize: maxStack, resultType: id }
+      return { stackSize: maxStack, resultType: instantiatedClassName }
     }
 
     // No applicable constructor found: fall back to matching the raw argument descriptor.
@@ -1516,7 +1535,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const argDescriptor = '(' + rawArgTypes.join('') + ')'
     for (let i = 0; i < methodInfos.length; i++) {
       const methodInfo = methodInfos[i]
-      if (methodInfo.typeDescriptor.includes(argDescriptor) && methodInfo.className == id) {
+      if (
+        methodInfo.typeDescriptor.includes(argDescriptor) &&
+        methodInfo.className == instantiatedClassName
+      ) {
         const method = cg.constantPoolManager.indexMethodrefInfo(
           methodInfo.className,
           methodInfo.name,
@@ -1527,7 +1549,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     }
 
-    return { stackSize: maxStack, resultType: id }
+    return { stackSize: maxStack, resultType: instantiatedClassName }
   },
 
   ArrayAccess: (node: Node, cg: CodeGenerator) => {

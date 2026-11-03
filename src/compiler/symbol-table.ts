@@ -29,8 +29,8 @@ export const typeMap = new Map([
   ['void', 'V']
 ])
 
-type Symbol = string
-type Table = Map<Symbol, SymbolNode>
+export type Symbol = string
+export type Table = Map<Symbol, SymbolNode>
 
 export type SymbolNode = {
   info: SymbolInfo
@@ -107,6 +107,12 @@ export class SymbolTable {
   private curClassIdx: number
   private importedPackages: Array<string>
   private importedClassMap: Map<string, string>
+  // Class-name keys that were ambiguous (shared by two unrelated
+  // declarations - e.g. two different enclosing classes each with a nested
+  // class of the same simple name) and have been evicted. Tracked
+  // separately from the tables themselves so a later declaration can't
+  // silently reclaim the bare name once it's known to be ambiguous.
+  private poisonedClassKeys: Set<string>
 
   constructor() {
     this.tables = [this.getNewTable()]
@@ -114,6 +120,7 @@ export class SymbolTable {
     this.curIdx = 0
     this.importedPackages = []
     this.importedClassMap = new Map()
+    this.poisonedClassKeys = new Set()
   }
 
   private setup() {
@@ -245,21 +252,58 @@ export class SymbolTable {
     this.curTable = this.tables[this.curIdx]
   }
 
-  insertClassInfo(info: ClassInfo) {
-    const key = generateSymbol(info.name, SymbolType.CLASS)
-
-    if (this.curTable.has(key)) {
-      throw new SymbolRedeclarationError(info.name)
-    }
-
+  // A nested class is registered under both its simple name (so unqualified
+  // source references like `Inner` resolve) and its qualified binary name
+  // (so a `Ljava/lang/Outer$Inner;`-style descriptor can be resolved back to
+  // its member table) - both keys share the same SymbolNode/children table.
+  // Returns the class's own member table (the `children` scope), so a caller
+  // compiling in two passes can register every class's signature up front
+  // (pass 1) and later re-enter each class's scope to generate bytecode
+  // (pass 2) via restoreClassScope, once every sibling is already visible.
+  insertClassInfo(info: ClassInfo, lookupNames: Array<string> = [info.name]): Table {
+    const names = [...new Set(lookupNames)]
     const symbolNode: SymbolNode = {
       info: info,
       children: this.getNewTable()
     }
-    this.curTable.set(key, symbolNode)
+
+    for (const name of names) {
+      const key = generateSymbol(name, SymbolType.CLASS)
+      const isPrimaryKey = name === info.name
+      if (this.curTable.has(key) || this.poisonedClassKeys.has(key)) {
+        if (isPrimaryKey) {
+          // The qualified binary name is built from a unique nesting path,
+          // so a collision here is a genuine redeclaration, not ambiguity.
+          throw new SymbolRedeclarationError(info.name)
+        }
+        // A secondary alias (e.g. a nested class's bare simple name) shared
+        // by two unrelated declarations is permanently ambiguous - evict it
+        // rather than letting whichever registered first silently win every
+        // future unqualified lookup. Each declaration stays fully reachable
+        // by its own unique qualified binary name; only the bare alias is
+        // lost, for both the earlier and any later registrant.
+        this.curTable.delete(key)
+        this.poisonedClassKeys.add(key)
+        continue
+      }
+      this.curTable.set(key, symbolNode)
+    }
 
     this.tables[++this.curIdx] = symbolNode.children
     this.curTable = this.tables[this.curIdx]
+    this.curClassIdx = this.curIdx
+    return symbolNode.children
+  }
+
+  // Re-enters a class's own member scope (previously returned by
+  // insertClassInfo) so its method bodies can be compiled in a later pass,
+  // after every class's signature has already been registered. This always
+  // appends a fresh slot rather than rewinding to the scope's original
+  // index, so classes registered afterwards (whose tables occupy higher
+  // indices) remain reachable via getClassTable's scan from the new curIdx.
+  restoreClassScope(classScope: Table): void {
+    this.tables[++this.curIdx] = classScope
+    this.curTable = classScope
     this.curClassIdx = this.curIdx
   }
 
@@ -344,6 +388,17 @@ export class SymbolTable {
       return root.get(key)!.info as ClassInfo
     }
 
+    // A dotted name (e.g. "Outer.Inner") may be a source-qualified reference
+    // to a nested type, whose registered binary name joins segments with
+    // '$' instead of '.' - try that before falling through to import/package
+    // resolution (which treats dots as package separators instead).
+    if (name.includes('.')) {
+      key = generateSymbol(name.replace(/\./g, '$'), SymbolType.CLASS)
+      if (root.has(key)) {
+        return root.get(key)!.info as ClassInfo
+      }
+    }
+
     if (this.importedClassMap.has(name)) {
       const fullName = this.importedClassMap.get(name)!
       key = generateSymbol(fullName, SymbolType.CLASS)
@@ -370,6 +425,22 @@ export class SymbolTable {
       const table = this.tables[i]
       if (table.has(key)) {
         return table.get(key)!.children
+      }
+    }
+
+    // A dotted name (e.g. "Outer.Inner") may be a source-qualified reference
+    // to a nested type, whose registered binary name joins segments with
+    // '$' instead of '.' - try that before falling through to import/package
+    // resolution (which treats dots as package separators instead). This is
+    // also how a qualified-typed local variable/field resolves its own
+    // member table when dispatching a method/field access on it.
+    if (name.includes('.')) {
+      key = generateSymbol(name.replace(/\./g, '$'), SymbolType.CLASS)
+      for (let i = this.curIdx; i >= 0; i--) {
+        const table = this.tables[i]
+        if (table.has(key)) {
+          return table.get(key)!.children
+        }
       }
     }
 

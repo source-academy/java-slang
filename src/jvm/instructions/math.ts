@@ -167,7 +167,7 @@ export function runIdiv(thread: Thread): void {
   const value1 = popResult.result
 
   if (value2 === 0) {
-    thread.throwNewException('java/lang/ArithmeticException', 'Division by 0')
+    thread.throwNewException('java/lang/ArithmeticException', '/ by zero')
     return
   }
 
@@ -189,7 +189,7 @@ export function runLdiv(thread: Thread): void {
   const value1: bigint = popResult.result
 
   if (value2 === BigInt(0)) {
-    thread.throwNewException('java/lang/ArithmeticException', 'Division by 0')
+    thread.throwNewException('java/lang/ArithmeticException', '/ by zero')
     return
   }
 
@@ -233,7 +233,7 @@ export function runIrem(thread: Thread): void {
   const value1 = popResult.result
 
   if (value2 === 0) {
-    thread.throwNewException('java/lang/ArithmeticException', 'Division by 0')
+    thread.throwNewException('java/lang/ArithmeticException', '/ by zero')
     return
   }
   // JS bitwise can only return 32-bit ints
@@ -250,7 +250,7 @@ export function runLrem(thread: Thread): void {
   const value1: bigint = popResult.result
 
   if (value2 === BigInt(0)) {
-    thread.throwNewException('java/lang/ArithmeticException', 'Division by 0')
+    thread.throwNewException('java/lang/ArithmeticException', '/ by zero')
     return
   }
 

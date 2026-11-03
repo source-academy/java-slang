@@ -1,6 +1,6 @@
 import JVM from './jvm'
 import { ThreadStatus } from './constants'
-import { StackFrame, InternalStackFrame, JavaStackFrame } from './stackframe'
+import { StackFrame, InternalStackFrame, NativeStackFrame } from './stackframe'
 import { ThreadPool } from './threadpool'
 import { Code } from './types/class/Attributes'
 import { ReferenceClassData, ClassData } from './types/class/ClassData'
@@ -44,13 +44,23 @@ export default class Thread {
    * @param thread
    */
   initialize(thread: Thread) {
-    const init = this.threadClass.getMethod('<init>()V') as Method
-    if (!init) {
+    const init = this.threadClass.getMethod(
+      '<init>(Ljava/lang/ThreadGroup;Ljava/lang/String;)V'
+    ) as Method
+    const groupField = this.threadClass.lookupField('groupLjava/lang/ThreadGroup;')
+    if (!init || !groupField) {
       throw new Error('Thread constructor not found')
     }
 
+    // the initial thread is named after the main method, like in a real JVM
     thread.invokeStackFrame(
-      new InternalStackFrame(this.threadClass, init, 0, [this.javaObject], () => {})
+      new InternalStackFrame(
+        this.threadClass,
+        init,
+        0,
+        [this.javaObject, this.javaObject.getField(groupField), this.jvm.getInternedString('main')],
+        () => {}
+      )
     )
   }
 
@@ -367,13 +377,12 @@ export default class Thread {
 
   /**
    * Throws a new exception of the given class with the given message.
-   * @todo message currently ignored.
    *
    * @param className class name of the exception
-   * @param _msg message of the exception
+   * @param msg message of the exception, an empty message leaves it unset
    * @returns
    */
-  throwNewException(className: string, _msg: string) {
+  throwNewException(className: string, msg: string) {
     // Initialize exception
     const clsRes = this.getClass().getLoader().getClass(className)
     if (clsRes.status === ResultType.ERROR) {
@@ -394,7 +403,12 @@ export default class Thread {
       return
     }
 
-    this.throwException(exceptionCls.instantiate())
+    const exception = exceptionCls.instantiate()
+    const msgField = exceptionCls.lookupField('detailMessageLjava/lang/String;')
+    if (msg && msgField) {
+      exception.putField(msgField, this.jvm.getInternedString(msg))
+    }
+    this.throwException(exception)
   }
 
   throwException(exception: JvmObject) {
@@ -465,8 +479,17 @@ export default class Thread {
       throw new Error('Undefined exception thrown')
     }
 
+    // implemented natively, see 'dispatchUncaughtException(Ljava/lang/Throwable;)V' in
+    // stdlib/java/lang/Thread.ts
     this.invokeStackFrame(
-      new JavaStackFrame(this.threadClass, unhandledMethod, 0, [this.getJavaObject(), exception])
+      new NativeStackFrame(
+        this.threadClass,
+        unhandledMethod,
+        0,
+        [this.getJavaObject(), exception],
+        0,
+        this.jvm.getJNI()
+      )
     )
   }
 

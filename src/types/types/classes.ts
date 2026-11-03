@@ -26,6 +26,7 @@ export class ClassType extends ClassOrInterfaceType implements Class {
   public readonly name: string
   private _modifiers = new Modifiers()
   private _parent: Class = new ObjectClass()
+  private _enclosingClass: Class | null = null
 
   private _constructors: Method[] = []
   private _fields = new Map<string, Type>()
@@ -39,13 +40,27 @@ export class ClassType extends ClassOrInterfaceType implements Class {
   public accessField(_name: string, location: Location): Type | TypeCheckerError {
     const field = this._fields.get(_name)
     if (field) return field
-    return this._parent.accessField(_name, location)
+    const parentResult = this._parent.accessField(_name, location)
+    if (!(parentResult instanceof TypeCheckerError)) return parentResult
+    if (this._enclosingClass) return this._enclosingClass.accessField(_name, location)
+    return parentResult
   }
 
   public accessMethod(name: string, location: Location): Method[] | TypeCheckerError {
     const method = this._methods.get(name)
     if (method) return method
-    return this._parent.accessMethod(name, location)
+    const parentResult = this._parent.accessMethod(name, location)
+    if (!(parentResult instanceof TypeCheckerError)) return parentResult
+    if (this._enclosingClass) return this._enclosingClass.accessMethod(name, location)
+    return parentResult
+  }
+
+  public getEnclosingClass(): Class | null {
+    return this._enclosingClass
+  }
+
+  public setEnclosingClass(enclosingClass: Class): void {
+    this._enclosingClass = enclosingClass
   }
 
   public addConstructor(method: Method, location: Location): void | TypeCheckerError {

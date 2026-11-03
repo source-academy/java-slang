@@ -4,6 +4,7 @@ import Thread from '../../../thread'
 import { ReferenceClassData } from '../../../types/class/ClassData'
 import { Method } from '../../../types/class/Method'
 import { JvmObject } from '../../../types/reference/Object'
+import { j2jsString } from '../../../utils'
 
 const functions = {
   'isAlive()Z': (thread: Thread, locals: any[]) => {
@@ -51,6 +52,35 @@ const functions = {
       },
       Number(locals[0] as bigint)
     )
+  },
+
+  /**
+   * Replaces the JDK's version, which prints the stack trace through classes that are not
+   * bundled and that raise further uncaught exceptions, making the thread report forever.
+   * Reports the exception once, as the default handler of a real JVM would:
+   * Exception in thread "main" java.lang.ArithmeticException: / by zero
+   * @param thread
+   * @param locals
+   */
+  'dispatchUncaughtException(Ljava/lang/Throwable;)V': (thread: Thread, locals: any[]) => {
+    const threadObj = locals[0] as JvmObject
+    const exception = locals[1] as JvmObject
+
+    const nameField = threadObj.getClass().lookupField('nameLjava/lang/String;')
+    const name = nameField ? (threadObj.getField(nameField) as JvmObject | null) : null
+    const msgField = exception.getClass().lookupField('detailMessageLjava/lang/String;')
+    const msg = msgField ? (exception.getField(msgField) as JvmObject | null) : null
+
+    const className = exception.getClass().getName().replace(/\//g, '.')
+    thread
+      .getJVM()
+      .getSystem()
+      .stderr(
+        `Exception in thread "${name ? j2jsString(name) : 'main'}" ${className}${
+          msg ? `: ${j2jsString(msg)}` : ''
+        }\n`
+      )
+    thread.returnStackFrame()
   },
 
   'start0()V': (thread: Thread, locals: any[]) => {

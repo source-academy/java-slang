@@ -124,3 +124,39 @@ describe("extract multiple NormalClassDeclaration correctly", () => {
     expect(ast).toEqual(expectedAst);
   });
 });
+
+describe("extract nested NormalClassDeclaration correctly", () => {
+  it("extract a static nested class inside a class body correctly", () => {
+    const programStr = `
+      class Outer {
+        static class Inner {}
+      }
+    `;
+
+    const expectedAst: AST = {
+      kind: "CompilationUnit",
+      importDeclarations: [],
+      topLevelClassOrInterfaceDeclarations: [
+        {
+          kind: "NormalClassDeclaration",
+          classModifier: [],
+          typeIdentifier: "Outer",
+          classBody: [
+            {
+              kind: "NormalClassDeclaration",
+              classModifier: ["static"],
+              typeIdentifier: "Inner",
+              classBody: [],
+              location: expect.anything(),
+            },
+          ],
+          location: expect.anything(),
+        },
+      ],
+      location: expect.anything(),
+    };
+
+    const ast = parse(programStr);
+    expect(ast).toEqual(expectedAst);
+  });
+});
