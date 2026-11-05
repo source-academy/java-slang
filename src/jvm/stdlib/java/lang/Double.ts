@@ -11,7 +11,7 @@ const functions = {
   'longBitsToDouble(J)D': (thread: Thread, locals: any[]) => {
     const long = locals[0]
     const dataview = new DataView(new ArrayBuffer(8))
-    dataview.getBigInt64(0, long)
+    dataview.setBigInt64(0, long)
     thread.returnStackFrame64(dataview.getFloat64(0))
   }
 }

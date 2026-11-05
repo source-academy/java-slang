@@ -34,8 +34,12 @@ import { MethodDeclaration, UnannType } from '../ast/types/classes'
 import { unannTypeToString } from '../types/ast/utils'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
+  AbstractClassInstantiationError,
   AmbiguousMethodCallError,
+  BadOperandTypesError,
   ConstructNotSupportedError,
+  EnumInstantiationError,
+  InconvertibleTypesError,
   NoMethodMatchingSignatureError,
   NonStaticReferenceInStaticContextError
 } from './error'
@@ -174,6 +178,8 @@ const normalStoreOp: { [type: string]: OPCODE } = {
   Z: OPCODE.ISTORE
 }
 
+// Opcodes for widening primitive conversions. byte/short/char are represented as int on the
+// operand stack, so their conversions are keyed (and emitted) as int conversions.
 const typeConversionsImplicit: { [key: string]: OPCODE } = {
   'I->F': OPCODE.I2F,
   'I->D': OPCODE.I2D,
@@ -183,15 +189,211 @@ const typeConversionsImplicit: { [key: string]: OPCODE } = {
   'J->D': OPCODE.L2D
 }
 
+// JLS 5.1.2: legal widening primitive conversions.
+const WIDENING_TARGETS: { [from: string]: string[] } = {
+  B: ['S', 'I', 'J', 'F', 'D'],
+  S: ['I', 'J', 'F', 'D'],
+  C: ['I', 'J', 'F', 'D'],
+  I: ['J', 'F', 'D'],
+  J: ['F', 'D'],
+  F: ['D']
+}
+
+const PRIMITIVE_NAMES: { [descriptor: string]: string } = {
+  B: 'byte',
+  S: 'short',
+  C: 'char',
+  I: 'int',
+  J: 'long',
+  F: 'float',
+  D: 'double'
+}
+
+const INT_LIKE_TYPES = ['B', 'S', 'C', 'I']
+const NUMERIC_TYPES = ['B', 'S', 'C', 'I', 'J', 'F', 'D']
+const isIntLike = (t: string) => INT_LIKE_TYPES.includes(t)
+const isNumeric = (t: string) => NUMERIC_TYPES.includes(t)
+const isWide = (t: string) => t === 'J' || t === 'D'
+const slotsOf = (t: string) => (isWide(t) ? 2 : 1)
+
+function isWideningPrimitive(from: string, to: string): boolean {
+  return WIDENING_TARGETS[from]?.includes(to) ?? false
+}
+
+function wideningOpcode(from: string, to: string): OPCODE | undefined {
+  return typeConversionsImplicit[`${isIntLike(from) ? 'I' : from}->${to}`]
+}
+
+// JLS 5.6.2: binary numeric promotion.
+function binaryPromotion(left: string, right: string): string {
+  if (left === 'D' || right === 'D') return 'D'
+  if (left === 'F' || right === 'F') return 'F'
+  if (left === 'J' || right === 'J') return 'J'
+  return 'I'
+}
+
+const INTEGER_LITERAL_KINDS = [
+  'DecimalIntegerLiteral',
+  'HexIntegerLiteral',
+  'OctalIntegerLiteral',
+  'BinaryIntegerLiteral'
+]
+
+/**
+ * Parses the text of an integer literal (JLS 3.10.1): an optional sign, a decimal, hexadecimal
+ * (`0x`), octal (leading `0`) or binary (`0b`) numeral that may contain `_` separators, and an
+ * optional `L` suffix. Hexadecimal, octal and binary literals denote the two's complement bit
+ * pattern of an int or long, so `0xFFFFFFFF` is -1; decimal literals must fit the signed range.
+ */
+function parseIntegerLiteral(text: string): { value: bigint; isLong: boolean } {
+  const match = /^([+-]?)(0[xX][0-9a-fA-F_]+|0[bB][01_]+|[0-9_]+)([lL]?)$/.exec(text)
+  if (!match) throw new Error(`Malformed integer literal: ${text}`)
+  const [, sign, numeral, suffix] = match
+  const isLong = suffix !== ''
+  const digits = numeral.replace(/_/g, '')
+
+  let magnitude: bigint
+  let isDecimal = false
+  if (/^0[xX]/.test(digits)) {
+    magnitude = BigInt(digits)
+  } else if (/^0[bB]/.test(digits)) {
+    magnitude = BigInt(digits)
+  } else if (/^0[0-9]/.test(digits)) {
+    magnitude = BigInt('0o' + digits.slice(1)) // octal
+  } else {
+    magnitude = BigInt(digits)
+    isDecimal = true
+  }
+
+  const bits = isLong ? 64 : 32
+  const negative = sign === '-'
+  if (isDecimal) {
+    // a decimal literal may be one larger than the maximum, but only when it is negated
+    const limit = BigInt(1) << BigInt(bits - 1)
+    if (magnitude > limit || (magnitude === limit && !negative)) {
+      throw new Error(`Integer number too large: ${text}`)
+    }
+  } else if (magnitude >> BigInt(bits)) {
+    throw new Error(`Integer number too large: ${text}`)
+  }
+  const value = BigInt.asIntN(bits, negative ? -magnitude : magnitude)
+  return { value, isLong }
+}
+
+const INT_RANGES: { [descriptor: string]: [number, number] } = {
+  B: [-128, 127],
+  S: [-32768, 32767],
+  C: [0, 65535]
+}
+
+/**
+ * Evaluates a constant expression of type byte, short, char or int (JLS 15.29), returning
+ * `undefined` if the expression is not such a constant.
+ */
+function evaluateIntConstant(node: Node): number | undefined {
+  switch (node.kind) {
+    case 'Literal': {
+      const { kind, value } = node.literalType
+      if (kind === 'CharacterLiteral') return value.charCodeAt(0)
+      if (INTEGER_LITERAL_KINDS.includes(kind)) {
+        const literal = parseIntegerLiteral(value)
+        return literal.isLong ? undefined : Number(literal.value)
+      }
+      return undefined
+    }
+    case 'PrefixExpression': {
+      const v = evaluateIntConstant(node.expression)
+      if (v === undefined) return undefined
+      switch (node.operator) {
+        case '+':
+          return v
+        case '-':
+          return -v | 0
+        case '~':
+          return ~v
+      }
+      return undefined
+    }
+    case 'BinaryExpression': {
+      const l = evaluateIntConstant(node.left)
+      const r = evaluateIntConstant(node.right)
+      if (l === undefined || r === undefined) return undefined
+      switch (node.operator) {
+        case '+':
+          return (l + r) | 0
+        case '-':
+          return (l - r) | 0
+        case '*':
+          return Math.imul(l, r)
+        case '/':
+          return r === 0 ? undefined : Math.trunc(l / r) | 0
+        case '%':
+          return r === 0 ? undefined : l % r | 0
+        case '&':
+          return l & r
+        case '|':
+          return l | r
+        case '^':
+          return l ^ r
+        case '<<':
+          return l << (r & 31)
+        case '>>':
+          return l >> (r & 31)
+        case '>>>':
+          return (l >>> (r & 31)) | 0
+      }
+      return undefined
+    }
+    case 'CastExpression': {
+      if (!node.isPrimitiveCast) return undefined
+      const v = evaluateIntConstant(node.expression)
+      if (v === undefined) return undefined
+      switch (node.castType) {
+        case 'int':
+          return v
+        case 'byte':
+          return (v << 24) >> 24
+        case 'short':
+          return (v << 16) >> 16
+        case 'char':
+          return v & 0xffff
+      }
+      return undefined
+    }
+  }
+  return undefined
+}
+
+/**
+ * JLS 5.2: an int-typed constant expression may be assigned to a byte, short or char
+ * variable if its value is representable in that type.
+ */
+function isNarrowableConstant(node: Node | undefined, toType: string): boolean {
+  if (!node || !(toType in INT_RANGES)) return false
+  const value = evaluateIntConstant(node)
+  if (value === undefined) return false
+  const [min, max] = INT_RANGES[toType]
+  return value >= min && value <= max
+}
+
 type CompileResult = {
   stackSize: number
   resultType: string
 }
 const EMPTY_TYPE: string = ''
 
+/**
+ * The internal class name in a type: `LFoo;` becomes `Foo`, and a name that is not a descriptor
+ * (e.g. the bare `Leaf` that `new Leaf()` has as its type) is returned unchanged. Stripping a
+ * leading `L` unconditionally would turn `Leaf` into `eaf`.
+ */
+function classNameOf(type: string): string {
+  return type.startsWith('L') && type.endsWith(';') ? type.slice(1, -1) : type
+}
+
 function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGenerator): boolean {
-  const cleanFrom = fromType.replace(/^L|;$/g, '')
-  const cleanTo = toType.replace(/^L|;$/g, '')
+  const cleanFrom = classNameOf(fromType)
+  const cleanTo = classNameOf(toType)
   if (cleanFrom === cleanTo) return true
 
   try {
@@ -205,6 +407,94 @@ function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGener
     return false
   }
   return false
+}
+
+/** `className` followed by its superclasses, nearest first (ending with java/lang/Object). */
+function classChain(className: string, cg: CodeGenerator): string[] {
+  const chain: string[] = []
+  let name: string | undefined = className
+  while (name !== undefined && !chain.includes(name)) {
+    chain.push(name)
+    try {
+      name = cg.symbolTable.queryClass(name).parentClassName
+    } catch (e) {
+      break
+    }
+  }
+  return chain
+}
+
+/**
+ * The methods in `candidates` that `startClass` has, declared by itself or inherited, where a
+ * method overriding another with the same signature hides it (the one declared nearest to
+ * `startClass` is kept).
+ */
+function methodsOfClass(
+  candidates: MethodInfos,
+  startClass: string,
+  cg: CodeGenerator
+): MethodInfos {
+  const chain = classChain(startClass, cg)
+  const nearest = new Map<string, MethodInfos[number]>()
+  for (const method of candidates) {
+    const depth = chain.indexOf(method.className)
+    if (depth < 0) continue
+    const existing = nearest.get(method.typeDescriptor)
+    if (existing === undefined || depth < chain.indexOf(existing.className)) {
+      nearest.set(method.typeDescriptor, method)
+    }
+  }
+  return [...nearest.values()]
+}
+
+/** Human-readable name of a type descriptor, for error messages. */
+function describeType(descriptor: string): string {
+  if (descriptor === 'Z') return 'boolean'
+  if (descriptor in PRIMITIVE_NAMES) return PRIMITIVE_NAMES[descriptor]
+  if (descriptor === EMPTY_TYPE) return '<unknown>'
+  return classNameOf(descriptor).replace(/\//g, '.')
+}
+
+const ACC_INTERFACE = 0x0200
+const ACC_ABSTRACT = 0x0400
+
+/**
+ * Whether `sub` is `sup` or one of its subclasses. Returns `undefined` when this cannot be
+ * determined because a class in the chain is unknown to the symbol table.
+ */
+function isSubclassOf(sub: string, sup: string, cg: CodeGenerator): boolean | undefined {
+  if (sub === sup || sup === 'java/lang/Object') return true
+  try {
+    let current = cg.symbolTable.queryClass(sub)
+    while (current.parentClassName) {
+      if (current.parentClassName === sup) return true
+      current = cg.symbolTable.queryClass(current.parentClassName)
+    }
+  } catch (e) {
+    return undefined
+  }
+  return false
+}
+
+/**
+ * JLS 5.5.1: a cast between two classes is only legal if one is a subclass of the other.
+ * Anything that cannot be decided statically (arrays, interfaces, classes the symbol table does
+ * not know) is left to the runtime check.
+ */
+function assertReferenceCastIsLegal(fromType: string, toType: string, cg: CodeGenerator) {
+  if (!fromType || fromType.startsWith('[') || toType.startsWith('[')) return
+  const from = classNameOf(fromType)
+  const to = classNameOf(toType)
+  try {
+    const isInterface = (name: string) =>
+      (cg.symbolTable.queryClass(name).accessFlags & ACC_INTERFACE) !== 0
+    if (isInterface(from) || isInterface(to)) return
+  } catch (e) {
+    return
+  }
+  if (isSubclassOf(from, to, cg) === false && isSubclassOf(to, from, cg) === false) {
+    throw new InconvertibleTypesError(from.replace(/\//g, '.'), to.replace(/\//g, '.'))
+  }
 }
 
 // Primitive descriptor -> its wrapper class' internal name.
@@ -252,7 +542,7 @@ function unboxIfWrapper(type: string, cg: CodeGenerator): string {
   const primitive = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[type]
   if (!primitive) return type
   const methodRef = cg.constantPoolManager.indexMethodrefInfo(
-    type.replace(/^L|;$/g, ''),
+    classNameOf(type),
     WRAPPER_UNBOX_METHODS[primitive],
     `()${primitive}`
   )
@@ -270,7 +560,7 @@ function tryBoxingConversion(fromType: string, toType: string, cg: CodeGenerator
 
   // primitive -> wrapper
   const boxTarget = PRIMITIVE_WRAPPERS[fromType]
-  if (boxTarget && toType.replace(/^L|;$/g, '') === boxTarget) {
+  if (boxTarget && classNameOf(toType) === boxTarget) {
     const methodRef = cg.constantPoolManager.indexMethodrefInfo(
       boxTarget,
       'valueOf',
@@ -282,7 +572,7 @@ function tryBoxingConversion(fromType: string, toType: string, cg: CodeGenerator
 
   // wrapper -> primitive
   const unboxSource = PRIMITIVE_WRAPPERS[toType]
-  if (unboxSource && fromType.replace(/^L|;$/g, '') === unboxSource) {
+  if (unboxSource && classNameOf(fromType) === unboxSource) {
     const methodRef = cg.constantPoolManager.indexMethodrefInfo(
       unboxSource,
       WRAPPER_UNBOX_METHODS[toType],
@@ -295,8 +585,21 @@ function tryBoxingConversion(fromType: string, toType: string, cg: CodeGenerator
   return null
 }
 
-function handleImplicitTypeConversion(fromType: string, toType: string, cg: CodeGenerator): number {
-  if (fromType === toType || toType.replace(/^L|;$/g, '') === 'java/lang/String') {
+/**
+ * Emits the code converting the value on top of the operand stack from `fromType` to `toType`
+ * in an assignment context (JLS 5.2) and returns the net change in operand stack slots.
+ * This covers identity, widening primitive and reference conversions, boxing/unboxing
+ * (optionally followed by widening) and narrowing of int constant expressions. `node` is the
+ * expression that produced the value, which is needed to recognise such constants; omit it for
+ * contexts where constant narrowing is not allowed (e.g. method invocation).
+ */
+function handleImplicitTypeConversion(
+  fromType: string,
+  toType: string,
+  cg: CodeGenerator,
+  node?: Node
+): number {
+  if (fromType === toType || classNameOf(toType) === 'java/lang/String') {
     return 0
   }
 
@@ -308,23 +611,54 @@ function handleImplicitTypeConversion(fromType: string, toType: string, cg: Code
     if (boxingStackChange !== null) {
       return boxingStackChange
     }
+
+    // int constant narrowed to byte/short/char, then boxed (e.g. `Byte b = 1;`)
+    const wrappedPrimitive = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[toType]
+    if (
+      wrappedPrimitive &&
+      isIntLike(fromType) &&
+      isNarrowableConstant(node, wrappedPrimitive) &&
+      tryBoxingConversion(wrappedPrimitive, toType, cg) !== null
+    ) {
+      return 0
+    }
+
+    // unboxing followed by widening (e.g. `long l = integerObject;`)
+    const unboxedPrimitive = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[fromType]
+    if (unboxedPrimitive && isWideningPrimitive(unboxedPrimitive, toType)) {
+      unboxIfWrapper(fromType, cg)
+      const widening = wideningOpcode(unboxedPrimitive, toType)
+      if (widening !== undefined) cg.code.push(widening)
+      return slotsOf(toType) - 1
+    }
+
+    // boxing followed by widening reference conversion (e.g. `Object o = 5;`, `Number n = 1;`)
+    const boxClass = PRIMITIVE_WRAPPERS[fromType]
+    if (boxClass) {
+      const boxDescriptor = `L${boxClass};`
+      const isNumberWrapper = !['Z', 'C'].includes(fromType)
+      if (
+        toType === 'Ljava/lang/Object;' ||
+        (toType === 'Ljava/lang/Number;' && isNumberWrapper) ||
+        areClassTypesCompatible(boxDescriptor, toType, cg)
+      ) {
+        return tryBoxingConversion(fromType, boxDescriptor, cg) as number
+      }
+    }
     throw new Error(`Unsupported class type conversion: ${fromType} -> ${toType}`)
   }
 
-  const conversionKey = `${fromType}->${toType}`
-  if (conversionKey in typeConversionsImplicit) {
-    cg.code.push(typeConversionsImplicit[conversionKey])
-    if (!['J', 'D'].includes(fromType) && ['J', 'D'].includes(toType)) {
-      return 1
-    } else if (!['J', 'D'].includes(toType) && ['J', 'D'].includes(fromType)) {
-      return -1
-      return -1
-    } else {
-      return 0
-    }
-  } else {
-    throw new Error(`Unsupported implicit type conversion: ${conversionKey}`)
+  if (isWideningPrimitive(fromType, toType)) {
+    const opcode = wideningOpcode(fromType, toType)
+    if (opcode !== undefined) cg.code.push(opcode)
+    return slotsOf(toType) - slotsOf(fromType)
   }
+
+  if (isIntLike(fromType) && isNarrowableConstant(node, toType)) {
+    return 0
+  }
+
+  throw new Error(`Unsupported implicit type conversion: ${fromType}->${toType}`)
 }
 
 function generateStringConversion(valueType: string, cg: CodeGenerator): void {
@@ -337,12 +671,15 @@ function generateStringConversion(valueType: string, cg: CodeGenerator): void {
     F: '(F)Ljava/lang/String;', // float
     D: '(D)Ljava/lang/String;', // double
     Z: '(Z)Ljava/lang/String;', // boolean
-    B: '(B)Ljava/lang/String;', // byte
-    S: '(S)Ljava/lang/String;', // short
+    B: '(I)Ljava/lang/String;', // byte (promoted to int)
+    S: '(I)Ljava/lang/String;', // short (promoted to int)
     C: '(C)Ljava/lang/String;' // char
   }
 
-  const descriptor = valueOfDescriptors[valueType]
+  const isReference = valueType.startsWith('L') || valueType.startsWith('[')
+  const descriptor = isReference
+    ? '(Ljava/lang/Object;)Ljava/lang/String;'
+    : valueOfDescriptors[valueType]
   if (!descriptor) {
     throw new Error(`Unsupported primitive type for String conversion: ${valueType}`)
   }
@@ -355,7 +692,7 @@ function generateStringConversion(valueType: string, cg: CodeGenerator): void {
 function hashCode(str: string): number {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
-    hash = hash * 31 + str.charCodeAt(i) // Simulate Java's overflow behavior
+    hash = (Math.imul(hash, 31) + str.charCodeAt(i)) | 0 // Java's 32-bit overflow behavior
   }
   return hash
 }
@@ -421,17 +758,38 @@ function getExpressionType(node: Node, cg: CodeGenerator): string {
     throw new ConstructNotSupportedError(node.kind)
   }
   const originalCode = [...cg.code] // Preserve the original code state
+  const originalLabelCount = cg.labels.length
   const resultType = codeGenerators[node.kind](node, cg).resultType
   cg.code = originalCode // Restore the original code state
+  cg.labels.length = originalLabelCount // Drop labels pointing into the discarded code
   return resultType
 }
 
 function isSubtype(fromType: string, toType: string, cg: CodeGenerator): boolean {
   return (
     fromType === toType ||
-    typeConversionsImplicit[`${fromType}->${toType}`] !== undefined ||
+    isWideningPrimitive(fromType, toType) ||
     areClassTypesCompatible(fromType, toType, cg)
   )
+}
+
+/**
+ * JLS 15.12.2.3 / 5.3: whether a value of `fromType` can be passed for a `toType` parameter in a
+ * "loose" invocation, which additionally allows boxing and unboxing (each followed by widening).
+ */
+function isLooselyInvocable(fromType: string, toType: string, cg: CodeGenerator): boolean {
+  if (isSubtype(fromType, toType, cg)) return true
+  const boxClass = PRIMITIVE_WRAPPERS[fromType]
+  if (boxClass) {
+    return (
+      toType === `L${boxClass};` ||
+      toType === 'Ljava/lang/Object;' ||
+      (toType === 'Ljava/lang/Number;' && !['Z', 'C'].includes(fromType)) ||
+      areClassTypesCompatible(`L${boxClass};`, toType, cg)
+    )
+  }
+  const unboxed = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[fromType]
+  return unboxed !== undefined && (unboxed === toType || isWideningPrimitive(unboxed, toType))
 }
 
 const isNullLiteral = (node: Node) => {
@@ -443,6 +801,169 @@ const createIntLiteralNode = (int: number): Literal => {
     kind: 'Literal',
     literalType: { kind: 'DecimalIntegerLiteral', value: int.toString() }
   }
+}
+
+const compareJumpOp: { [op: string]: OPCODE } = {
+  '==': OPCODE.IFEQ,
+  '!=': OPCODE.IFNE,
+  '<': OPCODE.IFLT,
+  '<=': OPCODE.IFLE,
+  '>': OPCODE.IFGT,
+  '>=': OPCODE.IFGE
+}
+
+const negatedComparison: { [op: string]: string } = {
+  '==': '!=',
+  '!=': '==',
+  '<': '>=',
+  '<=': '>',
+  '>': '<=',
+  '>=': '<'
+}
+
+/**
+ * Compiles the comparison `left op right` as a conditional jump to `targetLabel`, taken when the
+ * comparison evaluates to `jumpIfTrue`. Operands are promoted per JLS 5.6.2 (so long, float and
+ * double operands are compared with the matching *CMP instruction).
+ */
+function compileComparison(
+  left: Node,
+  right: Node,
+  op: string,
+  jumpIfTrue: boolean,
+  targetLabel: Label,
+  cg: CodeGenerator
+): CompileResult {
+  const boolType = cg.symbolTable.generateFieldDescriptor('boolean')
+  const nullCheck = (jumpIfNull: boolean) =>
+    cg.addBranchInstr(jumpIfNull ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
+
+  if (isNullLiteral(left) && isNullLiteral(right)) {
+    if (jumpIfTrue === (op === '==')) {
+      cg.addBranchInstr(OPCODE.GOTO, targetLabel)
+    }
+    return { stackSize: 1, resultType: boolType }
+  }
+  if (isNullLiteral(left) || isNullLiteral(right)) {
+    // the non-null operand is the one pushed onto the stack
+    const l = compile(isNullLiteral(left) ? right : left, cg)
+    nullCheck(jumpIfTrue === (op === '=='))
+    return { stackSize: l.stackSize, resultType: boolType }
+  }
+
+  // A primitive is a single-character descriptor; everything else non-empty is a reference.
+  const isReference = (t: string) => t.length > 1
+  const isWrapper = (t: string) => t in WRAPPER_DESCRIPTOR_TO_PRIMITIVE
+  const isEquality = op === '==' || op === '!='
+
+  // JLS 15.21.3: `==`/`!=` between two references (wrappers included) compares the references,
+  // so a wrapper is only unboxed when the other operand is not a reference.
+  const l = compile(left, cg)
+  const rawLeftType = l.resultType
+  const unboxLeft =
+    isWrapper(rawLeftType) && !(isEquality && isReference(getExpressionType(right, cg)))
+  const leftType = unboxLeft ? unboxIfWrapper(rawLeftType, cg) : rawLeftType
+  const insertConversionIndex = cg.code.length
+  cg.code.push(OPCODE.NOP)
+  const r = compile(right, cg)
+  const unboxRight = isWrapper(r.resultType) && !(isEquality && isReference(rawLeftType))
+  const rightType = unboxRight ? unboxIfWrapper(r.resultType, cg) : r.resultType
+
+  // JLS 15.20.1, 15.21: relational operators need numeric operands; equality operators need two
+  // numeric, two boolean or two reference operands.
+  const operandsAreValid = isEquality
+    ? (isNumeric(leftType) && isNumeric(rightType)) ||
+      (leftType === 'Z' && rightType === 'Z') ||
+      (isReference(leftType) && isReference(rightType))
+    : isNumeric(leftType) && isNumeric(rightType)
+  if (!operandsAreValid) {
+    throw new BadOperandTypesError(op, describeType(leftType), describeType(rightType))
+  }
+
+  if (isReference(leftType) && isReference(rightType)) {
+    // the operands of a reference comparison must be castable to one another
+    assertReferenceCastIsLegal(leftType, rightType, cg)
+  }
+
+  const effectiveOp = jumpIfTrue ? op : negatedComparison[op]
+  let stackSize: number
+  if (isNumeric(leftType) && isNumeric(rightType)) {
+    const promoted = binaryPromotion(leftType, rightType)
+    const leftConversion = wideningOpcode(leftType, promoted)
+    if (leftConversion !== undefined) cg.code[insertConversionIndex] = leftConversion
+    const rightConversion = wideningOpcode(rightType, promoted)
+    if (rightConversion !== undefined) cg.code.push(rightConversion)
+    const slots = slotsOf(promoted)
+    stackSize = Math.max(l.stackSize, slots + Math.max(r.stackSize, slots))
+
+    if (promoted === 'I') {
+      cg.addBranchInstr(jumpIfTrue ? logicalOp[op] : reverseLogicalOp[op], targetLabel)
+    } else {
+      // For NaN operands every comparison but != must be false: pick the *CMP variant that
+      // yields a value for which the (possibly negated) jump is not taken.
+      const nanResultsInGreater = op === '<' || op === '<='
+      const cmp = {
+        J: OPCODE.LCMP,
+        F: nanResultsInGreater ? OPCODE.FCMPG : OPCODE.FCMPL,
+        D: nanResultsInGreater ? OPCODE.DCMPG : OPCODE.DCMPL
+      }[promoted] as OPCODE
+      cg.code.push(cmp)
+      cg.addBranchInstr(compareJumpOp[effectiveOp], targetLabel)
+    }
+  } else {
+    stackSize = Math.max(l.stackSize, slotsOf(leftType) + r.stackSize)
+    if (isReference(leftType)) {
+      cg.addBranchInstr(effectiveOp === '==' ? OPCODE.IF_ACMPEQ : OPCODE.IF_ACMPNE, targetLabel)
+    } else {
+      cg.addBranchInstr(jumpIfTrue ? logicalOp[op] : reverseLogicalOp[op], targetLabel)
+    }
+  }
+  return { stackSize, resultType: boolType }
+}
+
+/**
+ * Emits code that leaves a new array on the stack for the initialiser `{a, b, ...}`
+ * of an array of type `typeName` (e.g. `int[]`, `String[][]`). Nested braces
+ * initialise the sub-arrays. Returns the maximum stack depth used.
+ */
+function compileArrayInitializer(init: any[], typeName: string, cg: CodeGenerator): number {
+  if (!typeName.endsWith('[]')) {
+    throw new Error(`array initializer is not allowed for the non-array type ${typeName}`)
+  }
+  const elemTypeName = typeName.slice(0, -2)
+  const elemDescriptor = cg.symbolTable.generateFieldDescriptor(elemTypeName)
+  let maxStack = compile(createIntLiteralNode(init.length), cg).stackSize
+  if (elemDescriptor in arrayTypeCode) {
+    cg.code.push(OPCODE.NEWARRAY, arrayTypeCode[elemDescriptor])
+  } else {
+    // a reference element type: a class (`Ljava/lang/String;`) or a nested array (`[I`)
+    const className = elemDescriptor.startsWith('[')
+      ? elemDescriptor
+      : cg.symbolTable.queryClass(elemTypeName).name
+    cg.code.push(OPCODE.ANEWARRAY, 0, cg.constantPoolManager.indexClassInfo(className))
+  }
+
+  init.forEach((val, i) => {
+    cg.code.push(OPCODE.DUP)
+    const size1 = compile(createIntLiteralNode(i), cg).stackSize
+    let valueStack: number
+    let conversionChange = 0
+    if (Array.isArray(val)) {
+      valueStack = compileArrayInitializer(val, elemTypeName, cg)
+    } else {
+      const { stackSize, resultType } = compile(val as Expression, cg)
+      valueStack = stackSize
+      conversionChange = handleImplicitTypeConversion(
+        resultType,
+        elemDescriptor,
+        cg,
+        val as Expression
+      )
+    }
+    cg.code.push(elemDescriptor in arrayStoreOp ? arrayStoreOp[elemDescriptor] : OPCODE.AASTORE)
+    maxStack = Math.max(maxStack, 2 + size1 + valueStack + conversionChange)
+  })
+  return maxStack
 }
 
 function compile(node: Node, cg: CodeGenerator): CompileResult {
@@ -492,35 +1013,15 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         return
       }
       if (Array.isArray(vi)) {
-        maxStack = compile(createIntLiteralNode(vi.length), cg).stackSize
-        const arrayElemType = variableInfo.typeDescriptor.slice(1)
-        if (arrayElemType in arrayTypeCode) {
-          cg.code.push(OPCODE.NEWARRAY, arrayTypeCode[arrayElemType])
-        } else {
-          cg.code.push(
-            OPCODE.ANEWARRAY,
-            0,
-            cg.constantPoolManager.indexClassInfo(
-              cg.symbolTable.queryClass(variableInfo.typeName.slice(0, -2)).name
-            )
-          )
-        }
-
-        vi.forEach((val, i) => {
-          cg.code.push(OPCODE.DUP)
-          const size1 = compile(createIntLiteralNode(i), cg).stackSize
-          const { stackSize: size2, resultType } = compile(val as Expression, cg)
-          const stackSizeChange = handleImplicitTypeConversion(resultType, arrayElemType, cg)
-          cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE)
-          maxStack = Math.max(maxStack, 2 + size1 + size2 + stackSizeChange)
-        })
+        maxStack = compileArrayInitializer(vi, variableInfo.typeName, cg)
         cg.code.push(OPCODE.ASTORE, curIdx)
       } else {
         const { stackSize: initializerStackSize, resultType: initializerType } = compile(vi, cg)
         const stackSizeChange = handleImplicitTypeConversion(
           initializerType,
           variableInfo.typeDescriptor,
-          cg
+          cg,
+          vi
         )
         maxStack = Math.max(maxStack, initializerStackSize + stackSizeChange)
         cg.code.push(
@@ -538,7 +1039,22 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { exp: expr } = node as ReturnStatement
 
     if (expr) {
-      const { stackSize: stackSize, resultType: resultType } = compile(expr, cg)
+      let { stackSize: stackSize, resultType: resultType } = compile(expr, cg)
+      const declared = cg.currentMethodReturnType
+      const isPrimitive = (t: string) => t.length === 1
+      if (
+        declared &&
+        declared !== resultType &&
+        (isPrimitive(declared) ||
+          isPrimitive(resultType) ||
+          resultType in WRAPPER_DESCRIPTOR_TO_PRIMITIVE ||
+          declared in WRAPPER_DESCRIPTOR_TO_PRIMITIVE)
+      ) {
+        // Return statements are an assignment context: widen/box/unbox to the declared type
+        const change = handleImplicitTypeConversion(resultType, declared, cg, expr)
+        stackSize = Math.max(stackSize, stackSize + change, slotsOf(declared))
+        resultType = declared
+      }
       if (cg.finallyBlockStack.length > 0) {
         const tempIndex = cg.maxLocals
         cg.maxLocals += ['J', 'D'].includes(resultType) ? 2 : 1
@@ -579,15 +1095,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       })
     }
 
-    if (cg.loopLabels.length > 0) {
-      // If inside a loop, break jumps to the end of the loop
-      cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][1])
-    } else if (cg.switchLabels.length > 0) {
-      // If inside a switch, break jumps to the switch's end label
-      cg.addBranchInstr(OPCODE.GOTO, cg.switchLabels[cg.switchLabels.length - 1])
-    } else {
+    // `break` leaves the innermost enclosing loop *or* switch, whichever is closer
+    if (cg.breakLabels.length === 0) {
       throw new Error('Break statement not inside a loop or switch statement')
     }
+    cg.addBranchInstr(OPCODE.GOTO, cg.breakLabels[cg.breakLabels.length - 1])
     return { stackSize: 0, resultType: EMPTY_TYPE }
   },
 
@@ -619,6 +1131,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const continueLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
     cg.loopLabels.push([continueLabel, endLabel])
+    cg.breakLabels.push(endLabel)
 
     startLabel.offset = cg.code.length
 
@@ -635,6 +1148,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     endLabel.offset = cg.code.length
 
     cg.loopLabels.pop()
+    cg.breakLabels.pop()
     cg.symbolTable.teardown()
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
@@ -647,15 +1161,21 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const continueLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
     cg.loopLabels.push([continueLabel, endLabel])
+    cg.breakLabels.push(endLabel)
 
     startLabel.offset = cg.code.length
     maxStack = Math.max(maxStack, compile(body, cg).stackSize)
     continueLabel.offset = cg.code.length
+    // LogicalExpression jumps to the most recently created label when the condition is false, and
+    // the body may have created labels of its own (an `if` or a `switch`), so make a fresh one
+    const exitLabel = cg.generateNewLabel()
     maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
     cg.addBranchInstr(OPCODE.GOTO, startLabel)
+    exitLabel.offset = cg.code.length
     endLabel.offset = cg.code.length
 
     cg.loopLabels.pop()
+    cg.breakLabels.pop()
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
 
@@ -666,6 +1186,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const startLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
     cg.loopLabels.push([startLabel, endLabel])
+    cg.breakLabels.push(endLabel)
     startLabel.offset = cg.code.length
 
     maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
@@ -673,6 +1194,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     cg.addBranchInstr(OPCODE.GOTO, startLabel)
     cg.loopLabels.pop()
+    cg.breakLabels.pop()
     endLabel.offset = cg.code.length
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
@@ -910,17 +1432,49 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     const elseLabel = cg.generateNewLabel()
     maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
+
+    // JLS 15.25: numeric operands are promoted to a common type, except that an int constant
+    // fitting in a byte/short/char operand keeps that narrower type.
+    const conType = getExpressionType(consequent, cg)
+    const altType = getExpressionType(alternate, cg)
+    let resType = conType
+    if (conType !== altType && isNumeric(conType) && isNumeric(altType)) {
+      if ((conType === 'B' && altType === 'S') || (conType === 'S' && altType === 'B')) {
+        resType = 'S'
+      } else if (
+        ['B', 'S', 'C'].includes(conType) &&
+        altType === 'I' &&
+        isNarrowableConstant(alternate, conType)
+      ) {
+        resType = conType
+      } else if (
+        ['B', 'S', 'C'].includes(altType) &&
+        conType === 'I' &&
+        isNarrowableConstant(consequent, altType)
+      ) {
+        resType = altType
+      } else {
+        resType = binaryPromotion(conType, altType)
+      }
+    }
+    const convertible = isNumeric(resType) && isNumeric(conType) && isNumeric(altType)
+
     const conRes = compile(consequent, cg)
     const conSize = conRes.stackSize
-    const resType = conRes.resultType
-    maxStack = Math.max(maxStack, conSize)
+    const conChange = convertible
+      ? handleImplicitTypeConversion(conType, resType, cg, consequent)
+      : 0
+    maxStack = Math.max(maxStack, conSize, conSize + conChange, slotsOf(resType))
 
     const endLabel = cg.generateNewLabel()
     cg.addBranchInstr(OPCODE.GOTO, endLabel)
 
     elseLabel.offset = cg.code.length
     const { stackSize: altSize } = compile(alternate, cg)
-    maxStack = Math.max(maxStack, altSize)
+    const altChange = convertible
+      ? handleImplicitTypeConversion(altType, resType, cg, alternate)
+      : 0
+    maxStack = Math.max(maxStack, altSize, altSize + altChange)
     endLabel.offset = cg.code.length
 
     return { stackSize: maxStack, resultType: resType }
@@ -939,7 +1493,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           }
           return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
         } else {
-          if (onTrue === (parseInt(value) !== 0)) {
+          if (onTrue === (parseIntegerLiteral(value).value !== BigInt(0))) {
             cg.addBranchInstr(OPCODE.GOTO, targetLabel)
           }
           return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
@@ -990,36 +1544,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             resultType: cg.symbolTable.generateFieldDescriptor('boolean')
           }
         } else if (op in reverseLogicalOp) {
-          if (isNullLiteral(left) && isNullLiteral(right)) {
-            if (onTrue === (op === '==')) {
-              cg.addBranchInstr(OPCODE.GOTO, targetLabel)
-            }
-            return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
-          } else if (isNullLiteral(left)) {
-            // still use l to represent the first argument pushed onto stack
-            l = compile(right, cg)
-            cg.addBranchInstr(
-              onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL,
-              targetLabel
-            )
-          } else if (isNullLiteral(right)) {
-            l = compile(left, cg)
-            cg.addBranchInstr(
-              onTrue !== (op === '!=') ? OPCODE.IFNULL : OPCODE.IFNONNULL,
-              targetLabel
-            )
-          } else {
-            l = compile(left, cg)
-            r = compile(right, cg)
-            cg.addBranchInstr(onTrue ? logicalOp[op] : reverseLogicalOp[op], targetLabel)
-          }
-          return {
-            stackSize: Math.max(
-              l.stackSize,
-              1 + (['D', 'J'].includes(l.resultType) ? 1 : 0) + r.stackSize
-            ),
-            resultType: cg.symbolTable.generateFieldDescriptor('boolean')
-          }
+          return compileComparison(left, right, op, onTrue, targetLabel, cg)
         }
       }
 
@@ -1034,79 +1559,105 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { castType: ct, expression: expr, isPrimitiveCast: b } = node as CastExpression
     if (b) {
       const res = compile(expr, cg)
-      const { stackSize: size, resultType: rt } = res
+      let { stackSize: size, resultType } = res
+
+      // JLS 5.5: casting a reference to a primitive is either an unboxing conversion (from the
+      // matching wrapper, optionally followed by widening) or a narrowing reference conversion
+      // to the primitive's wrapper class (from any of its superclasses, e.g. Object or Number)
+      // followed by unboxing.
+      const targetPrimitive =
+        ct === 'boolean' ? 'Z' : Object.keys(PRIMITIVE_NAMES).find(k => PRIMITIVE_NAMES[k] === ct)
+      if (resultType in WRAPPER_DESCRIPTOR_TO_PRIMITIVE) {
+        const unboxed = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[resultType]
+        if (unboxed !== targetPrimitive && !isWideningPrimitive(unboxed, targetPrimitive ?? '')) {
+          throw new Error(`Cannot cast ${resultType} to ${ct}`)
+        }
+        resultType = unboxIfWrapper(resultType, cg)
+        size = Math.max(size, slotsOf(resultType))
+      } else if (targetPrimitive && resultType.startsWith('L')) {
+        const wrapperClass = PRIMITIVE_WRAPPERS[targetPrimitive]
+        if (isSubclassOf(wrapperClass, resultType.slice(1, -1), cg) !== true) {
+          throw new Error(`Cannot cast ${resultType} to ${ct}`)
+        }
+        cg.code.push(OPCODE.CHECKCAST, 0, cg.constantPoolManager.indexClassInfo(wrapperClass))
+        resultType = unboxIfWrapper(`L${wrapperClass};`, cg)
+        size = Math.max(size, slotsOf(resultType))
+      }
+
+      if ((ct === 'boolean') !== (resultType === 'Z') && resultType !== EMPTY_TYPE) {
+        throw new Error(`Cannot cast ${resultType} to ${ct}`)
+      }
+      if (resultType.startsWith('L') || resultType.startsWith('[')) {
+        throw new Error(`Cannot cast ${resultType} to ${ct}`)
+      }
+      if (ct === 'boolean') {
+        return { stackSize: size, resultType: 'Z' }
+      }
+
+      // byte, short, char and int all live on the operand stack as an int
+      const rt = ['B', 'S', 'C'].includes(resultType) ? 'I' : resultType
+      const convert = (opcodes: { [from: string]: OPCODE }) => {
+        if (rt in opcodes) cg.code.push(opcodes[rt])
+      }
       switch (ct) {
         case 'double':
-          switch (rt) {
-            case 'F':
-              cg.code.push(OPCODE.F2D)
-              break
-            case 'J':
-              cg.code.push(OPCODE.L2D)
-              break
-            case 'I':
-              cg.code.push(OPCODE.I2D)
-              break
-            default:
-              break
-          }
+          convert({ F: OPCODE.F2D, J: OPCODE.L2D, I: OPCODE.I2D })
           return { stackSize: Math.max(size, 2), resultType: 'D' }
         case 'float':
-          switch (rt) {
-            case 'D':
-              cg.code.push(OPCODE.D2F)
-              break
-            case 'J':
-              cg.code.push(OPCODE.L2F)
-              break
-            case 'I':
-              cg.code.push(OPCODE.I2F)
-              break
-            default:
-          }
+          convert({ D: OPCODE.D2F, J: OPCODE.L2F, I: OPCODE.I2F })
           return { stackSize: Math.max(size, 1), resultType: 'F' }
         case 'long':
-          switch (rt) {
-            case 'D':
-              cg.code.push(OPCODE.D2L)
-              break
-            case 'F':
-              cg.code.push(OPCODE.F2L)
-              break
-            case 'I':
-              cg.code.push(OPCODE.I2L)
-              break
-            default:
-              break
-          }
-          return { stackSize: Math.max(size, 2), resultType: 'L' }
+          convert({ D: OPCODE.D2L, F: OPCODE.F2L, I: OPCODE.I2L })
+          return { stackSize: Math.max(size, 2), resultType: 'J' }
         case 'int':
-          switch (rt) {
-            case 'D':
-              cg.code.push(OPCODE.D2I)
-              break
-            case 'F':
-              cg.code.push(OPCODE.F2I)
-              break
-            case 'J':
-              cg.code.push(OPCODE.L2I)
-              break
-            default:
-              break
-          }
-          return { stackSize: Math.max(size, 1), resultType: 'I' }
+        case 'byte':
+        case 'short':
+        case 'char': {
+          convert({ D: OPCODE.D2I, F: OPCODE.F2I, J: OPCODE.L2I })
+          // narrowing from floating point/long to byte, short or char goes via int
+          if (ct === 'byte') cg.code.push(OPCODE.I2B)
+          else if (ct === 'short') cg.code.push(OPCODE.I2S)
+          else if (ct === 'char') cg.code.push(OPCODE.I2C)
+          const resultType = { int: 'I', byte: 'B', short: 'S', char: 'C' }[ct]
+          return { stackSize: Math.max(size, 1), resultType }
+        }
+      }
+      throw new Error(`Unsupported cast to ${ct}`)
+    }
+
+    // Reference cast (JLS 5.5): the result has the cast type
+    const res = compile(expr, cg)
+    let target: string
+    try {
+      target = cg.symbolTable.generateFieldDescriptor(ct)
+    } catch (e) {
+      // Class not known to the symbol table: fall back to the name as written
+      const dims = (ct.match(/\[/g) || []).length
+      const base = dims > 0 ? ct.slice(0, ct.indexOf('[')) : ct
+      target = '['.repeat(dims) + 'L' + (base.includes('/') ? base : base.replace(/\./g, '/')) + ';'
+    }
+    if (res.resultType.length === 1) {
+      // primitive operand: boxing, followed by widening reference conversion if needed
+      if (target === 'Ljava/lang/String;') {
+        throw new Error(`Cannot cast ${res.resultType} to ${ct}`)
+      }
+      const change = handleImplicitTypeConversion(res.resultType, target, cg)
+      return {
+        stackSize: Math.max(res.stackSize, res.stackSize + change, 1),
+        resultType: target
       }
     }
-    const res = compile(expr, cg)
-    let castClassName = ct
-    try {
-      castClassName = cg.symbolTable.queryClass(ct).name
-    } catch (e) {
-      castClassName = ct.includes('/') ? ct : ct.replace(/\./g, '/')
+    assertReferenceCastIsLegal(res.resultType, target, cg)
+    // Upcasts (and identity casts) are always safe, so only downcasts need a runtime check
+    if (
+      res.resultType !== target &&
+      target !== 'Ljava/lang/Object;' &&
+      !areClassTypesCompatible(res.resultType, target, cg)
+    ) {
+      const className = target.startsWith('[') ? target : target.slice(1, -1)
+      cg.code.push(OPCODE.CHECKCAST, 0, cg.constantPoolManager.indexClassInfo(className))
     }
-    const classInfoIndex = cg.constantPoolManager.indexClassInfo(castClassName)
-    cg.code.push(OPCODE.CHECKCAST, 0, classInfoIndex)
-    return res
+    return { stackSize: res.stackSize, resultType: target }
   },
 
   ClassInstanceCreationExpression: (node: Node, cg: CodeGenerator) => {
@@ -1115,8 +1666,19 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     let instantiatedClassName = id
     try {
-      instantiatedClassName = cg.symbolTable.queryClass(id).name
+      const classInfo = cg.symbolTable.queryClass(id)
+      instantiatedClassName = classInfo.name
+      // JLS 15.9.1: an abstract class (or an interface) cannot be instantiated
+      if (classInfo.accessFlags & (ACC_ABSTRACT | ACC_INTERFACE)) {
+        throw new AbstractClassInstantiationError(id.replace(/\//g, '.'))
+      }
+      if (classInfo.isEnum) {
+        throw new EnumInstantiationError(id.replace(/\//g, '.'))
+      }
     } catch (e) {
+      if (e instanceof AbstractClassInstantiationError || e instanceof EnumInstantiationError) {
+        throw e
+      }
       instantiatedClassName = id.includes('/') ? id : id.replace(/\./g, '/')
     }
     cg.code.push(
@@ -1126,15 +1688,65 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       OPCODE.DUP
     )
 
-    const argTypes: Array<UnannType> = []
+    const methodInfos = cg.symbolTable.queryMethod('<init>') as MethodInfos
+    const parseParams = (descriptor: string) =>
+      descriptor
+        .slice(1, descriptor.indexOf(')'))
+        .match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
+
+    // Pick the constructor applicable to the argument types (JLS 15.12.2: identity or widening
+    // conversions only), preferring an exact match and then the most specific one.
+    const argTypes = argLst.map(x => getExpressionType(x, cg))
+    let applicable: MethodInfos = []
+    for (const isApplicable of [isSubtype, isLooselyInvocable]) {
+      applicable = methodInfos.filter(m => {
+        if (m.className !== instantiatedClassName) return false
+        const params = parseParams(m.typeDescriptor)
+        return (
+          params.length === argTypes.length &&
+          params.every((p, i) => isApplicable(argTypes[i], p, cg))
+        )
+      })
+      if (applicable.length > 0) break
+    }
+    const isExact = (m: (typeof applicable)[number]) =>
+      parseParams(m.typeDescriptor).every((p, i) => argTypes[i] === p)
+    const isMoreSpecific = (m: (typeof applicable)[number], other: (typeof applicable)[number]) => {
+      const mp = parseParams(m.typeDescriptor)
+      const op = parseParams(other.typeDescriptor)
+      return mp.every((p, i) => p === op[i] || isSubtype(p, op[i], cg))
+    }
+    const chosen =
+      applicable.find(isExact) ?? applicable.find(m => applicable.every(o => isMoreSpecific(m, o)))
+
+    if (chosen) {
+      const params = parseParams(chosen.typeDescriptor)
+      argLst.forEach((x, i) => {
+        const argCompileResult = compile(x, cg)
+        const conv = handleImplicitTypeConversion(argCompileResult.resultType, params[i], cg)
+        maxStack = Math.max(
+          maxStack,
+          i + 2 + argCompileResult.stackSize,
+          i + 2 + slotsOf(params[i]) + conv
+        )
+      })
+      const method = cg.constantPoolManager.indexMethodrefInfo(
+        chosen.className,
+        chosen.name,
+        chosen.typeDescriptor
+      )
+      cg.code.push(OPCODE.INVOKESPECIAL, 0, method)
+      return { stackSize: maxStack, resultType: instantiatedClassName }
+    }
+
+    // No applicable constructor found: fall back to matching the raw argument descriptor.
+    const rawArgTypes: Array<UnannType> = []
     argLst.forEach((x, i) => {
       const argCompileResult = compile(x, cg)
       maxStack = Math.max(maxStack, i + 2 + argCompileResult.stackSize)
-      argTypes.push(argCompileResult.resultType)
+      rawArgTypes.push(argCompileResult.resultType)
     })
-    const argDescriptor = '(' + argTypes.join('') + ')'
-
-    const methodInfos = cg.symbolTable.queryMethod('<init>') as MethodInfos
+    const argDescriptor = '(' + rawArgTypes.join('') + ')'
     for (let i = 0; i < methodInfos.length; i++) {
       const methodInfo = methodInfos[i]
       if (
@@ -1179,12 +1791,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let candidateMethods: MethodInfos = []
     let unqualifiedCall = false
 
+    // `super.f()` calls the superclass's method; `super.field.f()` is a call on a field instead
+    const isSuperCall = n.identifier.startsWith('super.') && !n.identifier.slice(6).includes('.')
+
     // --- Handle super. calls ---
-    if (n.identifier.startsWith('super.')) {
+    if (isSuperCall) {
       candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(6)) as MethodInfos
-      candidateMethods = candidateMethods.filter(
-        method => method.className == cg.symbolTable.queryClass(cg.currentClass).parentClassName
-      )
+      const parentClass = cg.symbolTable.queryClass(cg.currentClass).parentClassName
+      candidateMethods = parentClass ? methodsOfClass(candidateMethods, parentClass, cg) : []
       cg.code.push(OPCODE.ALOAD, 0)
     }
     // --- Handle qualified calls (e.g. System.out.println or p.show) ---
@@ -1194,7 +1808,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
       if (receiverStr === 'this') {
         candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(5)) as MethodInfos
-        candidateMethods = candidateMethods.filter(method => method.className == cg.currentClass)
+        candidateMethods = methodsOfClass(candidateMethods, cg.currentClass, cg)
         cg.code.push(OPCODE.ALOAD, 0)
       } else {
         const recvRes = compile({ kind: 'ExpressionName', name: receiverStr }, cg)
@@ -1210,25 +1824,21 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     // Filter candidate methods by matching the argument list.
     const argDescs = n.argumentList.map(arg => getExpressionType(arg, cg))
-    const methodMatches: MethodInfos = []
+    let methodMatches: MethodInfos = []
 
-    for (let i = 0; i < candidateMethods.length; i++) {
-      const m = candidateMethods[i]
-      const fullDesc = m.typeDescriptor // e.g., "(Ljava/lang/String;C)V"
-      const paramPart = fullDesc.slice(1, fullDesc.indexOf(')'))
-      const params = paramPart.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
-      if (params.length !== argDescs.length) continue
-      let match = true
-      for (let i = 0; i < params.length; i++) {
-        const argType = argDescs[i]
-        // Allow B/S to match int.
-        if ((argType === 'B' || argType === 'S') && params[i] === 'I') continue
-        if (!isSubtype(argType, params[i], cg)) {
-          match = false
-          break
-        }
-      }
-      if (match) methodMatches.push(m)
+    // JLS 15.12.2: first look for methods applicable without boxing/unboxing (strict), and only
+    // if there are none, allow boxing/unboxing (loose).
+    for (const isApplicable of [isSubtype, isLooselyInvocable]) {
+      methodMatches = candidateMethods.filter(m => {
+        const fullDesc = m.typeDescriptor // e.g., "(Ljava/lang/String;C)V"
+        const paramPart = fullDesc.slice(1, fullDesc.indexOf(')'))
+        const params = paramPart.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
+        return (
+          params.length === argDescs.length &&
+          params.every((param, i) => isApplicable(argDescs[i], param, cg))
+        )
+      })
+      if (methodMatches.length > 0) break
     }
     if (methodMatches.length === 0) {
       throw new NoMethodMatchingSignatureError(n.identifier + argDescs.join(','))
@@ -1275,9 +1885,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const params = paramPart.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
     n.argumentList.forEach((arg, i) => {
       const argRes = compile(arg, cg)
-      let argType = argRes.resultType
-      if (argType === 'B' || argType === 'S') argType = 'I'
-      const conv = handleImplicitTypeConversion(argType, params[i] || '', cg)
+      const conv = handleImplicitTypeConversion(argRes.resultType, params[i] || '', cg)
       maxStack = Math.max(maxStack, i + 1 + argRes.stackSize + conv)
     })
 
@@ -1287,7 +1895,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       selectedMethod.name,
       selectedMethod.typeDescriptor
     )
-    if (n.identifier.startsWith('super.')) {
+    if (isSuperCall) {
       cg.code.push(OPCODE.INVOKESPECIAL, 0, methodRef)
     } else {
       const isStatic = (selectedMethod.accessFlags & METHOD_FLAGS.ACC_STATIC) !== 0
@@ -1307,11 +1915,21 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         right: right,
         operator: op.slice(0, op.length - 1) as BinaryOperator
       }
+      // JLS 15.26.2: `E1 op= E2` is `E1 = (T) ((E1) op (E2))`, where T is the type of E1.
+      const lhsType = getExpressionType(left, cg)
       const newAssignmentNode: Assignment = {
         kind: 'Assignment',
         left: left,
         operator: '=',
-        right: subExpr
+        right:
+          lhsType in PRIMITIVE_NAMES
+            ? {
+                kind: 'CastExpression',
+                castType: PRIMITIVE_NAMES[lhsType],
+                expression: subExpr,
+                isPrimitiveCast: true
+              }
+            : subExpr
       }
       return compile(newAssignmentNode, cg)
     }
@@ -1325,7 +1943,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
 
       const arrayElemType = arrayType.slice(1)
-      const stackSizeChange = handleImplicitTypeConversion(rhsType, arrayElemType, cg)
+      const stackSizeChange = handleImplicitTypeConversion(rhsType, arrayElemType, cg, right)
       maxStack = Math.max(maxStack, size1 + size2 + rhsSize + stackSizeChange)
       cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE)
     } else if (
@@ -1334,7 +1952,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     ) {
       const info = cg.symbolTable.queryVariable(lhs.name) as VariableInfo
       const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
-      const stackSizeChange = handleImplicitTypeConversion(rhsType, info.typeDescriptor, cg)
+      const stackSizeChange = handleImplicitTypeConversion(rhsType, info.typeDescriptor, cg, right)
       maxStack = Math.max(maxStack, 1 + rhsSize + stackSizeChange)
       cg.code.push(
         info.typeDescriptor in normalStoreOp ? normalStoreOp[info.typeDescriptor] : OPCODE.ASTORE,
@@ -1349,18 +1967,39 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         fieldInfo.typeDescriptor
       )
 
-      const varIndex = (infos[0] as VariableInfo).index
-      if (varIndex !== undefined) {
-        cg.code.push(OPCODE.ALOAD, varIndex)
-        maxStack += 1
-      } else if (lhs.name.startsWith('this.')) {
-        // load "this"
-        cg.code.push(OPCODE.ALOAD, 0)
+      // Push the object whose field is assigned: nothing for a static field, `this` for a field
+      // named without a qualifier, otherwise the value of the expression before the last dot
+      // (a variable, `this`, or a longer chain such as `car.engine`)
+      if (!(fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+        const lastDot = lhs.name.lastIndexOf('.')
+        const receiver = lastDot < 0 ? 'this' : lhs.name.slice(0, lastDot)
+        if (lastDot < 0 && cg.currentMethodIsStatic) {
+          throw new NonStaticReferenceInStaticContextError('field', fieldInfo.name)
+        }
+        if (receiver === 'this' || receiver === 'super') {
+          cg.code.push(OPCODE.ALOAD, 0)
+        } else {
+          const receiverRes = compile({ kind: 'ExpressionName', name: receiver }, cg)
+          maxStack = Math.max(maxStack, receiverRes.stackSize)
+        }
         maxStack += 1
       }
 
-      const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
-      const stackSizeChange = handleImplicitTypeConversion(rhsType, fieldInfo.typeDescriptor, cg)
+      let rhsSize: number
+      let stackSizeChange = 0
+      if (Array.isArray(right)) {
+        // `T[] f = {...}`: only reachable from a field's initialiser
+        rhsSize = compileArrayInitializer(right, fieldInfo.typeName, cg)
+      } else {
+        const rhs = compile(right, cg)
+        rhsSize = rhs.stackSize
+        stackSizeChange = handleImplicitTypeConversion(
+          rhs.resultType,
+          fieldInfo.typeDescriptor,
+          cg,
+          right
+        )
+      }
 
       maxStack = Math.max(maxStack, maxStack + rhsSize + stackSizeChange)
       cg.code.push(
@@ -1375,55 +2014,43 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
   BinaryExpression: (node: Node, cg: CodeGenerator) => {
     const { left: left, right: right, operator: op } = node as BinaryExpression
-    if (op in reverseLogicalOp) {
-      let l: CompileResult = { stackSize: 0, resultType: EMPTY_TYPE }
-      let r: CompileResult = { stackSize: 0, resultType: EMPTY_TYPE }
-      const targetLabel = cg.generateNewLabel()
-      if (isNullLiteral(left) && isNullLiteral(right)) {
-        cg.code.push(op === '==' ? OPCODE.ICONST_1 : OPCODE.ICONST_0)
-        return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
-      } else if (isNullLiteral(left)) {
-        // still use l to represent the first argument pushed onto stack
-        l = compile(right, cg)
-        cg.addBranchInstr(op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
-      } else if (isNullLiteral(right)) {
-        l = compile(left, cg)
-        cg.addBranchInstr(op === '!=' ? OPCODE.IFNULL : OPCODE.IFNONNULL, targetLabel)
-      } else {
-        l = compile(left, cg)
-        l.resultType = unboxIfWrapper(l.resultType, cg)
-        r = compile(right, cg)
-        r.resultType = unboxIfWrapper(r.resultType, cg)
-        cg.addBranchInstr(reverseLogicalOp[op], targetLabel)
-      }
+    if (op === '&&' || op === '||') {
+      // LogicalExpression jumps to the most recently created label when the condition is false
+      const falseLabel = cg.generateNewLabel()
+      const res = codeGenerators['LogicalExpression'](node, cg)
+      const endLabel = cg.generateNewLabel()
       cg.code.push(OPCODE.ICONST_1)
-      targetLabel.offset = cg.code.length
+      cg.addBranchInstr(OPCODE.GOTO, endLabel)
+      falseLabel.offset = cg.code.length
       cg.code.push(OPCODE.ICONST_0)
-      return {
-        stackSize: Math.max(
-          l.stackSize,
-          1 + (['D', 'J'].includes(l.resultType) ? 1 : 0) + r.stackSize
-        ),
-        resultType: cg.symbolTable.generateFieldDescriptor('boolean')
-      }
+      endLabel.offset = cg.code.length
+      return { stackSize: Math.max(res.stackSize, 1), resultType: res.resultType }
+    }
+    if (op in reverseLogicalOp) {
+      const falseLabel = cg.generateNewLabel()
+      const endLabel = cg.generateNewLabel()
+      const res = compileComparison(left, right, op, false, falseLabel, cg)
+      cg.code.push(OPCODE.ICONST_1)
+      cg.addBranchInstr(OPCODE.GOTO, endLabel)
+      falseLabel.offset = cg.code.length
+      cg.code.push(OPCODE.ICONST_0)
+      endLabel.offset = cg.code.length
+      return res
     }
 
     const leftCompiled = compile(left, cg)
     // Unbox a wrapper operand to its primitive before arithmetic / comparison.
     const leftType = unboxIfWrapper(leftCompiled.resultType, cg)
-    const size1 = Math.max(leftCompiled.stackSize, ['J', 'D'].includes(leftType) ? 2 : 1)
-    const insertConversionIndex = cg.code.length
-    cg.code.push(OPCODE.NOP)
-    const rightCompiled = compile(right, cg)
-    const rightType = unboxIfWrapper(rightCompiled.resultType, cg)
-    const size2 = Math.max(rightCompiled.stackSize, ['J', 'D'].includes(rightType) ? 2 : 1)
+    const isString = (type: string) => type === 'Ljava/lang/String;'
 
-    if (op === '+' && (leftType === 'Ljava/lang/String;' || rightType === 'Ljava/lang/String;')) {
-      if (leftType !== 'Ljava/lang/String;') {
+    if (op === '+' && (isString(leftType) || isString(getExpressionType(right, cg)))) {
+      // String concatenation: each operand is converted to a String as soon as it is on the stack
+      if (!isString(leftType)) {
         generateStringConversion(leftType, cg)
       }
-
-      if (rightType !== 'Ljava/lang/String;') {
+      const rightCompiled = compile(right, cg)
+      const rightType = unboxIfWrapper(rightCompiled.resultType, cg)
+      if (!isString(rightType)) {
         generateStringConversion(rightType, cg)
       }
 
@@ -1436,74 +2063,57 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       cg.code.push(OPCODE.INVOKEVIRTUAL, 0, concatMethodIndex)
 
       return {
-        stackSize: Math.max(size1 + 1, size2 + 1), // Max stack size plus one for the concatenation
+        stackSize: Math.max(leftCompiled.stackSize, 1 + rightCompiled.stackSize),
         resultType: 'Ljava/lang/String;'
       }
     }
 
+    const insertConversionIndex = cg.code.length
+    cg.code.push(OPCODE.NOP)
+    const rightCompiled = compile(right, cg)
+    const rightType = unboxIfWrapper(rightCompiled.resultType, cg)
+
+    // JLS 15.19, 15.17-15.18, 15.22: shifts need integral operands, arithmetic needs numeric
+    // operands, and bitwise operators need operands that are both integral or both boolean.
+    const isIntegral = (t: string) => t === 'J' || isIntLike(t)
+    const isShiftOp = op === '<<' || op === '>>' || op === '>>>'
+    const isBitwiseOp = op === '&' || op === '|' || op === '^'
+    const operandsAreValid = isShiftOp
+      ? isIntegral(leftType) && isIntegral(rightType)
+      : isBitwiseOp
+        ? (isIntegral(leftType) && isIntegral(rightType)) || (leftType === 'Z' && rightType === 'Z')
+        : isNumeric(leftType) && isNumeric(rightType)
+    if (!operandsAreValid) {
+      throw new BadOperandTypesError(op, describeType(leftType), describeType(rightType))
+    }
+
     let finalType = leftType
+    let size1 = Math.max(leftCompiled.stackSize, slotsOf(leftType))
+    let size2 = Math.max(rightCompiled.stackSize, slotsOf(rightType))
 
-    if (leftType !== rightType) {
-      const conversionKeyLeft = `${leftType}->${rightType}`
-      const conversionKeyRight = `${rightType}->${leftType}`
-
-      if (['D', 'F'].includes(leftType) || ['D', 'F'].includes(rightType)) {
-        // Promote both to double if one is double, or to float otherwise
-        if (leftType !== 'D' && rightType === 'D') {
-          cg.code.fill(
-            typeConversionsImplicit[conversionKeyLeft],
-            insertConversionIndex,
-            insertConversionIndex + 1
-          )
-          finalType = 'D'
-        } else if (leftType === 'D' && rightType !== 'D') {
-          cg.code.push(typeConversionsImplicit[conversionKeyRight])
-          finalType = 'D'
-        } else if (leftType !== 'F' && rightType === 'F') {
-          // handleImplicitTypeConversion(leftType, 'F', cg);
-          cg.code.fill(
-            typeConversionsImplicit[conversionKeyLeft],
-            insertConversionIndex,
-            insertConversionIndex + 1
-          )
-          finalType = 'F'
-        } else if (leftType === 'F' && rightType !== 'F') {
-          cg.code.push(typeConversionsImplicit[conversionKeyRight])
-          finalType = 'F'
-        }
-      } else if (['J'].includes(leftType) || ['J'].includes(rightType)) {
-        // Promote both to long if one is long
-        if (leftType !== 'J' && rightType === 'J') {
-          cg.code.fill(
-            typeConversionsImplicit[conversionKeyLeft],
-            insertConversionIndex,
-            insertConversionIndex + 1
-          )
-        } else if (leftType === 'J' && rightType !== 'J') {
-          cg.code.push(typeConversionsImplicit[conversionKeyRight])
-        }
-        finalType = 'J'
+    if (isNumeric(leftType) && isNumeric(rightType)) {
+      const isShift = isShiftOp
+      // Shift operands are promoted separately (JLS 5.6.1); the result has the left type.
+      const promoted = isShift
+        ? binaryPromotion(leftType, 'I')
+        : binaryPromotion(leftType, rightType)
+      const leftConversion = wideningOpcode(leftType, promoted)
+      if (leftConversion !== undefined) cg.code[insertConversionIndex] = leftConversion
+      if (isShift) {
+        // the shift distance is always an int on the stack
+        if (rightType === 'J') cg.code.push(OPCODE.L2I)
+        size2 = Math.max(rightCompiled.stackSize, 1)
       } else {
-        // Promote both to int as the common type for smaller types like byte, short, char
-        if (leftType !== 'I') {
-          cg.code.fill(
-            typeConversionsImplicit[conversionKeyLeft],
-            insertConversionIndex,
-            insertConversionIndex + 1
-          )
-        }
-        if (rightType !== 'I') {
-          cg.code.push(typeConversionsImplicit[conversionKeyRight])
-        }
-        finalType = 'I'
+        const rightConversion = wideningOpcode(rightType, promoted)
+        if (rightConversion !== undefined) cg.code.push(rightConversion)
+        size2 = Math.max(rightCompiled.stackSize, slotsOf(promoted))
       }
+      size1 = Math.max(leftCompiled.stackSize, slotsOf(promoted))
+      finalType = promoted
     }
 
     // Perform the operation
     switch (finalType) {
-      case 'B':
-        cg.code.push(intBinaryOp[op], OPCODE.I2B)
-        break
       case 'D':
         cg.code.push(doubleBinaryOp[op])
         break
@@ -1511,18 +2121,16 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         cg.code.push(floatBinaryOp[op])
         break
       case 'I':
+      case 'Z':
         cg.code.push(intBinaryOp[op])
         break
       case 'J':
         cg.code.push(longBinaryOp[op])
         break
-      case 'S':
-        cg.code.push(intBinaryOp[op], OPCODE.I2S)
-        break
     }
 
     return {
-      stackSize: Math.max(size1, 1 + (['D', 'J'].includes(finalType) ? 1 : 0) + size2),
+      stackSize: Math.max(size1, slotsOf(finalType) + size2),
       resultType: finalType
     }
   },
@@ -1533,13 +2141,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const assignment: Assignment = {
         kind: 'Assignment',
         left: node.expression as LeftHandSide,
-        operator: '=',
-        right: {
-          kind: 'BinaryExpression',
-          left: node.expression,
-          operator: node.operator === '++' ? '+' : '-',
-          right: createIntLiteralNode(1)
-        }
+        operator: node.operator === '++' ? '+=' : '-=',
+        right: createIntLiteralNode(1)
       }
       return compile(assignment, cg)
     }
@@ -1558,6 +2161,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     const compileResult = compile(expr, cg)
+    // Unary numeric promotion (JLS 5.6.1): byte, short and char operands become int.
+    if (
+      (op === '-' || op === '+' || op === '~') &&
+      ['B', 'S', 'C'].includes(compileResult.resultType)
+    ) {
+      compileResult.resultType = 'I'
+    }
     if (op === '-') {
       const negationOpcodes: { [type: string]: OPCODE } = {
         I: OPCODE.INEG, // Integer negation
@@ -1572,8 +2182,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         throw new Error(`Unary '-' not supported for type: ${compileResult.resultType}`)
       }
     } else if (op === '~') {
-      cg.code.push(OPCODE.ICONST_M1, OPCODE.IXOR)
-      compileResult.stackSize = Math.max(compileResult.stackSize, 2)
+      if (compileResult.resultType === 'J') {
+        cg.code.push(OPCODE.LCONST_1, OPCODE.LNEG, OPCODE.LXOR)
+        compileResult.stackSize = Math.max(compileResult.stackSize, 4)
+      } else {
+        cg.code.push(OPCODE.ICONST_M1, OPCODE.IXOR)
+        compileResult.stackSize = Math.max(compileResult.stackSize, 2)
+      }
     } else if (op === '!') {
       const elseLabel = cg.generateNewLabel()
       const endLabel = cg.generateNewLabel()
@@ -1687,14 +2302,16 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('String') }
       }
       case 'HexIntegerLiteral':
+      case 'OctalIntegerLiteral':
+      case 'BinaryIntegerLiteral':
       case 'DecimalIntegerLiteral': {
-        if (value.endsWith('l') || value.endsWith('L')) {
-          const n = BigInt(value.slice(0, -1))
-          const idx = cg.constantPoolManager.indexLongInfo(n)
+        const literal = parseIntegerLiteral(value)
+        if (literal.isLong) {
+          const idx = cg.constantPoolManager.indexLongInfo(literal.value)
           cg.code.push(OPCODE.LDC2_W, 0, idx)
           return { stackSize: 2, resultType: cg.symbolTable.generateFieldDescriptor('long') }
         }
-        const n = parseInt(value)
+        const n = Number(literal.value)
         if (-128 <= n && n < 128) {
           cg.code.push(OPCODE.BIPUSH, n)
         } else if (-32768 <= n && n < 32768) {
@@ -1706,7 +2323,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('int') }
       }
       case 'DecimalFloatingPointLiteral': {
-        const d = parseFloat(value)
+        const d = parseFloat(value.replace(/_/g, ''))
         if (value.endsWith('f') || value.endsWith('F')) {
           const idx = cg.constantPoolManager.indexFloatInfo(d)
           cg.code.push(OPCODE.LDC, idx)
@@ -1740,7 +2357,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let _resultType = resultType
     let enumTypeName: string | null = null
     if (_resultType && _resultType.startsWith('L') && _resultType !== 'Ljava/lang/String;') {
-      const clean = _resultType.replace(/^L|;$/g, '')
+      const clean = classNameOf(_resultType)
       try {
         const classInfo = cg.symbolTable.queryClass(clean)
         if (classInfo.isEnum) {
@@ -1764,8 +2381,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const defaultLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
 
-    // Track the switch statement's end label
-    cg.switchLabels.push(endLabel)
+    // `break` inside the switch jumps to its end label
+    cg.breakLabels.push(endLabel)
 
     if (['I', 'B', 'S', 'C'].includes(_resultType)) {
       const caseValues: number[] = []
@@ -1793,7 +2410,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
                         `Identifier case labels are only supported for enum switch selectors: ${label.expression.name}`
                       )
                     })()
-                  : parseInt((label.expression as Literal).literalType.value)
+                  : (() => {
+                      const constant = evaluateIntConstant(label.expression)
+                      if (constant === undefined) throw new Error('Constant expression required')
+                      return constant
+                    })()
             caseValues.push(value)
             caseLabelMap.set(value, caseLabels[index])
           } else if (label.kind === 'DefaultLabel') {
@@ -1803,6 +2424,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         })
       })
 
+      const sortedCaseValues = [...new Set(caseValues)].sort((a, b) => a - b)
       const [minValue, maxValue] = [Math.min(...caseValues), Math.max(...caseValues)]
       const useTableSwitch = maxValue - minValue < caseValues.length * 2
       const caseLabelIndex: number[] = []
@@ -1862,15 +2484,16 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
         // Push the number of case-value pairs
         cg.code.push(
-          (caseValues.length >> 24) & 0xff,
-          (caseValues.length >> 16) & 0xff,
-          (caseValues.length >> 8) & 0xff,
-          caseValues.length & 0xff
+          (sortedCaseValues.length >> 24) & 0xff,
+          (sortedCaseValues.length >> 16) & 0xff,
+          (sortedCaseValues.length >> 8) & 0xff,
+          sortedCaseValues.length & 0xff
         )
         indexTracker += 4
 
-        // Generate lookup table (pairs of case values and corresponding labels)
-        caseValues.forEach((value, index) => {
+        // Generate lookup table (pairs of case values and corresponding labels). The JVM binary
+        // searches it, so the keys must be in ascending order whatever order the cases are in.
+        sortedCaseValues.forEach(value => {
           // push 4-byte key
           cg.code.push(
             (value >> 24) & 0xff,
@@ -1951,9 +2574,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           cg.code[idx + 3] = off & 0xff
         }
       } else {
-        for (let k = 0; k < caseValues.length; k++) {
+        for (let k = 0; k < sortedCaseValues.length; k++) {
           const idx = caseLabelIndex[1 + k]
-          const lbl = caseLabelMap.get(caseValues[k]) || defaultLabel
+          const lbl = caseLabelMap.get(sortedCaseValues[k]) || defaultLabel
           const off = lbl.offset - positionOffset
           cg.code[idx] = (off >> 24) & 0xff
           cg.code[idx + 1] = (off >> 16) & 0xff
@@ -2008,6 +2631,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       caseLabelIndex.push(indexTracker)
       indexTracker += 4
 
+      // The JVM binary searches the table, so the hash codes must be in ascending (signed) order
+      const sortedHashEntries = [...hashCaseMap.entries()].sort((a, b) => a[0] - b[0])
+
       // Number of case-value pairs
       cg.code.push(
         (hashCaseMap.size >> 24) & 0xff,
@@ -2019,7 +2645,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
       // Populate LOOKUPSWITCH
       const hashLabels: Label[] = []
-      hashCaseMap.forEach((label, hashCode) => {
+      sortedHashEntries.forEach(([hashCode, label]) => {
         cg.code.push(
           (hashCode >> 24) & 0xff,
           (hashCode >> 16) & 0xff,
@@ -2107,7 +2733,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         cg.code[idx + 3] = defOff & 0xff
       }
 
-      // Patch hash-case entries in insertion order
+      // Patch hash-case entries (in the sorted order they were written)
       for (let k = 0; k < hashLabels.length; k++) {
         const idx = caseLabelIndex[1 + k]
         const off = hashLabels[k].offset - positionOffset
@@ -2124,7 +2750,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       )
     }
 
-    cg.switchLabels.pop()
+    cg.breakLabels.pop()
 
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   }
@@ -2138,11 +2764,13 @@ class CodeGenerator {
   exceptionTable: Array<ExceptionHandler> = []
   labels: Label[] = []
   loopLabels: Label[][] = []
-  switchLabels: Label[] = []
+  // end label of every enclosing loop and switch (innermost last), the targets of `break`
+  breakLabels: Label[] = []
   finallyBlockStack: Node[] = []
   code: number[] = []
   currentClass: string
   currentMethodIsStatic: boolean = false
+  currentMethodReturnType: string = ''
 
   constructor(symbolTable: SymbolTable, constantPoolManager: ConstantPoolManager) {
     this.symbolTable = symbolTable
@@ -2177,6 +2805,15 @@ class CodeGenerator {
     this.symbolTable.extend()
     this.currentClass = currentClass
     this.currentMethodIsStatic = methodNode.methodModifier.includes('static')
+    this.currentMethodReturnType = ''
+    const returnType = methodNode.methodHeader.result
+    if (returnType && returnType !== 'void') {
+      try {
+        this.currentMethodReturnType = this.symbolTable.generateFieldDescriptor(returnType)
+      } catch (e) {
+        // leave unknown return types unconverted
+      }
+    }
     this.exceptionTable = []
     if (!this.currentMethodIsStatic) {
       this.maxLocals++

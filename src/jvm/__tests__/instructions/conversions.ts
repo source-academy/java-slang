@@ -238,6 +238,56 @@ describe('L2d', () => {
 })
 
 describe('F2i', () => {
+  test('F2I: truncates toward zero (5.9 -> 5)', () => {
+    thread.pushStack(5.9)
+    code.setUint8(0, OPCODE.F2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(5)
+  })
+
+  test('F2I: truncates toward zero (-5.9 -> -5)', () => {
+    thread.pushStack(-5.9)
+    code.setUint8(0, OPCODE.F2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(-5)
+  })
+
+  test('F2I: truncates toward zero (2.5 -> 2)', () => {
+    thread.pushStack(2.5)
+    code.setUint8(0, OPCODE.F2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(2)
+  })
+
+  test('F2I: truncates toward zero (0.5 -> 0)', () => {
+    thread.pushStack(0.5)
+    code.setUint8(0, OPCODE.F2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(0)
+  })
+
+  test('F2I: truncates toward zero (65535.9 -> 65535)', () => {
+    thread.pushStack(65535.9)
+    code.setUint8(0, OPCODE.F2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(65535)
+  })
+
   test('F2I: float converts to int', () => {
     thread.pushStack(-20.5)
     code.setUint8(0, OPCODE.F2I)
@@ -312,6 +362,56 @@ describe('F2i', () => {
 })
 
 describe('F2l', () => {
+  test('F2L: truncates toward zero (5.9 -> 5)', () => {
+    thread.pushStack(5.9)
+    code.setUint8(0, OPCODE.F2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(5))
+  })
+
+  test('F2L: truncates toward zero (-5.9 -> -5)', () => {
+    thread.pushStack(-5.9)
+    code.setUint8(0, OPCODE.F2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(-5))
+  })
+
+  test('F2L: truncates toward zero (2.5 -> 2)', () => {
+    thread.pushStack(2.5)
+    code.setUint8(0, OPCODE.F2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(2))
+  })
+
+  test('F2L: truncates toward zero (0.5 -> 0)', () => {
+    thread.pushStack(0.5)
+    code.setUint8(0, OPCODE.F2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(0))
+  })
+
+  test('F2L: truncates toward zero (65535.9 -> 65535)', () => {
+    thread.pushStack(65535.9)
+    code.setUint8(0, OPCODE.F2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(65535))
+  })
+
   test('F2L: float converts to long', () => {
     thread.pushStack(-20.5)
     code.setUint8(0, OPCODE.F2L)
@@ -400,6 +500,56 @@ describe('F2d', () => {
 })
 
 describe('D2i', () => {
+  test('D2I: truncates toward zero (5.9 -> 5)', () => {
+    thread.pushStack64(5.9)
+    code.setUint8(0, OPCODE.D2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(5)
+  })
+
+  test('D2I: truncates toward zero (-5.9 -> -5)', () => {
+    thread.pushStack64(-5.9)
+    code.setUint8(0, OPCODE.D2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(-5)
+  })
+
+  test('D2I: truncates toward zero (2.5 -> 2)', () => {
+    thread.pushStack64(2.5)
+    code.setUint8(0, OPCODE.D2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(2)
+  })
+
+  test('D2I: truncates toward zero (0.5 -> 0)', () => {
+    thread.pushStack64(0.5)
+    code.setUint8(0, OPCODE.D2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(0)
+  })
+
+  test('D2I: truncates toward zero (65535.9 -> 65535)', () => {
+    thread.pushStack64(65535.9)
+    code.setUint8(0, OPCODE.D2I)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(1)
+    expect(lastFrame.operandStack[0]).toBe(65535)
+  })
+
   test('D2I: double converts to int', () => {
     thread.pushStack64(-20.5)
     code.setUint8(0, OPCODE.D2I)
@@ -474,6 +624,56 @@ describe('D2i', () => {
 })
 
 describe('D2l', () => {
+  test('D2L: truncates toward zero (5.9 -> 5)', () => {
+    thread.pushStack64(5.9)
+    code.setUint8(0, OPCODE.D2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(5))
+  })
+
+  test('D2L: truncates toward zero (-5.9 -> -5)', () => {
+    thread.pushStack64(-5.9)
+    code.setUint8(0, OPCODE.D2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(-5))
+  })
+
+  test('D2L: truncates toward zero (2.5 -> 2)', () => {
+    thread.pushStack64(2.5)
+    code.setUint8(0, OPCODE.D2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(2))
+  })
+
+  test('D2L: truncates toward zero (0.5 -> 0)', () => {
+    thread.pushStack64(0.5)
+    code.setUint8(0, OPCODE.D2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(0))
+  })
+
+  test('D2L: truncates toward zero (65535.9 -> 65535)', () => {
+    thread.pushStack64(65535.9)
+    code.setUint8(0, OPCODE.D2L)
+
+    thread.runFor(1)
+    const lastFrame = thread.peekStackFrame()
+    expect(lastFrame.operandStack.length).toBe(2)
+    expect(lastFrame.operandStack[0]).toBe(BigInt(65535))
+  })
+
   test('D2L: double converts to long', () => {
     thread.pushStack64(-20.5)
     code.setUint8(0, OPCODE.D2L)

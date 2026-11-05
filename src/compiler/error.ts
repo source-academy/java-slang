@@ -63,3 +63,35 @@ export class OverrideFinalMethodError extends CompileError {
     super(`Cannot override final method ${name}`)
   }
 }
+
+export class InconvertibleTypesError extends CompileError {
+  constructor(from: string, to: string) {
+    super(`incompatible types: ${from} cannot be converted to ${to}`)
+  }
+}
+
+export class BadOperandTypesError extends CompileError {
+  constructor(operator: string, left: string, right: string) {
+    super(`bad operand types for binary operator '${operator}': ${left}, ${right}`)
+  }
+}
+
+export class AbstractClassInstantiationError extends CompileError {
+  constructor(name: string) {
+    super(`${name} is abstract; cannot be instantiated`)
+  }
+}
+
+export class EnumInstantiationError extends CompileError {
+  constructor(name: string) {
+    super(`enum classes may not be instantiated: ${name}`)
+  }
+}
+
+export class MissingAbstractMethodImplementationError extends CompileError {
+  constructor(className: string, method: string, declaringClass: string) {
+    super(
+      `${className} is not abstract and does not override abstract method ${method} in ${declaringClass}`
+    )
+  }
+}

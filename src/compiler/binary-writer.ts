@@ -180,9 +180,10 @@ export class BinaryWriter {
         break
       case CONSTANT_TAG.Long:
         val = (constant as ConstantLongInfo).value
-        const div = 2 ** 32
-        this.write(Number(val / BigInt(div)), u4)
-        this.write(Number(val % BigInt(div)), u4)
+        // two's complement, so that negative values get a high word of 0xFFFFFFFF
+        const bits = BigInt.asUintN(64, val)
+        this.write(Number(bits >> BigInt(32)), u4)
+        this.write(Number(bits & BigInt(0xffffffff)), u4)
         break
       case CONSTANT_TAG.Double:
         val = (constant as ConstantDoubleInfo).value

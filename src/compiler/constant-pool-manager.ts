@@ -130,7 +130,15 @@ export class ConstantPoolManager {
       tag: tag,
       value: value
     }
-    const key = JSON.stringify(task, (k, v) => (typeof v === 'bigint' ? v.toString() : v))
+    // JSON has no -0, NaN or Infinity (it turns them into 0 / null), so they must be spelled out
+    // or e.g. the constants 0.0 and -0.0 would be treated as the same entry
+    const key = JSON.stringify(task, (k, v) => {
+      if (typeof v === 'bigint') return v.toString()
+      if (typeof v === 'number' && (Object.is(v, -0) || !Number.isFinite(v))) {
+        return `number:${Object.is(v, -0) ? '-0' : v}`
+      }
+      return v
+    })
     let pos = this.objectMap.get(key)
     if (pos !== undefined) {
       return pos
