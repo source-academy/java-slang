@@ -642,7 +642,7 @@ function generateStringConversion(valueType: string, cg: CodeGenerator): void {
 function hashCode(str: string): number {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
-    hash = hash * 31 + str.charCodeAt(i) // Simulate Java's overflow behavior
+    hash = (Math.imul(hash, 31) + str.charCodeAt(i)) | 0 // Java's 32-bit overflow behavior
   }
   return hash
 }
@@ -1026,15 +1026,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       })
     }
 
-    if (cg.loopLabels.length > 0) {
-      // If inside a loop, break jumps to the end of the loop
-      cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][1])
-    } else if (cg.switchLabels.length > 0) {
-      // If inside a switch, break jumps to the switch's end label
-      cg.addBranchInstr(OPCODE.GOTO, cg.switchLabels[cg.switchLabels.length - 1])
-    } else {
+    // `break` leaves the innermost enclosing loop *or* switch, whichever is closer
+    if (cg.breakLabels.length === 0) {
       throw new Error('Break statement not inside a loop or switch statement')
     }
+    cg.addBranchInstr(OPCODE.GOTO, cg.breakLabels[cg.breakLabels.length - 1])
     return { stackSize: 0, resultType: EMPTY_TYPE }
   },
 
@@ -1066,6 +1062,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const continueLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
     cg.loopLabels.push([continueLabel, endLabel])
+    cg.breakLabels.push(endLabel)
 
     startLabel.offset = cg.code.length
 
@@ -1082,6 +1079,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     endLabel.offset = cg.code.length
 
     cg.loopLabels.pop()
+    cg.breakLabels.pop()
     cg.symbolTable.teardown()
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
@@ -1094,15 +1092,21 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const continueLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
     cg.loopLabels.push([continueLabel, endLabel])
+    cg.breakLabels.push(endLabel)
 
     startLabel.offset = cg.code.length
     maxStack = Math.max(maxStack, compile(body, cg).stackSize)
     continueLabel.offset = cg.code.length
+    // LogicalExpression jumps to the most recently created label when the condition is false, and
+    // the body may have created labels of its own (an `if` or a `switch`), so make a fresh one
+    const exitLabel = cg.generateNewLabel()
     maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
     cg.addBranchInstr(OPCODE.GOTO, startLabel)
+    exitLabel.offset = cg.code.length
     endLabel.offset = cg.code.length
 
     cg.loopLabels.pop()
+    cg.breakLabels.pop()
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
 
@@ -1113,6 +1117,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const startLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
     cg.loopLabels.push([startLabel, endLabel])
+    cg.breakLabels.push(endLabel)
     startLabel.offset = cg.code.length
 
     maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
@@ -1120,6 +1125,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     cg.addBranchInstr(OPCODE.GOTO, startLabel)
     cg.loopLabels.pop()
+    cg.breakLabels.pop()
     endLabel.offset = cg.code.length
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
@@ -2277,8 +2283,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const defaultLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
 
-    // Track the switch statement's end label
-    cg.switchLabels.push(endLabel)
+    // `break` inside the switch jumps to its end label
+    cg.breakLabels.push(endLabel)
 
     if (['I', 'B', 'S', 'C'].includes(_resultType)) {
       const caseValues: number[] = []
@@ -2320,6 +2326,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         })
       })
 
+      const sortedCaseValues = [...new Set(caseValues)].sort((a, b) => a - b)
       const [minValue, maxValue] = [Math.min(...caseValues), Math.max(...caseValues)]
       const useTableSwitch = maxValue - minValue < caseValues.length * 2
       const caseLabelIndex: number[] = []
@@ -2379,15 +2386,16 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
         // Push the number of case-value pairs
         cg.code.push(
-          (caseValues.length >> 24) & 0xff,
-          (caseValues.length >> 16) & 0xff,
-          (caseValues.length >> 8) & 0xff,
-          caseValues.length & 0xff
+          (sortedCaseValues.length >> 24) & 0xff,
+          (sortedCaseValues.length >> 16) & 0xff,
+          (sortedCaseValues.length >> 8) & 0xff,
+          sortedCaseValues.length & 0xff
         )
         indexTracker += 4
 
-        // Generate lookup table (pairs of case values and corresponding labels)
-        caseValues.forEach((value, index) => {
+        // Generate lookup table (pairs of case values and corresponding labels). The JVM binary
+        // searches it, so the keys must be in ascending order whatever order the cases are in.
+        sortedCaseValues.forEach(value => {
           // push 4-byte key
           cg.code.push(
             (value >> 24) & 0xff,
@@ -2468,9 +2476,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           cg.code[idx + 3] = off & 0xff
         }
       } else {
-        for (let k = 0; k < caseValues.length; k++) {
+        for (let k = 0; k < sortedCaseValues.length; k++) {
           const idx = caseLabelIndex[1 + k]
-          const lbl = caseLabelMap.get(caseValues[k]) || defaultLabel
+          const lbl = caseLabelMap.get(sortedCaseValues[k]) || defaultLabel
           const off = lbl.offset - positionOffset
           cg.code[idx] = (off >> 24) & 0xff
           cg.code[idx + 1] = (off >> 16) & 0xff
@@ -2525,6 +2533,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       caseLabelIndex.push(indexTracker)
       indexTracker += 4
 
+      // The JVM binary searches the table, so the hash codes must be in ascending (signed) order
+      const sortedHashEntries = [...hashCaseMap.entries()].sort((a, b) => a[0] - b[0])
+
       // Number of case-value pairs
       cg.code.push(
         (hashCaseMap.size >> 24) & 0xff,
@@ -2536,7 +2547,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
       // Populate LOOKUPSWITCH
       const hashLabels: Label[] = []
-      hashCaseMap.forEach((label, hashCode) => {
+      sortedHashEntries.forEach(([hashCode, label]) => {
         cg.code.push(
           (hashCode >> 24) & 0xff,
           (hashCode >> 16) & 0xff,
@@ -2624,7 +2635,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         cg.code[idx + 3] = defOff & 0xff
       }
 
-      // Patch hash-case entries in insertion order
+      // Patch hash-case entries (in the sorted order they were written)
       for (let k = 0; k < hashLabels.length; k++) {
         const idx = caseLabelIndex[1 + k]
         const off = hashLabels[k].offset - positionOffset
@@ -2641,7 +2652,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       )
     }
 
-    cg.switchLabels.pop()
+    cg.breakLabels.pop()
 
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   }
@@ -2655,7 +2666,8 @@ class CodeGenerator {
   exceptionTable: Array<ExceptionHandler> = []
   labels: Label[] = []
   loopLabels: Label[][] = []
-  switchLabels: Label[] = []
+  // end label of every enclosing loop and switch (innermost last), the targets of `break`
+  breakLabels: Label[] = []
   finallyBlockStack: Node[] = []
   code: number[] = []
   currentClass: string
