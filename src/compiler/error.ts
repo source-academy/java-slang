@@ -75,3 +75,15 @@ export class BadOperandTypesError extends CompileError {
     super(`bad operand types for binary operator '${operator}': ${left}, ${right}`)
   }
 }
+
+export class AbstractClassInstantiationError extends CompileError {
+  constructor(name: string) {
+    super(`${name} is abstract; cannot be instantiated`)
+  }
+}
+
+export class EnumInstantiationError extends CompileError {
+  constructor(name: string) {
+    super(`enum classes may not be instantiated: ${name}`)
+  }
+}

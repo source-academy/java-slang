@@ -822,9 +822,15 @@ export class Compiler {
     const descriptorIndex = this.constantPoolManager.indexUtf8Info(descriptor)
 
     const attributes: Array<AttributeInfo> = []
-    attributes.push(
-      generateCode(this.symbolTable, this.constantPoolManager, this.className, methodNode)
-    )
+    // JVMS 4.7.3: abstract and native methods have no body, so they have no Code attribute
+    const hasBody =
+      !methodNode.methodModifier.includes('abstract') &&
+      !methodNode.methodModifier.includes('native')
+    if (hasBody) {
+      attributes.push(
+        generateCode(this.symbolTable, this.constantPoolManager, this.className, methodNode)
+      )
+    }
 
     this.methods.push({
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),

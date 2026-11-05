@@ -2,6 +2,11 @@ import {
   runTest,
   testCase,
 } from "../__utils__/test-utils";
+import * as peggy from "peggy";
+import { compile } from "../../index";
+import { AST } from "../../../ast/types/packages-and-modules";
+import { javaPegGrammar } from "../../grammar";
+import { peggyFunctions } from "../../peggy-functions";
 
 const testCases: testCase[] = [
   {
@@ -182,6 +187,38 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["In f", "In print", "In g"],
   },
+  {
+    comment: "concrete subclasses of abstract classes can be instantiated",
+    program: `
+      abstract class Shape {
+        public abstract int sides();
+        public abstract String name();
+        public String describe() { return name() + " has " + sides() + " sides"; }
+      }
+      class Triangle extends Shape {
+        public int sides() { return 3; }
+        public String name() { return "triangle"; }
+      }
+      abstract class Polygon extends Shape {
+        public String name() { return "polygon"; }
+      }
+      class Square extends Polygon {
+        public int sides() { return 4; }
+      }
+      public class Main {
+        public static void main(String[] args) {
+          Shape t = new Triangle();
+          Shape s = new Square();
+          System.out.println(t.describe());
+          System.out.println(s.describe());
+          Polygon p = new Square();
+          Shape asShape = p;
+          System.out.println(asShape.sides());
+        }
+      }
+    `,
+    expectedLines: ["triangle has 3 sides", "polygon has 4 sides", "4"],
+  },
 ];
 
 export const classTest = () => describe("fields and methods of class", () => {
@@ -189,4 +226,51 @@ export const classTest = () => describe("fields and methods of class", () => {
     const { comment: comment, program: program, expectedLines: expectedLines } = testCase;
     it(comment, () => runTest(program, expectedLines));
   }
+
+  describe("rejects instantiations that Java does not allow", () => {
+    const classes = `
+      abstract class Shape {
+        public abstract int sides();
+      }
+      abstract class Polygon extends Shape {}
+      class Square extends Polygon {
+        public int sides() { return 4; }
+      }
+      enum Color { RED, GREEN }
+    `;
+    const compileWithClasses = (body: string) => {
+      const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+        allowedStartRules: ["CompilationUnit"],
+      });
+      return compile(
+        parser.parse(`
+          ${classes}
+          public class Main {
+            public static void main(String[] args) {
+              ${body}
+            }
+          }
+        `) as AST
+      );
+    };
+
+    const rejected: [string, string, RegExp][] = [
+      ["an abstract class", "Shape s = new Shape();", /Shape is abstract; cannot be instantiated/],
+      ["an abstract subclass of an abstract class", "Polygon p = new Polygon();", /Polygon is abstract/],
+      ["an abstract class in an array initializer", "Shape[] shapes = {new Shape()};", /Shape is abstract/],
+      ["an abstract class passed as an argument", "System.out.println(new Shape());", /Shape is abstract/],
+      ["an abstract library class", "Number n = new Number();", /Number is abstract/],
+      ["a library interface", "Runnable r = new Runnable();", /Runnable is abstract/],
+      ["an enum", "Color c = new Color();", /enum classes may not be instantiated/],
+    ];
+    for (const [comment, body, message] of rejected) {
+      it(`rejects instantiating ${comment}`, () =>
+        expect(() => compileWithClasses(body)).toThrow(message));
+    }
+
+    it("still allows a concrete subclass", () =>
+      expect(() => compileWithClasses("Shape s = new Square(); Polygon p = new Square();")).not.toThrow());
+    it("still allows a concrete library class", () =>
+      expect(() => compileWithClasses("StringBuilder b = new StringBuilder();")).not.toThrow());
+  });
 });

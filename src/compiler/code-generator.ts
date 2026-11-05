@@ -34,9 +34,11 @@ import { MethodDeclaration, UnannType } from '../ast/types/classes'
 import { unannTypeToString } from '../types/ast/utils'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
+  AbstractClassInstantiationError,
   AmbiguousMethodCallError,
   BadOperandTypesError,
   ConstructNotSupportedError,
+  EnumInstantiationError,
   InconvertibleTypesError,
   NoMethodMatchingSignatureError,
   NonStaticReferenceInStaticContextError
@@ -407,6 +409,7 @@ function describeType(descriptor: string): string {
 }
 
 const ACC_INTERFACE = 0x0200
+const ACC_ABSTRACT = 0x0400
 
 /**
  * Whether `sub` is `sup` or one of its subclasses. Returns `undefined` when this cannot be
@@ -1597,8 +1600,19 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     let instantiatedClassName = id
     try {
-      instantiatedClassName = cg.symbolTable.queryClass(id).name
+      const classInfo = cg.symbolTable.queryClass(id)
+      instantiatedClassName = classInfo.name
+      // JLS 15.9.1: an abstract class (or an interface) cannot be instantiated
+      if (classInfo.accessFlags & (ACC_ABSTRACT | ACC_INTERFACE)) {
+        throw new AbstractClassInstantiationError(id.replace(/\//g, '.'))
+      }
+      if (classInfo.isEnum) {
+        throw new EnumInstantiationError(id.replace(/\//g, '.'))
+      }
     } catch (e) {
+      if (e instanceof AbstractClassInstantiationError || e instanceof EnumInstantiationError) {
+        throw e
+      }
       instantiatedClassName = id.includes('/') ? id : id.replace(/\./g, '/')
     }
     cg.code.push(
