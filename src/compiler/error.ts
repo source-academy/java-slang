@@ -69,3 +69,9 @@ export class InconvertibleTypesError extends CompileError {
     super(`incompatible types: ${from} cannot be converted to ${to}`)
   }
 }
+
+export class BadOperandTypesError extends CompileError {
+  constructor(operator: string, left: string, right: string) {
+    super(`bad operand types for binary operator '${operator}': ${left}, ${right}`)
+  }
+}

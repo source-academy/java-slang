@@ -1063,6 +1063,174 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["97", "99", "12", "-2147483648", "4465", "45", "B", "3.1", "2999999904"],
   },
+  {
+    comment: "bitwise and shift operators on boolean and integral operands",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          boolean t = true;
+          boolean f = false;
+          System.out.println(t & f);
+          System.out.println(t | f);
+          System.out.println(t ^ f);
+          System.out.println((t & f) | (t ^ f));
+          boolean acc = true;
+          acc &= f;
+          acc |= t;
+          acc ^= t;
+          System.out.println(acc);
+          byte b = 12;
+          char c = 'a';
+          short s = 5;
+          long l = 1L << 40;
+          System.out.println(b & c);
+          System.out.println(c | s);
+          System.out.println(l | b);
+          System.out.println(l ^ c);
+          System.out.println(b & l);
+          System.out.println(b << l);
+          System.out.println(l >> b);
+          System.out.println(c >>> s);
+          int i = 6;
+          i <<= 2L;
+          i ^= 'a';
+          i &= l | 255;
+          System.out.println(i);
+        }
+      }
+    `,
+    expectedLines: ["false", "true", "true", "true", "false", "0", "101", "1099511627788", "1099511627873", "0", "12", "268435456", "3", "121"],
+  },
+  {
+    comment: "relational and equality operators on numeric, boolean, wrapper and reference operands",
+    program: `
+      class Foo {}
+      class Bar extends Foo {}
+      public class Main {
+        public static void main(String[] args) {
+          byte b = 3;
+          char c = 'a';
+          long l = 4;
+          float f = 2.5f;
+          double d = 3.5;
+          System.out.println(b < c);
+          System.out.println(l >= b);
+          System.out.println(f > l);
+          System.out.println(d <= f);
+          System.out.println(c == 97);
+          System.out.println(l != 4.0);
+          boolean t = true;
+          boolean u = false;
+          System.out.println(t == u);
+          System.out.println(t != u);
+          System.out.println((b < l) == (f < d));
+          Integer i = 7;
+          Boolean flag = true;
+          System.out.println(i < 8);
+          System.out.println(i == 7);
+          System.out.println(7 == i);
+          System.out.println(flag == t);
+          System.out.println(i >= l);
+          Foo foo = new Foo();
+          Foo same = foo;
+          Foo other = new Foo();
+          Bar bar = new Bar();
+          Foo viaParent = bar;
+          System.out.println(foo == same);
+          System.out.println(foo != other);
+          System.out.println(bar == viaParent);
+          System.out.println(viaParent == bar);
+          Object o = i;
+          System.out.println(i == o);
+          System.out.println(o != i);
+          Object p = foo;
+          System.out.println(p == foo);
+          String s = "abc";
+          Object so = s;
+          System.out.println(s == so);
+          int count = 0;
+          for (long k = 0; k < 3L; k++) {
+            if (k != 1) {
+              count++;
+            }
+          }
+          System.out.println(count);
+        }
+      }
+    `,
+    expectedLines: ["true", "true", "false", "false", "true", "false", "false", "true", "true", "true", "true", "true", "true", "true", "true", "true", "true", "true", "true", "false", "true", "true", "2"],
+  },
+  {
+    comment: "negative long constants keep their sign in the constant pool",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          long a = -128L;
+          long b = -5000000000L;
+          long c = -9223372036854775807L - 1L;
+          long d = 9223372036854775807L;
+          long e = -1L;
+          long f = 4294967296L;
+          System.out.println(a);
+          System.out.println(b);
+          System.out.println(c);
+          System.out.println(d);
+          System.out.println(e);
+          System.out.println(f);
+          System.out.println(a < 0L);
+          System.out.println(b + f);
+          long mask = ~0L;
+          System.out.println(mask);
+          long flipped = ~a;
+          System.out.println(flipped);
+          System.out.println(a >= -128L);
+          System.out.println(a >= -129L);
+        }
+      }
+    `,
+    expectedLines: ["-128", "-5000000000", "-9223372036854775808", "9223372036854775807", "-1", "4294967296", "true", "-705032704", "-1", "127", "true", "true"],
+  },
+  {
+    comment: "== and != on two wrappers compare references, so only cached values are equal",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          { Integer a = -129; Integer b = -129; Object x = a; Object y = b; System.out.println("Integer -129 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Integer a = -128; Integer b = -128; Object x = a; Object y = b; System.out.println("Integer -128 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Integer a = 127; Integer b = 127; Object x = a; Object y = b; System.out.println("Integer 127 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Integer a = 128; Integer b = 128; Object x = a; Object y = b; System.out.println("Integer 128 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Long a = -129L; Long b = -129L; Object x = a; Object y = b; System.out.println("Long -129 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Long a = -128L; Long b = -128L; Object x = a; Object y = b; System.out.println("Long -128 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Long a = 127L; Long b = 127L; Object x = a; Object y = b; System.out.println("Long 127 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Long a = 128L; Long b = 128L; Object x = a; Object y = b; System.out.println("Long 128 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Short a = (short) -129; Short b = (short) -129; Object x = a; Object y = b; System.out.println("Short -129 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Short a = (short) -128; Short b = (short) -128; Object x = a; Object y = b; System.out.println("Short -128 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Short a = (short) 127; Short b = (short) 127; Object x = a; Object y = b; System.out.println("Short 127 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Short a = (short) 128; Short b = (short) 128; Object x = a; Object y = b; System.out.println("Short 128 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Byte a = (byte) -128; Byte b = (byte) -128; Object x = a; Object y = b; System.out.println("Byte -128 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Byte a = (byte) 127; Byte b = (byte) 127; Object x = a; Object y = b; System.out.println("Byte 127 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Character a = (char) 0; Character b = (char) 0; Object x = a; Object y = b; System.out.println("Character 0 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Character a = (char) 127; Character b = (char) 127; Object x = a; Object y = b; System.out.println("Character 127 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Character a = (char) 128; Character b = (char) 128; Object x = a; Object y = b; System.out.println("Character 128 " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Boolean a = true; Boolean b = true; Object x = a; Object y = b; System.out.println("Boolean true " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Float a = 0.0f; Float b = 0.0f; Object x = a; Object y = b; System.out.println("Float " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          { Double a = 0.0; Double b = 0.0; Object x = a; Object y = b; System.out.println("Double " + (a == b) + " " + (a != b) + " " + (x == y)); }
+          Integer big = 1000;
+          Integer alias = big;
+          System.out.println(big == alias);
+          System.out.println(big == 1000);
+          System.out.println(1000 == big);
+          Integer other = 1000;
+          System.out.println(big.equals(other));
+          System.out.println(big < other);
+          System.out.println(big <= other);
+          Long wide = 1000L;
+          System.out.println(big == wide.intValue());
+        }
+      }
+    `,
+    expectedLines: ["Integer -129 false true false", "Integer -128 true false true", "Integer 127 true false true", "Integer 128 false true false", "Long -129 false true false", "Long -128 true false true", "Long 127 true false true", "Long 128 false true false", "Short -129 false true false", "Short -128 true false true", "Short 127 true false true", "Short 128 false true false", "Byte -128 true false true", "Byte 127 true false true", "Character 0 true false true", "Character 127 true false true", "Character 128 false true false", "Boolean true true false true", "Float false true false", "Double false true false", "true", "true", "true", "true", "false", "true", "true"],
+  },
 ]
 
 const compileProgram = (body: string) => {
@@ -1084,6 +1252,72 @@ export const typeConversionTest = () => describe("type conversion", () => {
     const { comment: comment, program: program, expectedLines: expectedLines } = testCase;
     it(comment, () => runTest(program, expectedLines));
   }
+
+  describe("rejects comparisons of unrelated classes", () => {
+    const parse = (body: string) => {
+      const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+        allowedStartRules: ["CompilationUnit"],
+      });
+      return compile(
+        parser.parse(`
+          class Foo {}
+          class Bar extends Foo {}
+          class Baz {}
+          public class Main {
+            public static void main(String[] args) {
+              ${body}
+            }
+          }
+        `) as AST
+      );
+    };
+    const rejected: [string, string][] = [
+      ["unrelated classes", "Foo f = new Foo(); Baz z = new Baz(); boolean b = f == z;"],
+      ["Integer and String", "Integer i = 1; String s = \"1\"; boolean b = i == s;"],
+      ["Integer and Long", "Integer i = 1; Long l = 1L; boolean b = i == l;"],
+    ];
+    for (const [comment, body] of rejected) {
+      it(`rejects ${comment}`, () => expect(() => parse(body)).toThrow(/incompatible types/));
+    }
+    it("allows a class and its subclass", () =>
+      expect(() =>
+        parse("Foo f = new Foo(); Bar b = new Bar(); boolean x = f == b; boolean y = b != f;")
+      ).not.toThrow());
+  });
+
+  describe("rejects operators applied to illegal operand types", () => {
+    const rejected: [string, string][] = [
+      ["shift with a double distance", "int i = 1 << 2.0;"],
+      ["shift of a double", "int i = (int) (1.5 << 1);"],
+      ["shift of a float by a long", "float f = 1f; long l = 1; float g = f >> l;"],
+      ["shift of a boolean", "boolean b = true; int i = b << 1;"],
+      ["shift by a boolean", "boolean b = true; int i = 1 >>> b;"],
+      ["bitwise and of an int and a double", "double d = 1 & 2.5;"],
+      ["bitwise or of a float", "float f = 1f; int i = (int) (f | 1);"],
+      ["bitwise xor of two doubles", "double d = 1.0 ^ 2.0;"],
+      ["bitwise and of a boolean and an int", "boolean b = true; int i = b & 1;"],
+      ["bitwise or of an int and a boolean", "boolean b = true; int i = 1 | b;"],
+      ["addition of a boolean and an int", "int i = true + 1;"],
+      ["multiplication of two booleans", "boolean b = true * false;"],
+      ["remainder by a boolean", "int i = 1 % true;"],
+      ["subtraction of a boolean", "boolean b = true; int i = 1 - b;"],
+      ["compound shift by a double", "int i = 1; i <<= 2.0;"],
+      ["compound bitwise and of a double variable", "double d = 1; d &= 1;"],
+      ["compound addition to a boolean", "boolean b = true; b += 1;"],
+      ["less-than on booleans", "boolean b = true < false;"],
+      ["less-than of an int and a boolean", "boolean b = true; boolean c = 1 < b;"],
+      ["greater-or-equal on Strings", "boolean b = \"a\" >= \"b\";"],
+      ["relational operator on Objects", "Object o = 1; Object p = 2; boolean b = o > p;"],
+      ["equality of a boolean and an int", "boolean b = true == 1;"],
+      ["equality of an int and a boolean", "boolean t = true; boolean b = 1 != t;"],
+      ["equality of a String and an int", "String s = \"1\"; boolean b = s == 1;"],
+      ["equality of an Object and an int", "Object o = 1; boolean b = o == 1;"],
+    ];
+    for (const [comment, body] of rejected) {
+      it(`rejects ${comment}`, () =>
+        expect(() => compileProgram(body)).toThrow(/bad operand types/));
+    }
+  });
 
   describe("rejects conversions that are not implicit", () => {
     const rejected: [string, string][] = [

@@ -35,6 +35,7 @@ import { unannTypeToString } from '../types/ast/utils'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
   AmbiguousMethodCallError,
+  BadOperandTypesError,
   ConstructNotSupportedError,
   InconvertibleTypesError,
   NoMethodMatchingSignatureError,
@@ -348,6 +349,14 @@ function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGener
     return false
   }
   return false
+}
+
+/** Human-readable name of a type descriptor, for error messages. */
+function describeType(descriptor: string): string {
+  if (descriptor === 'Z') return 'boolean'
+  if (descriptor in PRIMITIVE_NAMES) return PRIMITIVE_NAMES[descriptor]
+  if (descriptor === EMPTY_TYPE) return '<unknown>'
+  return descriptor.replace(/^L|;$/g, '').replace(/\//g, '.')
 }
 
 const ACC_INTERFACE = 0x0200
@@ -745,12 +754,39 @@ function compileComparison(
     return { stackSize: l.stackSize, resultType: boolType }
   }
 
+  // A primitive is a single-character descriptor; everything else non-empty is a reference.
+  const isReference = (t: string) => t.length > 1
+  const isWrapper = (t: string) => t in WRAPPER_DESCRIPTOR_TO_PRIMITIVE
+  const isEquality = op === '==' || op === '!='
+
+  // JLS 15.21.3: `==`/`!=` between two references (wrappers included) compares the references,
+  // so a wrapper is only unboxed when the other operand is not a reference.
   const l = compile(left, cg)
-  const leftType = unboxIfWrapper(l.resultType, cg)
+  const rawLeftType = l.resultType
+  const unboxLeft =
+    isWrapper(rawLeftType) && !(isEquality && isReference(getExpressionType(right, cg)))
+  const leftType = unboxLeft ? unboxIfWrapper(rawLeftType, cg) : rawLeftType
   const insertConversionIndex = cg.code.length
   cg.code.push(OPCODE.NOP)
   const r = compile(right, cg)
-  const rightType = unboxIfWrapper(r.resultType, cg)
+  const unboxRight = isWrapper(r.resultType) && !(isEquality && isReference(rawLeftType))
+  const rightType = unboxRight ? unboxIfWrapper(r.resultType, cg) : r.resultType
+
+  // JLS 15.20.1, 15.21: relational operators need numeric operands; equality operators need two
+  // numeric, two boolean or two reference operands.
+  const operandsAreValid = isEquality
+    ? (isNumeric(leftType) && isNumeric(rightType)) ||
+      (leftType === 'Z' && rightType === 'Z') ||
+      (isReference(leftType) && isReference(rightType))
+    : isNumeric(leftType) && isNumeric(rightType)
+  if (!operandsAreValid) {
+    throw new BadOperandTypesError(op, describeType(leftType), describeType(rightType))
+  }
+
+  if (isReference(leftType) && isReference(rightType)) {
+    // the operands of a reference comparison must be castable to one another
+    assertReferenceCastIsLegal(leftType, rightType, cg)
+  }
 
   const effectiveOp = jumpIfTrue ? op : negatedComparison[op]
   let stackSize: number
@@ -779,8 +815,7 @@ function compileComparison(
     }
   } else {
     stackSize = Math.max(l.stackSize, slotsOf(leftType) + r.stackSize)
-    const isReference = (t: string) => t.startsWith('L') || t.startsWith('[')
-    if (isReference(leftType) && isReference(rightType)) {
+    if (isReference(leftType)) {
       cg.addBranchInstr(effectiveOp === '==' ? OPCODE.IF_ACMPEQ : OPCODE.IF_ACMPNE, targetLabel)
     } else {
       cg.addBranchInstr(jumpIfTrue ? logicalOp[op] : reverseLogicalOp[op], targetLabel)
@@ -1887,12 +1922,26 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const rightCompiled = compile(right, cg)
     const rightType = unboxIfWrapper(rightCompiled.resultType, cg)
 
+    // JLS 15.19, 15.17-15.18, 15.22: shifts need integral operands, arithmetic needs numeric
+    // operands, and bitwise operators need operands that are both integral or both boolean.
+    const isIntegral = (t: string) => t === 'J' || isIntLike(t)
+    const isShiftOp = op === '<<' || op === '>>' || op === '>>>'
+    const isBitwiseOp = op === '&' || op === '|' || op === '^'
+    const operandsAreValid = isShiftOp
+      ? isIntegral(leftType) && isIntegral(rightType)
+      : isBitwiseOp
+        ? (isIntegral(leftType) && isIntegral(rightType)) || (leftType === 'Z' && rightType === 'Z')
+        : isNumeric(leftType) && isNumeric(rightType)
+    if (!operandsAreValid) {
+      throw new BadOperandTypesError(op, describeType(leftType), describeType(rightType))
+    }
+
     let finalType = leftType
     let size1 = Math.max(leftCompiled.stackSize, slotsOf(leftType))
     let size2 = Math.max(rightCompiled.stackSize, slotsOf(rightType))
 
     if (isNumeric(leftType) && isNumeric(rightType)) {
-      const isShift = op === '<<' || op === '>>' || op === '>>>'
+      const isShift = isShiftOp
       // Shift operands are promoted separately (JLS 5.6.1); the result has the left type.
       const promoted = isShift
         ? binaryPromotion(leftType, 'I')
