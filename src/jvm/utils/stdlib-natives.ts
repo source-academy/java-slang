@@ -10,6 +10,7 @@ import natives_java_lang_Double from '../stdlib/java/lang/Double'
 import natives_java_lang_Float from '../stdlib/java/lang/Float'
 import natives_java_lang_Object from '../stdlib/java/lang/Object'
 import natives_java_lang_Runtime from '../stdlib/java/lang/Runtime'
+import natives_java_lang_StrictMath from '../stdlib/java/lang/StrictMath'
 import natives_java_lang_String from '../stdlib/java/lang/String'
 import natives_java_lang_System from '../stdlib/java/lang/System'
 import natives_java_lang_Thread from '../stdlib/java/lang/Thread'
@@ -47,6 +48,7 @@ const stdlibNatives: Lib = {
   'java/lang/Float': { methods: natives_java_lang_Float },
   'java/lang/Object': { methods: natives_java_lang_Object },
   'java/lang/Runtime': { methods: natives_java_lang_Runtime },
+  'java/lang/StrictMath': { methods: natives_java_lang_StrictMath },
   'java/lang/String': { methods: natives_java_lang_String },
   'java/lang/System': { methods: natives_java_lang_System },
   'java/lang/Thread': { methods: natives_java_lang_Thread },
@@ -54,15 +56,19 @@ const stdlibNatives: Lib = {
   'java/lang/invoke/MethodHandleNatives': { methods: natives_java_lang_invoke_MethodHandleNatives },
   'java/lang/reflect/Array': { methods: natives_java_lang_reflect_Array },
   'java/security/AccessController': { methods: natives_java_security_AccessController },
-  'java/util/concurrent/atomic/AtomicLong': { methods: natives_java_util_concurrent_atomic_AtomicLong },
+  'java/util/concurrent/atomic/AtomicLong': {
+    methods: natives_java_util_concurrent_atomic_AtomicLong
+  },
   'sun/misc/Perf': { methods: natives_sun_misc_Perf },
   'sun/misc/Signal': { methods: natives_sun_misc_Signal },
   'sun/misc/URLClassPath': { methods: natives_sun_misc_URLClassPath },
   'sun/misc/Unsafe': { methods: natives_sun_misc_Unsafe },
   'sun/misc/VM': { methods: natives_sun_misc_VM },
-  'sun/reflect/NativeConstructorAccessorImpl': { methods: natives_sun_reflect_NativeConstructorAccessorImpl },
+  'sun/reflect/NativeConstructorAccessorImpl': {
+    methods: natives_sun_reflect_NativeConstructorAccessorImpl
+  },
   'sun/reflect/NativeMethodAccessorImpl': { methods: natives_sun_reflect_NativeMethodAccessorImpl },
-  'sun/reflect/Reflection': { methods: natives_sun_reflect_Reflection },
+  'sun/reflect/Reflection': { methods: natives_sun_reflect_Reflection }
 }
 
 export default stdlibNatives

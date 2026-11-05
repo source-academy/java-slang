@@ -6,6 +6,13 @@ export const functions = {
     const dataview = new DataView(new ArrayBuffer(8))
     dataview.setFloat32(0, float)
     thread.returnStackFrame(dataview.getInt32(0))
+  },
+
+  'intBitsToFloat(I)F': (thread: Thread, locals: any[]) => {
+    const int = locals[0]
+    const dataview = new DataView(new ArrayBuffer(4))
+    dataview.setInt32(0, int)
+    thread.returnStackFrame(dataview.getFloat32(0))
   }
 }
 

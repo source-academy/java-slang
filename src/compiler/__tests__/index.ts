@@ -13,6 +13,7 @@ import { enumTest } from "./tests/enum.test";
 import { nestedClassesTest } from "./tests/nestedClasses.test";
 import { typeConversionTest } from "./tests/typeConversion.test";
 import { castExpressionTest } from "./tests/castExpression.test";
+import { literalTest } from "./tests/literals.test";
 
 describe("compiler tests", () => {
   printlnTest();
@@ -30,4 +31,5 @@ describe("compiler tests", () => {
   nestedClassesTest();
   typeConversionTest();
   castExpressionTest();
+  literalTest();
 })

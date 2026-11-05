@@ -1231,6 +1231,34 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["Integer -129 false true false", "Integer -128 true false true", "Integer 127 true false true", "Integer 128 false true false", "Long -129 false true false", "Long -128 true false true", "Long 127 true false true", "Long 128 false true false", "Short -129 false true false", "Short -128 true false true", "Short 127 true false true", "Short 128 false true false", "Byte -128 true false true", "Byte 127 true false true", "Character 0 true false true", "Character 127 true false true", "Character 128 false true false", "Boolean true true false true", "Float false true false", "Double false true false", "true", "true", "true", "true", "false", "true", "true"],
   },
+  {
+    comment: "0.0 and -0.0 (and NaN, infinities) are distinct constants",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          double negative = -0.0;
+          double positive = 0.0;
+          System.out.println(negative);
+          System.out.println(positive);
+          float fn = -0.0f;
+          float fp = 0.0f;
+          System.out.println(fn);
+          System.out.println(fp);
+          System.out.println(1.0 / negative);
+          System.out.println(1.0 / positive);
+          System.out.println(1.0f / fn);
+          System.out.println(1.0f / fp);
+          double nan = 0.0 / 0.0;
+          System.out.println(nan);
+          System.out.println(nan == nan);
+          double inf = 1.0 / 0.0;
+          System.out.println(inf);
+          System.out.println(-inf);
+        }
+      }
+    `,
+    expectedLines: ["-0.0", "0.0", "-0.0", "0.0", "-Infinity", "Infinity", "-Infinity", "Infinity", "NaN", "false", "Infinity", "-Infinity"],
+  },
 ]
 
 const compileProgram = (body: string) => {

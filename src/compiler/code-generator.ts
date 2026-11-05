@@ -230,6 +230,54 @@ function binaryPromotion(left: string, right: string): string {
   return 'I'
 }
 
+const INTEGER_LITERAL_KINDS = [
+  'DecimalIntegerLiteral',
+  'HexIntegerLiteral',
+  'OctalIntegerLiteral',
+  'BinaryIntegerLiteral'
+]
+
+/**
+ * Parses the text of an integer literal (JLS 3.10.1): an optional sign, a decimal, hexadecimal
+ * (`0x`), octal (leading `0`) or binary (`0b`) numeral that may contain `_` separators, and an
+ * optional `L` suffix. Hexadecimal, octal and binary literals denote the two's complement bit
+ * pattern of an int or long, so `0xFFFFFFFF` is -1; decimal literals must fit the signed range.
+ */
+function parseIntegerLiteral(text: string): { value: bigint; isLong: boolean } {
+  const match = /^([+-]?)(0[xX][0-9a-fA-F_]+|0[bB][01_]+|[0-9_]+)([lL]?)$/.exec(text)
+  if (!match) throw new Error(`Malformed integer literal: ${text}`)
+  const [, sign, numeral, suffix] = match
+  const isLong = suffix !== ''
+  const digits = numeral.replace(/_/g, '')
+
+  let magnitude: bigint
+  let isDecimal = false
+  if (/^0[xX]/.test(digits)) {
+    magnitude = BigInt(digits)
+  } else if (/^0[bB]/.test(digits)) {
+    magnitude = BigInt(digits)
+  } else if (/^0[0-9]/.test(digits)) {
+    magnitude = BigInt('0o' + digits.slice(1)) // octal
+  } else {
+    magnitude = BigInt(digits)
+    isDecimal = true
+  }
+
+  const bits = isLong ? 64 : 32
+  const negative = sign === '-'
+  if (isDecimal) {
+    // a decimal literal may be one larger than the maximum, but only when it is negated
+    const limit = BigInt(1) << BigInt(bits - 1)
+    if (magnitude > limit || (magnitude === limit && !negative)) {
+      throw new Error(`Integer number too large: ${text}`)
+    }
+  } else if (magnitude >> BigInt(bits)) {
+    throw new Error(`Integer number too large: ${text}`)
+  }
+  const value = BigInt.asIntN(bits, negative ? -magnitude : magnitude)
+  return { value, isLong }
+}
+
 const INT_RANGES: { [descriptor: string]: [number, number] } = {
   B: [-128, 127],
   S: [-32768, 32767],
@@ -245,10 +293,9 @@ function evaluateIntConstant(node: Node): number | undefined {
     case 'Literal': {
       const { kind, value } = node.literalType
       if (kind === 'CharacterLiteral') return value.charCodeAt(0)
-      if (kind === 'DecimalIntegerLiteral' || kind === 'HexIntegerLiteral') {
-        if (/[lL]$/.test(value)) return undefined
-        const n = parseInt(value)
-        return Number.isNaN(n) ? undefined : n | 0
+      if (INTEGER_LITERAL_KINDS.includes(kind)) {
+        const literal = parseIntegerLiteral(value)
+        return literal.isLong ? undefined : Number(literal.value)
       }
       return undefined
     }
@@ -1371,7 +1418,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           }
           return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
         } else {
-          if (onTrue === (parseInt(value) !== 0)) {
+          if (onTrue === (parseIntegerLiteral(value).value !== BigInt(0))) {
             cg.addBranchInstr(OPCODE.GOTO, targetLabel)
           }
           return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
@@ -2151,14 +2198,16 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('String') }
       }
       case 'HexIntegerLiteral':
+      case 'OctalIntegerLiteral':
+      case 'BinaryIntegerLiteral':
       case 'DecimalIntegerLiteral': {
-        if (value.endsWith('l') || value.endsWith('L')) {
-          const n = BigInt(value.slice(0, -1))
-          const idx = cg.constantPoolManager.indexLongInfo(n)
+        const literal = parseIntegerLiteral(value)
+        if (literal.isLong) {
+          const idx = cg.constantPoolManager.indexLongInfo(literal.value)
           cg.code.push(OPCODE.LDC2_W, 0, idx)
           return { stackSize: 2, resultType: cg.symbolTable.generateFieldDescriptor('long') }
         }
-        const n = parseInt(value)
+        const n = Number(literal.value)
         if (-128 <= n && n < 128) {
           cg.code.push(OPCODE.BIPUSH, n)
         } else if (-32768 <= n && n < 32768) {
@@ -2170,7 +2219,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         return { stackSize: 1, resultType: cg.symbolTable.generateFieldDescriptor('int') }
       }
       case 'DecimalFloatingPointLiteral': {
-        const d = parseFloat(value)
+        const d = parseFloat(value.replace(/_/g, ''))
         if (value.endsWith('f') || value.endsWith('F')) {
           const idx = cg.constantPoolManager.indexFloatInfo(d)
           cg.code.push(OPCODE.LDC, idx)
@@ -2257,7 +2306,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
                         `Identifier case labels are only supported for enum switch selectors: ${label.expression.name}`
                       )
                     })()
-                  : parseInt((label.expression as Literal).literalType.value)
+                  : (() => {
+                      const constant = evaluateIntConstant(label.expression)
+                      if (constant === undefined) throw new Error('Constant expression required')
+                      return constant
+                    })()
             caseValues.push(value)
             caseLabelMap.set(value, caseLabels[index])
           } else if (label.kind === 'DefaultLabel') {

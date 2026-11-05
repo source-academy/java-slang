@@ -187,12 +187,37 @@ const JVM_BOOTSTRAP_SEEDS = [
   'java/nio/charset/CoderResult$2'
 ]
 
+/**
+ * Classes that JDK code executed by ordinary programs loads at runtime, but that are neither a
+ * supertype of a compiler seed nor a direct reference of one (implementation dependencies are
+ * only followed one level deep, see `computeClosure`).
+ *
+ * Converting a `float`/`double` to or from text (`println(1.5)`, `String.valueOf(2.5f)`, string
+ * concatenation, `Double.parseDouble`, ...) goes through `sun.misc.FloatingDecimal`. `Double`
+ * and `Float` reference it directly, but its nested classes (where the actual conversion
+ * happens) and `FDBigInteger` are one hop further, so without these seeds printing a float or a
+ * double fails with a `ClassNotFoundException`. `FloatingDecimal$HexFloatPattern` is left out on
+ * purpose: it is only used for hexadecimal floating-point literals and would pull in the whole
+ * regex engine.
+ */
+const RUNTIME_SEEDS = [
+  'sun/misc/FDBigInteger',
+  'sun/misc/FloatingDecimal',
+  'sun/misc/FloatingDecimal$1',
+  'sun/misc/FloatingDecimal$ASCIIToBinaryBuffer',
+  'sun/misc/FloatingDecimal$ASCIIToBinaryConverter',
+  'sun/misc/FloatingDecimal$BinaryToASCIIBuffer',
+  'sun/misc/FloatingDecimal$BinaryToASCIIConverter',
+  'sun/misc/FloatingDecimal$ExceptionalBinaryToASCIIBuffer',
+  'sun/misc/FloatingDecimal$PreparedASCIIToBinaryBuffer'
+]
+
 function cf2b64(filePath: string): string {
   return fs.readFileSync(filePath).toString('base64')
 }
 
 function build() {
-  const closure = computeClosure(CLASS_ROOT, JVM_BOOTSTRAP_SEEDS, {
+  const closure = computeClosure(CLASS_ROOT, [...JVM_BOOTSTRAP_SEEDS, ...RUNTIME_SEEDS], {
     followImplementationDependencies: true
   })
   if (closure.unresolved.length > 0) {
