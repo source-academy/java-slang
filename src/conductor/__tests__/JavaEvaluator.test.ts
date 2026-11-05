@@ -143,7 +143,7 @@ describe('JavaEvaluator', () => {
     }
 
     expect(mock.errors).toHaveLength(0)
-    expect(mock.outputs.join('')).toBe('1\n2\n3\n4\n5\n')
+    expect(mock.outputs).toEqual(['1', '2', '3', '4', '5'])
     expect(result).toBeUndefined()
     expect(mock.results).toHaveLength(0)
   })
@@ -198,7 +198,7 @@ describe('JavaEvaluator', () => {
 
     expect(mock.errors).toHaveLength(0)
     expect(mock.outputs).toEqual([
-      'ERR: Exception in thread "main" java.lang.ArithmeticException: / by zero\n'
+      'ERR: Exception in thread "main" java.lang.ArithmeticException: / by zero'
     ])
   })
 
@@ -210,5 +210,57 @@ describe('JavaEvaluator', () => {
 
     expect(mock.errors).toHaveLength(1)
     expect(mock.results).toHaveLength(0)
+  })
+
+  describe('program output', () => {
+    const run = async (body: string): Promise<string[]> => {
+      const mock = new MockConductor()
+      const ev = new JavaEvaluator(mock as any)
+      const originalBuffer = (globalThis as any).Buffer
+      delete (globalThis as any).Buffer
+      try {
+        await ev.evaluateChunk(`
+          public class Main {
+            public static void main(String[] args) {
+              ${body}
+            }
+          }
+        `)
+      } finally {
+        ;(globalThis as any).Buffer = originalBuffer
+      }
+      expect(mock.errors).toHaveLength(0)
+      return mock.outputs
+    }
+
+    test('sends each println as one message, with no separate newline message', async () => {
+      expect(await run('System.out.println("a"); System.out.println(42);')).toEqual(['a', '42'])
+    })
+
+    test('joins print calls into the line that the next println ends', async () => {
+      expect(
+        await run(
+          'System.out.print("b"); System.out.print("c"); System.out.println(); System.out.println("d");'
+        )
+      ).toEqual(['bc', 'd'])
+    })
+
+    test('keeps an intentional blank line', async () => {
+      expect(
+        await run('System.out.println("a"); System.out.println(); System.out.println("b");')
+      ).toEqual(['a', '', 'b'])
+    })
+
+    test('splits a string containing newlines into lines', async () => {
+      expect(await run('System.out.println("a\\nb");')).toEqual(['a', 'b'])
+    })
+
+    test('still sends output that is not terminated by a newline', async () => {
+      expect(await run('System.out.println("a"); System.out.print("tail");')).toEqual(['a', 'tail'])
+    })
+
+    test('sends no output for a program that prints nothing', async () => {
+      expect(await run('int i = 1;')).toEqual([])
+    })
   })
 })
