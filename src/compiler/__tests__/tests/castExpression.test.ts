@@ -488,6 +488,60 @@ export const castExpressionTest = () => describe("cast expression", () => {
     it(comment, () => runTest(program, expectedLines));
   }
 
+  describe("casts between classes", () => {
+    const classes = `
+      class Animal {}
+      class Dog extends Animal {}
+      class Puppy extends Dog {}
+      class Cat extends Animal {}
+      class Rock {}
+    `;
+    const compileWithClasses = (body: string) => {
+      const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+        allowedStartRules: ["CompilationUnit"],
+      });
+      return compile(
+        parser.parse(`
+          ${classes}
+          public class Main {
+            public static void main(String[] args) {
+              ${body}
+            }
+          }
+        `) as AST
+      );
+    };
+
+    const rejected: [string, string][] = [
+      ["sibling classes", "Cat c = new Cat(); Dog d = (Dog) c;"],
+      ["unrelated classes", "Rock r = new Rock(); Dog d = (Dog) r;"],
+      ["unrelated classes, other direction", "Dog d = new Dog(); Rock r = (Rock) d;"],
+      ["String to Integer", "String s = \"1\"; Integer i = (Integer) s;"],
+      ["Integer to String", "Integer i = 1; String s = (String) i;"],
+      ["Integer to Long", "Integer i = 1; Long l = (Long) i;"],
+    ];
+    for (const [comment, body] of rejected) {
+      it(`rejects ${comment}`, () =>
+        expect(() => compileWithClasses(body)).toThrow(/incompatible types/));
+    }
+
+    const allowed: [string, string][] = [
+      ["downcast", "Animal a = new Dog(); Dog d = (Dog) a;"],
+      ["downcast across several levels", "Animal a = new Puppy(); Puppy p = (Puppy) a;"],
+      ["upcast", "Puppy p = new Puppy(); Animal a = (Animal) p;"],
+      ["identity cast", "Dog d = new Dog(); Dog e = (Dog) d;"],
+      ["Object to any class", "Object o = new Rock(); Rock r = (Rock) o;"],
+      ["any class to Object", "Rock r = new Rock(); Object o = (Object) r;"],
+      ["Object to String", "Object o = \"s\"; String s = (String) o;"],
+      ["Number to Integer", "Number n = 1; Integer i = (Integer) n;"],
+      ["Integer to Number", "Integer i = 1; Number n = (Number) i;"],
+      ["null", "Dog d = (Dog) null;"],
+    ];
+    for (const [comment, body] of allowed) {
+      it(`allows ${comment}`, () => expect(() => compileWithClasses(body)).not.toThrow());
+    }
+  });
+
   describe("rejects casts that are not allowed", () => {
     const rejected: [string, string][] = [
       ["boolean to int", "boolean b = true; int i = (int) b;"],

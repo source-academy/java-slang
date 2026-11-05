@@ -36,6 +36,7 @@ import { ConstantPoolManager } from './constant-pool-manager'
 import {
   AmbiguousMethodCallError,
   ConstructNotSupportedError,
+  InconvertibleTypesError,
   NoMethodMatchingSignatureError,
   NonStaticReferenceInStaticContextError
 } from './error'
@@ -347,6 +348,47 @@ function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGener
     return false
   }
   return false
+}
+
+const ACC_INTERFACE = 0x0200
+
+/**
+ * Whether `sub` is `sup` or one of its subclasses. Returns `undefined` when this cannot be
+ * determined because a class in the chain is unknown to the symbol table.
+ */
+function isSubclassOf(sub: string, sup: string, cg: CodeGenerator): boolean | undefined {
+  if (sub === sup || sup === 'java/lang/Object') return true
+  try {
+    let current = cg.symbolTable.queryClass(sub)
+    while (current.parentClassName) {
+      if (current.parentClassName === sup) return true
+      current = cg.symbolTable.queryClass(current.parentClassName)
+    }
+  } catch (e) {
+    return undefined
+  }
+  return false
+}
+
+/**
+ * JLS 5.5.1: a cast between two classes is only legal if one is a subclass of the other.
+ * Anything that cannot be decided statically (arrays, interfaces, classes the symbol table does
+ * not know) is left to the runtime check.
+ */
+function assertReferenceCastIsLegal(fromType: string, toType: string, cg: CodeGenerator) {
+  if (!fromType || fromType.startsWith('[') || toType.startsWith('[')) return
+  const from = fromType.replace(/^L|;$/g, '')
+  const to = toType.replace(/^L|;$/g, '')
+  try {
+    const isInterface = (name: string) =>
+      (cg.symbolTable.queryClass(name).accessFlags & ACC_INTERFACE) !== 0
+    if (isInterface(from) || isInterface(to)) return
+  } catch (e) {
+    return
+  }
+  if (isSubclassOf(from, to, cg) === false && isSubclassOf(to, from, cg) === false) {
+    throw new InconvertibleTypesError(from.replace(/\//g, '.'), to.replace(/\//g, '.'))
+  }
 }
 
 // Primitive descriptor -> its wrapper class' internal name.
@@ -1445,6 +1487,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         resultType: target
       }
     }
+    assertReferenceCastIsLegal(res.resultType, target, cg)
     // Upcasts (and identity casts) are always safe, so only downcasts need a runtime check
     if (
       res.resultType !== target &&

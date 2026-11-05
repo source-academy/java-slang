@@ -63,3 +63,9 @@ export class OverrideFinalMethodError extends CompileError {
     super(`Cannot override final method ${name}`)
   }
 }
+
+export class InconvertibleTypesError extends CompileError {
+  constructor(from: string, to: string) {
+    super(`incompatible types: ${from} cannot be converted to ${to}`)
+  }
+}
