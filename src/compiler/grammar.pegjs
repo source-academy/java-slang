@@ -435,10 +435,10 @@ TypeName
   = Name
 
 ExpressionName
-  = t:(this dot)? n:Name {
+  = t:(@(this / super) dot)? n:Name {
     return addLocInfo({
       kind: "ExpressionName",
-      name: (t ? "this." : "") + n,
+      name: (t ? t + "." : "") + n,
     })
   }
 

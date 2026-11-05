@@ -15,6 +15,7 @@ import { typeConversionTest } from "./tests/typeConversion.test";
 import { castExpressionTest } from "./tests/castExpression.test";
 import { literalTest } from "./tests/literals.test";
 import { switchTest } from "./tests/switch.test";
+import { inheritanceTest } from "./tests/inheritance.test";
 
 describe("compiler tests", () => {
   printlnTest();
@@ -34,4 +35,5 @@ describe("compiler tests", () => {
   castExpressionTest();
   literalTest();
   switchTest();
+  inheritanceTest();
 })

@@ -382,9 +382,18 @@ type CompileResult = {
 }
 const EMPTY_TYPE: string = ''
 
+/**
+ * The internal class name in a type: `LFoo;` becomes `Foo`, and a name that is not a descriptor
+ * (e.g. the bare `Leaf` that `new Leaf()` has as its type) is returned unchanged. Stripping a
+ * leading `L` unconditionally would turn `Leaf` into `eaf`.
+ */
+function classNameOf(type: string): string {
+  return type.startsWith('L') && type.endsWith(';') ? type.slice(1, -1) : type
+}
+
 function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGenerator): boolean {
-  const cleanFrom = fromType.replace(/^L|;$/g, '')
-  const cleanTo = toType.replace(/^L|;$/g, '')
+  const cleanFrom = classNameOf(fromType)
+  const cleanTo = classNameOf(toType)
   if (cleanFrom === cleanTo) return true
 
   try {
@@ -400,12 +409,50 @@ function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGener
   return false
 }
 
+/** `className` followed by its superclasses, nearest first (ending with java/lang/Object). */
+function classChain(className: string, cg: CodeGenerator): string[] {
+  const chain: string[] = []
+  let name: string | undefined = className
+  while (name !== undefined && !chain.includes(name)) {
+    chain.push(name)
+    try {
+      name = cg.symbolTable.queryClass(name).parentClassName
+    } catch (e) {
+      break
+    }
+  }
+  return chain
+}
+
+/**
+ * The methods in `candidates` that `startClass` has, declared by itself or inherited, where a
+ * method overriding another with the same signature hides it (the one declared nearest to
+ * `startClass` is kept).
+ */
+function methodsOfClass(
+  candidates: MethodInfos,
+  startClass: string,
+  cg: CodeGenerator
+): MethodInfos {
+  const chain = classChain(startClass, cg)
+  const nearest = new Map<string, MethodInfos[number]>()
+  for (const method of candidates) {
+    const depth = chain.indexOf(method.className)
+    if (depth < 0) continue
+    const existing = nearest.get(method.typeDescriptor)
+    if (existing === undefined || depth < chain.indexOf(existing.className)) {
+      nearest.set(method.typeDescriptor, method)
+    }
+  }
+  return [...nearest.values()]
+}
+
 /** Human-readable name of a type descriptor, for error messages. */
 function describeType(descriptor: string): string {
   if (descriptor === 'Z') return 'boolean'
   if (descriptor in PRIMITIVE_NAMES) return PRIMITIVE_NAMES[descriptor]
   if (descriptor === EMPTY_TYPE) return '<unknown>'
-  return descriptor.replace(/^L|;$/g, '').replace(/\//g, '.')
+  return classNameOf(descriptor).replace(/\//g, '.')
 }
 
 const ACC_INTERFACE = 0x0200
@@ -436,8 +483,8 @@ function isSubclassOf(sub: string, sup: string, cg: CodeGenerator): boolean | un
  */
 function assertReferenceCastIsLegal(fromType: string, toType: string, cg: CodeGenerator) {
   if (!fromType || fromType.startsWith('[') || toType.startsWith('[')) return
-  const from = fromType.replace(/^L|;$/g, '')
-  const to = toType.replace(/^L|;$/g, '')
+  const from = classNameOf(fromType)
+  const to = classNameOf(toType)
   try {
     const isInterface = (name: string) =>
       (cg.symbolTable.queryClass(name).accessFlags & ACC_INTERFACE) !== 0
@@ -495,7 +542,7 @@ function unboxIfWrapper(type: string, cg: CodeGenerator): string {
   const primitive = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[type]
   if (!primitive) return type
   const methodRef = cg.constantPoolManager.indexMethodrefInfo(
-    type.replace(/^L|;$/g, ''),
+    classNameOf(type),
     WRAPPER_UNBOX_METHODS[primitive],
     `()${primitive}`
   )
@@ -513,7 +560,7 @@ function tryBoxingConversion(fromType: string, toType: string, cg: CodeGenerator
 
   // primitive -> wrapper
   const boxTarget = PRIMITIVE_WRAPPERS[fromType]
-  if (boxTarget && toType.replace(/^L|;$/g, '') === boxTarget) {
+  if (boxTarget && classNameOf(toType) === boxTarget) {
     const methodRef = cg.constantPoolManager.indexMethodrefInfo(
       boxTarget,
       'valueOf',
@@ -525,7 +572,7 @@ function tryBoxingConversion(fromType: string, toType: string, cg: CodeGenerator
 
   // wrapper -> primitive
   const unboxSource = PRIMITIVE_WRAPPERS[toType]
-  if (unboxSource && fromType.replace(/^L|;$/g, '') === unboxSource) {
+  if (unboxSource && classNameOf(fromType) === unboxSource) {
     const methodRef = cg.constantPoolManager.indexMethodrefInfo(
       unboxSource,
       WRAPPER_UNBOX_METHODS[toType],
@@ -552,7 +599,7 @@ function handleImplicitTypeConversion(
   cg: CodeGenerator,
   node?: Node
 ): number {
-  if (fromType === toType || toType.replace(/^L|;$/g, '') === 'java/lang/String') {
+  if (fromType === toType || classNameOf(toType) === 'java/lang/String') {
     return 0
   }
 
@@ -874,6 +921,51 @@ function compileComparison(
   return { stackSize, resultType: boolType }
 }
 
+/**
+ * Emits code that leaves a new array on the stack for the initialiser `{a, b, ...}`
+ * of an array of type `typeName` (e.g. `int[]`, `String[][]`). Nested braces
+ * initialise the sub-arrays. Returns the maximum stack depth used.
+ */
+function compileArrayInitializer(init: any[], typeName: string, cg: CodeGenerator): number {
+  if (!typeName.endsWith('[]')) {
+    throw new Error(`array initializer is not allowed for the non-array type ${typeName}`)
+  }
+  const elemTypeName = typeName.slice(0, -2)
+  const elemDescriptor = cg.symbolTable.generateFieldDescriptor(elemTypeName)
+  let maxStack = compile(createIntLiteralNode(init.length), cg).stackSize
+  if (elemDescriptor in arrayTypeCode) {
+    cg.code.push(OPCODE.NEWARRAY, arrayTypeCode[elemDescriptor])
+  } else {
+    // a reference element type: a class (`Ljava/lang/String;`) or a nested array (`[I`)
+    const className = elemDescriptor.startsWith('[')
+      ? elemDescriptor
+      : cg.symbolTable.queryClass(elemTypeName).name
+    cg.code.push(OPCODE.ANEWARRAY, 0, cg.constantPoolManager.indexClassInfo(className))
+  }
+
+  init.forEach((val, i) => {
+    cg.code.push(OPCODE.DUP)
+    const size1 = compile(createIntLiteralNode(i), cg).stackSize
+    let valueStack: number
+    let conversionChange = 0
+    if (Array.isArray(val)) {
+      valueStack = compileArrayInitializer(val, elemTypeName, cg)
+    } else {
+      const { stackSize, resultType } = compile(val as Expression, cg)
+      valueStack = stackSize
+      conversionChange = handleImplicitTypeConversion(
+        resultType,
+        elemDescriptor,
+        cg,
+        val as Expression
+      )
+    }
+    cg.code.push(elemDescriptor in arrayStoreOp ? arrayStoreOp[elemDescriptor] : OPCODE.AASTORE)
+    maxStack = Math.max(maxStack, 2 + size1 + valueStack + conversionChange)
+  })
+  return maxStack
+}
+
 function compile(node: Node, cg: CodeGenerator): CompileResult {
   if (!(node.kind in codeGenerators)) {
     throw new ConstructNotSupportedError(node.kind)
@@ -921,33 +1013,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         return
       }
       if (Array.isArray(vi)) {
-        maxStack = compile(createIntLiteralNode(vi.length), cg).stackSize
-        const arrayElemType = variableInfo.typeDescriptor.slice(1)
-        if (arrayElemType in arrayTypeCode) {
-          cg.code.push(OPCODE.NEWARRAY, arrayTypeCode[arrayElemType])
-        } else {
-          cg.code.push(
-            OPCODE.ANEWARRAY,
-            0,
-            cg.constantPoolManager.indexClassInfo(
-              cg.symbolTable.queryClass(variableInfo.typeName.slice(0, -2)).name
-            )
-          )
-        }
-
-        vi.forEach((val, i) => {
-          cg.code.push(OPCODE.DUP)
-          const size1 = compile(createIntLiteralNode(i), cg).stackSize
-          const { stackSize: size2, resultType } = compile(val as Expression, cg)
-          const stackSizeChange = handleImplicitTypeConversion(
-            resultType,
-            arrayElemType,
-            cg,
-            val as Expression
-          )
-          cg.code.push(arrayElemType in arrayStoreOp ? arrayStoreOp[arrayElemType] : OPCODE.AASTORE)
-          maxStack = Math.max(maxStack, 2 + size1 + size2 + stackSizeChange)
-        })
+        maxStack = compileArrayInitializer(vi, variableInfo.typeName, cg)
         cg.code.push(OPCODE.ASTORE, curIdx)
       } else {
         const { stackSize: initializerStackSize, resultType: initializerType } = compile(vi, cg)
@@ -1725,12 +1791,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let candidateMethods: MethodInfos = []
     let unqualifiedCall = false
 
+    // `super.f()` calls the superclass's method; `super.field.f()` is a call on a field instead
+    const isSuperCall = n.identifier.startsWith('super.') && !n.identifier.slice(6).includes('.')
+
     // --- Handle super. calls ---
-    if (n.identifier.startsWith('super.')) {
+    if (isSuperCall) {
       candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(6)) as MethodInfos
-      candidateMethods = candidateMethods.filter(
-        method => method.className == cg.symbolTable.queryClass(cg.currentClass).parentClassName
-      )
+      const parentClass = cg.symbolTable.queryClass(cg.currentClass).parentClassName
+      candidateMethods = parentClass ? methodsOfClass(candidateMethods, parentClass, cg) : []
       cg.code.push(OPCODE.ALOAD, 0)
     }
     // --- Handle qualified calls (e.g. System.out.println or p.show) ---
@@ -1740,7 +1808,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
       if (receiverStr === 'this') {
         candidateMethods = cg.symbolTable.queryMethod(n.identifier.slice(5)) as MethodInfos
-        candidateMethods = candidateMethods.filter(method => method.className == cg.currentClass)
+        candidateMethods = methodsOfClass(candidateMethods, cg.currentClass, cg)
         cg.code.push(OPCODE.ALOAD, 0)
       } else {
         const recvRes = compile({ kind: 'ExpressionName', name: receiverStr }, cg)
@@ -1827,7 +1895,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       selectedMethod.name,
       selectedMethod.typeDescriptor
     )
-    if (n.identifier.startsWith('super.')) {
+    if (isSuperCall) {
       cg.code.push(OPCODE.INVOKESPECIAL, 0, methodRef)
     } else {
       const isStatic = (selectedMethod.accessFlags & METHOD_FLAGS.ACC_STATIC) !== 0
@@ -1899,23 +1967,39 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         fieldInfo.typeDescriptor
       )
 
-      const varIndex = (infos[0] as VariableInfo).index
-      if (varIndex !== undefined) {
-        cg.code.push(OPCODE.ALOAD, varIndex)
-        maxStack += 1
-      } else if (lhs.name.startsWith('this.')) {
-        // load "this"
-        cg.code.push(OPCODE.ALOAD, 0)
+      // Push the object whose field is assigned: nothing for a static field, `this` for a field
+      // named without a qualifier, otherwise the value of the expression before the last dot
+      // (a variable, `this`, or a longer chain such as `car.engine`)
+      if (!(fieldInfo.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
+        const lastDot = lhs.name.lastIndexOf('.')
+        const receiver = lastDot < 0 ? 'this' : lhs.name.slice(0, lastDot)
+        if (lastDot < 0 && cg.currentMethodIsStatic) {
+          throw new NonStaticReferenceInStaticContextError('field', fieldInfo.name)
+        }
+        if (receiver === 'this' || receiver === 'super') {
+          cg.code.push(OPCODE.ALOAD, 0)
+        } else {
+          const receiverRes = compile({ kind: 'ExpressionName', name: receiver }, cg)
+          maxStack = Math.max(maxStack, receiverRes.stackSize)
+        }
         maxStack += 1
       }
 
-      const { stackSize: rhsSize, resultType: rhsType } = compile(right, cg)
-      const stackSizeChange = handleImplicitTypeConversion(
-        rhsType,
-        fieldInfo.typeDescriptor,
-        cg,
-        right
-      )
+      let rhsSize: number
+      let stackSizeChange = 0
+      if (Array.isArray(right)) {
+        // `T[] f = {...}`: only reachable from a field's initialiser
+        rhsSize = compileArrayInitializer(right, fieldInfo.typeName, cg)
+      } else {
+        const rhs = compile(right, cg)
+        rhsSize = rhs.stackSize
+        stackSizeChange = handleImplicitTypeConversion(
+          rhs.resultType,
+          fieldInfo.typeDescriptor,
+          cg,
+          right
+        )
+      }
 
       maxStack = Math.max(maxStack, maxStack + rhsSize + stackSizeChange)
       cg.code.push(
@@ -2273,7 +2357,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     let _resultType = resultType
     let enumTypeName: string | null = null
     if (_resultType && _resultType.startsWith('L') && _resultType !== 'Ljava/lang/String;') {
-      const clean = _resultType.replace(/^L|;$/g, '')
+      const clean = classNameOf(_resultType)
       try {
         const classInfo = cg.symbolTable.queryClass(clean)
         if (classInfo.isEnum) {

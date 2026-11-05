@@ -12,7 +12,7 @@ import {
 import { AttributeInfo } from '../ClassFile/types/attributes'
 import { FieldInfo } from '../ClassFile/types/fields'
 import { MethodInfo } from '../ClassFile/types/methods'
-import { ConstructNotSupportedError } from './error'
+import { ConstructNotSupportedError, MissingAbstractMethodImplementationError } from './error'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
   generateClassAccessFlags,
@@ -69,7 +69,7 @@ export class Compiler {
     // declaration order.
     declarations.forEach(decl => {
       const className = decl.typeIdentifier
-      const parentClassName = 'sclass' in decl && decl.sclass ? decl.sclass : 'java/lang/Object'
+      const parentClassName = this.resolveSuperclassName(decl)
       const accessFlags = generateClassAccessFlags(decl.classModifier)
       // Nested types are registered under both their simple name (so
       // unqualified references from within the compilation unit resolve) and
@@ -102,6 +102,11 @@ export class Compiler {
       classScopes.set(decl, scope)
     })
 
+    // Every class's members are registered now, so the abstract-method rules can be checked
+    declarations.forEach(decl => {
+      if (decl.kind === 'NormalClassDeclaration') this.checkAbstractMethods(decl)
+    })
+
     // Pass 2: generate the actual bytecode for every class, re-entering
     // each class's own member scope registered in pass 1.
     const compiled = new Map<(typeof declarations)[number], Class>()
@@ -118,6 +123,40 @@ export class Compiler {
     // Return in declaration order (top-level types first, then member enums) so
     // the entry class stays at index 0 regardless of compilation order.
     return declarations.map(decl => compiled.get(decl) as Class)
+  }
+
+  /**
+   * JLS 8.1.1.1 / 8.4.3.1: only an abstract class may declare an abstract method, and a
+   * non-abstract class must implement every abstract method it inherits.
+   */
+  private checkAbstractMethods(classNode: NormalClassDeclaration) {
+    if (classNode.classModifier.includes('abstract')) return
+    const displayName = classNode.typeIdentifier.replace(/\$/g, '.')
+
+    for (const member of classNode.classBody) {
+      if (member.kind === 'MethodDeclaration' && member.methodModifier.includes('abstract')) {
+        const params = member.methodHeader.formalParameterList.map(p => p.unannType).join(',')
+        throw new MissingAbstractMethodImplementationError(
+          displayName,
+          `${member.methodHeader.identifier}(${params})`,
+          displayName
+        )
+      }
+    }
+
+    const missing = this.symbolTable.findUnimplementedAbstractMethod(classNode.typeIdentifier)
+    if (missing !== undefined) {
+      const params = (
+        missing.typeDescriptor
+          .slice(1, missing.typeDescriptor.indexOf(')'))
+          .match(/\[*(?:[BCDFIJSZ]|L[^;]+;)/g) ?? []
+      ).map(descriptorToSourceName)
+      throw new MissingAbstractMethodImplementationError(
+        displayName,
+        `${missing.name}(${params.join(',')})`,
+        missing.className.replace(/[/$]/g, '.').split('.').pop() as string
+      )
+    }
   }
 
   /**
@@ -187,14 +226,29 @@ export class Compiler {
   }
 
   /**
+   * The binary name of the class named in a declaration's `extends` clause. A library class
+   * is written by its simple name (`Number`) but the class file must name it in full
+   * (`java/lang/Number`); a class of this compilation unit is already registered under the
+   * name it is written with.
+   */
+  private resolveSuperclassName(decl: { sclass?: string } | object): string {
+    const sclass = 'sclass' in decl ? decl.sclass : undefined
+    if (!sclass) return 'java/lang/Object'
+    try {
+      return this.symbolTable.queryClass(sclass).name
+    } catch (e) {
+      return sclass
+    }
+  }
+
+  /**
    * Pass 1 for a class: registers its own member signatures (fields,
    * methods, constructors) in a fresh scope, with no bytecode generated.
    * Returns that scope so pass 2 can re-enter it via restoreClassScope.
    */
   private registerClassSignature(classNode: ClassDeclaration): Table {
     this.className = classNode.typeIdentifier
-    const sclass = 'sclass' in classNode ? classNode.sclass : undefined
-    this.parentClassName = sclass ? sclass : 'java/lang/Object'
+    this.parentClassName = this.resolveSuperclassName(classNode)
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
     this.symbolTable.extend()
     const scope = this.symbolTable.insertClassInfo({ name: this.className, accessFlags }, [
@@ -213,8 +267,7 @@ export class Compiler {
    */
   private generateClassFile(classNode: ClassDeclaration): ClassFile {
     this.className = classNode.typeIdentifier
-    const sclass = 'sclass' in classNode ? classNode.sclass : undefined
-    this.parentClassName = sclass ? sclass : 'java/lang/Object'
+    this.parentClassName = this.resolveSuperclassName(classNode)
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
@@ -865,4 +918,26 @@ export class Compiler {
 
     this.compileMethod(methodNode)
   }
+}
+
+const PRIMITIVE_SOURCE_NAMES: { [descriptor: string]: string } = {
+  B: 'byte',
+  C: 'char',
+  D: 'double',
+  F: 'float',
+  I: 'int',
+  J: 'long',
+  S: 'short',
+  Z: 'boolean'
+}
+
+/** `[Ljava/lang/String;` -> `String[]`, `I` -> `int` */
+function descriptorToSourceName(descriptor: string): string {
+  const dims = descriptor.length - descriptor.replace(/^\[+/, '').length
+  const element = descriptor.slice(dims)
+  const base =
+    element in PRIMITIVE_SOURCE_NAMES
+      ? PRIMITIVE_SOURCE_NAMES[element]
+      : (element.slice(1, -1).split(/[/$]/).pop() as string)
+  return base + '[]'.repeat(dims)
 }

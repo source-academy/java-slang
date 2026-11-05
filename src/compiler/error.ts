@@ -87,3 +87,11 @@ export class EnumInstantiationError extends CompileError {
     super(`enum classes may not be instantiated: ${name}`)
   }
 }
+
+export class MissingAbstractMethodImplementationError extends CompileError {
+  constructor(className: string, method: string, declaringClass: string) {
+    super(
+      `${className} is not abstract and does not override abstract method ${method} in ${declaringClass}`
+    )
+  }
+}
