@@ -1404,24 +1404,27 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const res = compile(expr, cg)
       let { stackSize: size, resultType } = res
 
-      // Casting a wrapper to a primitive unboxes it first (then widens, if needed); casting an
-      // Object to a primitive casts it to the primitive's wrapper class and unboxes that.
+      // JLS 5.5: casting a reference to a primitive is either an unboxing conversion (from the
+      // matching wrapper, optionally followed by widening) or a narrowing reference conversion
+      // to the primitive's wrapper class (from any of its superclasses, e.g. Object or Number)
+      // followed by unboxing.
+      const targetPrimitive =
+        ct === 'boolean' ? 'Z' : Object.keys(PRIMITIVE_NAMES).find(k => PRIMITIVE_NAMES[k] === ct)
       if (resultType in WRAPPER_DESCRIPTOR_TO_PRIMITIVE) {
+        const unboxed = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[resultType]
+        if (unboxed !== targetPrimitive && !isWideningPrimitive(unboxed, targetPrimitive ?? '')) {
+          throw new Error(`Cannot cast ${resultType} to ${ct}`)
+        }
         resultType = unboxIfWrapper(resultType, cg)
         size = Math.max(size, slotsOf(resultType))
-      } else if (resultType === 'Ljava/lang/Object;') {
-        const target =
-          ct === 'boolean' ? 'Z' : Object.keys(PRIMITIVE_NAMES).find(k => PRIMITIVE_NAMES[k] === ct)
-        if (target) {
-          const wrapper = `L${PRIMITIVE_WRAPPERS[target]};`
-          cg.code.push(
-            OPCODE.CHECKCAST,
-            0,
-            cg.constantPoolManager.indexClassInfo(PRIMITIVE_WRAPPERS[target])
-          )
-          resultType = unboxIfWrapper(wrapper, cg)
-          size = Math.max(size, slotsOf(resultType))
+      } else if (targetPrimitive && resultType.startsWith('L')) {
+        const wrapperClass = PRIMITIVE_WRAPPERS[targetPrimitive]
+        if (isSubclassOf(wrapperClass, resultType.slice(1, -1), cg) !== true) {
+          throw new Error(`Cannot cast ${resultType} to ${ct}`)
         }
+        cg.code.push(OPCODE.CHECKCAST, 0, cg.constantPoolManager.indexClassInfo(wrapperClass))
+        resultType = unboxIfWrapper(`L${wrapperClass};`, cg)
+        size = Math.max(size, slotsOf(resultType))
       }
 
       if ((ct === 'boolean') !== (resultType === 'Z') && resultType !== EMPTY_TYPE) {

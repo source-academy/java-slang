@@ -466,6 +466,42 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["caught", "caught again", "caught primitive"],
   },
+  {
+    comment: "Casting Number or Object to a primitive checks the wrapper class at runtime",
+    program: `
+      public class Main {
+        public static void main(String[] args) {
+          Number n = 1.5;
+          try {
+            int i = (int) n;
+            System.out.println("unreachable " + i);
+          } catch (ClassCastException e) {
+            System.out.println("Double is not an Integer");
+          }
+          Number m = 7;
+          int j = (int) m;
+          System.out.println(j);
+          Number big = 5000000000L;
+          long l = (long) big;
+          System.out.println(l);
+          Number half = 2.5;
+          double d = (double) half;
+          System.out.println(d);
+          Object o = 3;
+          try {
+            long wrong = (long) o;
+            System.out.println("unreachable " + wrong);
+          } catch (ClassCastException e) {
+            System.out.println("Integer is not a Long");
+          }
+          Integer w = 9;
+          double widened = (double) w;
+          System.out.println(widened);
+        }
+      }
+    `,
+    expectedLines: ["Double is not an Integer", "7", "5000000000", "2.5", "Integer is not a Long", "9.0"],
+  },
 ];
 
 const compileProgram = (body: string) => {
@@ -548,6 +584,10 @@ export const castExpressionTest = () => describe("cast expression", () => {
       ["int to boolean", "int i = 1; boolean b = (boolean) i;"],
       ["String to int", "String s = \"1\"; int i = (int) s;"],
       ["int to String", "String s = (String) 1;"],
+      ["wrapper to a narrower primitive", "Integer i = 1; short s = (short) i;"],
+      ["wrapper to an unrelated primitive", "Integer i = 1; boolean b = (boolean) i;"],
+      ["Number to char", "Number n = 1; char c = (char) n;"],
+      ["Number to boolean", "Number n = 1; boolean b = (boolean) n;"],
     ];
     for (const [comment, body] of rejected) {
       it(comment, () => expect(() => compileProgram(body)).toThrow());
