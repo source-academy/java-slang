@@ -1259,6 +1259,34 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["-0.0", "0.0", "-0.0", "0.0", "-Infinity", "Infinity", "-Infinity", "Infinity", "NaN", "false", "Infinity", "-Infinity"],
   },
+  {
+    comment: "implicit widening to library interfaces",
+    program: `
+      public class Main {
+        static CharSequence field = "static field";
+        static CharSequence echo(CharSequence c) { return c; }
+        static Comparable fromInteger() { return 42; }
+        public static void main(String[] args) {
+          String s = "hi";
+          CharSequence c = s;
+          Comparable m = s;
+          Integer i = 5;
+          Comparable n = i;
+          Object o = c;
+          CharSequence[] arr = {"x", s};
+          System.out.println(c);
+          System.out.println(m);
+          System.out.println(n);
+          System.out.println(o);
+          System.out.println(echo("arg"));
+          System.out.println(fromInteger());
+          System.out.println(arr.length);
+          System.out.println(field);
+        }
+      }
+    `,
+    expectedLines: ["hi", "hi", "5", "hi", "arg", "42", "2", "static field"],
+  },
 ]
 
 const compileProgram = (body: string) => {
@@ -1360,6 +1388,9 @@ export const typeConversionTest = () => describe("type conversion", () => {
       ["char to short", "char c = 'a'; short s = c;"],
       ["short to char", "short s = 1; char c = s;"],
       ["byte to char", "byte b = 1; char c = b;"],
+      ["a class to an interface it does not implement", "Runnable r = \"x\";"],
+      ["a wrapper to an interface it does not implement", "Integer i = 1; CharSequence c = i;"],
+      ["a primitive to an interface that is not a wrapper's", "CharSequence c = 5;"],
     ];
     for (const [comment, body] of rejected) {
       it(comment, () => expect(() => compileProgram(body)).toThrow());

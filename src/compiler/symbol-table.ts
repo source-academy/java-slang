@@ -50,6 +50,8 @@ export interface ClassInfo {
   name: string
   accessFlags: number
   parentClassName?: string
+  /** Internal names of the directly implemented interfaces (known for library classes only). */
+  interfaces?: string[]
   isEnum?: boolean
 }
 
@@ -177,7 +179,8 @@ export class SymbolTable {
       this.insertClassInfo({
         name: meta.name,
         accessFlags: meta.accessFlags,
-        parentClassName: meta.superClass ?? undefined
+        parentClassName: meta.superClass ?? undefined,
+        interfaces: meta.interfaces
       })
       meta.fields.forEach(f =>
         this.insertFieldInfo({

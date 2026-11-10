@@ -106,6 +106,19 @@ export class ConstantPoolManager {
     })
   }
 
+  /** An `InterfaceMethodref`, which `invokeinterface` (and `invokestatic` on an interface) needs. */
+  indexInterfaceMethodrefInfo(className: string, methodName: string, descriptor: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.InterfaceMethodref, {
+      class: {
+        name: { value: className }
+      },
+      nameAndType: {
+        name: { value: methodName },
+        descriptor: { value: descriptor }
+      }
+    })
+  }
+
   indexNameAndTypeInfo(name: string, type: string) {
     return this.writeIfAbsent(CONSTANT_TAG.NameAndType, {
       name: { value: name },
@@ -192,6 +205,9 @@ export class ConstantPoolManager {
       case CONSTANT_TAG.Methodref:
         this.writeMethodrefInfo(task.value as ConstantMethodrefValue)
         break
+      case CONSTANT_TAG.InterfaceMethodref:
+        this.writeInterfaceMethodrefInfo(task.value as ConstantMethodrefValue)
+        break
       case CONSTANT_TAG.NameAndType:
         this.writeNameAndTypeInfo(task.value as ConstantNameAndTypeValue)
         break
@@ -266,6 +282,16 @@ export class ConstantPoolManager {
     const nameAndTypeIndex = this.addNameAndTypeInfo(val.nameAndType)
     this.constantPool.push({
       tag: CONSTANT_TAG.Methodref,
+      classIndex: classIndex,
+      nameAndTypeIndex: nameAndTypeIndex
+    })
+  }
+
+  private writeInterfaceMethodrefInfo(val: ConstantMethodrefValue) {
+    const classIndex = this.addClassInfo(val.class)
+    const nameAndTypeIndex = this.addNameAndTypeInfo(val.nameAndType)
+    this.constantPool.push({
+      tag: CONSTANT_TAG.InterfaceMethodref,
       classIndex: classIndex,
       nameAndTypeIndex: nameAndTypeIndex
     })

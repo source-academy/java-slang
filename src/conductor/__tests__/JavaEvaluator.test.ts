@@ -284,6 +284,23 @@ describe('JavaEvaluator', () => {
       ).toEqual(['32767', '160', '4294967295', '493', '32.0', '65536.0', '8.0', '-1'])
     })
 
+    test('calls methods through library interface types', async () => {
+      expect(
+        await run(`
+              Object o = "hello";
+              CharSequence c = (CharSequence) o;
+              System.out.println(c.length());
+              System.out.println(c.charAt(1));
+              System.out.println(c.subSequence(1, 3));
+              Comparable m = (Comparable) o;
+              System.out.println(m.compareTo("hellp"));
+              Integer i = 5;
+              Comparable n = i;
+              System.out.println(n.compareTo(3));
+            `)
+      ).toEqual(['5', 'e', 'el', '-1', '1'])
+    })
+
     test('computes Math and StrictMath functions exactly as JDK 8 does', async () => {
       // expected values were printed by a real JDK 8 (the bundled JDK classes are JDK 8's)
       expect(

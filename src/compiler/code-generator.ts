@@ -392,21 +392,40 @@ function classNameOf(type: string): string {
 }
 
 function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGenerator): boolean {
-  const cleanFrom = classNameOf(fromType)
-  const cleanTo = classNameOf(toType)
-  if (cleanFrom === cleanTo) return true
+  return classReaches(classNameOf(fromType), classNameOf(toType), cg) === true
+}
 
+/**
+ * Whether `to` is `from`, one of its superclasses, or an interface it implements (directly or
+ * through a superclass or superinterface). Returns `undefined` when `to` was not found but a
+ * class on the way is unknown to the symbol table, so the answer cannot be decided.
+ */
+function classReaches(from: string, to: string, cg: CodeGenerator): boolean | undefined {
+  if (from === to) return true
+  let target: string
   try {
-    let current = cg.symbolTable.queryClass(cleanFrom)
-    while (current.parentClassName) {
-      const parentClean = current.parentClassName
-      if (parentClean === cleanTo) return true
-      current = cg.symbolTable.queryClass(parentClean)
-    }
+    target = cg.symbolTable.queryClass(to).name
   } catch (e) {
-    return false
+    return undefined
   }
-  return false
+  let complete = true
+  const visited = new Set<string>()
+  const pending = [from]
+  while (pending.length > 0) {
+    let info
+    try {
+      info = cg.symbolTable.queryClass(pending.pop() as string)
+    } catch (e) {
+      complete = false
+      continue
+    }
+    if (info.name === target) return true
+    if (visited.has(info.name)) continue
+    visited.add(info.name)
+    if (info.parentClassName) pending.push(info.parentClassName)
+    pending.push(...(info.interfaces ?? []))
+  }
+  return complete ? false : undefined
 }
 
 /** `className` followed by its superclasses, nearest first (ending with java/lang/Object). */
@@ -459,6 +478,15 @@ const ACC_INTERFACE = 0x0200
 const ACC_FINAL = 0x0010
 const ACC_ABSTRACT = 0x0400
 
+/** Whether `className` is a library interface. */
+function isInterfaceClass(className: string, cg: CodeGenerator): boolean {
+  try {
+    return (cg.symbolTable.queryClass(className).accessFlags & ACC_INTERFACE) !== 0
+  } catch (e) {
+    return false
+  }
+}
+
 /**
  * Whether `sub` is `sup` or one of its subclasses. Returns `undefined` when this cannot be
  * determined because a class in the chain is unknown to the symbol table.
@@ -486,26 +514,43 @@ function assertReferenceCastIsLegal(fromType: string, toType: string, cg: CodeGe
   if (!fromType || fromType.startsWith('[') || toType.startsWith('[')) return
   const from = classNameOf(fromType)
   const to = classNameOf(toType)
+  let fromInfo, toInfo
   try {
-    const isInterface = (name: string) =>
-      (cg.symbolTable.queryClass(name).accessFlags & ACC_INTERFACE) !== 0
-    if (isInterface(from) || isInterface(to)) return
+    fromInfo = cg.symbolTable.queryClass(from)
+    toInfo = cg.symbolTable.queryClass(to)
   } catch (e) {
     return
   }
+  const fromIsInterface = (fromInfo.accessFlags & ACC_INTERFACE) !== 0
+  const toIsInterface = (toInfo.accessFlags & ACC_INTERFACE) !== 0
+  const inconvertible = () =>
+    new InconvertibleTypesError(from.replace(/\//g, '.'), to.replace(/\//g, '.'))
+
+  if (fromIsInterface || toIsInterface) {
+    // JLS 5.5.1: a cast between two interfaces is always allowed, and a cast between a class
+    // and an interface is allowed unless the class is final and does not implement the
+    // interface (a non-final class might have a subclass that does)
+    if (fromIsInterface !== toIsInterface) {
+      const [classInfo, className, interfaceName] = toIsInterface
+        ? [fromInfo, from, to]
+        : [toInfo, to, from]
+      if (
+        classInfo.accessFlags & ACC_FINAL &&
+        classReaches(className, interfaceName, cg) === false
+      ) {
+        throw inconvertible()
+      }
+    }
+    return
+  }
+
   // JLS 5.5.1: a final class cannot have subclasses, so it can only be cast to itself or to one
   // of its superclasses
-  let fromIsFinal = false
-  try {
-    fromIsFinal = (cg.symbolTable.queryClass(from).accessFlags & ACC_FINAL) !== 0
-  } catch (e) {
-    // an unknown class is left to the runtime check
-  }
-  if (fromIsFinal && isSubclassOf(from, to, cg) === false) {
-    throw new InconvertibleTypesError(from.replace(/\//g, '.'), to.replace(/\//g, '.'))
+  if (fromInfo.accessFlags & ACC_FINAL && isSubclassOf(from, to, cg) === false) {
+    throw inconvertible()
   }
   if (isSubclassOf(from, to, cg) === false && isSubclassOf(to, from, cg) === false) {
-    throw new InconvertibleTypesError(from.replace(/\//g, '.'), to.replace(/\//g, '.'))
+    throw inconvertible()
   }
 }
 
@@ -1902,16 +1947,35 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     })
 
     // Emit the method call.
-    const methodRef = cg.constantPoolManager.indexMethodrefInfo(
-      selectedMethod.className,
-      selectedMethod.name,
-      selectedMethod.typeDescriptor
-    )
-    if (isSuperCall) {
-      cg.code.push(OPCODE.INVOKESPECIAL, 0, methodRef)
+    const isStatic = (selectedMethod.accessFlags & METHOD_FLAGS.ACC_STATIC) !== 0
+    if (!isSuperCall && isInterfaceClass(selectedMethod.className, cg)) {
+      // a method declared by an interface is referenced through an InterfaceMethodref
+      const methodRef = cg.constantPoolManager.indexInterfaceMethodrefInfo(
+        selectedMethod.className,
+        selectedMethod.name,
+        selectedMethod.typeDescriptor
+      )
+      if (isStatic) {
+        cg.code.push(OPCODE.INVOKESTATIC, 0, methodRef)
+      } else {
+        // invokeinterface takes the argument count (including the receiver) and a zero byte
+        const argumentSlots = (params as string[]).reduce(
+          (slots: number, param: string) => slots + slotsOf(param),
+          1
+        )
+        cg.code.push(OPCODE.INVOKEINTERFACE, 0, methodRef, argumentSlots, 0)
+      }
     } else {
-      const isStatic = (selectedMethod.accessFlags & METHOD_FLAGS.ACC_STATIC) !== 0
-      cg.code.push(isStatic ? OPCODE.INVOKESTATIC : OPCODE.INVOKEVIRTUAL, 0, methodRef)
+      const methodRef = cg.constantPoolManager.indexMethodrefInfo(
+        selectedMethod.className,
+        selectedMethod.name,
+        selectedMethod.typeDescriptor
+      )
+      if (isSuperCall) {
+        cg.code.push(OPCODE.INVOKESPECIAL, 0, methodRef)
+      } else {
+        cg.code.push(isStatic ? OPCODE.INVOKESTATIC : OPCODE.INVOKEVIRTUAL, 0, methodRef)
+      }
     }
     resultType = selectedMethod.typeDescriptor.slice(selectedMethod.typeDescriptor.indexOf(')') + 1)
     return { stackSize: maxStack, resultType: resultType }

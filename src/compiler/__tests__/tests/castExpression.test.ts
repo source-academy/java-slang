@@ -502,6 +502,36 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["Double is not an Integer", "7", "5000000000", "2.5", "Integer is not a Long", "9.0"],
   },
+  {
+    comment: "casts to library interfaces and calls through them",
+    program: `
+      public class Main {
+        static int length(CharSequence c) { return c.length(); }
+        public static void main(String[] args) {
+          Object o = "hello";
+          CharSequence c = (CharSequence) o;
+          System.out.println(c.length());
+          System.out.println(c.charAt(1));
+          System.out.println(c);
+          System.out.println(c.subSequence(1, 3));
+          System.out.println(length("abc"));
+          Comparable m = (Comparable) o;
+          System.out.println(m.compareTo("hellp"));
+          Integer i = 5;
+          Comparable n = (Comparable) i;
+          System.out.println(n.compareTo(3));
+          Object p = new Object();
+          try {
+            Comparable bad = (Comparable) p;
+            System.out.println("not reached");
+          } catch (ClassCastException e) {
+            System.out.println("not Comparable");
+          }
+        }
+      }
+    `,
+    expectedLines: ["5", "e", "hello", "el", "3", "-1", "1", "not Comparable"],
+  },
 ];
 
 const compileProgram = (body: string) => {
@@ -556,6 +586,9 @@ export const castExpressionTest = () => describe("cast expression", () => {
       ["String to Integer", "String s = \"1\"; Integer i = (Integer) s;"],
       ["Integer to String", "Integer i = 1; String s = (String) i;"],
       ["Integer to Long", "Integer i = 1; Long l = (Long) i;"],
+      ["a final class to an interface it does not implement", "String s = \"a\"; Object o = (Runnable) s;"],
+      ["a wrapper to an interface it does not implement", "Integer i = 1; Object o = (CharSequence) i;"],
+      ["an interface to a final class that does not implement it", "CharSequence c = \"a\"; Object o = (Integer) c;"],
       ["a final class to a sibling class", "Sealed s = new Sealed(); Cat c = (Cat) s;"],
       ["a final library class to a subclass of its parent", "String s = \"1\"; Number n = (Number) s;"],
     ];
@@ -575,6 +608,16 @@ export const castExpressionTest = () => describe("cast expression", () => {
       ["Number to Integer", "Number n = 1; Integer i = (Integer) n;"],
       ["Integer to Number", "Integer i = 1; Number n = (Number) i;"],
       ["null", "Dog d = (Dog) null;"],
+      ["a final class to an interface it implements", "String s = \"a\"; Object o = (CharSequence) s;"],
+      ["a final class to an interface implemented by its superclass", "StringBuilder b = new StringBuilder(); Object o = (CharSequence) b;"],
+      ["a wrapper to Comparable", "Integer i = 1; Object o = (Comparable) i;"],
+      ["a primitive to an interface its wrapper implements", "Object o = (Comparable) 5;"],
+      ["a non-final class to an interface", "Number n = 1; Object o = (Runnable) n;"],
+      ["Object to an interface", "Object o = \"a\"; Object p = (Runnable) o;"],
+      ["an interface to a final class that implements it", "CharSequence c = \"a\"; String s = (String) c;"],
+      ["an interface to Object", "CharSequence c = \"a\"; Object o = (Object) c;"],
+      ["an interface to a non-final class", "CharSequence c = \"a\"; Dog d = (Dog) c;"],
+      ["an interface to another interface", "CharSequence c = \"a\"; Object o = (Comparable) c;"],
       ["a final class to its superclass", "Sealed s = new Sealed(); Animal a = (Animal) s;"],
       ["a final class to itself", "Sealed s = new Sealed(); Sealed t = (Sealed) s;"],
       ["a final class to Object", "Sealed s = new Sealed(); Object o = (Object) s;"],
@@ -596,6 +639,7 @@ export const castExpressionTest = () => describe("cast expression", () => {
       ["wrapper to an unrelated primitive", "Integer i = 1; boolean b = (boolean) i;"],
       ["Number to char", "Number n = 1; char c = (char) n;"],
       ["Number to boolean", "Number n = 1; boolean b = (boolean) n;"],
+      ["int to an interface its wrapper does not implement", "Object o = (CharSequence) 5;"],
     ];
     for (const [comment, body] of rejected) {
       it(comment, () => expect(() => compileProgram(body)).toThrow());
