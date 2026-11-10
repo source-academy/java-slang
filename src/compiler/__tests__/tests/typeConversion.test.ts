@@ -1876,7 +1876,7 @@ export const typeConversionTest = () => describe("type conversion", () => {
         ));
       it(`names the operator when it rejects ${comment}`, () =>
         expect(() => compileProgram(body)).toThrow(
-          new RegExp(`for unary operator '${operator.replace(/[+]/g, "\\$&")}'$`)
+          new RegExp(`for unary operator '${operator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}'$`)
         ));
     }
   });
