@@ -59,6 +59,7 @@ export class Compiler {
   compile(ast: AST) {
     this.setup()
     this.symbolTable.handleImports(ast.importDeclarations)
+    this.symbolTable.rejectInterfaceReferences = true
     const topLevelDeclarations = ast.topLevelClassOrInterfaceDeclarations
     const memberDeclarations = topLevelDeclarations.flatMap(declaration =>
       declaration.kind === 'NormalClassDeclaration'
@@ -258,6 +259,7 @@ export class Compiler {
   private resolveSuperclassName(decl: { sclass?: string } | object): string {
     const sclass = 'sclass' in decl ? decl.sclass : undefined
     if (!sclass) return 'java/lang/Object'
+    this.symbolTable.assertNotInterface(sclass)
     try {
       return this.symbolTable.queryClass(sclass).name
     } catch (e) {

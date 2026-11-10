@@ -424,7 +424,7 @@ export const classTest = () => describe("fields and methods of class", () => {
       ["an abstract class in an array initializer", "Shape[] shapes = {new Shape()};", /Shape is abstract/],
       ["an abstract class passed as an argument", "System.out.println(new Shape());", /Shape is abstract/],
       ["an abstract library class", "Number n = new Number();", /Number is abstract/],
-      ["a library interface", "Runnable r = new Runnable();", /Runnable is abstract/],
+      ["a library interface", "Object r = new Runnable();", /interfaces are not currently supported in java-slang/],
       ["an enum", "Color c = new Color();", /enum classes may not be instantiated/],
     ];
     for (const [comment, body, message] of rejected) {
@@ -533,6 +533,44 @@ export const classTest = () => describe("fields and methods of class", () => {
             "class O { static abstract class A { abstract void f(); } static class B extends A {} }"
           )
         ).toThrow(/O.B is not abstract .* f\(\) in A/));
+    });
+
+    describe("library interfaces", () => {
+      const MESSAGE = /interfaces are not currently supported in java-slang/;
+      const compileSource = (source: string) => {
+        const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+          allowedStartRules: ["CompilationUnit"],
+        });
+        return compile(parser.parse(source) as AST);
+      };
+      const inMain = (body: string) =>
+        `public class Main { public static void main(String[] args) { ${body} } }`;
+      const rejected: [string, string][] = [
+        ["a local variable type", inMain("Runnable r = null;")],
+        ["an array type", inMain("Runnable[] r = null;")],
+        ["a multi-dimensional array type", inMain("Comparable[][] r = null;")],
+        ["a cast", inMain("Object o = null; Object p = (Runnable) o;")],
+        ["an instantiation", inMain("Object o = new Runnable();")],
+        ["a static method call", inMain("Runnable.run();")],
+        ["a static field access", inMain("Object o = Comparable.foo;")],
+        ["a field type", "public class Main { static CharSequence f; public static void main(String[] a) {} }"],
+        ["a parameter type", "public class Main { static void f(Runnable r) {} public static void main(String[] a) {} }"],
+        ["a constructor parameter type", "public class Main { Main(Comparable c) {} public static void main(String[] a) {} }"],
+        ["a return type", "public class Main { static Runnable f() { return null; } public static void main(String[] a) {} }"],
+        ["an extends clause", "class A extends Runnable {} public class Main { public static void main(String[] a) {} }"],
+      ];
+      for (const [comment, source] of rejected) {
+        it(`rejects ${comment}`, () => expect(() => compileSource(source)).toThrow(MESSAGE));
+      }
+
+      it("still allows classes and library methods that return an interface", () =>
+        expect(() =>
+          compileSource(
+            inMain(
+              'Integer i = 1; Number n = i; String s = "abc"; StringBuilder sb = new StringBuilder(); System.out.println(s.subSequence(0, 1));'
+            )
+          )
+        ).not.toThrow());
     });
 
     describe("final classes", () => {
