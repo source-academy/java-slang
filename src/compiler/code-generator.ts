@@ -43,6 +43,7 @@ import {
   EnumInstantiationError,
   ExceptionNeverThrownError,
   InconvertibleTypesError,
+  LossyConversionError,
   MulticatchAlternativesRelatedError,
   MulticatchParameterAssignedError,
   NoMethodMatchingSignatureError,
@@ -1994,6 +1995,57 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       cg.code.push(OPCODE.CHECKCAST, 0, cg.constantPoolManager.indexClassInfo(className))
     }
     return { stackSize: res.stackSize, resultType: target }
+  },
+
+  ArrayCreationExpression: (node: Node, cg: CodeGenerator) => {
+    const { elementType, dimensionExpressions, dims, initializer } = node as unknown as {
+      elementType: string
+      dimensionExpressions?: Node[]
+      dims: string
+      initializer?: any[]
+    }
+    // Multidimensional arrays are not supported: only `new T[size]` and `new T[] {...}`
+    const isOneDimensional = initializer
+      ? dims === '[]'
+      : dimensionExpressions?.length === 1 && dims === ''
+    if (!isOneDimensional) {
+      throw new ConstructNotSupportedError('multidimensional array creation')
+    }
+
+    const arrayTypeName = elementType + '[]'
+    const arrayDescriptor = cg.symbolTable.generateFieldDescriptor(arrayTypeName)
+
+    // `new T[] {a, b, c}` (JLS 15.10.1)
+    if (initializer) {
+      return {
+        stackSize: compileArrayInitializer(initializer, arrayTypeName, cg),
+        resultType: arrayDescriptor
+      }
+    }
+
+    // `new T[size]`: the size undergoes unary numeric promotion and must be an int (JLS 15.10.1)
+    const sizeExpression = (dimensionExpressions as Node[])[0]
+    const size = compile(sizeExpression, cg)
+    const primitive = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[size.resultType] ?? size.resultType
+    if (['J', 'F', 'D'].includes(primitive)) {
+      throw new LossyConversionError(describeType(primitive), 'int')
+    }
+    if (primitive.length !== 1 || !'BSCI'.includes(primitive)) {
+      throw new InconvertibleTypesError(typeNameInMessage(size.resultType), 'int')
+    }
+    unboxIfWrapper(size.resultType, cg)
+
+    const elementDescriptor = arrayDescriptor.slice(1)
+    if (elementDescriptor in arrayTypeCode) {
+      cg.code.push(OPCODE.NEWARRAY, arrayTypeCode[elementDescriptor])
+    } else {
+      cg.code.push(
+        OPCODE.ANEWARRAY,
+        0,
+        cg.constantPoolManager.indexClassInfo(classNameOf(elementDescriptor))
+      )
+    }
+    return { stackSize: Math.max(size.stackSize, 1), resultType: arrayDescriptor }
   },
 
   ClassInstanceCreationExpression: (node: Node, cg: CodeGenerator) => {

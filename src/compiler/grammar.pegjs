@@ -645,10 +645,12 @@ VariableDeclarator
   }
 
 VariableDeclaratorId
-  = id:Identifier Dims? {
+  = id:Identifier d:Dims? {
     return {
       kind: "VariableDeclarator",
       variableDeclaratorId: id,
+      // the dimensions written after the name, as in int a[]
+      dims: d ?? undefined,
     }
   }
 
@@ -1073,6 +1075,7 @@ StatementExpression
 Primary
   = lparen @Expression rparen
   / ClassInstanceCreationExpression
+  / ArrayCreationExpression
   / MethodInvocation
   / ArrayAccess
   / ThisExpression
@@ -1142,13 +1145,30 @@ MethodReference
   =  TO_BE_ADDED
 
 ArrayCreationExpression
-  = new (PrimitiveType / ClassType) (Dims ArrayInitializer / DimExprs Dims?)
+  = new t:(PrimitiveType / ClassType) d:Dims i:ArrayInitializer {
+    return addLocInfo({
+      kind: "ArrayCreationExpression",
+      elementType: t,
+      dims: d,
+      initializer: i,
+    })
+  }
+  / new t:(PrimitiveType / ClassType) dx:DimExprs d:Dims? {
+    return addLocInfo({
+      kind: "ArrayCreationExpression",
+      elementType: t,
+      dimensionExpressions: dx,
+      dims: d ?? "",
+    })
+  }
 
 DimExprs
   = DimExpr+
 
 DimExpr
-  = Annotation* lsquare Expression rsquare
+  = Annotation* lsquare e:Expression rsquare {
+    return e;
+  }
 
 Expression
   = LambdaExpression

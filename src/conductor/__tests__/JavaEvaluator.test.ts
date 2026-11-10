@@ -283,6 +283,54 @@ describe('JavaEvaluator', () => {
     ])
   })
 
+  test('creates arrays with default values and with explicit initializers', async () => {
+    const mock = new MockConductor()
+    const ev = new JavaEvaluator(mock as any)
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateChunk(`
+        class Animal { String name() { return "animal"; } }
+        class Dog extends Animal { String name() { return "dog"; } }
+        public class Main {
+          static int sum(int[] values) {
+            int total = 0;
+            for (int i = 0; i < values.length; i++) { total = total + values[i]; }
+            return total;
+          }
+          public static void main(String[] args) {
+            int n = 4;
+            int[] ints = new int[n + 1];
+            double[] doubles = new double[2];
+            boolean[] flags = new boolean[2];
+            String[] strings = new String[2];
+            for (int i = 0; i < ints.length; i++) { ints[i] = i * i; }
+            System.out.println(ints.length + " " + sum(ints));
+            System.out.println(doubles[1]);
+            System.out.println(flags[0]);
+            System.out.println(strings[1] == null);
+            int[] explicit = new int[] {1, 2, 3, 4, 5};
+            System.out.println(sum(explicit));
+            Animal[] pets = new Animal[] {new Dog(), new Animal()};
+            Animal first = pets[0];
+            System.out.println(first.name());
+            Animal[] covariant = new Dog[2];
+            System.out.println(covariant.length);
+            try {
+              int[] bad = new int[n - 10];
+            } catch (NegativeArraySizeException e) {
+              System.out.println("negative size");
+            }
+          }
+        }
+      `)
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
+    expect(mock.errors).toHaveLength(0)
+    expect(mock.outputs).toEqual(['5 30', '0.0', 'false', 'true', '15', 'dog', '2', 'negative size'])
+  })
+
   test('stops the program and reports an exception that is never caught', async () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)

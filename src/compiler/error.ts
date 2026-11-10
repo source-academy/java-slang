@@ -146,3 +146,9 @@ export class MulticatchParameterAssignedError extends CompileError {
     super(`multi-catch parameter ${parameter} may not be assigned`)
   }
 }
+
+export class LossyConversionError extends CompileError {
+  constructor(from: string, to: string) {
+    super(`incompatible types: possible lossy conversion from ${from} to ${to}`)
+  }
+}
