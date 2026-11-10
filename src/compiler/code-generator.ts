@@ -36,6 +36,7 @@ import { ConstantPoolManager } from './constant-pool-manager'
 import {
   AbstractClassInstantiationError,
   AmbiguousMethodCallError,
+  BadOperandTypeError,
   BadOperandTypesError,
   ConstructNotSupportedError,
   EnumInstantiationError,
@@ -1073,6 +1074,24 @@ function compileArrayInitializer(init: any[], typeName: string, cg: CodeGenerato
   return maxStack
 }
 
+/** Whether a value of this type can be used as a boolean: boolean, or Boolean (unboxed). */
+const isBooleanType = (type: string) => type === 'Z' || type === 'Ljava/lang/Boolean;'
+
+/** A type as it is named in an error message; `null` has the empty type. */
+const typeNameInMessage = (type: string) => (type === EMPTY_TYPE ? '<null>' : describeType(type))
+
+/**
+ * Compiles the condition of an `if`, a loop or a conditional expression, which must be boolean
+ * or Boolean (JLS 14.9, 14.12, 14.13, 14.14, 15.25).
+ */
+function compileCondition(condition: Node, cg: CodeGenerator): CompileResult {
+  const res = codeGenerators['LogicalExpression'](condition, cg)
+  if (!isBooleanType(res.resultType)) {
+    throw new InconvertibleTypesError(typeNameInMessage(res.resultType), 'boolean')
+  }
+  return res
+}
+
 function compile(node: Node, cg: CodeGenerator): CompileResult {
   if (!(node.kind in codeGenerators)) {
     throw new ConstructNotSupportedError(node.kind)
@@ -1243,7 +1262,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     startLabel.offset = cg.code.length
 
     if (condition) {
-      maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
+      maxStack = Math.max(maxStack, compileCondition(condition, cg).stackSize)
     }
     maxStack = Math.max(maxStack, compile(body, cg).stackSize)
     continueLabel.offset = cg.code.length
@@ -1276,7 +1295,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     // LogicalExpression jumps to the most recently created label when the condition is false, and
     // the body may have created labels of its own (an `if` or a `switch`), so make a fresh one
     const exitLabel = cg.generateNewLabel()
-    maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
+    maxStack = Math.max(maxStack, compileCondition(condition, cg).stackSize)
     cg.addBranchInstr(OPCODE.GOTO, startLabel)
     exitLabel.offset = cg.code.length
     endLabel.offset = cg.code.length
@@ -1296,7 +1315,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     cg.breakLabels.push(endLabel)
     startLabel.offset = cg.code.length
 
-    maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
+    maxStack = Math.max(maxStack, compileCondition(condition, cg).stackSize)
     maxStack = Math.max(maxStack, compile(body, cg).stackSize)
 
     cg.addBranchInstr(OPCODE.GOTO, startLabel)
@@ -1315,7 +1334,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     } = node as IfStatement
 
     const elseLabel = cg.generateNewLabel()
-    maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
+    maxStack = Math.max(maxStack, compileCondition(condition, cg).stackSize)
     const conRes = compile(consequent, cg)
     const conSize = conRes.stackSize
     let resType = conRes.resultType
@@ -1538,7 +1557,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     } = node as TernaryExpression
 
     const elseLabel = cg.generateNewLabel()
-    maxStack = Math.max(maxStack, codeGenerators['LogicalExpression'](condition, cg).stackSize)
+    maxStack = Math.max(maxStack, compileCondition(condition, cg).stackSize)
 
     // JLS 15.25: numeric operands are promoted to a common type, except that an int constant
     // fitting in a byte/short/char operand keeps that narrower type.
@@ -1588,6 +1607,17 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   },
 
   LogicalExpression: (node: Node, cg: CodeGenerator) => {
+    // JLS 15.23, 15.24: both operands of && and || must be boolean or Boolean
+    const assertBooleanOperands = (op: string, leftType: string, rightType: string) => {
+      if (!isBooleanType(leftType) || !isBooleanType(rightType)) {
+        throw new BadOperandTypesError(
+          op,
+          typeNameInMessage(leftType),
+          typeNameInMessage(rightType)
+        )
+      }
+    }
+
     const f = (node: Node, targetLabel: Label, onTrue: boolean): CompileResult => {
       if (node.kind === 'Literal') {
         const {
@@ -1600,16 +1630,22 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           }
           return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
         } else {
-          if (onTrue === (parseIntegerLiteral(value).value !== BigInt(0))) {
-            cg.addBranchInstr(OPCODE.GOTO, targetLabel)
-          }
-          return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('boolean') }
+          // not a boolean, so a type error for an operand of && or ||; report its real type
+          return { stackSize: 0, resultType: getExpressionType(node, cg) }
         }
       }
 
-      if (node.kind === 'PrefixExpression') {
+      // `!x` is the only prefix operator that can produce a boolean
+      if (node.kind === 'PrefixExpression' && node.operator === '!') {
         const { expression: expr } = node
-        return f(expr, targetLabel, !onTrue)
+        const operand = f(expr, targetLabel, !onTrue)
+        if (!isBooleanType(operand.resultType)) {
+          throw new BadOperandTypeError('!', typeNameInMessage(operand.resultType))
+        }
+        return {
+          stackSize: operand.stackSize,
+          resultType: cg.symbolTable.generateFieldDescriptor('boolean')
+        }
       }
 
       if (node.kind === 'BinaryExpression') {
@@ -1626,6 +1662,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             l = f(left, targetLabel, false)
             r = f(right, targetLabel, false)
           }
+          assertBooleanOperands(op, l.resultType, r.resultType)
           return {
             stackSize: Math.max(
               l.stackSize,
@@ -1643,6 +1680,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             r = f(right, targetLabel, false)
             falseLabel.offset = cg.code.length
           }
+          assertBooleanOperands(op, l.resultType, r.resultType)
           return {
             stackSize: Math.max(
               l.stackSize,
@@ -1656,6 +1694,8 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
 
       const res = compile(node, cg)
+      // a Boolean operand is unboxed (JLS 15.23, 15.24); the result type stays the declared one
+      if (res.resultType === 'Ljava/lang/Boolean;') unboxIfWrapper(res.resultType, cg)
       cg.addBranchInstr(onTrue ? OPCODE.IFNE : OPCODE.IFEQ, targetLabel)
       return res
     }
@@ -2287,12 +2327,40 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
   IncrementDecrementExpression: (node: Node, cg: CodeGenerator) => {
     // handle cases of ++x, x++, x--, --x that do not add object to operand stack
     if (node.kind === 'PrefixExpression' || node.kind === 'PostfixExpression') {
-      const assignment: Assignment = {
-        kind: 'Assignment',
-        left: node.expression as LeftHandSide,
-        operator: node.operator === '++' ? '+=' : '-=',
-        right: createIntLiteralNode(1)
+      // JLS 15.14, 15.15.1, 15.15.2: the operand must be a variable of a numeric type, or of
+      // the wrapper class of one
+      const operandType = getExpressionType(node.expression, cg)
+      const primitive = WRAPPER_DESCRIPTOR_TO_PRIMITIVE[operandType] ?? operandType
+      if (primitive.length !== 1 || !'BSCIJFD'.includes(primitive)) {
+        throw new BadOperandTypeError(node.operator, typeNameInMessage(operandType))
       }
+
+      const left = node.expression as LeftHandSide
+      const assignment: Assignment =
+        operandType in WRAPPER_DESCRIPTOR_TO_PRIMITIVE
+          ? {
+              // x = (P) (x + 1), which the assignment boxes again (JLS 15.14.2)
+              kind: 'Assignment',
+              left: left,
+              operator: '=',
+              right: {
+                kind: 'CastExpression',
+                castType: PRIMITIVE_NAMES[primitive],
+                expression: {
+                  kind: 'BinaryExpression',
+                  left: node.expression,
+                  right: createIntLiteralNode(1),
+                  operator: node.operator === '++' ? '+' : '-'
+                },
+                isPrimitiveCast: true
+              }
+            }
+          : {
+              kind: 'Assignment',
+              left: left,
+              operator: node.operator === '++' ? '+=' : '-=',
+              right: createIntLiteralNode(1)
+            }
       return compile(assignment, cg)
     }
     return { stackSize: 0, resultType: EMPTY_TYPE }
@@ -2310,12 +2378,17 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     const compileResult = compile(expr, cg)
-    // Unary numeric promotion (JLS 5.6.1): byte, short and char operands become int.
-    if (
-      (op === '-' || op === '+' || op === '~') &&
-      ['B', 'S', 'C'].includes(compileResult.resultType)
-    ) {
-      compileResult.resultType = 'I'
+    if (op === '-' || op === '+' || op === '~') {
+      // JLS 15.15.3-15.15.5: the operand is unboxed if needed and must be numeric (integral for
+      // ~); unary numeric promotion (JLS 5.6.1) turns byte, short and char into int
+      const operandType = compileResult.resultType
+      const primitive = unboxIfWrapper(operandType, cg)
+      const allowed = op === '~' ? 'BSCIJ' : 'BSCIJFD'
+      if (primitive.length !== 1 || !allowed.includes(primitive)) {
+        throw new BadOperandTypeError(op, typeNameInMessage(operandType))
+      }
+      compileResult.resultType = ['B', 'S', 'C'].includes(primitive) ? 'I' : primitive
+      compileResult.stackSize = Math.max(compileResult.stackSize, slotsOf(primitive))
     }
     if (op === '-') {
       const negationOpcodes: { [type: string]: OPCODE } = {
@@ -2324,12 +2397,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         F: OPCODE.FNEG, // Float negation
         D: OPCODE.DNEG // Double negation
       }
-
-      if (compileResult.resultType in negationOpcodes) {
-        cg.code.push(negationOpcodes[compileResult.resultType])
-      } else {
-        throw new Error(`Unary '-' not supported for type: ${compileResult.resultType}`)
-      }
+      cg.code.push(negationOpcodes[compileResult.resultType])
     } else if (op === '~') {
       if (compileResult.resultType === 'J') {
         cg.code.push(OPCODE.LCONST_1, OPCODE.LNEG, OPCODE.LXOR)
@@ -2339,6 +2407,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         compileResult.stackSize = Math.max(compileResult.stackSize, 2)
       }
     } else if (op === '!') {
+      if (!isBooleanType(compileResult.resultType)) {
+        throw new BadOperandTypeError('!', typeNameInMessage(compileResult.resultType))
+      }
+      // a Boolean operand is unboxed first
+      compileResult.resultType = unboxIfWrapper(compileResult.resultType, cg)
       const elseLabel = cg.generateNewLabel()
       const endLabel = cg.generateNewLabel()
       cg.addBranchInstr(OPCODE.IFEQ, elseLabel)

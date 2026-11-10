@@ -1358,6 +1358,290 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["2", "puppy", "2", "3", "2", "2", "z", "x", "true", "true", "true", "true", "true", "true", "true", "true", "2", "3", "dog", "puppy", "true", "false", "true", "1", "3"],
   },
+  {
+    comment: "logical and/or on boolean and Boolean operands, with short-circuiting",
+    program: `
+      public class Main {
+        static int calls;
+        static boolean yes() { calls++; return true; }
+        static boolean no() { calls++; return false; }
+        static Boolean wrappedYes() { calls++; return true; }
+        public static void main(String[] args) {
+          Boolean t = true;
+          Boolean f = false;
+          boolean p = true;
+          boolean q = false;
+          System.out.println(t && f);
+          System.out.println(t || f);
+          System.out.println(t && p);
+          System.out.println(q || f);
+          System.out.println(!f && t);
+          System.out.println(!t || !q);
+          System.out.println((t && p) || (f && q));
+          System.out.println(t && f || t);
+          System.out.println(f && t || f);
+          boolean r1 = t && wrappedYes();
+          boolean r2 = f && wrappedYes();
+          boolean r3 = t || wrappedYes();
+          System.out.println(r1);
+          System.out.println(r2);
+          System.out.println(r3);
+          System.out.println(calls);
+          calls = 0;
+          boolean s1 = no() && yes();
+          boolean s2 = yes() || no();
+          boolean s3 = yes() && yes() && no();
+          boolean s4 = no() || no() || yes();
+          System.out.println(s1 + " " + s2 + " " + s3 + " " + s4 + " " + calls);
+          int hits = 0;
+          if (t && p) { hits = hits + 1; }
+          if (f || q) { hits = hits + 10; }
+          if (t && !f) { hits = hits + 100; }
+          if (f || t) { hits = hits + 1000; }
+          int i = 0;
+          while (i < 5 && !f) { i = i + 1; }
+          System.out.println(hits + " " + i);
+          int x = 3;
+          int y = 4;
+          System.out.println(x < y && y < 5);
+          System.out.println(x > y || y > 3);
+          System.out.println((x < y) && t);
+          System.out.println(t && (x < y));
+          boolean viaBitwise = (p & q) || (p | q) && (p ^ q);
+          System.out.println(viaBitwise);
+          Boolean lazy = t ? f : t;
+          System.out.println(lazy || p);
+        }
+      }
+    `,
+    expectedLines: ["false", "true", "true", "false", "true", "true", "true", "true", "false", "true", "false", "true", "1", "false true false true 8", "1101 5", "true", "true", "true", "true", "true", "true"],
+  },
+  {
+    comment: "! and conditions on boolean and Boolean values",
+    program: `
+      public class Main {
+        static int calls;
+        static Boolean wrapped(boolean v) { calls++; return v; }
+        public static void main(String[] args) {
+          Boolean t = true;
+          Boolean f = false;
+          boolean p = true;
+          boolean q = false;
+          System.out.println(!t);
+          System.out.println(!f);
+          System.out.println(!p);
+          System.out.println(!q);
+          System.out.println(!!t);
+          System.out.println(!(p && q));
+          System.out.println(!(t || f));
+          boolean n1 = !t;
+          boolean n2 = !f;
+          Boolean n3 = !t;
+          Boolean n4 = !f;
+          System.out.println(n1 + " " + n2 + " " + n3 + " " + n4);
+          System.out.println(!wrapped(false) && !wrapped(true));
+          System.out.println(calls);
+          int r = 0;
+          if (t) { r = r + 1; }
+          if (f) { r = r + 10; }
+          if (!t) { r = r + 100; }
+          if (!f) { r = r + 1000; }
+          if (wrapped(true)) { r = r + 10000; }
+          System.out.println(r);
+          int i = 0;
+          while (t && i < 3) { i = i + 1; if (i == 3) { t = false; } }
+          System.out.println(i);
+          int j = 0;
+          do { j = j + 1; } while (f);
+          System.out.println(j);
+          int k = 0;
+          for (; !f && k < 4; k++) { }
+          System.out.println(k);
+          for (Boolean go = true; go; go = false) { k = k + 10; }
+          System.out.println(k);
+          int tern1 = t ? 1 : 2;
+          int tern2 = f ? 1 : 2;
+          int tern3 = !f ? 1 : 2;
+          int tern4 = wrapped(false) ? 1 : 2;
+          int tern5 = (p && q) ? 1 : 2;
+          System.out.println(tern1 + " " + tern2 + " " + tern3 + " " + tern4 + " " + tern5);
+          String label = t ? "yes" : "no";
+          System.out.println(label);
+          System.out.println(calls);
+        }
+      }
+    `,
+    expectedLines: ["false", "true", "false", "true", "true", "true", "false", "false true false true", "false", "2", "11001", "3", "1", "4", "14", "2 2 1 2 2", "no", "4"],
+  },
+  {
+    comment: "unary +, -, ~, ++ and -- on every numeric type and wrapper",
+    program: `
+      public class Main {
+        static int field = 5;
+        int inst = 7;
+        static long counter;
+        static int next() { counter++; return (int) counter; }
+        public static void main(String[] args) {
+          int x = 7;
+          long l = 5000000000L;
+          float f = 1.5f;
+          double d = -2.5;
+          char ch = 'c';
+          byte by = 100;
+          short sh = -300;
+          Integer wi = 8;
+          Long wl = 9L;
+          Double wd = 2.5;
+          Character wc = 'a';
+          Byte wby = 7;
+          Float wf = 0.5f;
+          Short wsh = 12;
+          System.out.println(-x);
+          System.out.println(+x);
+          System.out.println(-l);
+          System.out.println(-f);
+          System.out.println(-d);
+          System.out.println(-ch);
+          System.out.println(+ch);
+          System.out.println(-by);
+          System.out.println(+by);
+          System.out.println(-sh);
+          System.out.println(~sh);
+          System.out.println(-wi);
+          System.out.println(+wi);
+          System.out.println(-wl);
+          System.out.println(-wd);
+          System.out.println(-wc);
+          System.out.println(+wc);
+          System.out.println(-wby);
+          System.out.println(-wf);
+          System.out.println(-wsh);
+          System.out.println(~x);
+          System.out.println(~l);
+          System.out.println(~ch);
+          System.out.println(~by);
+          System.out.println(~wi);
+          System.out.println(~wl);
+          System.out.println(~wc);
+          System.out.println(~wby);
+          System.out.println(~~x);
+          System.out.println(- -x);
+          System.out.println(-(-x));
+          System.out.println(-~x);
+          System.out.println(~-x);
+          System.out.println(-(x + 1) * 2);
+          int min = -2147483647 - 1;
+          System.out.println(-min);
+          System.out.println(~min);
+          long lmin = -9223372036854775807L - 1L;
+          System.out.println(-lmin);
+          double zero = 0.0;
+          System.out.println(-zero);
+          System.out.println(-zero + 0.0);
+          int viaInt = -ch;
+          long viaLong = ~x;
+          long widened = -by;
+          double dbl = -ch;
+          Integer boxed = -x;
+          Long boxedL = ~l;
+          Object obj = -ch;
+          System.out.println(viaInt + " " + viaLong + " " + widened + " " + dbl + " " + boxed + " " + boxedL + " " + obj);
+          byte cast = (byte) -by;
+          char castC = (char) -ch;
+          short castS = (short) ~sh;
+          System.out.println(cast + " " + (int) castC + " " + castS);
+          int[] arr = {3, 4};
+          double[] darr = {1.5};
+          System.out.println(-arr[1]);
+          System.out.println(~arr[0]);
+          System.out.println(-darr[0]);
+          int i = 0;
+          System.out.println(i++);
+          System.out.println(i);
+          System.out.println(++i);
+          System.out.println(i--);
+          System.out.println(--i);
+          System.out.println(i);
+          long lc = 4000000000L;
+          lc++;
+          ++lc;
+          System.out.println(lc);
+          float fc = 1.5f;
+          fc++;
+          System.out.println(--fc + " " + fc--);
+          System.out.println(fc);
+          double dc = 0.5;
+          dc--;
+          System.out.println(dc);
+          char cc = 'y';
+          cc++;
+          ++cc;
+          System.out.println(cc);
+          System.out.println(cc--);
+          System.out.println(--cc);
+          byte bc = 127;
+          bc++;
+          System.out.println(bc);
+          bc--;
+          System.out.println(bc);
+          short sc = 32767;
+          ++sc;
+          System.out.println(sc);
+          wi++;
+          ++wi;
+          System.out.println(wi);
+          System.out.println(wi++);
+          System.out.println(++wi);
+          System.out.println(wi--);
+          System.out.println(--wi);
+          wl--;
+          System.out.println(wl);
+          wd++;
+          System.out.println(wd);
+          wc++;
+          System.out.println(wc);
+          ++wc;
+          System.out.println(wc);
+          System.out.println(wc--);
+          System.out.println(--wc);
+          wby++;
+          System.out.println(wby);
+          wby = 127;
+          wby++;
+          System.out.println(wby);
+          ++wsh;
+          System.out.println(wsh);
+          wf--;
+          System.out.println(wf);
+          arr[0]++;
+          ++arr[1];
+          arr[0] += arr[1]++;
+          System.out.println(arr[0] + " " + arr[1]);
+          darr[0]--;
+          System.out.println(darr[0]);
+          field++;
+          ++field;
+          System.out.println(field);
+          System.out.println(field--);
+          System.out.println(Main.field);
+          Main m = new Main();
+          m.inst++;
+          ++m.inst;
+          System.out.println(m.inst);
+          System.out.println(m.inst--);
+          System.out.println(m.inst);
+          int sum = x++ + ++x;
+          System.out.println(sum + " " + x);
+          int mixed = -x++ + ~x-- - -(--x);
+          System.out.println(mixed + " " + x);
+          counter = 0;
+          int idx = next() + next();
+          System.out.println(idx + " " + counter);
+        }
+      }
+    `,
+    expectedLines: ["-7", "7", "-5000000000", "-1.5", "2.5", "-99", "99", "-100", "100", "300", "299", "-8", "8", "-9", "-2.5", "-97", "97", "-7", "-0.5", "-12", "-8", "-5000000001", "-100", "-101", "-9", "-10", "-98", "-8", "7", "7", "7", "8", "6", "-16", "-2147483648", "2147483647", "-9223372036854775808", "-0.0", "0.0", "-99 -8 -100 -99.0 -7 -5000000001 -99", "-100 65437 299", "-4", "-4", "-1.5", "0", "1", "2", "2", "0", "0", "4000000002", "1.5 1.5", "0.5", "-0.5", "{", "{", "y", "-128", "127", "-32768", "10", "10", "12", "12", "10", "8", "3.5", "b", "c", "c", "a", "8", "-128", "13", "-0.5", "9 6", "0.5", "7", "7", "6", "9", "9", "8", "16 9", "-12 8", "3 2"],
+  },
 ]
 
 const compileProgram = (body: string) => {
@@ -1439,10 +1723,180 @@ export const typeConversionTest = () => describe("type conversion", () => {
       ["equality of an int and a boolean", "boolean t = true; boolean b = 1 != t;"],
       ["equality of a String and an int", "String s = \"1\"; boolean b = s == 1;"],
       ["equality of an Object and an int", "Object o = 1; boolean b = o == 1;"],
+      ["logical and of an int and a boolean", "boolean b = 1 && true;"],
+      ["logical and of a boolean and an int", "boolean b = true && 1;"],
+      ["logical or of two ints", "boolean b = 1 || 2;"],
+      ["logical and with a String", "boolean b = \"s\" && true;"],
+      ["logical and with null", "boolean b = null && true;"],
+      ["logical or with null on the right", "boolean b = true || null;"],
+      ["logical or with a double", "boolean b = 1.5 || true;"],
+      ["logical and with a char", "boolean b = true; char c = 'c'; boolean d = c && b;"],
+      ["logical and with a long variable", "long l = 1L; boolean b = l && true;"],
+      ["logical or with an int variable", "int i = 1; boolean b = true || i;"],
+      ["logical and with an Integer", "Integer i = 1; boolean b = i && true;"],
+      ["logical and with an array", "int[] a = {1}; boolean b = a && true;"],
+      ["logical and with a negative int", "int i = 1; boolean b = -i && true;"],
+      ["logical or with a complemented int", "int i = 1; boolean b = ~i || true;"],
+      ["logical and with an arithmetic result", "boolean b = true && (1 + 2);"],
+      ["logical and with a bitwise int result", "int i = 1; boolean b = (i & 1) && true;"],
+      ["logical and with a parenthesised bad operand", "boolean b = (true && 1) || false;"],
+      ["a bad operand deep in a chain", "boolean a = true; boolean b = a && a && a || 1;"],
+      ["a bad right operand in a condition", "boolean a = true; if (a && 1) { a = false; }"],
+      ["a bad left operand in a loop condition", "int i = 0; while (i && true) { i = 1; }"],
     ];
     for (const [comment, body] of rejected) {
       it(`rejects ${comment}`, () =>
         expect(() => compileProgram(body)).toThrow(/bad operand types/));
+    }
+  });
+
+  describe("rejects conditions and operands of ! that are not boolean", () => {
+    const rejectedConditions: [string, string][] = [
+      ["an int in an if", "int x = 1; if (x) { x = 2; }"],
+      ["an int literal in an if", "int x = 0; if (1) { x = 2; }"],
+      ["a double in an if", "double d = 1.5; int x = 0; if (d) { x = 2; }"],
+      ["a String in an if", "String s = \"s\"; int x = 0; if (s) { x = 2; }"],
+      ["null in an if", "int x = 0; if (null) { x = 2; }"],
+      ["an Integer in an if", "Integer i = 1; int x = 0; if (i) { x = 2; }"],
+      ["an arithmetic result in an if", "int x = 1; if (x + 1) { x = 2; }"],
+      ["an int in the else-if of an if", "boolean b = true; int x = 1; if (b) { x = 2; } else if (x) { x = 3; }"],
+      ["an int in a while", "int x = 1; while (x) { x = 0; }"],
+      ["a String in a while", "String s = \"s\"; while (s) { s = null; }"],
+      ["an int in a do-while", "int x = 1; do { x = 0; } while (x);"],
+      ["a double in a do-while", "int x = 1; do { x = 0; } while (1.5);"],
+      ["an int in a for", "for (int i = 0; i; i++) { }"],
+      ["an int variable in a for", "int x = 1; for (int i = 0; x; i++) { }"],
+      ["an int in a for without an initializer", "int x = 1; for (; x; ) { x = 0; }"],
+      ["an int in a conditional expression", "int x = 1; int y = x ? 2 : 3;"],
+      ["an int literal in a conditional expression", "int y = 1 ? 2 : 3;"],
+      ["a String in a conditional expression", "String s = \"s\"; int y = s ? 2 : 3;"],
+      ["an Integer in a conditional expression", "Integer i = 1; int y = i ? 2 : 3;"],
+    ];
+    for (const [comment, body] of rejectedConditions) {
+      it(`rejects ${comment}`, () =>
+        expect(() => compileProgram(body)).toThrow(/incompatible types: .* cannot be converted to boolean/));
+    }
+
+    const rejectedNegations: [string, string][] = [
+      ["! of an int", "int x = 1; boolean b = !x;"],
+      ["! of an int literal", "boolean b = !1;"],
+      ["! of a char", "char c = 'c'; boolean b = !c;"],
+      ["! of a double", "double d = 1.5; boolean b = !d;"],
+      ["! of a long", "long l = 1L; boolean b = !l;"],
+      ["! of a String", "String s = \"s\"; boolean b = !s;"],
+      ["! of null", "boolean b = !null;"],
+      ["! of an Integer", "Integer i = 1; boolean b = !i;"],
+      ["! of an array", "int[] a = {1}; boolean b = !a;"],
+      ["! of an arithmetic result", "int x = 1; boolean b = !(x + 1);"],
+      ["! of an int inside a condition", "int x = 1; if (!x) { x = 2; }"],
+      ["! of an int inside a loop condition", "int x = 1; while (!x) { x = 2; }"],
+      ["! of an int as an operand of &&", "int x = 1; boolean a = true; boolean b = a && !x;"],
+      ["! of an int on the left of ||", "int x = 1; boolean a = true; boolean b = !x || a;"],
+      ["a double negation of an int", "int x = 1; boolean b = !!x;"],
+    ];
+    for (const [comment, body] of rejectedNegations) {
+      it(`rejects ${comment}`, () =>
+        expect(() => compileProgram(body)).toThrow(/bad operand type .* for unary operator '!'/));
+    }
+
+    const allowed: [string, string][] = [
+      ["boolean and Boolean conditions", "boolean a = true; Boolean w = false; int x = 0; if (a) { x = 1; } if (w) { x = 2; } while (w) { x = 3; } do { x = 4; } while (w); for (; w; ) { x = 5; } x = w ? 1 : 2;"],
+      ["comparisons and logical operators as conditions", "int x = 1; int y = 2; boolean a = true; if (x < y && a || !a) { x = 3; } while (x == y) { x = 0; } x = (x > y) ? 1 : 2;"],
+      ["a for without a condition", "for (;;) { break; }"],
+      ["constant conditions", "int x = 0; if (true) { x = 1; } while (false) { x = 2; } x = true ? 1 : 2;"],
+      ["! of booleans and Booleans", "boolean a = true; Boolean w = false; boolean b = !a; boolean c = !w; Boolean d = !w; boolean e = !(a && w); boolean f = !!a;"],
+    ];
+    for (const [comment, body] of allowed) {
+      it(`accepts ${comment}`, () => expect(() => compileProgram(body)).not.toThrow());
+    }
+  });
+
+  describe("rejects unary operators applied to illegal operand types", () => {
+    const rejected: [string, string, string][] = [
+      ["unary - of a boolean", "boolean a = true; Object r = -a;", "-"],
+      ["unary - of a boolean literal", "Object r = -true;", "-"],
+      ["unary - of a boolean array element", "boolean[] a = {true}; Object r = -a[0];", "-"],
+      ["unary - of a Boolean", "Boolean a = true; Object r = -a;", "-"],
+      ["unary - of a String", "String a = \"s\"; Object r = -a;", "-"],
+      ["unary - of a string literal", "Object r = -\"s\";", "-"],
+      ["unary - of null", "Object r = -null;", "-"],
+      ["unary - of an array", "int[] a = {1}; Object r = -a;", "-"],
+      ["unary - of an Object", "Object a = null; Object r = -a;", "-"],
+      ["unary + of a boolean", "boolean a = true; Object r = +a;", "+"],
+      ["unary + of a boolean literal", "Object r = +true;", "+"],
+      ["unary + of a boolean array element", "boolean[] a = {true}; Object r = +a[0];", "+"],
+      ["unary + of a Boolean", "Boolean a = true; Object r = +a;", "+"],
+      ["unary + of a String", "String a = \"s\"; Object r = +a;", "+"],
+      ["unary + of a string literal", "Object r = +\"s\";", "+"],
+      ["unary + of null", "Object r = +null;", "+"],
+      ["unary + of an array", "int[] a = {1}; Object r = +a;", "+"],
+      ["unary + of an Object", "Object a = null; Object r = +a;", "+"],
+      ["~ of a float", "float a = 1f; Object r = ~a;", "~"],
+      ["~ of a double", "double a = 1.5; Object r = ~a;", "~"],
+      ["~ of a double literal", "Object r = ~1.5;", "~"],
+      ["~ of a boolean", "boolean a = true; Object r = ~a;", "~"],
+      ["~ of a boolean literal", "Object r = ~true;", "~"],
+      ["~ of a Float", "Float a = 1f; Object r = ~a;", "~"],
+      ["~ of a Double", "Double a = 1.5; Object r = ~a;", "~"],
+      ["~ of a Boolean", "Boolean a = true; Object r = ~a;", "~"],
+      ["~ of a String", "String a = \"s\"; Object r = ~a;", "~"],
+      ["~ of null", "Object r = ~null;", "~"],
+      ["~ of an array", "int[] a = {1}; Object r = ~a;", "~"],
+      ["~ of a double array element", "double[] a = {1.5}; Object r = ~a[0];", "~"],
+      ["~ of an Object", "Object a = null; Object r = ~a;", "~"],
+      ["prefix ++ of a boolean", "boolean a = true; ++a;", "++"],
+      ["postfix ++ of a boolean", "boolean a = true; a++;", "++"],
+      ["prefix ++ of a Boolean", "Boolean a = true; ++a;", "++"],
+      ["postfix ++ of a Boolean", "Boolean a = true; a++;", "++"],
+      ["prefix ++ of a String", "String a = \"s\"; ++a;", "++"],
+      ["postfix ++ of a String", "String a = \"s\"; a++;", "++"],
+      ["prefix ++ of an array", "int[] a = {1}; ++a;", "++"],
+      ["postfix ++ of an array", "int[] a = {1}; a++;", "++"],
+      ["prefix ++ of an Object", "Object a = null; ++a;", "++"],
+      ["postfix ++ of an Object", "Object a = null; a++;", "++"],
+      ["prefix ++ of a boolean array element", "boolean[] a = {true}; ++a[0];", "++"],
+      ["postfix ++ of a boolean array element", "boolean[] a = {true}; a[0]++;", "++"],
+      ["prefix -- of a boolean", "boolean a = true; --a;", "--"],
+      ["postfix -- of a boolean", "boolean a = true; a--;", "--"],
+      ["prefix -- of a Boolean", "Boolean a = true; --a;", "--"],
+      ["postfix -- of a Boolean", "Boolean a = true; a--;", "--"],
+      ["prefix -- of a String", "String a = \"s\"; --a;", "--"],
+      ["postfix -- of a String", "String a = \"s\"; a--;", "--"],
+      ["prefix -- of an array", "int[] a = {1}; --a;", "--"],
+      ["postfix -- of an array", "int[] a = {1}; a--;", "--"],
+      ["prefix -- of an Object", "Object a = null; --a;", "--"],
+      ["postfix -- of an Object", "Object a = null; a--;", "--"],
+      ["prefix -- of a boolean array element", "boolean[] a = {true}; --a[0];", "--"],
+      ["postfix -- of a boolean array element", "boolean[] a = {true}; a[0]--;", "--"],
+    ];
+    for (const [comment, body, operator] of rejected) {
+      it(`rejects ${comment}`, () =>
+        expect(() => compileProgram(body)).toThrow(
+          `bad operand type`
+        ));
+      it(`names the operator when it rejects ${comment}`, () =>
+        expect(() => compileProgram(body)).toThrow(
+          new RegExp(`for unary operator '${operator.replace(/[+]/g, "\\$&")}'$`)
+        ));
+    }
+  });
+
+  describe("accepts logical operators on boolean operands", () => {
+    const allowed: [string, string][] = [
+      ["boolean literals", "boolean b = true && false || true;"],
+      ["boolean variables", "boolean a = true; boolean b = false; boolean c = a && b || !a;"],
+      ["Boolean variables", "Boolean a = true; Boolean b = false; boolean c = a && b || a;"],
+      ["a mix of boolean and Boolean", "Boolean a = true; boolean b = false; boolean c = a && b; boolean d = b || a;"],
+      ["comparisons", "int x = 1; int y = 2; boolean b = x < y && y > x || x == y;"],
+      ["comparison of booleans", "boolean a = true; boolean b = false; boolean c = a == b && a != b;"],
+      ["bitwise operators on booleans", "boolean a = true; boolean b = false; boolean c = (a & b) && (a | b) || (a ^ b);"],
+      ["negations", "boolean a = true; boolean b = !a && !(a || !a);"],
+      ["a conditional expression", "boolean a = true; boolean b = (a ? a : false) && a;"],
+      ["nested parentheses", "boolean a = true; boolean b = ((a && (a || a)) && ((a)));"],
+      ["a condition", "boolean a = true; if (a && !a || a) { a = false; }"],
+    ];
+    for (const [comment, body] of allowed) {
+      it(`accepts ${comment}`, () => expect(() => compileProgram(body)).not.toThrow());
     }
   });
 
@@ -1459,6 +1913,16 @@ export const typeConversionTest = () => describe("type conversion", () => {
       ["char to short", "char c = 'a'; short s = c;"],
       ["short to char", "short s = 1; char c = s;"],
       ["byte to char", "byte b = 1; char c = b;"],
+      ["a negated byte to byte", "byte b = 1; byte c = -b;"],
+      ["a negated short to short", "short s = 1; short t = -s;"],
+      ["a negated char to char", "char c = 'a'; char d = -c;"],
+      ["a unary plus on a char to char", "char c = 'a'; char d = +c;"],
+      ["a complemented byte to byte", "byte b = 1; byte c = ~b;"],
+      ["a complemented short to short", "short s = 1; short t = ~s;"],
+      ["a complemented long to int", "long l = 1L; int i = ~l;"],
+      ["a negated long to int", "long l = 1L; int i = -l;"],
+      ["a negated double to float", "double d = 1.5; float f = -d;"],
+      ["a negated Integer to byte", "Integer i = 1; byte b = -i;"],
       ["int[] to Object[]", "int[] a = {1}; Object[] o = a;"],
       ["int[] to long[]", "int[] a = {1}; long[] l = a;"],
       ["byte[] to int[]", "byte[] a = {1}; int[] i = a;"],

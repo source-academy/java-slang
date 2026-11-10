@@ -113,3 +113,9 @@ export class MethodAlreadyDefinedError extends CompileError {
     super(`${kind} ${signature} is already defined in class ${className}`)
   }
 }
+
+export class BadOperandTypeError extends CompileError {
+  constructor(operator: string, type: string) {
+    super(`bad operand type ${type} for unary operator '${operator}'`)
+  }
+}
