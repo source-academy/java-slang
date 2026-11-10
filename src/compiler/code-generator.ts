@@ -40,7 +40,6 @@ import {
   ConstructNotSupportedError,
   EnumInstantiationError,
   InconvertibleTypesError,
-  InterfaceNotSupportedError,
   NoMethodMatchingSignatureError,
   NonStaticReferenceInStaticContextError
 } from './error'
@@ -1644,7 +1643,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     try {
       target = cg.symbolTable.generateFieldDescriptor(ct)
     } catch (e) {
-      if (e instanceof InterfaceNotSupportedError) throw e
       // Class not known to the symbol table: fall back to the name as written
       const dims = (ct.match(/\[/g) || []).length
       const base = dims > 0 ? ct.slice(0, ct.indexOf('[')) : ct
@@ -1678,7 +1676,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const { identifier: id, argumentList: argLst } = node as ClassInstanceCreationExpression
     let maxStack = 2
 
-    cg.symbolTable.assertNotInterface(id)
     let instantiatedClassName = id
     try {
       const classInfo = cg.symbolTable.queryClass(id)
@@ -2254,7 +2251,6 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     try {
       info = cg.symbolTable.queryVariable(name)
     } catch (e) {
-      if (e instanceof InterfaceNotSupportedError) throw e
       return { stackSize: 1, resultType: 'Ljava/lang/Class;' }
     }
     if (Array.isArray(info)) {

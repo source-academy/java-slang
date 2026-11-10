@@ -7,7 +7,6 @@ import {
   generateMethodAccessFlags
 } from './compiler-utils'
 import {
-  InterfaceNotSupportedError,
   InvalidMethodCallError,
   OverrideFinalMethodError,
   SymbolCannotBeResolvedError,
@@ -381,28 +380,6 @@ export class SymbolTable {
     this.curTable.set(key, symbolNode)
   }
 
-  /**
-   * When set, naming a library interface in the source program is a compile error, since
-   * interfaces are not supported. It is switched on once the library has been registered, so
-   * the library's own signatures can still mention interfaces.
-   */
-  rejectInterfaceReferences = false
-
-  /** Throws if `className`, written in the source program, is an interface. */
-  assertNotInterface(className: string) {
-    if (!this.rejectInterfaceReferences) return
-    const ACC_INTERFACE = 0x0200
-    let info: ClassInfo
-    try {
-      info = this.queryClass(className)
-    } catch (e) {
-      return
-    }
-    if (info.accessFlags & ACC_INTERFACE) {
-      throw new InterfaceNotSupportedError()
-    }
-  }
-
   queryClass(name: string): ClassInfo {
     const root = this.tables[0]
 
@@ -641,8 +618,6 @@ export class SymbolTable {
     let startsAtSuper = false
     const symbolInfos: Array<SymbolInfo> = []
 
-    // whether the first token names a class (not a variable or field), as in `Runnable.run()`
-    let startsWithClassName = false
     const tokens = name.split('.')
     const len = tokens.length
     tokens.forEach((token, i) => {
@@ -658,7 +633,6 @@ export class SymbolTable {
             break
           }
         }
-        startsWithClassName = !resolved && token !== 'this' && token !== 'super'
         if (!resolved && token !== 'this' && token !== 'super') {
           // not a local variable: a field of the current class or one it inherits (which hides
           // a class of the same name)
@@ -672,7 +646,6 @@ export class SymbolTable {
           if (field !== undefined && len > 1) {
             symbolInfos.push(field)
             token = field.typeName
-            startsWithClassName = false
           }
         }
 
@@ -689,7 +662,6 @@ export class SymbolTable {
           curClassName = parent
           startsAtSuper = true
         } else {
-          if (startsWithClassName) this.assertNotInterface(token)
           curTable = this.getClassTable(token)
           curClassName = token
         }
@@ -826,9 +798,6 @@ export class SymbolTable {
     }
 
     typeName = typeName.slice(0, last)
-    if (!typeMap.has(typeName) && !typeName.includes('/')) {
-      this.assertNotInterface(typeName)
-    }
     return (
       '['.repeat(dim) +
       (typeMap.has(typeName)

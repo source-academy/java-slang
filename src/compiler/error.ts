@@ -101,9 +101,3 @@ export class CannotInheritFromFinalClassError extends CompileError {
     super(`cannot inherit from final ${name}`)
   }
 }
-
-export class InterfaceNotSupportedError extends CompileError {
-  constructor() {
-    super('interfaces are not currently supported in java-slang')
-  }
-}
