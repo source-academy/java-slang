@@ -352,6 +352,73 @@ const testCases: testCase[] = [
     expectedLines: ["2 8.0", "1", "null", "extra", "MyEx", "null", "42"],
   },
   {
+    comment: "a bare this as a value",
+    program: `
+      class Counter {
+        int n;
+        Counter self = this;
+        Counter inc() { n = n + 1; return this; }
+        Counter add(int k) { this.n += k; return this; }
+        boolean same(Counter o) { return this == o; }
+        boolean sameAsSelf() { return same(this); }
+        Counter pick(boolean b, Counter other) { return b ? this : other; }
+        Object asObject() { return (Object) this; }
+        void register(Registry r) { r.add(this); }
+        int viaOther(Counter o) { return o.n; }
+        int readThrough() { return viaOther(this); }
+      }
+      class Registry {
+        Counter last;
+        int adds;
+        void add(Counter c) { last = c; adds = adds + 1; }
+      }
+      class Base {
+        int id = 7;
+        Base me() { return this; }
+      }
+      class Derived extends Base {
+        Base asBase() { Base b = this; return b; }
+        Derived myself() { return this; }
+      }
+      public class Main {
+        static class Inner {
+          int k = 4;
+          Inner me() { return this; }
+        }
+        public static void main(String[] args) {
+          Counter c = new Counter();
+          Counter d = c.inc();
+          d.add(5);
+          System.out.println(c.n);
+          System.out.println(c == d);
+          System.out.println(c.same(c));
+          System.out.println(c.same(new Counter()));
+          System.out.println(c.sameAsSelf());
+          Counter other = new Counter();
+          System.out.println(c.pick(true, other) == c);
+          System.out.println(c.pick(false, other) == other);
+          System.out.println(c.asObject() == c);
+          System.out.println(c.self == c);
+          Registry r = new Registry();
+          c.register(r);
+          c.register(r);
+          System.out.println(r.last == c);
+          System.out.println(r.adds);
+          System.out.println(c.readThrough());
+          Derived x = new Derived();
+          System.out.println(x.myself() == x);
+          System.out.println(x.asBase() == x);
+          System.out.println(x.me() == x);
+          Inner i = new Inner();
+          Inner j = i.me();
+          System.out.println(j == i);
+          System.out.println(j.k);
+        }
+      }
+    `,
+    expectedLines: ["6", "true", "true", "false", "true", "true", "true", "true", "true", "true", "2", "6", "true", "true", "true", "true", "4"],
+  },
+  {
     comment: "concrete subclasses of abstract classes can be instantiated",
     program: `
       abstract class Shape {
@@ -533,6 +600,70 @@ export const classTest = () => describe("fields and methods of class", () => {
             "class O { static abstract class A { abstract void f(); } static class B extends A {} }"
           )
         ).toThrow(/O.B is not abstract .* f\(\) in A/));
+    });
+
+    describe("a bare this", () => {
+      const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+        allowedStartRules: ["CompilationUnit"],
+      });
+      const parseMember = (member: string) =>
+        parser.parse(`class T { int x; ${member} } public class Main { public static void main(String[] a) {} }`);
+      // finds the first node of the given kind anywhere in the tree
+      const find = (node: any, kind: string): any => {
+        if (node === null || typeof node !== "object") return undefined;
+        if (node.kind === kind) return node;
+        for (const child of Object.values(node)) {
+          const found = find(child, kind);
+          if (found) return found;
+        }
+        return undefined;
+      };
+
+      const parsed: [string, string][] = [
+        ["a return value", "T f() { return this; }"],
+        ["a method argument", "void g(T t) {} void f() { g(this); }"],
+        ["a variable initializer", "void f() { T t = this; }"],
+        ["the right side of an assignment", "void f() { T t = null; t = this; }"],
+        ["a cast operand", "void f() { Object o = (Object) this; }"],
+        ["a comparison operand", "boolean f() { return this == this; }"],
+        ["a conditional operand", "T f(boolean b) { return b ? this : null; }"],
+      ];
+      for (const [comment, member] of parsed) {
+        it(`parses as ${comment}`, () =>
+          expect(find(parseMember(member), "ThisExpression")).toBeDefined());
+      }
+
+      const unchanged: [string, string][] = [
+        ["a field read", "int f() { return this.x; }"],
+        ["a field assignment", "void f() { this.x = 1; }"],
+        ["a method call", "void g() {} void f() { this.g(); }"],
+        ["an increment", "void f() { this.x++; }"],
+        ["an identifier that starts with this", "void f() { int thisx = 1; int y = thisx; }"],
+      ];
+      for (const [comment, member] of unchanged) {
+        it(`still handles ${comment} without a ThisExpression`, () =>
+          expect(find(parseMember(member), "ThisExpression")).toBeUndefined());
+      }
+    });
+
+    describe("this in a static context", () => {
+      const compileMember = (member: string) => {
+        const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+          allowedStartRules: ["CompilationUnit"],
+        });
+        return compile(
+          parser.parse(
+            `class T { int x; ${member} } public class Main { public static void main(String[] a) {} }`
+          ) as AST
+        );
+      };
+      const message = /non-static variable "this" cannot be referenced from a static context/;
+      it("rejects returning this from a static method", () =>
+        expect(() => compileMember("static T f() { return null; } static T g() { return this; }")).toThrow(message));
+      it("rejects passing this from a static method", () =>
+        expect(() => compileMember("static void g(T t) {} static void f() { g(this); }")).toThrow(message));
+      it("allows this in an instance method", () =>
+        expect(() => compileMember("T f() { return this; }")).not.toThrow());
     });
 
     describe("final classes", () => {

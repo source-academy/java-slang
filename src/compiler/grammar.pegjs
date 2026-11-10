@@ -1068,7 +1068,14 @@ Primary
   / ClassInstanceCreationExpression
   / MethodInvocation
   / ArrayAccess
+  / ThisExpression
   / Literal 
+
+// A bare this; this.x and this.m() are handled by ExpressionName and MethodInvocation
+ThisExpression
+  = this !dot {
+    return addLocInfo({ kind: "ThisExpression" })
+  }
 
 ClassInstanceCreationExpression
   = u:UnqualifiedClassInstanceCreationExpression {

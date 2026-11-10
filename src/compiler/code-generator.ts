@@ -1823,6 +1823,14 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     return { stackSize: maxStack, resultType: instantiatedClassName }
   },
 
+  ThisExpression: (node: Node, cg: CodeGenerator) => {
+    if (cg.currentMethodIsStatic) {
+      throw new NonStaticReferenceInStaticContextError('variable', 'this')
+    }
+    cg.code.push(OPCODE.ALOAD, 0)
+    return { stackSize: 1, resultType: `L${cg.currentClass};` }
+  },
+
   ArrayAccess: (node: Node, cg: CodeGenerator) => {
     const n = node as ArrayAccess
     const { stackSize: size1, resultType: arrayType } = compile(n.primary, cg)
