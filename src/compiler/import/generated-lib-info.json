@@ -1992,6 +1992,14 @@
       }
     ]
   },
+  "java/lang/Cloneable": {
+    "name": "java/lang/Cloneable",
+    "accessFlags": 1537,
+    "superClass": "java/lang/Object",
+    "interfaces": [],
+    "fields": [],
+    "methods": []
+  },
   "java/lang/Comparable": {
     "name": "java/lang/Comparable",
     "accessFlags": 1537,

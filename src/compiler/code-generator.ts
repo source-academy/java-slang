@@ -392,7 +392,34 @@ function classNameOf(type: string): string {
 }
 
 function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGenerator): boolean {
+  if (fromType.startsWith('[') || toType.startsWith('[')) {
+    return isArraySubtype(fromType, toType, cg)
+  }
   return classReaches(classNameOf(fromType), classNameOf(toType), cg) === true
+}
+
+// The only classes and interfaces that an array type is a subtype of (JLS 4.10.3)
+const ARRAY_SUPERTYPES = ['Ljava/lang/Object;', 'Ljava/lang/Cloneable;', 'Ljava/io/Serializable;']
+
+const isPrimitiveDescriptor = (type: string) => type.length === 1
+
+/**
+ * JLS 4.10.3: whether `from` is a subtype of `to`, when at least one of them is an array type.
+ * Arrays are subtypes of Object, Cloneable and Serializable, and `S[]` is a subtype of `T[]`
+ * if `S` and `T` are the same primitive type, or are reference types with `S` a subtype of `T`.
+ * Multidimensional arrays are not supported, so they are only subtypes of themselves.
+ */
+function isArraySubtype(from: string, to: string, cg: CodeGenerator): boolean {
+  if (from === to) return true
+  if (from.startsWith('[[') || to.startsWith('[[')) return false
+  // a class or interface is never a subtype of an array type
+  if (!from.startsWith('[')) return false
+  if (!to.startsWith('[')) return ARRAY_SUPERTYPES.includes(to)
+
+  const fromComponent = from.slice(1)
+  const toComponent = to.slice(1)
+  if (isPrimitiveDescriptor(fromComponent) || isPrimitiveDescriptor(toComponent)) return false
+  return classReaches(classNameOf(fromComponent), classNameOf(toComponent), cg) === true
 }
 
 /**
@@ -449,6 +476,7 @@ function describeType(descriptor: string): string {
   if (descriptor === 'Z') return 'boolean'
   if (descriptor in PRIMITIVE_NAMES) return PRIMITIVE_NAMES[descriptor]
   if (descriptor === EMPTY_TYPE) return '<unknown>'
+  if (descriptor.startsWith('[')) return describeType(descriptor.slice(1)) + '[]'
   return classNameOf(descriptor).replace(/\//g, '.')
 }
 
@@ -484,12 +512,55 @@ function isSubclassOf(sub: string, sup: string, cg: CodeGenerator): boolean | un
 }
 
 /**
+ * JLS 5.5.1: a cast with an array type as the source or the target. An array can only be cast
+ * to or from Object, Cloneable and Serializable (the narrowing reference conversions of
+ * JLS 5.1.6 from them, and the widening ones of 5.1.5 to them), or to another array type whose
+ * component type is the same primitive type, or is a reference type that the source's component
+ * type can be cast to. Multidimensional arrays are not supported, so they are left to the
+ * runtime check.
+ */
+function assertArrayCastIsLegal(fromType: string, toType: string, cg: CodeGenerator) {
+  if (fromType.startsWith('[[') || toType.startsWith('[[')) return
+  const inconvertible = () =>
+    new InconvertibleTypesError(describeType(fromType), describeType(toType))
+
+  if (fromType.startsWith('[') && toType.startsWith('[')) {
+    const fromComponent = fromType.slice(1)
+    const toComponent = toType.slice(1)
+    if (fromComponent === toComponent) return
+    if (isPrimitiveDescriptor(fromComponent) || isPrimitiveDescriptor(toComponent)) {
+      throw inconvertible()
+    }
+    try {
+      assertReferenceCastIsLegal(fromComponent, toComponent, cg)
+    } catch (e) {
+      throw e instanceof InconvertibleTypesError ? inconvertible() : e
+    }
+    return
+  }
+
+  // exactly one of them is an array type
+  const other = fromType.startsWith('[') ? toType : fromType
+  if (ARRAY_SUPERTYPES.includes(other)) return
+  try {
+    cg.symbolTable.queryClass(classNameOf(other))
+  } catch (e) {
+    return // a class the symbol table does not know is left to the runtime check
+  }
+  throw inconvertible()
+}
+
+/**
  * JLS 5.5.1: a cast between two classes is only legal if one is a subclass of the other, and a
  * final class can only be cast to its superclasses.
  * Anything that cannot be decided statically is left to the runtime check.
  */
 function assertReferenceCastIsLegal(fromType: string, toType: string, cg: CodeGenerator) {
-  if (!fromType || fromType.startsWith('[') || toType.startsWith('[')) return
+  if (!fromType) return
+  if (fromType.startsWith('[') || toType.startsWith('[')) {
+    assertArrayCastIsLegal(fromType, toType, cg)
+    return
+  }
   const from = classNameOf(fromType)
   const to = classNameOf(toType)
   let fromInfo, toInfo
@@ -634,11 +705,12 @@ function handleImplicitTypeConversion(
   cg: CodeGenerator,
   node?: Node
 ): number {
-  if (fromType === toType || classNameOf(toType) === 'java/lang/String') {
+  if (fromType === toType) {
     return 0
   }
 
-  if (fromType.startsWith('L') || toType.startsWith('L')) {
+  const isReferenceType = (type: string) => type.startsWith('L') || type.startsWith('[')
+  if (isReferenceType(fromType) || isReferenceType(toType)) {
     if (areClassTypesCompatible(fromType, toType, cg) || fromType === '') {
       return 0
     }

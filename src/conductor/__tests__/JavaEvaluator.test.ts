@@ -96,6 +96,53 @@ describe('JavaEvaluator', () => {
     expect(mock.outputs).toEqual(['Y', 'Y'])
   })
 
+  test('widens and casts array types', async () => {
+    const mock = new MockConductor()
+    const ev = new JavaEvaluator(mock as any)
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateChunk(`
+        import java.io.Serializable;
+        class Animal { }
+        class Dog extends Animal { }
+        class Cat extends Animal { }
+        public class Main {
+          static int count(Object[] items) { return items.length; }
+          static String attempt(Object o) {
+            try {
+              Cat[] cats = (Cat[]) o;
+              return "cats";
+            } catch (ClassCastException e) {
+              return "not cats";
+            }
+          }
+          public static void main(String[] args) {
+            Dog[] dogs = {new Dog(), new Dog()};
+            int[] ints = {1, 2, 3};
+            Animal[] animals = dogs;
+            Object[] objects = dogs;
+            Object asObject = ints;
+            Serializable serializable = ints;
+            Cloneable cloneable = dogs;
+            Dog[] back = (Dog[]) animals;
+            int[] backInts = (int[]) serializable;
+            Object plain = (Object) dogs;
+            System.out.println(count(dogs));
+            System.out.println(animals.length + objects.length);
+            System.out.println(back.length + backInts.length);
+            System.out.println(attempt(plain));
+            System.out.println(attempt(asObject));
+          }
+        }
+      `)
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
+    expect(mock.errors).toHaveLength(0)
+    expect(mock.outputs).toEqual(['2', '4', '5', 'not cats', 'not cats'])
+  })
+
   test('reports an error when the submitted class file is not valid', async () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)

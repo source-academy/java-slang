@@ -23,6 +23,7 @@
   "java/lang/ClassFormatError.class",
   "java/lang/ClassNotFoundException.class",
   "java/lang/CloneNotSupportedException.class",
+  "java/lang/Cloneable.class",
   "java/lang/Comparable.class",
   "java/lang/Double.class",
   "java/lang/Enum.class",

@@ -532,6 +532,65 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["5", "e", "hello", "el", "3", "-1", "1", "not Comparable"],
   },
+  {
+    comment: "casts between one-dimensional array types and to Object, Cloneable and Serializable",
+    program: `
+      import java.io.Serializable;
+      class Animal { }
+      class Dog extends Animal { }
+      class Cat extends Animal { }
+      class Puppy extends Dog { }
+      public class Main {
+        static String attempt(int which, Object o) {
+          try {
+            if (which == 0) { Dog[] t = (Dog[]) o; }
+            else if (which == 1) { Cat[] t = (Cat[]) o; }
+            else if (which == 2) { Animal[] t = (Animal[]) o; }
+            else if (which == 3) { Puppy[] t = (Puppy[]) o; }
+            else if (which == 4) { Object[] t = (Object[]) o; }
+            else if (which == 5) { int[] t = (int[]) o; }
+            else if (which == 6) { long[] t = (long[]) o; }
+            else if (which == 7) { String[] t = (String[]) o; }
+            else if (which == 8) { Serializable t = (Serializable) o; }
+            else if (which == 9) { Cloneable t = (Cloneable) o; }
+            else { Comparable[] t = (Comparable[]) o; }
+            return "ok";
+          } catch (ClassCastException e) {
+            return "CCE";
+          }
+        }
+        public static void main(String[] args) {
+          Dog[] dogs = {new Dog()};
+          int[] ia = {1};
+          String[] strings = {"s"};
+          Object[] mixed = {"s"};
+          Animal[] animals = dogs;
+          Object[] viaStrings = (Object[]) strings;
+          Object od = (Object) dogs;
+          Object oi = (Object) ia;
+          Object os = (Object) strings;
+          Object om = (Object) mixed;
+          Object oa = (Object) animals;
+          Object ov = (Object) viaStrings;
+          for (int w = 0; w <= 10; w++) {
+            System.out.println(w + " " + attempt(w, od) + " " + attempt(w, oi) + " " + attempt(w, os) + " " + attempt(w, om) + " " + attempt(w, oa) + " " + attempt(w, ov));
+          }
+          Serializable ser = (Serializable) oi;
+          Cloneable clone = (Cloneable) oi;
+          int[] fromSer = (int[]) ser;
+          int[] fromClone = (int[]) clone;
+          System.out.println(fromSer.length + fromClone.length);
+          Dog[] narrowed = (Dog[]) animals;
+          Animal[] widened = (Animal[]) dogs;
+          String[] again = (String[]) viaStrings;
+          System.out.println(narrowed.length + widened.length + again.length);
+          Dog[] none = (Dog[]) null;
+          System.out.println(none == null);
+        }
+      }
+    `,
+    expectedLines: ["0 ok CCE CCE CCE ok CCE", "1 CCE CCE CCE CCE CCE CCE", "2 ok CCE CCE CCE ok CCE", "3 CCE CCE CCE CCE CCE CCE", "4 ok CCE ok ok ok ok", "5 CCE ok CCE CCE CCE CCE", "6 CCE CCE CCE CCE CCE CCE", "7 CCE CCE ok CCE CCE ok", "8 ok ok ok ok ok ok", "9 ok ok ok ok ok ok", "10 CCE CCE ok CCE CCE ok", "2", "3", "true"],
+  },
 ];
 
 const compileProgram = (body: string) => {
@@ -586,6 +645,22 @@ export const castExpressionTest = () => describe("cast expression", () => {
       ["String to Integer", "String s = \"1\"; Integer i = (Integer) s;"],
       ["Integer to String", "Integer i = 1; String s = (String) i;"],
       ["Integer to Long", "Integer i = 1; Long l = (Long) i;"],
+      ["arrays of unrelated classes", "Cat[] c = {new Cat()}; Dog[] d = (Dog[]) c;"],
+      ["arrays of sibling-related final and non-final classes", "Sealed[] s = {new Sealed()}; Dog[] d = (Dog[]) s;"],
+      ["a final class array to an unrelated array", "Dog[] d = {new Dog()}; Sealed[] s = (Sealed[]) d;"],
+      ["arrays of unrelated library classes", "Integer[] i = {1}; String[] s = (String[]) i;"],
+      ["a final class array to an interface array it does not implement", "String[] s = {\"s\"}; Runnable[] r = (Runnable[]) s;"],
+      ["int[] to long[]", "int[] a = {1}; long[] l = (long[]) a;"],
+      ["long[] to int[]", "long[] a = {1L}; int[] i = (int[]) a;"],
+      ["int[] to byte[]", "int[] a = {1}; byte[] b = (byte[]) a;"],
+      ["a primitive array to a reference array", "int[] a = {1}; Object[] o = (Object[]) a;"],
+      ["a reference array to a primitive array", "Object[] a = {\"s\"}; int[] i = (int[]) a;"],
+      ["a class to an array of it", "Dog d = new Dog(); Dog[] a = (Dog[]) d;"],
+      ["an array to its component class", "Dog[] a = {new Dog()}; Dog d = (Dog) a;"],
+      ["an array to an unrelated class", "String[] a = {\"s\"}; String s = (String) a;"],
+      ["an array to a superclass of its component", "Integer[] a = {1}; Number n = (Number) a;"],
+      ["an array to an interface other than Cloneable and Serializable", "Dog[] a = {new Dog()}; Runnable r = (Runnable) a;"],
+      ["a primitive array to an interface other than Cloneable and Serializable", "int[] a = {1}; Runnable r = (Runnable) a;"],
       ["a final class to an interface it does not implement", "String s = \"a\"; Object o = (Runnable) s;"],
       ["a wrapper to an interface it does not implement", "Integer i = 1; Object o = (CharSequence) i;"],
       ["an interface to a final class that does not implement it", "CharSequence c = \"a\"; Object o = (Integer) c;"],
@@ -608,6 +683,25 @@ export const castExpressionTest = () => describe("cast expression", () => {
       ["Number to Integer", "Number n = 1; Integer i = (Integer) n;"],
       ["Integer to Number", "Integer i = 1; Number n = (Number) i;"],
       ["null", "Dog d = (Dog) null;"],
+      ["Object to an array", "Object o = null; Dog[] d = (Dog[]) o;"],
+      ["Object to a primitive array", "Object o = null; int[] a = (int[]) o;"],
+      ["an array to Object", "Dog[] a = {new Dog()}; Object o = (Object) a;"],
+      ["a primitive array to Object", "int[] a = {1}; Object o = (Object) a;"],
+      ["an array to a superclass array (widening)", "Dog[] a = {new Dog()}; Animal[] b = (Animal[]) a;"],
+      ["an array to a subclass array (narrowing)", "Animal[] a = {new Dog()}; Dog[] b = (Dog[]) a;"],
+      ["narrowing across several levels", "Dog[] a = {new Puppy()}; Puppy[] b = (Puppy[]) a;"],
+      ["an array to the same array type", "Dog[] a = {new Dog()}; Dog[] b = (Dog[]) a;"],
+      ["a final class array to an array of its superclass", "Sealed[] a = {new Sealed()}; Animal[] b = (Animal[]) a;"],
+      ["Object[] to String[]", "Object[] a = {\"s\"}; String[] s = (String[]) a;"],
+      ["String[] to Object[]", "String[] a = {\"s\"}; Object[] o = (Object[]) a;"],
+      ["an array to an array of an interface it implements", "String[] a = {\"s\"}; Comparable[] c = (Comparable[]) a;"],
+      ["an interface array to an array of a class implementing it", "Comparable[] a = {\"s\"}; String[] s = (String[]) a;"],
+      ["Number[] to Integer[]", "Number[] a = {1}; Integer[] i = (Integer[]) a;"],
+      ["Object[] to an interface array", "Object[] a = {\"s\"}; Runnable[] r = (Runnable[]) a;"],
+      ["a non-final class array to an interface array", "Animal[] a = {new Dog()}; Runnable[] r = (Runnable[]) a;"],
+      ["an array to Cloneable", "int[] a = {1}; Object o = (Cloneable) a;"],
+      ["Cloneable to an array", "Cloneable c = null; int[] a = (int[]) c;"],
+      ["null to an array type", "Dog[] a = (Dog[]) null;"],
       ["a final class to an interface it implements", "String s = \"a\"; Object o = (CharSequence) s;"],
       ["a final class to an interface implemented by its superclass", "StringBuilder b = new StringBuilder(); Object o = (CharSequence) b;"],
       ["a wrapper to Comparable", "Integer i = 1; Object o = (Comparable) i;"],

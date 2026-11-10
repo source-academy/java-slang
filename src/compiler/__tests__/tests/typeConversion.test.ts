@@ -1287,6 +1287,77 @@ const testCases: testCase[] = [
     `,
     expectedLines: ["hi", "hi", "5", "hi", "arg", "42", "2", "static field"],
   },
+  {
+    comment: "widening reference conversions of one-dimensional array types",
+    program: `
+      import java.io.Serializable;
+      class Animal { String name() { return "animal"; } }
+      class Dog extends Animal { String name() { return "dog"; } }
+      class Puppy extends Dog { String name() { return "puppy"; } }
+      public class Main {
+        static int length(Object[] items) { return items.length; }
+        static Animal first(Animal[] animals) { return animals[0]; }
+        static Animal[] widen(Dog[] dogs) { return dogs; }
+        static boolean same(Object a, Object b) { return a == b; }
+        static int total(Serializable s, Cloneable c) { return 1; }
+        public static void main(String[] args) {
+          int[] ia = {1, 2, 3};
+          char[] ch = {'a', 'b'};
+          Dog[] dogs = {new Dog(), new Puppy()};
+          String[] strings = {"x", "y", "z"};
+          Integer[] ints = {1, 2};
+          Object o = ia;
+          Object oc = ch;
+          Object od = dogs;
+          Animal[] animals = dogs;
+          Object[] asObjects = dogs;
+          Object[] stringObjects = strings;
+          Object[] intObjects = ints;
+          Number[] numbers = ints;
+          Comparable[] comparable = strings;
+          CharSequence[] sequences = strings;
+          Serializable ser = ia;
+          Serializable serDogs = dogs;
+          Cloneable clone = ia;
+          Cloneable cloneStrings = strings;
+          int[] none = null;
+          Dog[] noDogs = null;
+          System.out.println(animals.length);
+          Animal second = animals[1];
+          System.out.println(second.name());
+          System.out.println(asObjects.length);
+          System.out.println(stringObjects.length);
+          System.out.println(intObjects.length);
+          System.out.println(numbers[1]);
+          System.out.println(comparable[2]);
+          System.out.println(sequences[0]);
+          System.out.println(o == ia);
+          System.out.println(oc == ch);
+          System.out.println(od == dogs);
+          System.out.println(ser == ia);
+          System.out.println(clone == ia);
+          System.out.println(serDogs == animals);
+          System.out.println(none == null);
+          System.out.println(noDogs == null);
+          System.out.println(length(dogs));
+          System.out.println(length(strings));
+          Animal f = first(dogs);
+          Animal[] w = widen(dogs);
+          System.out.println(f.name());
+          Animal wsecond = w[1];
+          System.out.println(wsecond.name());
+          System.out.println(same(ia, ia));
+          System.out.println(same(ia, ch));
+          System.out.println(same(dogs, animals));
+          System.out.println(total(ia, strings));
+          Object[] reassigned = dogs;
+          reassigned = strings;
+          System.out.println(reassigned.length);
+        }
+      }
+    `,
+    expectedLines: ["2", "puppy", "2", "3", "2", "2", "z", "x", "true", "true", "true", "true", "true", "true", "true", "true", "2", "3", "dog", "puppy", "true", "false", "true", "1", "3"],
+  },
 ]
 
 const compileProgram = (body: string) => {
@@ -1388,6 +1459,20 @@ export const typeConversionTest = () => describe("type conversion", () => {
       ["char to short", "char c = 'a'; short s = c;"],
       ["short to char", "short s = 1; char c = s;"],
       ["byte to char", "byte b = 1; char c = b;"],
+      ["int[] to Object[]", "int[] a = {1}; Object[] o = a;"],
+      ["int[] to long[]", "int[] a = {1}; long[] l = a;"],
+      ["byte[] to int[]", "byte[] a = {1}; int[] i = a;"],
+      ["Object[] to String[]", "Object[] a = {\"s\"}; String[] s = a;"],
+      ["Integer[] to String[]", "Integer[] a = {1}; String[] s = a;"],
+      ["Number[] to Comparable[]", "Number[] a = {1}; Comparable[] c = a;"],
+      ["Object to int[]", "Object o = null; int[] a = o;"],
+      ["String to String[]", "String s = \"s\"; String[] a = s;"],
+      ["String[] to String", "String[] a = {\"s\"}; String s = a;"],
+      ["an int to an array", "int[] a = 1;"],
+      ["an int to a String", "String s = 5;"],
+      ["an Object to a String", "Object o = null; String s = o;"],
+      ["a boolean to a String", "String s = true;"],
+      ["an array to an int", "int[] a = {1}; int i = a;"],
       ["a class to an interface it does not implement", "Runnable r = \"x\";"],
       ["a wrapper to an interface it does not implement", "Integer i = 1; CharSequence c = i;"],
       ["a primitive to an interface that is not a wrapper's", "CharSequence c = 5;"],

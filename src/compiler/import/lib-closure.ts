@@ -39,6 +39,7 @@ export const SEED_CLASSES: string[] = [
   'java/lang/Float',
   'java/lang/Double',
   'java/lang/Void',
+  'java/lang/Cloneable',
   'java/lang/Comparable',
   'java/lang/CharSequence',
   'java/lang/Iterable',
