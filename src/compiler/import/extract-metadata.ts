@@ -1,4 +1,5 @@
 import { ClassFile } from '../../ClassFile/types'
+import { AttributeInfo } from '../../ClassFile/types/attributes'
 import { ConstantClassInfo, ConstantUtf8Info } from '../../ClassFile/types/constants'
 import { METHOD_FLAGS } from '../../ClassFile/types/methods'
 import parseBin from '../../jvm/utils/disassembler'
@@ -19,16 +20,39 @@ const classNameAt = (cf: ClassFile, index: number): string | null => {
   return utf8(cf, classInfo.nameIndex)
 }
 
-type RawMember = { accessFlags: number; nameIndex: number; descriptorIndex: number }
+type RawMember = {
+  accessFlags: number
+  nameIndex: number
+  descriptorIndex: number
+  attributes?: AttributeInfo[]
+}
+
+/** The classes named in a member's `Exceptions` attribute (its `throws` clause). */
+const declaredExceptions = (cf: ClassFile, member: RawMember): string[] => {
+  const names: string[] = []
+  for (const attribute of member.attributes ?? []) {
+    if ('exceptionIndexTable' in attribute) {
+      for (const index of attribute.exceptionIndexTable) {
+        const name = classNameAt(cf, index)
+        if (name !== null) names.push(name)
+      }
+    }
+  }
+  return names
+}
 
 const collectMembers = (cf: ClassFile, members: RawMember[]): MemberMeta[] =>
   members
     .filter(m => (m.accessFlags & VISIBLE) !== 0 && (m.accessFlags & SYNTHETIC) === 0)
-    .map(m => ({
-      name: utf8(cf, m.nameIndex),
-      descriptor: utf8(cf, m.descriptorIndex),
-      accessFlags: m.accessFlags
-    }))
+    .map(m => {
+      const exceptions = declaredExceptions(cf, m)
+      return {
+        name: utf8(cf, m.nameIndex),
+        descriptor: utf8(cf, m.descriptorIndex),
+        accessFlags: m.accessFlags,
+        ...(exceptions.length > 0 ? { exceptions } : {})
+      }
+    })
     // `<clinit>` is never public/protected, but guard anyway; keep `<init>`.
     .filter(m => m.name !== '<clinit>')
 

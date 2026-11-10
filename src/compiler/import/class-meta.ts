@@ -12,6 +12,11 @@ export interface MemberMeta {
   descriptor: string
   /** Raw `access_flags` bitfield (see `METHOD_FLAGS` / `FIELD_FLAGS`). */
   accessFlags: number
+  /**
+   * Internal names of the exception classes in a method's `throws` clause (its `Exceptions`
+   * attribute). Only present when the method declares any.
+   */
+  exceptions?: string[]
 }
 
 export interface ClassMeta {

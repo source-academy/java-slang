@@ -72,6 +72,8 @@ export interface MethodInfo {
   parentClassName: string
   typeDescriptor: string
   className: string
+  /** Binary names of the exception classes in the method's `throws` clause. */
+  exceptions?: string[]
 }
 
 export interface VariableInfo {
@@ -202,7 +204,8 @@ export class SymbolTable {
           accessFlags: m.accessFlags,
           parentClassName: meta.name,
           typeDescriptor: m.descriptor,
-          className: meta.name
+          className: meta.name,
+          exceptions: m.exceptions
         })
       )
       this.returnToRoot()
@@ -607,6 +610,22 @@ export class SymbolTable {
       pending.push(...(info.interfaces ?? []))
     }
     return complete ? false : undefined
+  }
+
+  /**
+   * JLS 11.1.1: whether `className` is a checked exception class, which is a subclass of
+   * Throwable that is neither a subclass of RuntimeException nor of Error. Returns `false` for
+   * a class that is not a Throwable, and `undefined` when this cannot be decided because a
+   * class on the way is unknown to the symbol table.
+   */
+  isCheckedException(className: string): boolean | undefined {
+    const isThrowable = this.classReaches(className, 'java/lang/Throwable')
+    if (isThrowable !== true) return isThrowable
+    const isRuntime = this.classReaches(className, 'java/lang/RuntimeException')
+    const isError = this.classReaches(className, 'java/lang/Error')
+    if (isRuntime === true || isError === true) return false
+    if (isRuntime === undefined || isError === undefined) return undefined
+    return true
   }
 
   /**

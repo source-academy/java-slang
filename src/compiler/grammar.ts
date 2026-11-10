@@ -683,12 +683,13 @@ MethodModifier
   / strictfp
 
 MethodHeader
-  = r:Result id:Identifier lparen (ReceiverParameter comma)? fpl:FormalParameterList? rparen Throws? {
+  = r:Result id:Identifier lparen (ReceiverParameter comma)? fpl:FormalParameterList? rparen t:Throws? {
     return {
       kind: "MethodHeader",
       result: r,
       identifier: id,
       formalParameterList: fpl ?? [],
+      throws: t ? t.exceptionTypeList : [],
     }
   }
 
@@ -738,12 +739,13 @@ ExceptionType
   / TypeIdentifier
 
 ConstructorDeclaration
-  = cm:ConstructorModifier* cd:ConstructorDeclarator Throws? cb:ConstructorBody {
+  = cm:ConstructorModifier* cd:ConstructorDeclarator t:Throws? cb:ConstructorBody {
     return addLocInfo({
       kind: "ConstructorDeclaration",
       constructorModifier: cm,
       constructorDeclarator: cd,
       constructorBody: cb,
+      throws: t ? t.exceptionTypeList : [],
     })
   }
 
@@ -925,7 +927,12 @@ ReturnStatement
   }
 
 ThrowStatement
-  = throw Expression semicolon
+  = throw e:Expression semicolon {
+    return addLocInfo({
+      kind: "ThrowStatement",
+      expression: e,
+    })
+  }
 
 SynchronizedStatement
   = synchronized lparen Expression rparen Block

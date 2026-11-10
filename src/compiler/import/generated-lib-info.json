@@ -11,7 +11,29 @@
       {
         "name": "close",
         "descriptor": "()V",
-        "accessFlags": 1025
+        "accessFlags": 1025,
+        "exceptions": [
+          "java/io/IOException"
+        ]
+      }
+    ]
+  },
+  "java/io/FileNotFoundException": {
+    "name": "java/io/FileNotFoundException",
+    "accessFlags": 33,
+    "superClass": "java/io/IOException",
+    "interfaces": [],
+    "fields": [],
+    "methods": [
+      {
+        "name": "<init>",
+        "descriptor": "()V",
+        "accessFlags": 1
+      },
+      {
+        "name": "<init>",
+        "descriptor": "(Ljava/lang/String;)V",
+        "accessFlags": 1
       }
     ]
   },
@@ -36,27 +58,42 @@
       {
         "name": "close",
         "descriptor": "()V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "flush",
         "descriptor": "()V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "write",
         "descriptor": "(I)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "write",
         "descriptor": "([B)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "write",
         "descriptor": "([BII)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       }
     ]
   },
@@ -70,7 +107,39 @@
       {
         "name": "flush",
         "descriptor": "()V",
-        "accessFlags": 1025
+        "accessFlags": 1025,
+        "exceptions": [
+          "java/io/IOException"
+        ]
+      }
+    ]
+  },
+  "java/io/IOException": {
+    "name": "java/io/IOException",
+    "accessFlags": 33,
+    "superClass": "java/lang/Exception",
+    "interfaces": [],
+    "fields": [],
+    "methods": [
+      {
+        "name": "<init>",
+        "descriptor": "()V",
+        "accessFlags": 1
+      },
+      {
+        "name": "<init>",
+        "descriptor": "(Ljava/lang/String;)V",
+        "accessFlags": 1
+      },
+      {
+        "name": "<init>",
+        "descriptor": "(Ljava/lang/String;Ljava/lang/Throwable;)V",
+        "accessFlags": 1
+      },
+      {
+        "name": "<init>",
+        "descriptor": "(Ljava/lang/Throwable;)V",
+        "accessFlags": 1
       }
     ]
   },
@@ -92,27 +161,42 @@
       {
         "name": "close",
         "descriptor": "()V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "flush",
         "descriptor": "()V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "write",
         "descriptor": "(I)V",
-        "accessFlags": 1025
+        "accessFlags": 1025,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "write",
         "descriptor": "([B)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "write",
         "descriptor": "([BII)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       }
     ]
   },
@@ -139,27 +223,44 @@
       {
         "name": "<init>",
         "descriptor": "(Ljava/io/OutputStream;ZLjava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/UnsupportedEncodingException"
+        ]
       },
       {
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/FileNotFoundException"
+        ]
       },
       {
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;Ljava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/FileNotFoundException",
+          "java/io/UnsupportedEncodingException"
+        ]
       },
       {
         "name": "<init>",
         "descriptor": "(Ljava/io/File;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/FileNotFoundException"
+        ]
       },
       {
         "name": "<init>",
         "descriptor": "(Ljava/io/File;Ljava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/FileNotFoundException",
+          "java/io/UnsupportedEncodingException"
+        ]
       },
       {
         "name": "append",
@@ -335,6 +436,25 @@
     "interfaces": [],
     "fields": [],
     "methods": []
+  },
+  "java/io/UnsupportedEncodingException": {
+    "name": "java/io/UnsupportedEncodingException",
+    "accessFlags": 33,
+    "superClass": "java/io/IOException",
+    "interfaces": [],
+    "fields": [],
+    "methods": [
+      {
+        "name": "<init>",
+        "descriptor": "()V",
+        "accessFlags": 1
+      },
+      {
+        "name": "<init>",
+        "descriptor": "(Ljava/lang/String;)V",
+        "accessFlags": 1
+      }
+    ]
   },
   "java/lang/AbstractMethodError": {
     "name": "java/lang/AbstractMethodError",
@@ -627,17 +747,26 @@
       {
         "name": "append",
         "descriptor": "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
-        "accessFlags": 1025
+        "accessFlags": 1025,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "append",
         "descriptor": "(Ljava/lang/CharSequence;II)Ljava/lang/Appendable;",
-        "accessFlags": 1025
+        "accessFlags": 1025,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "append",
         "descriptor": "(C)Ljava/lang/Appendable;",
-        "accessFlags": 1025
+        "accessFlags": 1025,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       }
     ]
   },
@@ -767,7 +896,10 @@
       {
         "name": "close",
         "descriptor": "()V",
-        "accessFlags": 1025
+        "accessFlags": 1025,
+        "exceptions": [
+          "java/lang/Exception"
+        ]
       }
     ]
   },
@@ -956,7 +1088,10 @@
       {
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "byteValue",
@@ -976,7 +1111,10 @@
       {
         "name": "decode",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Byte;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "doubleValue",
@@ -1016,12 +1154,18 @@
       {
         "name": "parseByte",
         "descriptor": "(Ljava/lang/String;I)B",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "parseByte",
         "descriptor": "(Ljava/lang/String;)B",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "shortValue",
@@ -1056,12 +1200,18 @@
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;I)Ljava/lang/Byte;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Byte;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       }
     ]
   },
@@ -2087,7 +2237,10 @@
       {
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "byteValue",
@@ -2192,7 +2345,10 @@
       {
         "name": "parseDouble",
         "descriptor": "(Ljava/lang/String;)D",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "shortValue",
@@ -2222,7 +2378,10 @@
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Double;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "valueOf",
@@ -2249,7 +2408,10 @@
       {
         "name": "clone",
         "descriptor": "()Ljava/lang/Object;",
-        "accessFlags": 20
+        "accessFlags": 20,
+        "exceptions": [
+          "java/lang/CloneNotSupportedException"
+        ]
       },
       {
         "name": "compareTo",
@@ -2502,7 +2664,10 @@
       {
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "byteValue",
@@ -2607,7 +2772,10 @@
       {
         "name": "parseFloat",
         "descriptor": "(Ljava/lang/String;)F",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "shortValue",
@@ -2637,7 +2805,10 @@
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Float;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "valueOf",
@@ -2899,7 +3070,10 @@
       {
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "bitCount",
@@ -2929,7 +3103,10 @@
       {
         "name": "decode",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Integer;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "divideUnsigned",
@@ -3019,22 +3196,34 @@
       {
         "name": "parseInt",
         "descriptor": "(Ljava/lang/String;I)I",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "parseInt",
         "descriptor": "(Ljava/lang/String;)I",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "parseUnsignedInt",
         "descriptor": "(Ljava/lang/String;I)I",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "parseUnsignedInt",
         "descriptor": "(Ljava/lang/String;)I",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "remainderUnsigned",
@@ -3124,12 +3313,18 @@
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;I)Ljava/lang/Integer;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Integer;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "valueOf",
@@ -3277,7 +3472,10 @@
       {
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "bitCount",
@@ -3307,7 +3505,10 @@
       {
         "name": "decode",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Long;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "divideUnsigned",
@@ -3397,22 +3598,34 @@
       {
         "name": "parseLong",
         "descriptor": "(Ljava/lang/String;I)J",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "parseLong",
         "descriptor": "(Ljava/lang/String;)J",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "parseUnsignedLong",
         "descriptor": "(Ljava/lang/String;I)J",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "parseUnsignedLong",
         "descriptor": "(Ljava/lang/String;)J",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "remainderUnsigned",
@@ -3497,12 +3710,18 @@
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;I)Ljava/lang/Long;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Long;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "valueOf",
@@ -4109,7 +4328,10 @@
       {
         "name": "clone",
         "descriptor": "()Ljava/lang/Object;",
-        "accessFlags": 260
+        "accessFlags": 260,
+        "exceptions": [
+          "java/lang/CloneNotSupportedException"
+        ]
       },
       {
         "name": "equals",
@@ -4119,7 +4341,10 @@
       {
         "name": "finalize",
         "descriptor": "()V",
-        "accessFlags": 4
+        "accessFlags": 4,
+        "exceptions": [
+          "java/lang/Throwable"
+        ]
       },
       {
         "name": "getClass",
@@ -4149,17 +4374,26 @@
       {
         "name": "wait",
         "descriptor": "(J)V",
-        "accessFlags": 273
+        "accessFlags": 273,
+        "exceptions": [
+          "java/lang/InterruptedException"
+        ]
       },
       {
         "name": "wait",
         "descriptor": "(JI)V",
-        "accessFlags": 17
+        "accessFlags": 17,
+        "exceptions": [
+          "java/lang/InterruptedException"
+        ]
       },
       {
         "name": "wait",
         "descriptor": "()V",
-        "accessFlags": 17
+        "accessFlags": 17,
+        "exceptions": [
+          "java/lang/InterruptedException"
+        ]
       }
     ]
   },
@@ -4331,7 +4565,10 @@
       {
         "name": "<init>",
         "descriptor": "(Ljava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "byteValue",
@@ -4351,7 +4588,10 @@
       {
         "name": "decode",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Short;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "doubleValue",
@@ -4391,12 +4631,18 @@
       {
         "name": "parseShort",
         "descriptor": "(Ljava/lang/String;I)S",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "parseShort",
         "descriptor": "(Ljava/lang/String;)S",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "reverseBytes",
@@ -4431,12 +4677,18 @@
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;I)Ljava/lang/Short;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "valueOf",
         "descriptor": "(Ljava/lang/String;)Ljava/lang/Short;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/lang/NumberFormatException"
+        ]
       },
       {
         "name": "valueOf",
@@ -4874,7 +5126,10 @@
       {
         "name": "<init>",
         "descriptor": "([BIILjava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/UnsupportedEncodingException"
+        ]
       },
       {
         "name": "<init>",
@@ -4884,7 +5139,10 @@
       {
         "name": "<init>",
         "descriptor": "([BLjava/lang/String;)V",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/UnsupportedEncodingException"
+        ]
       },
       {
         "name": "<init>",
@@ -5004,7 +5262,10 @@
       {
         "name": "getBytes",
         "descriptor": "(Ljava/lang/String;)[B",
-        "accessFlags": 1
+        "accessFlags": 1,
+        "exceptions": [
+          "java/io/UnsupportedEncodingException"
+        ]
       },
       {
         "name": "getBytes",
@@ -5852,7 +6113,10 @@
       {
         "name": "inheritedChannel",
         "descriptor": "()Ljava/nio/channels/Channel;",
-        "accessFlags": 9
+        "accessFlags": 9,
+        "exceptions": [
+          "java/io/IOException"
+        ]
       },
       {
         "name": "lineSeparator",

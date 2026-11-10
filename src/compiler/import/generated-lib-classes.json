@@ -1,10 +1,13 @@
 [
   "java/io/Closeable.class",
+  "java/io/FileNotFoundException.class",
   "java/io/FilterOutputStream.class",
   "java/io/Flushable.class",
+  "java/io/IOException.class",
   "java/io/OutputStream.class",
   "java/io/PrintStream.class",
   "java/io/Serializable.class",
+  "java/io/UnsupportedEncodingException.class",
   "java/lang/AbstractMethodError.class",
   "java/lang/AbstractStringBuilder.class",
   "java/lang/Appendable.class",

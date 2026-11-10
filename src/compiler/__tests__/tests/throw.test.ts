@@ -1,0 +1,1623 @@
+import * as peggy from 'peggy'
+import * as fs from 'fs'
+import * as os from 'os'
+import * as path from 'path'
+import { BinaryWriter } from '../../binary-writer'
+import { extractClassMetaFromBuffer } from '../../import/extract-metadata'
+import { runTest, testCase } from '../__utils__/test-utils'
+import { compile } from '../../index'
+import { AST } from '../../../ast/types/packages-and-modules'
+import { javaPegGrammar } from '../../grammar'
+import { peggyFunctions } from '../../peggy-functions'
+
+const testCases: testCase[] = [
+  {
+    comment: 'user-defined exceptions thrown, propagated, rethrown and caught',
+    program: `
+      class AppException extends Exception {
+        public int code;
+        public String getMessage() { return "app failure " + code; }
+      }
+      class InputException extends AppException { }
+      class FatalException extends AppException { }
+      class UncheckedProblem extends RuntimeException {
+        public String detail = "unchecked";
+        public String getMessage() { return detail; }
+      }
+      class Broken extends Error { }
+      class Resource {
+        int id;
+        Resource(int id) throws AppException {
+          if (id < 0) {
+            InputException e = new InputException();
+            e.code = id;
+            throw e;
+          }
+          this.id = id;
+        }
+        void use(int times) throws AppException {
+          if (times > 2) {
+            AppException e = new AppException();
+            e.code = times;
+            throw e;
+          }
+        }
+      }
+      public class Main {
+        static int log;
+
+        static void fail(int code) throws AppException {
+          AppException e = new AppException();
+          e.code = code;
+          throw e;
+        }
+
+        static void failInput(int code) throws InputException {
+          InputException e = new InputException();
+          e.code = code;
+          throw e;
+        }
+
+        static int level3(int x) throws AppException {
+          if (x == 1) { failInput(11); }
+          if (x == 2) { fail(22); }
+          if (x == 3) { throw new FatalException(); }
+          return x * 10;
+        }
+
+        static int level2(int x) throws AppException {
+          return level3(x) + 1;
+        }
+
+        static int level1(int x) {
+          try {
+            return level2(x);
+          } catch (InputException e) {
+            return -1;
+          } catch (AppException e) {
+            return -2;
+          }
+        }
+
+        static int pick(int x) {
+          if (x > 0) {
+            return x;
+          }
+          throw new UncheckedProblem();
+        }
+
+        static int withFinally(int x) {
+          try {
+            if (x == 0) { throw new UncheckedProblem(); }
+            return 100;
+          } catch (UncheckedProblem e) {
+            return 200;
+          } finally {
+            log = log + 1;
+          }
+        }
+
+        static void rethrow(int x) throws AppException {
+          try {
+            fail(x);
+          } catch (AppException e) {
+            log = log + 10;
+            throw e;
+          }
+        }
+
+        static void replace() {
+          try {
+            throw new UncheckedProblem();
+          } catch (UncheckedProblem e) {
+            throw new Broken();
+          }
+        }
+
+        static void nested(int x) throws AppException {
+          try {
+            try {
+              if (x == 1) { throw new UncheckedProblem(); }
+              if (x == 2) { fail(2); }
+            } finally {
+              log = log + 100;
+            }
+          } catch (UncheckedProblem e) {
+            log = log + 1000;
+          }
+        }
+
+        public static void main(String[] args) {
+          System.out.println(level1(0));
+          System.out.println(level1(1));
+          System.out.println(level1(2));
+          System.out.println(level1(3));
+          System.out.println(level1(4));
+
+          try {
+            fail(7);
+          } catch (AppException e) {
+            System.out.println(e.getMessage());
+            System.out.println(e.code);
+            System.out.println(e);
+          }
+
+          try {
+            throw new UncheckedProblem();
+          } catch (RuntimeException e) {
+            System.out.println("runtime " + e.getMessage());
+          }
+
+          try {
+            pick(0);
+          } catch (UncheckedProblem e) {
+            System.out.println("pick failed");
+          }
+          System.out.println(pick(5));
+
+          System.out.println(withFinally(0));
+          System.out.println(withFinally(1));
+          System.out.println(log);
+
+          try {
+            rethrow(3);
+          } catch (AppException e) {
+            System.out.println("rethrown " + e.code);
+          }
+          System.out.println(log);
+
+          try {
+            replace();
+          } catch (Broken b) {
+            System.out.println("replaced");
+          }
+
+          log = 0;
+          try {
+            nested(0);
+            nested(1);
+            nested(2);
+          } catch (AppException e) {
+            System.out.println("nested " + e.code);
+          }
+          System.out.println(log);
+
+          try {
+            Resource ok = new Resource(1);
+            ok.use(1);
+            ok.use(3);
+            System.out.println("not reached");
+          } catch (AppException e) {
+            System.out.println("use " + e.code);
+          }
+          try {
+            Resource bad = new Resource(-5);
+            System.out.println("not reached");
+          } catch (InputException e) {
+            System.out.println("ctor " + e.code);
+          } catch (AppException e) {
+            System.out.println("wrong handler");
+          }
+
+          try {
+            throw null;
+          } catch (NullPointerException e) {
+            System.out.println("npe");
+          }
+
+          int caught = 0;
+          for (int i = 0; i < 5; i++) {
+            try {
+              if (i % 2 == 0) { throw new UncheckedProblem(); }
+              caught = caught + 100;
+            } catch (UncheckedProblem e) {
+              caught = caught + 1;
+            }
+          }
+          System.out.println(caught);
+
+          try {
+            Throwable t = new FatalException();
+            throw t;
+          } catch (Throwable t) {
+            System.out.println("throwable");
+          }
+
+          try {
+            Exception ex = new InputException();
+            throw ex;
+          } catch (InputException e) {
+            System.out.println("by static type");
+          } catch (Exception e) {
+            System.out.println("by static type, wrong");
+          }
+
+          try {
+            int zero = 0;
+            System.out.println(5 / zero);
+          } catch (ArithmeticException e) {
+            System.out.println("arith");
+          }
+        }
+      }
+    `,
+    expectedLines: [
+      '1',
+      '-1',
+      '-2',
+      '-2',
+      '41',
+      'app failure 7',
+      '7',
+      'AppException: app failure 7',
+      'runtime unchecked',
+      'pick failed',
+      '5',
+      '200',
+      '100',
+      '2',
+      'rethrown 3',
+      '12',
+      'replaced',
+      'nested 2',
+      '1300',
+      'use 3',
+      'ctor -5',
+      'npe',
+      '203',
+      'throwable',
+      'by static type',
+      'arith'
+    ]
+  },
+  {
+    comment: 'throw in loops, switch, constructors and inherited methods',
+    program: `
+      class Problem extends RuntimeException {
+        public int level;
+      }
+      class Mild extends Problem { }
+      class Severe extends Problem { }
+      class Counter {
+        int count;
+        void tick(int limit) {
+          count = count + 1;
+          if (count > limit) {
+            Severe s = new Severe();
+            s.level = count;
+            throw s;
+          }
+        }
+      }
+      class Account {
+        int balance;
+        Account() { }
+        Account(int start) {
+          if (start < 0) { throw new Mild(); }
+          balance = start;
+        }
+        void withdraw(int amount) {
+          if (amount > balance) {
+            Problem p = new Problem();
+            p.level = amount - balance;
+            throw p;
+          }
+          balance = balance - amount;
+        }
+      }
+      class SavingsAccount extends Account {
+        SavingsAccount(int start) { }
+        void withdraw(int amount) {
+          if (amount > 100) { throw new Severe(); }
+          super.withdraw(amount);
+        }
+      }
+      public class Main {
+        static int trace;
+
+        static String classify(int code) {
+          switch (code) {
+            case 1:
+              throw new Mild();
+            case 2:
+              throw new Severe();
+            case 3:
+              return "three";
+            default:
+              return "other";
+          }
+        }
+
+        static int loops() {
+          int handled = 0;
+          for (int i = 0; i < 6; i++) {
+            try {
+              if (i == 1) { continue; }
+              if (i == 4) { break; }
+              if (i % 2 == 0) { throw new Mild(); }
+              handled = handled + 100;
+            } catch (Mild m) {
+              handled = handled + 1;
+            } finally {
+              trace = trace + 1;
+            }
+          }
+          return handled;
+        }
+
+        static void deep(int n) {
+          if (n == 0) { throw new Severe(); }
+          deep(n - 1);
+        }
+
+        public static void main(String[] args) {
+          for (int c = 1; c <= 4; c++) {
+            try {
+              System.out.println(classify(c));
+            } catch (Mild m) {
+              System.out.println("mild");
+            } catch (Problem p) {
+              System.out.println("problem");
+            }
+          }
+
+          System.out.println(loops());
+          System.out.println(trace);
+
+          Counter counter = new Counter();
+          try {
+            for (int i = 0; i < 10; i++) {
+              counter.tick(3);
+            }
+          } catch (Severe s) {
+            System.out.println("stopped at " + s.level);
+          }
+          System.out.println(counter.count);
+
+          try {
+            Account bad = new Account(-1);
+            System.out.println("created");
+          } catch (Mild m) {
+            System.out.println("rejected");
+          }
+          Account acct = new Account(50);
+          try {
+            acct.withdraw(20);
+            acct.withdraw(40);
+          } catch (Problem p) {
+            System.out.println("short by " + p.level);
+          }
+          System.out.println(acct.balance);
+
+          SavingsAccount sav = new SavingsAccount(0);
+          sav.balance = 500;
+          try {
+            sav.withdraw(50);
+            sav.withdraw(150);
+          } catch (Severe s) {
+            System.out.println("too much");
+          }
+          System.out.println(sav.balance);
+          try {
+            sav.withdraw(600);
+          } catch (Severe s) {
+            System.out.println("wrong");
+          } catch (Problem p) {
+            System.out.println("overdrawn " + p.level);
+          }
+
+          try {
+            deep(25);
+          } catch (Problem p) {
+            System.out.println("deep");
+          }
+
+          try {
+            try {
+              throw new Mild();
+            } finally {
+              System.out.println("cleanup");
+            }
+          } catch (Mild m) {
+            System.out.println("after cleanup");
+          }
+
+          try {
+            try {
+              throw new Mild();
+            } catch (Mild m) {
+              throw new Severe();
+            } finally {
+              System.out.println("inner finally");
+            }
+          } catch (Severe s) {
+            System.out.println("outer severe");
+          }
+
+          Problem keep = null;
+          try {
+            throw new Problem();
+          } catch (Problem p) {
+            keep = p;
+          }
+          System.out.println(keep == null);
+          String msg = keep.getMessage();
+          System.out.println(msg);
+        }
+      }
+    `,
+    expectedLines: [
+      'mild',
+      'problem',
+      'three',
+      'other',
+      '102',
+      '5',
+      'stopped at 4',
+      '4',
+      'rejected',
+      'short by 10',
+      '30',
+      'too much',
+      '450',
+      'wrong',
+      'deep',
+      'cleanup',
+      'after cleanup',
+      'inner finally',
+      'outer severe',
+      'false',
+      'null'
+    ]
+  },
+  {
+    comment: 'multi-catch handles each alternative, with finally and rethrow',
+    program: `
+      class AppException extends Exception {
+        public String getMessage() { return "app"; }
+      }
+      class InputException extends Exception {
+        public String getMessage() { return "input"; }
+      }
+      class NetworkException extends Exception {
+        public String getMessage() { return "network"; }
+      }
+      class SoftFailure extends RuntimeException { }
+      class HardFailure extends Error { }
+      public class Main {
+        static int log;
+
+        static void raise(int kind) throws AppException, InputException, NetworkException {
+          if (kind == 1) { throw new AppException(); }
+          if (kind == 2) { throw new InputException(); }
+          if (kind == 3) { throw new NetworkException(); }
+          if (kind == 4) { throw new SoftFailure(); }
+          if (kind == 5) { throw new HardFailure(); }
+        }
+
+        static String attempt(int kind) {
+          try {
+            raise(kind);
+            return "none";
+          } catch (AppException | InputException e) {
+            return "app-or-input " + e.getMessage();
+          } catch (NetworkException e) {
+            return "network " + e.getMessage();
+          } catch (SoftFailure | HardFailure e) {
+            return "unchecked " + e.toString();
+          }
+        }
+
+        static String vmExceptions(int which) {
+          try {
+            int[] data = {1, 2};
+            String text = null;
+            if (which == 0) { return "" + (data[0] / (which)); }
+            if (which == 1) { return "" + data[5]; }
+            if (which == 2) { return "" + text.length(); }
+            return "fine";
+          } catch (ArithmeticException | ArrayIndexOutOfBoundsException e) {
+            return "arith-or-index";
+          } catch (NullPointerException e) {
+            return "npe";
+          }
+        }
+
+        static void rethrow(int kind) throws AppException, InputException {
+          try {
+            raise(kind);
+          } catch (AppException | InputException e) {
+            log = log + 1;
+            throw e;
+          } catch (NetworkException e) {
+            log = log + 10;
+          }
+        }
+
+        static int withFinally(int kind) {
+          try {
+            raise(kind);
+            return 0;
+          } catch (InputException | NetworkException e) {
+            return 1;
+          } catch (Exception e) {
+            return 2;
+          } finally {
+            log = log + 100;
+          }
+        }
+
+        static String describe(int kind) {
+          try {
+            raise(kind);
+          } catch (AppException | InputException | NetworkException e) {
+            Exception common = e;
+            String text = e.toString();
+            return text + " " + common.getMessage();
+          }
+          return "ok";
+        }
+
+        public static void main(String[] args) {
+          for (int k = 0; k <= 5; k++) {
+            System.out.println(attempt(k));
+          }
+          for (int w = 0; w <= 3; w++) {
+            System.out.println(vmExceptions(w));
+          }
+          for (int k = 0; k <= 3; k++) {
+            try {
+              rethrow(k);
+              System.out.println("returned " + k);
+            } catch (AppException e) {
+              System.out.println("rethrown app");
+            } catch (InputException e) {
+              System.out.println("rethrown input");
+            }
+          }
+          System.out.println(log);
+          log = 0;
+          for (int k = 0; k <= 4; k++) {
+            System.out.println(withFinally(k));
+          }
+          System.out.println(log);
+          System.out.println(describe(0));
+          System.out.println(describe(1));
+          System.out.println(describe(2));
+          System.out.println(describe(3));
+          try {
+            raise(2);
+          } catch (AppException | InputException e) {
+            System.out.println(e);
+          } catch (NetworkException e) {
+            System.out.println("no");
+          }
+        }
+      }
+    `,
+    expectedLines: [
+      'none',
+      'app-or-input app',
+      'app-or-input input',
+      'network network',
+      'unchecked SoftFailure',
+      'unchecked HardFailure',
+      'arith-or-index',
+      'arith-or-index',
+      'npe',
+      'fine',
+      'returned 0',
+      'rethrown app',
+      'rethrown input',
+      'returned 3',
+      '12',
+      '0',
+      '2',
+      '1',
+      '1',
+      '2',
+      '500',
+      'ok',
+      'AppException: app app',
+      'InputException: input input',
+      'NetworkException: network network',
+      'InputException: input'
+    ]
+  }
+]
+
+const compileMethodBody = (body: string) => {
+  const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+    allowedStartRules: ['CompilationUnit']
+  })
+  return compile(
+    parser.parse(`
+      class Mine extends RuntimeException { }
+      class Sub extends Mine { }
+      class MyError extends Error { }
+      class Plain { }
+      public class Main {
+        static void x() { }
+        public static void main(String[] args) {
+          ${body}
+        }
+      }
+    `) as AST
+  )
+}
+
+export const throwTest = () =>
+  describe('throw statement', () => {
+    for (const { comment, program, expectedLines } of testCases) {
+      it(comment, () => runTest(program, expectedLines))
+    }
+
+    describe('requires a Throwable', () => {
+      const rejected: [string, string][] = [
+        ['an int', 'int x = 1; throw x;'],
+        ['an int literal', 'throw 1;'],
+        ['a boolean', 'throw true;'],
+        ['a double', 'throw 1.5;'],
+        ['a char', "throw 'c';"],
+        ['a String', 'String s = "s"; throw s;'],
+        ['a string literal', 'throw "s";'],
+        ['an Object', 'Object o = null; throw o;'],
+        ['an Integer', 'Integer i = 1; throw i;'],
+        ['an int array', 'int[] a = {1}; throw a;'],
+        ['an exception array', 'RuntimeException[] a = {new RuntimeException()}; throw a;'],
+        ['an instance of a class that is not an exception', 'throw new Object();'],
+        ['an instance of a user class that is not an exception', 'throw new Plain();'],
+        ['a variable of a user class that is not an exception', 'Plain p = new Plain(); throw p;'],
+        ['a cast to Object', 'RuntimeException e = new RuntimeException(); throw (Object) e;'],
+        ['a cast to a user class that is not an exception', 'Object o = null; throw (Plain) o;']
+      ]
+      for (const [comment, body] of rejected) {
+        it(`rejects throwing ${comment}`, () =>
+          expect(() => compileMethodBody(body)).toThrow(
+            /incompatible types: .* cannot be converted to java.lang.Throwable/
+          ))
+      }
+
+      const accepted: [string, string][] = [
+        ['null', 'throw null;'],
+        ['a new user exception', 'throw new Mine();'],
+        ['a new subclass of a user exception', 'throw new Sub();'],
+        ['a user error', 'throw new MyError();'],
+        ['a variable of a user exception', 'Mine m = new Mine(); throw m;'],
+        ['a variable of a superclass', 'RuntimeException r = new Mine(); throw r;'],
+        ['a new library exception', 'throw new RuntimeException();'],
+        ['a new library subclass', 'throw new IllegalStateException();'],
+        ['a new arithmetic exception', 'throw new ArithmeticException();'],
+        ['a cast to an unchecked exception', 'RuntimeException r = new Mine(); throw (Mine) r;'],
+        [
+          'a conditional of exceptions',
+          'int x = 1; Mine m = new Mine(); RuntimeException r = new Mine(); throw x > 0 ? m : r;'
+        ],
+        ['a statement in a branch', 'int x = 1; if (x > 0) throw new Mine();'],
+        [
+          'both branches of an if',
+          'int x = 1; if (x > 0) { throw new Mine(); } else { throw new MyError(); }'
+        ],
+        ['a loop body', 'int x = 1; while (x > 0) { throw new Mine(); }'],
+        ['a try block with a catch', 'try { throw new Mine(); } catch (Mine e) { x(); }'],
+        [
+          'a rethrow of the caught exception',
+          'try { throw new Mine(); } catch (Mine e) { throw e; }'
+        ],
+        ['a try block with a finally', 'try { throw new Mine(); } finally { x(); }'],
+        ['a loop without a condition', 'Mine m = new Mine(); for (;;) { throw m; }']
+      ]
+      for (const [comment, body] of accepted) {
+        it(`accepts throwing ${comment}`, () => expect(() => compileMethodBody(body)).not.toThrow())
+      }
+    })
+    describe('checked exceptions', () => {
+      const compileClasses = (extra: string, body: string, throwsClause: string) => {
+        const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+          allowedStartRules: ['CompilationUnit']
+        })
+        return compile(
+          parser.parse(`
+            import java.io.*;
+            class AppEx extends Exception { }
+            class SubEx extends AppEx { }
+            class OtherEx extends Exception { }
+            class RtEx extends RuntimeException { }
+            class MyErr extends Error { }
+            class Svc {
+              Svc() { }
+              Svc(int x) throws AppEx { }
+              void risky() throws AppEx { throw new AppEx(); }
+              void two() throws AppEx, OtherEx { }
+              void safe() { }
+              static void sRisky() throws SubEx { }
+            }
+            class P { P() throws AppEx { } }
+            ${extra}
+            public class Main {
+              static void t() ${throwsClause} {
+                Svc s = new Svc();
+                Object o = new Object();
+                boolean b = true;
+                ${body}
+              }
+              public static void main(String[] args) { }
+            }
+          `) as AST
+        )
+      }
+
+      // [comment, other classes, body of a method, its throws clause, the error or undefined]
+      const cases: [string, string, string, string, RegExp | undefined][] = [
+        [
+          'throwing a checked exception without declaring it',
+          '',
+          'throw new AppEx();',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'throwing a checked exception that the method declares',
+          '',
+          'throw new AppEx();',
+          'throws AppEx',
+          undefined
+        ],
+        [
+          'throwing a checked exception that a superclass is declared for',
+          '',
+          'throw new AppEx();',
+          'throws Exception',
+          undefined
+        ],
+        [
+          'throwing a checked exception that Throwable is declared for',
+          '',
+          'throw new AppEx();',
+          'throws Throwable',
+          undefined
+        ],
+        [
+          'throwing a checked exception when only a subclass is declared',
+          '',
+          'throw new AppEx();',
+          'throws SubEx',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'throwing a subclass of the declared exception',
+          '',
+          'throw new SubEx();',
+          'throws AppEx',
+          undefined
+        ],
+        ['throwing an unchecked exception', '', 'throw new RtEx();', '', undefined],
+        ['throwing an error', '', 'throw new MyErr();', '', undefined],
+        [
+          'throwing a library checked exception',
+          '',
+          'throw new Exception();',
+          '',
+          /unreported exception Exception; must be caught or declared to be thrown/
+        ],
+        [
+          'throwing Throwable',
+          '',
+          'throw new Throwable();',
+          '',
+          /unreported exception Throwable; must be caught or declared to be thrown/
+        ],
+        [
+          'throwing a variable of a checked type',
+          '',
+          'Exception e = new Exception(); throw e;',
+          '',
+          /unreported exception Exception; must be caught or declared to be thrown/
+        ],
+        [
+          'throwing a checked exception from a conditional',
+          '',
+          'if (b) throw new AppEx();',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'throwing a checked exception in a loop',
+          '',
+          'while (b) { throw new AppEx(); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'throwing a checked exception in a switch',
+          '',
+          'int x = 1; switch (x) { case 1: throw new AppEx(); default: break; }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'throwing the common class of a conditional',
+          '',
+          'throw b ? new AppEx() : new OtherEx();',
+          '',
+          /unreported exception Exception; must be caught or declared to be thrown/
+        ],
+        ['throwing null', '', 'throw null;', '', undefined],
+        [
+          'declaring an unchecked exception that is thrown',
+          '',
+          'throw new RtEx();',
+          'throws AppEx',
+          undefined
+        ],
+        [
+          'calling a method that throws, without declaring it',
+          '',
+          's.risky();',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        ['calling a method that throws, declared', '', 's.risky();', 'throws AppEx', undefined],
+        [
+          'calling a method that throws, declared as Exception',
+          '',
+          's.risky();',
+          'throws Exception',
+          undefined
+        ],
+        [
+          'calling a method that throws, declared as something else',
+          '',
+          's.risky();',
+          'throws OtherEx',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'calling a method that throws two exceptions, declaring one',
+          '',
+          's.two();',
+          'throws AppEx',
+          /unreported exception OtherEx; must be caught or declared to be thrown/
+        ],
+        [
+          'calling a method that throws two exceptions, declaring both',
+          '',
+          's.two();',
+          'throws AppEx, OtherEx',
+          undefined
+        ],
+        ['calling a method that throws nothing', '', 's.safe();', '', undefined],
+        [
+          'calling a static method that throws',
+          '',
+          'Svc.sRisky();',
+          '',
+          /unreported exception SubEx; must be caught or declared to be thrown/
+        ],
+        [
+          'calling a static method that throws, declared by a superclass',
+          '',
+          'Svc.sRisky();',
+          'throws AppEx',
+          undefined
+        ],
+        [
+          'calling a constructor that throws',
+          '',
+          'Svc t = new Svc(1);',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'calling a constructor that throws, declared',
+          '',
+          'Svc t = new Svc(1);',
+          'throws AppEx',
+          undefined
+        ],
+        ['calling a constructor that throws nothing', '', 'Svc t = new Svc();', '', undefined],
+        [
+          'calling a method of the same class that throws',
+          'class M1 { void a() throws AppEx { } void b() { a(); } }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'calling a method of the same class that throws, declared',
+          'class M2 { void a() throws AppEx { } void b() throws AppEx { a(); } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'calling a static method of the same class that throws',
+          'class M3 { static void a() throws AppEx { } static void b() { a(); } }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'calling a method through this',
+          'class M4 { void a() throws AppEx { } void b() { this.a(); } }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'calling a super method that throws, declared',
+          'class M5 { void a() throws AppEx { } } class M6 extends M5 { void a() throws AppEx { super.a(); } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'calling a super method that throws',
+          'class M7 { void a() throws AppEx { } } class M8 extends M7 { void a() throws AppEx { } void c() { super.a(); } }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a method that returns a value and throws',
+          'class R1 { int f(int x) throws AppEx { if (x > 0) { return x; } throw new AppEx(); } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'a method that returns a value and throws, undeclared',
+          'class R2 { int f(int x) { if (x > 0) { return x; } throw new AppEx(); } }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'catching the exception that is thrown',
+          '',
+          'try { s.risky(); } catch (AppEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching a superclass of the exception that is thrown',
+          '',
+          'try { s.risky(); } catch (Exception e) { }',
+          '',
+          undefined
+        ],
+        ['catching Throwable', '', 'try { s.risky(); } catch (Throwable e) { }', '', undefined],
+        [
+          'catching only a subclass of the exception that is thrown',
+          '',
+          'try { s.risky(); } catch (SubEx e) { }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'catching an unrelated checked exception',
+          '',
+          'try { s.risky(); } catch (OtherEx e) { }',
+          '',
+          /exception OtherEx is never thrown in body of corresponding try statement/
+        ],
+        [
+          'catching an unchecked exception does not catch a checked one',
+          '',
+          'try { s.risky(); } catch (RtEx e) { }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a try with only a finally does not catch',
+          '',
+          'try { s.risky(); } finally { }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a try with only a finally, declared',
+          '',
+          'try { s.risky(); } finally { }',
+          'throws AppEx',
+          undefined
+        ],
+        [
+          'catching a checked exception that is never thrown',
+          '',
+          'try { s.safe(); } catch (AppEx e) { }',
+          '',
+          /exception AppEx is never thrown in body of corresponding try statement/
+        ],
+        [
+          'catching a checked exception in an empty try',
+          '',
+          'try { } catch (AppEx e) { }',
+          '',
+          /exception AppEx is never thrown in body of corresponding try statement/
+        ],
+        [
+          'catching Exception when nothing is thrown',
+          '',
+          'try { s.safe(); } catch (Exception e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching Throwable when nothing is thrown',
+          '',
+          'try { s.safe(); } catch (Throwable e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching an unchecked exception when nothing is thrown',
+          '',
+          'try { s.safe(); } catch (RtEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching an error when nothing is thrown',
+          '',
+          'try { s.safe(); } catch (MyErr e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a catch that rethrows what it caught',
+          '',
+          'try { s.risky(); } catch (AppEx e) { throw e; }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a catch that rethrows what it caught, declared',
+          '',
+          'try { s.risky(); } catch (AppEx e) { throw e; }',
+          'throws AppEx',
+          undefined
+        ],
+        [
+          'a catch that throws another checked exception',
+          '',
+          'try { s.risky(); } catch (AppEx e) { throw new OtherEx(); }',
+          '',
+          /unreported exception OtherEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a catch that throws another checked exception, declared',
+          '',
+          'try { s.risky(); } catch (AppEx e) { throw new OtherEx(); }',
+          'throws OtherEx',
+          undefined
+        ],
+        [
+          'catching only one of two exceptions',
+          '',
+          'try { s.two(); } catch (AppEx e) { }',
+          '',
+          /unreported exception OtherEx; must be caught or declared to be thrown/
+        ],
+        [
+          'catching both of two exceptions',
+          '',
+          'try { s.two(); } catch (AppEx e) { } catch (OtherEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a call in a catch is not covered by its sibling catches',
+          '',
+          'try { s.risky(); } catch (AppEx e) { s.two(); } catch (OtherEx e) { }',
+          '',
+          /exception OtherEx is never thrown in body of corresponding try statement/
+        ],
+        [
+          'a call in a catch, declared',
+          '',
+          'try { s.risky(); } catch (AppEx e) { s.two(); }',
+          'throws AppEx, OtherEx',
+          undefined
+        ],
+        [
+          'a call in a finally',
+          '',
+          'try { s.safe(); } finally { s.risky(); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a call in a finally, declared',
+          '',
+          'try { s.safe(); } finally { s.risky(); }',
+          'throws AppEx',
+          undefined
+        ],
+        [
+          'nested try blocks',
+          '',
+          'try { try { s.risky(); } finally { } } catch (AppEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a nested catch that is never thrown',
+          '',
+          'try { try { s.risky(); } catch (OtherEx e) { } } catch (AppEx e) { }',
+          '',
+          /exception OtherEx is never thrown in body of corresponding try statement/
+        ],
+        [
+          'a try inside a catch',
+          '',
+          'try { s.risky(); } catch (AppEx e) { try { s.risky(); } catch (AppEx e2) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a catch type that is not a Throwable',
+          '',
+          'try { s.risky(); } catch (String e) { }',
+          '',
+          /incompatible types: .* cannot be converted to java.lang.Throwable/
+        ],
+        [
+          'rethrowing Exception when the try throws a checked exception',
+          '',
+          'try { throw new AppEx(); } catch (Exception e) { throw e; }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'rethrowing Exception when the try throws a checked exception, declared',
+          '',
+          'try { throw new AppEx(); } catch (Exception e) { throw e; }',
+          'throws AppEx',
+          undefined
+        ],
+        [
+          'rethrowing Exception when the try throws nothing checked',
+          '',
+          'try { s.safe(); } catch (Exception e) { throw e; }',
+          '',
+          undefined
+        ],
+        [
+          'rethrowing Throwable when the try throws nothing checked',
+          '',
+          'try { s.safe(); } catch (Throwable t) { throw t; }',
+          '',
+          undefined
+        ],
+        [
+          'rethrowing a reassigned parameter',
+          '',
+          'try { s.safe(); } catch (Exception e) { e = new Exception(); throw e; }',
+          '',
+          /unreported exception Exception; must be caught or declared to be thrown/
+        ],
+        [
+          'rethrowing Exception when the try calls a throwing method',
+          '',
+          'try { s.risky(); } catch (Exception e) { throw e; }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'rethrowing Exception when the declared type is a subclass',
+          '',
+          'try { s.risky(); } catch (Exception e) { throw e; }',
+          'throws SubEx',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'rethrowing only the exceptions that the try throws',
+          '',
+          'try { s.two(); } catch (Exception e) { throw e; }',
+          'throws AppEx',
+          /unreported exception OtherEx; must be caught or declared to be thrown/
+        ],
+        [
+          'rethrowing both exceptions that the try throws',
+          '',
+          'try { s.two(); } catch (Exception e) { throw e; }',
+          'throws AppEx, OtherEx',
+          undefined
+        ],
+        [
+          'rethrowing what earlier catches did not catch',
+          '',
+          'try { s.two(); } catch (AppEx a) { } catch (Exception e) { throw e; }',
+          'throws OtherEx',
+          undefined
+        ],
+        [
+          'rethrowing after catching the subclass first',
+          '',
+          'try { s.risky(); } catch (SubEx e) { throw e; } catch (AppEx e) { throw e; }',
+          'throws AppEx',
+          undefined
+        ],
+        [
+          'a multi-catch of both exceptions that are thrown',
+          '',
+          'try { s.two(); } catch (AppEx | OtherEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a multi-catch with an exception that is never thrown',
+          '',
+          'try { s.risky(); } catch (AppEx | OtherEx e) { }',
+          '',
+          /exception OtherEx is never thrown in body of corresponding try statement/
+        ],
+        [
+          'a multi-catch of related classes',
+          '',
+          'try { s.risky(); } catch (AppEx | SubEx e) { }',
+          '',
+          /Alternatives in a multi-catch statement cannot be related by subclassing/
+        ],
+        [
+          'a multi-catch of related classes, reversed',
+          '',
+          'try { s.risky(); } catch (SubEx | AppEx e) { }',
+          '',
+          /Alternatives in a multi-catch statement cannot be related by subclassing/
+        ],
+        [
+          'a multi-catch of unchecked exceptions',
+          '',
+          'try { s.safe(); } catch (RtEx | MyErr e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a multi-catch of a checked and an unchecked exception',
+          '',
+          'try { s.risky(); } catch (AppEx | RtEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a multi-catch with a type that is not a Throwable',
+          '',
+          'try { s.risky(); } catch (String | AppEx e) { }',
+          '',
+          /incompatible types: .* cannot be converted to java.lang.Throwable/
+        ],
+        [
+          'calling a method on a multi-catch parameter',
+          '',
+          'try { s.two(); } catch (AppEx | OtherEx e) { String m = e.getMessage(); }',
+          '',
+          undefined
+        ],
+        [
+          'rethrowing a multi-catch parameter, declared',
+          '',
+          'try { s.two(); } catch (AppEx | OtherEx e) { throw e; }',
+          'throws AppEx, OtherEx',
+          undefined
+        ],
+        [
+          'rethrowing a multi-catch parameter, undeclared',
+          '',
+          'try { s.two(); } catch (AppEx | OtherEx e) { throw e; }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'rethrowing a multi-catch parameter, declaring one',
+          '',
+          'try { s.two(); } catch (AppEx | OtherEx e) { throw e; }',
+          'throws AppEx',
+          /unreported exception OtherEx; must be caught or declared to be thrown/
+        ],
+        [
+          'rethrowing an unchecked multi-catch parameter',
+          '',
+          'try { s.safe(); } catch (RtEx | MyErr e) { throw e; }',
+          '',
+          undefined
+        ],
+        [
+          'assigning to a multi-catch parameter',
+          '',
+          'try { s.safe(); } catch (RtEx | MyErr e) { e = null; }',
+          '',
+          /multi-catch parameter e may not be assigned/
+        ],
+        [
+          'assigning to an ordinary catch parameter',
+          '',
+          'try { s.safe(); } catch (RtEx e) { e = null; }',
+          '',
+          undefined
+        ],
+        [
+          'a multi-catch followed by another catch',
+          '',
+          'try { s.two(); } catch (AppEx | OtherEx e) { } catch (RtEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a library method that throws a checked exception',
+          '',
+          'o.wait();',
+          '',
+          /unreported exception InterruptedException; must be caught or declared to be thrown/
+        ],
+        [
+          'a library method that throws a checked exception, caught',
+          '',
+          'try { o.wait(); } catch (InterruptedException e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a library method that throws a checked exception, declared',
+          '',
+          'o.wait();',
+          'throws InterruptedException',
+          undefined
+        ],
+        [
+          'a library method that throws an IOException subclass',
+          '',
+          'String str = "a"; byte[] x = str.getBytes("UTF-8");',
+          '',
+          /unreported exception UnsupportedEncodingException; must be caught or declared to be thrown/
+        ],
+        [
+          'a library method that throws an IOException subclass, caught',
+          '',
+          'String str = "a"; try { byte[] x = str.getBytes("UTF-8"); } catch (UnsupportedEncodingException e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a library method that throws an IOException subclass, caught as IOException',
+          '',
+          'String str = "a"; try { byte[] x = str.getBytes("UTF-8"); } catch (IOException e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching an IOException subclass that is not thrown',
+          '',
+          'String str = "a"; try { byte[] x = str.getBytes("UTF-8"); } catch (FileNotFoundException e) { }',
+          '',
+          /exception FileNotFoundException is never thrown in body of corresponding try statement/
+        ],
+        [
+          'a library method that throws an unchecked exception',
+          '',
+          'int x = Integer.parseInt("1");',
+          '',
+          undefined
+        ],
+        [
+          'a constructor that calls a throwing constructor',
+          'class C1 { C1() { new Svc(1); } }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a constructor that calls a throwing constructor, declared',
+          'class C2 { C2() throws AppEx { new Svc(1); } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'an implicit super() that throws, explicit constructor',
+          'class Q1 extends P { Q1() { } }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'an implicit super() that throws, constructor declares it',
+          'class Q2 extends P { Q2() throws AppEx { } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'an implicit super() that throws, default constructor',
+          'class Q3 extends P { }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'an implicit super() that throws, constructor declares a superclass',
+          'class Q4 extends P { Q4() throws Exception { } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'a field initializer that throws',
+          'class F1 { Svc t = new Svc(1); }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a field initializer that throws, constructor declares it',
+          'class F2 { F2() throws AppEx { } Svc t = new Svc(1); }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'a field initializer that throws, one constructor does not declare it',
+          'class F3 { F3() throws AppEx { } F3(int x) { } Svc t = new Svc(1); }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a static field initializer that throws',
+          'class G1 { static Svc t = new Svc(1); }',
+          '',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'an override that throws a broader exception',
+          'class A1 { void f() throws AppEx { } } class B1 extends A1 { void f() throws OtherEx { } }',
+          '',
+          '',
+          /f\(\) in B1 cannot override f\(\) in A1; overridden method does not throw OtherEx/
+        ],
+        [
+          'an override that throws a subclass',
+          'class A2 { void f() throws AppEx { } } class B2 extends A2 { void f() throws SubEx { } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'an override that throws nothing',
+          'class A3 { void f() throws AppEx { } } class B3 extends A3 { void f() { } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'an override that throws Exception',
+          'class A4 { void f() throws AppEx { } } class B4 extends A4 { void f() throws Exception { } }',
+          '',
+          '',
+          /overridden method does not throw Exception/
+        ],
+        [
+          'an override that throws an unchecked exception',
+          'class A5 { void f() { } } class B5 extends A5 { void f() throws RtEx { } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'an override that adds a checked exception',
+          'class A6 { void f() { } } class B6 extends A6 { void f() throws AppEx { } }',
+          '',
+          '',
+          /overridden method does not throw AppEx/
+        ],
+        [
+          'an override that throws the same exception',
+          'class A7 { void f() throws AppEx { } } class B7 extends A7 { void f() throws AppEx { } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'an override of a library method that adds a checked exception',
+          'class T1 { public String toString() throws AppEx { return ""; } }',
+          '',
+          '',
+          /toString\(\) in T1 cannot override toString\(\) in Object; overridden method does not throw AppEx/
+        ],
+        [
+          'an override of a library method that throws Throwable',
+          'class T2 { protected void finalize() throws Throwable { } }',
+          '',
+          '',
+          undefined
+        ],
+        [
+          'a throws clause naming a class that is not a Throwable',
+          'class N1 { void f() throws String { } }',
+          '',
+          '',
+          /incompatible types: .* cannot be converted to java.lang.Throwable/
+        ],
+        [
+          'a throws clause naming an unchecked exception',
+          'class N2 { void f() throws RtEx { } }',
+          '',
+          '',
+          undefined
+        ]
+      ]
+      for (const [comment, extra, body, throwsClause, error] of cases) {
+        if (error === undefined) {
+          it(`accepts ${comment}`, () =>
+            expect(() => compileClasses(extra, body, throwsClause)).not.toThrow())
+        } else {
+          it(`rejects ${comment}`, () =>
+            expect(() => compileClasses(extra, body, throwsClause)).toThrow(error))
+        }
+      }
+    })
+    describe('throws clause in the class file', () => {
+      // Compiles the program, writes its classes out and reads them back with the class file
+      // reader, giving the exceptions of each public or protected method by class and method
+      const readThrows = (source: string) => {
+        const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+          allowedStartRules: ['CompilationUnit']
+        })
+        const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'throws-'))
+        try {
+          const writer = new BinaryWriter()
+          for (const compiled of compile(parser.parse(source) as AST)) {
+            writer.writeBinary(compiled.classFile, directory + path.sep)
+          }
+          const result: { [name: string]: string[] | undefined } = {}
+          for (const file of fs.readdirSync(directory).filter(f => f.endsWith('.class'))) {
+            const meta = extractClassMetaFromBuffer(fs.readFileSync(path.join(directory, file)))
+            for (const method of meta.methods) {
+              result[`${meta.name}.${method.name}${method.descriptor}`] = method.exceptions
+            }
+          }
+          return result
+        } finally {
+          fs.rmSync(directory, { recursive: true, force: true })
+        }
+      }
+
+      const thrown = readThrows(`
+        class AppEx extends Exception { }
+        class OtherEx extends Exception { }
+        abstract class Base {
+          public abstract void load(int n) throws AppEx, OtherEx;
+          public abstract void plain();
+        }
+        class Impl extends Base {
+          public Impl() throws AppEx { }
+          public void load(int n) throws AppEx { if (n > 0) { throw new AppEx(); } }
+          public void plain() { }
+          public static void make(int n) throws OtherEx, AppEx { }
+          public int value() throws RuntimeException { return 1; }
+        }
+        public class Main {
+          public static void main(String[] args) throws Exception { }
+        }
+      `)
+
+      it('writes the exceptions of a method', () =>
+        expect(thrown['Impl.load(I)V']).toEqual(['AppEx']))
+      it('writes several exceptions in the order they are declared', () =>
+        expect(thrown['Impl.make(I)V']).toEqual(['OtherEx', 'AppEx']))
+      it('writes the exceptions of an abstract method', () =>
+        expect(thrown['Base.load(I)V']).toEqual(['AppEx', 'OtherEx']))
+      it('writes the exceptions of a constructor', () =>
+        expect(thrown['Impl.<init>()V']).toEqual(['AppEx']))
+      it('writes the exceptions of main', () =>
+        expect(thrown['Main.main([Ljava/lang/String;)V']).toEqual(['java/lang/Exception']))
+      it('writes unchecked exceptions that are declared', () =>
+        expect(thrown['Impl.value()I']).toEqual(['java/lang/RuntimeException']))
+      it('writes no attribute for a method without a throws clause', () => {
+        expect(thrown['Impl.plain()V']).toBeUndefined()
+        expect(thrown['Base.plain()V']).toBeUndefined()
+      })
+    })
+  })

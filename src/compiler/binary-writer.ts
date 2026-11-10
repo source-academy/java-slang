@@ -4,6 +4,7 @@ import {
   AppendFrame,
   AttributeInfo,
   CodeAttribute,
+  ExceptionsAttribute,
   ExceptionHandler,
   ObjectVariableInfo,
   StackMapTableAttribute,
@@ -241,8 +242,17 @@ export class BinaryWriter {
       case 'StackMapTable':
         this.writeStackMapTableAttribute(attribute as StackMapTableAttribute)
         break
+      case 'Exceptions':
+        this.writeExceptionsAttribute(attribute as ExceptionsAttribute)
+        break
       default:
     }
+  }
+
+  /** JVMS 4.7.5: the classes in the `throws` clause of a method. */
+  private writeExceptionsAttribute(attribute: ExceptionsAttribute) {
+    this.write(attribute.exceptionIndexTable.length, u2)
+    attribute.exceptionIndexTable.forEach(index => this.write(index, u2))
   }
 
   private writeCodeAttribute(attribute: CodeAttribute) {

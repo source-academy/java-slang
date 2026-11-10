@@ -15,6 +15,7 @@ import { MethodInfo } from '../ClassFile/types/methods'
 import {
   CannotInheritFromFinalClassError,
   ConstructNotSupportedError,
+  InconvertibleTypesError,
   InvalidOverrideError,
   MethodAlreadyDefinedError,
   MissingAbstractMethodImplementationError
@@ -219,6 +220,16 @@ export class Compiler {
         fail(
           `return type ${descriptorToSourceName(returned)} is not compatible with ${descriptorToSourceName(expected)}`
         )
+      }
+
+      // JLS 8.4.8.3: the overriding method may only throw the checked exceptions that the
+      // overridden method throws, or subclasses of them
+      for (const thrown of method.exceptions ?? []) {
+        if (this.symbolTable.isCheckedException(thrown) !== true) continue
+        const isAllowed = (overridden.exceptions ?? []).some(
+          allowed => this.symbolTable.classReaches(thrown, allowed) !== false
+        )
+        if (!isAllowed) fail(`overridden method does not throw ${displayClass(thrown)}`)
       }
     }
   }
@@ -958,6 +969,20 @@ export class Compiler {
     )
   }
 
+  /**
+   * The binary names of the classes in a `throws` clause, each of which must be a Throwable
+   * (JLS 8.4.6).
+   */
+  private resolveThrows(names: Array<string> | undefined): string[] {
+    return (names ?? []).map(name => {
+      const resolved = this.symbolTable.queryClass(name).name
+      if (this.symbolTable.classReaches(resolved, 'java/lang/Throwable') === false) {
+        throw new InconvertibleTypesError(name, 'java.lang.Throwable')
+      }
+      return resolved
+    })
+  }
+
   private recordMethodInfo(methodNode: MethodDeclaration) {
     const header = methodNode.methodHeader
     const methodName = header.identifier
@@ -971,7 +996,8 @@ export class Compiler {
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
       parentClassName: this.parentClassName,
       typeDescriptor: descriptor,
-      className: this.className
+      className: this.className,
+      exceptions: this.resolveThrows(header.throws)
     })
   }
 
@@ -986,7 +1012,8 @@ export class Compiler {
       accessFlags: generateMethodAccessFlags(constructor.constructorModifier),
       parentClassName: this.parentClassName,
       typeDescriptor: descriptor,
-      className: this.className
+      className: this.className,
+      exceptions: this.resolveThrows(constructor.throws)
     })
   }
 
@@ -1087,6 +1114,16 @@ export class Compiler {
       )
     }
 
+    // JVMS 4.7.5: the classes in the `throws` clause (abstract and native methods have them too)
+    const thrown = this.resolveThrows(header.throws)
+    if (thrown.length > 0) {
+      attributes.push({
+        attributeNameIndex: this.constantPoolManager.indexUtf8Info('Exceptions'),
+        attributeLength: 2 + 2 * thrown.length,
+        exceptionIndexTable: thrown.map(name => this.constantPoolManager.indexClassInfo(name))
+      })
+    }
+
     this.methods.push({
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
       nameIndex: nameIndex,
@@ -1110,7 +1147,8 @@ export class Compiler {
       methodHeader: {
         identifier: '<init>',
         formalParameterList: constructor.constructorDeclarator.formalParameterList,
-        result: 'void'
+        result: 'void',
+        throws: constructor.throws
       },
       methodBody: {
         kind: 'Block',

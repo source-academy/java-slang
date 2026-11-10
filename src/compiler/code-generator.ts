@@ -17,6 +17,7 @@ import {
   PostfixExpression,
   PrefixExpression,
   ReturnStatement,
+  ThrowStatement,
   Expression,
   ArrayAccess,
   BinaryOperator,
@@ -40,9 +41,13 @@ import {
   BadOperandTypesError,
   ConstructNotSupportedError,
   EnumInstantiationError,
+  ExceptionNeverThrownError,
   InconvertibleTypesError,
+  MulticatchAlternativesRelatedError,
+  MulticatchParameterAssignedError,
   NoMethodMatchingSignatureError,
-  NonStaticReferenceInStaticContextError
+  NonStaticReferenceInStaticContextError,
+  UnreportedExceptionError
 } from './error'
 import { FieldInfo, MethodInfos, SymbolInfo, SymbolTable, VariableInfo } from './symbol-table'
 
@@ -1074,8 +1079,110 @@ function compileArrayInitializer(init: any[], typeName: string, cg: CodeGenerato
   return maxStack
 }
 
+/** A catch clause, with the exception classes it catches (as written, and as binary names). */
+interface CatchClauseInfo {
+  clause: any
+  alternatives: Array<{ source: string; binary: string }>
+}
+
+/** The binary name of an exception class written in a catch clause. */
+function resolveCatchClass(name: string, cg: CodeGenerator): string {
+  try {
+    return cg.symbolTable.queryClass(name).name
+  } catch (e) {
+    return name.includes('/') ? name : name.replace(/\./g, '/')
+  }
+}
+
+/** The nearest class that all of the classes are subclasses of (for the type of `A | B e`). */
+function commonSuperclass(classNames: string[], cg: CodeGenerator): string {
+  return (
+    classChain(classNames[0], cg).find(candidate =>
+      classNames.every(name => cg.symbolTable.classReaches(name, candidate) === true)
+    ) ?? 'java/lang/Throwable'
+  )
+}
+
+/** Whether a node assigns to, increments or decrements the variable with this name. */
+function assignsTo(node: any, variable: string): boolean {
+  if (node === null || typeof node !== 'object') return false
+  if (Array.isArray(node)) return node.some(child => assignsTo(child, variable))
+  const target =
+    node.kind === 'Assignment'
+      ? node.left
+      : (node.kind === 'PrefixExpression' || node.kind === 'PostfixExpression') &&
+          (node.operator === '++' || node.operator === '--')
+        ? node.expression
+        : undefined
+  if (target?.kind === 'ExpressionName' && target.name === variable) return true
+  return Object.values(node).some(child => assignsTo(child, variable))
+}
+
+/**
+ * Checks the catch clauses of a try statement whose try block can throw the given checked
+ * exceptions, and notes the exceptions that no clause catches as thrown by the try statement.
+ * Returns, for each clause, the checked exceptions that `throw e` of its parameter can throw.
+ */
+function analyseCatchClauses(
+  clauses: CatchClauseInfo[],
+  tryThrown: Set<string>,
+  cg: CodeGenerator
+): string[][] {
+  const reaches = (from: string, to: string) => cg.symbolTable.classReaches(from, to)
+  const rethrowTypes: string[][] = []
+  let remaining = [...tryThrown]
+
+  for (const { alternatives } of clauses) {
+    // JLS 14.20: the type of a catch parameter is a subclass of Throwable
+    for (const { source, binary } of alternatives) {
+      if (reaches(binary, 'java/lang/Throwable') === false) {
+        throw new InconvertibleTypesError(source, 'java.lang.Throwable')
+      }
+    }
+
+    // JLS 14.20: the alternatives of a multi-catch cannot be related by subclassing
+    for (const [i, first] of alternatives.entries()) {
+      for (const second of alternatives.slice(i + 1)) {
+        if (reaches(first.binary, second.binary) === true) {
+          throw new MulticatchAlternativesRelatedError(first.source, second.source)
+        }
+        if (reaches(second.binary, first.binary) === true) {
+          throw new MulticatchAlternativesRelatedError(second.source, first.source)
+        }
+      }
+    }
+
+    // JLS 11.2.3: a checked exception class other than Exception and Throwable can only be
+    // caught if the try block can throw it, a subclass of it or a superclass of it
+    for (const { binary } of alternatives) {
+      if (
+        cg.symbolTable.isCheckedException(binary) === true &&
+        binary !== 'java/lang/Exception' &&
+        binary !== 'java/lang/Throwable' &&
+        ![...tryThrown].some(
+          thrown => reaches(thrown, binary) !== false || reaches(binary, thrown) !== false
+        )
+      ) {
+        throw new ExceptionNeverThrownError(exceptionDisplayName(binary))
+      }
+    }
+
+    const names = alternatives.map(alternative => alternative.binary)
+    const isCaught = (thrown: string) => names.some(name => reaches(thrown, name) === true)
+    rethrowTypes.push(remaining.filter(isCaught))
+    remaining = remaining.filter(thrown => !isCaught(thrown))
+  }
+
+  cg.recordThrown(remaining)
+  return rethrowTypes
+}
+
 /** Whether a value of this type can be used as a boolean: boolean, or Boolean (unboxed). */
 const isBooleanType = (type: string) => type === 'Z' || type === 'Ljava/lang/Boolean;'
+
+/** An exception class as it is named in an error message, without its package. */
+const exceptionDisplayName = (className: string) =>
+  (className.split('/').pop() as string).replace(/\$/g, '.')
 
 /** A type as it is named in an error message; `null` has the empty type. */
 const typeNameInMessage = (type: string) => (type === EMPTY_TYPE ? '<null>' : describeType(type))
@@ -1358,6 +1465,35 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     return { stackSize: maxStack, resultType: resType }
   },
 
+  ThrowStatement: (node: Node, cg: CodeGenerator) => {
+    const { expression } = node as ThrowStatement
+    const res = compile(expression, cg)
+
+    // JLS 14.18: the expression must be of a type that is assignable to Throwable (the null
+    // literal, which has the empty type, is allowed and throws a NullPointerException)
+    const type = res.resultType
+    if (
+      type !== EMPTY_TYPE &&
+      (type.length === 1 ||
+        type.startsWith('[') ||
+        cg.symbolTable.classReaches(classNameOf(type), 'java/lang/Throwable') === false)
+    ) {
+      throw new InconvertibleTypesError(typeNameInMessage(type), 'java.lang.Throwable')
+    }
+
+    // JLS 11.2.2: `throw e` of a catch parameter that is not reassigned can only throw the
+    // checked exceptions that the try block can throw and the catch clause catches; any other
+    // throw can throw the type of its expression
+    if (expression.kind === 'ExpressionName' && cg.preciseRethrows.has(expression.name)) {
+      cg.recordThrown(cg.preciseRethrows.get(expression.name))
+    } else if (type !== EMPTY_TYPE) {
+      cg.recordThrown([classNameOf(type)])
+    }
+
+    cg.code.push(OPCODE.ATHROW)
+    return { stackSize: Math.max(res.stackSize, 1), resultType: EMPTY_TYPE }
+  },
+
   TryStatement: (node: Node, cg: CodeGenerator) => {
     let maxStack = 0
     const { block, catches } = node as any
@@ -1372,6 +1508,25 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     if (hasCatches || finallyNode) {
       maxStack = Math.max(maxStack, 1)
     }
+
+    // The exception classes of each catch clause: one for `catch (A e)`, several for the
+    // alternatives of a multi-catch `catch (A | B e)`
+    const clauses: CatchClauseInfo[] = hasCatches
+      ? catches.catchClauses.map((clause: any) => {
+          const catchType = clause.catchFormalParameter.catchType
+          const sources: string[] = [
+            unannTypeToString(catchType.unannClassType),
+            ...(catchType.classTypes ?? [])
+          ]
+          return {
+            clause,
+            alternatives: sources.map(source => ({
+              source,
+              binary: resolveCatchClass(source, cg)
+            }))
+          }
+        })
+      : []
 
     const localExceptionTable: Array<{
       startPc: number
@@ -1390,8 +1545,11 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       const tryStart = cg.generateNewLabel()
       tryStart.offset = cg.code.length
 
-      // compile try block
+      // compile try block, noting the checked exceptions that it can throw
+      cg.thrownCheckedExceptions.push(new Set())
       maxStack = Math.max(maxStack, compile(block, cg).stackSize)
+      const tryThrown = cg.thrownCheckedExceptions.pop() as Set<string>
+      const rethrowTypes = analyseCatchClauses(clauses, tryThrown, cg)
 
       // end of protected region (first instruction after try block)
       const tryEnd = cg.generateNewLabel()
@@ -1413,35 +1571,36 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
       // For each catch clause, emit a handler and an exception table entry
       if (hasCatches) {
-        for (const catchClause of catches.catchClauses) {
+        for (const [clauseIndex, { clause: catchClause, alternatives }] of clauses.entries()) {
           const handlerLabel = cg.generateNewLabel()
           handlerLabel.offset = cg.code.length
 
-          // determine catch type index (constant pool)
+          // one exception table entry (startPc, endPc, handlerPc, catchType) for each of the
+          // alternatives, all with the same handler
           const catchTypeNode = catchClause.catchFormalParameter.catchType
-          const catchTypeName = unannTypeToString(catchTypeNode.unannClassType)
-          let catchClassName = 'java/lang/Throwable'
-          try {
-            catchClassName = cg.symbolTable.queryClass(catchTypeName).name
-          } catch (e) {
-            catchClassName = catchTypeName.includes('/')
-              ? catchTypeName
-              : catchTypeName.replace(/\./g, '/')
+          for (const { binary } of alternatives) {
+            localExceptionTable.push({
+              startPc: tryStart.offset,
+              endPc: tryEnd.offset,
+              handlerLabel: handlerLabel,
+              catchType: cg.constantPoolManager.indexClassInfo(binary)
+            })
           }
-          const catchTypeIndex = cg.constantPoolManager.indexClassInfo(catchClassName)
-
-          // add exception table entry (startPc, endPc, handlerPc, catchType)
-          localExceptionTable.push({
-            startPc: tryStart.offset,
-            endPc: tryEnd.offset,
-            handlerLabel: handlerLabel,
-            catchType: catchTypeIndex
-          })
 
           // create scope for catch variable
           cg.symbolTable.extend()
-          const varName = catchClause.catchFormalParameter.variableDeclaratorId
-          const varTypeStr = unannTypeToString(catchTypeNode.unannClassType)
+          // the parser gives the parameter's name as a declarator node (`e` in `catch (X e)`)
+          const declaratorId = catchClause.catchFormalParameter.variableDeclaratorId
+          const varName: string =
+            typeof declaratorId === 'string' ? declaratorId : declaratorId.variableDeclaratorId
+          // the type of a multi-catch parameter is the closest superclass of its alternatives
+          const varTypeStr =
+            alternatives.length === 1
+              ? unannTypeToString(catchTypeNode.unannClassType)
+              : commonSuperclass(
+                  alternatives.map(alternative => alternative.binary),
+                  cg
+                )
           const varInfo = {
             name: varName,
             accessFlags: 0,
@@ -1461,12 +1620,20 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
           const catchStartOffset = cg.code.length
 
-          // compile catch block statements
+          // compile catch block statements; `throw e` of the parameter, if it is never assigned
+          // to, only throws what the try block can throw (JLS 11.2.2)
           const catchBlock = catchClause.block
+          const isPreciseRethrow = !assignsTo(catchBlock, varName)
+          // JLS 14.20: a multi-catch parameter is implicitly final
+          if (alternatives.length > 1 && !isPreciseRethrow) {
+            throw new MulticatchParameterAssignedError(varName)
+          }
+          if (isPreciseRethrow) cg.preciseRethrows.set(varName, rethrowTypes[clauseIndex])
           catchBlock.blockStatements.forEach((stmt: any) => {
             const { stackSize } = compile(stmt, cg)
             maxStack = Math.max(maxStack, stackSize)
           })
+          cg.preciseRethrows.delete(varName)
 
           const catchEndOffset = cg.code.length
 
@@ -1581,6 +1748,28 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         resType = altType
       } else {
         resType = binaryPromotion(conType, altType)
+      }
+    }
+    // JLS 15.25.3: the type of a reference conditional is the least upper bound of its operands'
+    // types, and the null operand takes the type of the other one
+    if (conType !== altType) {
+      // a class type is a descriptor (`LA;`), or just the name (`A`) for a `new A()`
+      const isClassType = (type: string) =>
+        type.length > 1 && !type.startsWith('[') && type !== EMPTY_TYPE
+      if (conType === EMPTY_TYPE && !isNumeric(altType)) {
+        resType = altType
+      } else if (altType === EMPTY_TYPE && !isNumeric(conType)) {
+        resType = conType
+      } else if (isClassType(conType) && isClassType(altType) && !isNumeric(resType)) {
+        const conClass = classNameOf(conType)
+        const altClass = classNameOf(altType)
+        if (cg.symbolTable.classReaches(altClass, conClass) === true) {
+          resType = conType
+        } else if (cg.symbolTable.classReaches(conClass, altClass) === true) {
+          resType = altType
+        } else {
+          resType = `L${commonSuperclass([conClass, altClass], cg)};`
+        }
       }
     }
     const convertible = isNumeric(resType) && isNumeric(conType) && isNumeric(altType)
@@ -1867,6 +2056,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       applicable.find(isExact) ?? applicable.find(m => applicable.every(o => isMoreSpecific(m, o)))
 
     if (chosen) {
+      cg.recordThrown(chosen.exceptions)
       const params = parseParams(chosen.typeDescriptor)
       // the new object is on the stack twice (NEW, DUP) below the arguments; a long or double
       // argument takes two slots
@@ -1906,6 +2096,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         methodInfo.typeDescriptor.includes(argDescriptor) &&
         methodInfo.className == instantiatedClassName
       ) {
+        cg.recordThrown(methodInfo.exceptions)
         const method = cg.constantPoolManager.indexMethodrefInfo(
           methodInfo.className,
           methodInfo.name,
@@ -2032,6 +2223,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         }
       }
     }
+
+    // the call can throw the exceptions in the method's throws clause (JLS 11.2.1)
+    cg.recordThrown(selectedMethod.exceptions)
 
     if (unqualifiedCall && !(selectedMethod.accessFlags & FIELD_FLAGS.ACC_STATIC)) {
       if (cg.currentMethodIsStatic) {
@@ -2993,10 +3187,26 @@ class CodeGenerator {
   currentClass: string
   currentMethodIsStatic: boolean = false
   currentMethodReturnType: string = ''
+  // The checked exceptions (JLS 11.1.1) that the code compiled so far can throw, as binary class
+  // names: one set for each enclosing try block, and the method's own at the bottom
+  thrownCheckedExceptions: Array<Set<string>> = [new Set()]
+  // The binary names of the exception classes in the `throws` clause of the method
+  declaredExceptions: string[] = []
+  // For each `catch (E e)` being compiled, the checked exceptions that `throw e` can throw
+  // (JLS 11.2.2), by the name of the catch parameter
+  preciseRethrows: Map<string, string[]> = new Map()
 
   constructor(symbolTable: SymbolTable, constantPoolManager: ConstantPoolManager) {
     this.symbolTable = symbolTable
     this.constantPoolManager = constantPoolManager
+  }
+
+  /** Notes that the code being compiled can throw these exceptions (the unchecked ones don't count). */
+  recordThrown(exceptions: string[] | undefined) {
+    const thrown = this.thrownCheckedExceptions[this.thrownCheckedExceptions.length - 1]
+    for (const exception of exceptions ?? []) {
+      if (this.symbolTable.isCheckedException(exception) === true) thrown.add(exception)
+    }
   }
 
   generateNewLabel(): Label {
@@ -3037,6 +3247,13 @@ class CodeGenerator {
       }
     }
     this.exceptionTable = []
+    this.declaredExceptions = (methodNode.methodHeader.throws ?? []).map(name => {
+      try {
+        return this.symbolTable.queryClass(name).name
+      } catch (e) {
+        return name
+      }
+    })
     if (!this.currentMethodIsStatic) {
       this.maxLocals++
     }
@@ -3067,9 +3284,26 @@ class CodeGenerator {
         0,
         this.constantPoolManager.indexMethodrefInfo(parentClass, '<init>', '()V')
       )
+      // the implicit super() throws what the superclass's constructor throws (JLS 11.2.2)
+      try {
+        const superConstructor = (this.symbolTable.queryMethod('<init>') as MethodInfos).find(
+          m => m.className === parentClass && m.typeDescriptor === '()V'
+        )
+        this.recordThrown(superConstructor?.exceptions)
+      } catch (e) {
+        // a superclass without constructors in the symbol table throws nothing we know of
+      }
     }
 
     this.stackSize = Math.max(this.stackSize, compile(methodNode.methodBody, this).stackSize)
+
+    // JLS 11.2: a checked exception that the body can throw must be declared by the method
+    for (const thrown of this.thrownCheckedExceptions[0]) {
+      const isDeclared = this.declaredExceptions.some(
+        declared => this.symbolTable.classReaches(thrown, declared) === true
+      )
+      if (!isDeclared) throw new UnreportedExceptionError(exceptionDisplayName(thrown))
+    }
     if (methodNode.methodHeader.result === 'void') {
       this.code.push(OPCODE.RETURN)
     }

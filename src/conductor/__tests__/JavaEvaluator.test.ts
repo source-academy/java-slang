@@ -143,6 +143,171 @@ describe('JavaEvaluator', () => {
     expect(mock.outputs).toEqual(['2', '4', '5', 'not cats', 'not cats'])
   })
 
+  test('throws and catches user-defined exceptions', async () => {
+    const mock = new MockConductor()
+    const ev = new JavaEvaluator(mock as any)
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateChunk(`
+        class AppException extends Exception {
+          public int code;
+          public String getMessage() { return "app failure " + code; }
+        }
+        class InputException extends AppException { }
+        public class Main {
+          static int log;
+          static void fail(int code) throws AppException {
+            AppException e = new AppException();
+            e.code = code;
+            throw e;
+          }
+          static int check(int x) throws AppException {
+            if (x < 0) { throw new InputException(); }
+            if (x > 10) { fail(x); }
+            return x;
+          }
+          static int safely(int x) {
+            try {
+              return check(x);
+            } catch (InputException e) {
+              return -1;
+            } catch (AppException e) {
+              return -e.code;
+            } finally {
+              log = log + 1;
+            }
+          }
+          public static void main(String[] args) {
+            System.out.println(safely(5));
+            System.out.println(safely(-3));
+            System.out.println(safely(42));
+            System.out.println(log);
+            try {
+              fail(7);
+            } catch (AppException e) {
+              System.out.println(e.getMessage());
+              System.out.println(e);
+            }
+            try {
+              throw new IllegalStateException();
+            } catch (RuntimeException e) {
+              System.out.println("runtime");
+            }
+          }
+        }
+      `)
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
+    expect(mock.errors).toHaveLength(0)
+    expect(mock.outputs).toEqual([
+      '5',
+      '-1',
+      '-42',
+      '3',
+      'app failure 7',
+      'AppException: app failure 7',
+      'runtime'
+    ])
+  })
+
+  test('runs multi-catch and checked exceptions', async () => {
+    const mock = new MockConductor()
+    const ev = new JavaEvaluator(mock as any)
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateChunk(`
+        class AppException extends Exception { public String getMessage() { return "app"; } }
+        class InputException extends Exception { public String getMessage() { return "input"; } }
+        class NetworkException extends Exception { public String getMessage() { return "network"; } }
+        public class Main {
+          static void raise(int kind) throws AppException, InputException, NetworkException {
+            if (kind == 1) { throw new AppException(); }
+            if (kind == 2) { throw new InputException(); }
+            if (kind == 3) { throw new NetworkException(); }
+          }
+          static String attempt(int kind) {
+            try {
+              raise(kind);
+              return "none";
+            } catch (AppException | InputException e) {
+              return "app-or-input " + e.getMessage();
+            } catch (NetworkException e) {
+              return "network " + e.getMessage();
+            }
+          }
+          static void rethrow(int kind) throws AppException, InputException {
+            try {
+              raise(kind);
+            } catch (AppException | InputException e) {
+              throw e;
+            } catch (NetworkException e) {
+              System.out.println("swallowed");
+            }
+          }
+          public static void main(String[] args) {
+            for (int k = 0; k <= 3; k++) {
+              System.out.println(attempt(k));
+            }
+            try {
+              rethrow(2);
+            } catch (InputException e) {
+              System.out.println("rethrown " + e.getMessage());
+            } catch (AppException e) {
+              System.out.println("wrong");
+            }
+            rethrowQuietly();
+          }
+          static void rethrowQuietly() {
+            try {
+              rethrow(3);
+            } catch (Exception e) {
+              System.out.println("wrong");
+            }
+          }
+        }
+      `)
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
+    expect(mock.errors).toHaveLength(0)
+    expect(mock.outputs).toEqual([
+      'none',
+      'app-or-input app',
+      'app-or-input input',
+      'network network',
+      'rethrown input',
+      'swallowed'
+    ])
+  })
+
+  test('stops the program and reports an exception that is never caught', async () => {
+    const mock = new MockConductor()
+    const ev = new JavaEvaluator(mock as any)
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateChunk(`
+        class Boom extends RuntimeException { }
+        public class Main {
+          static void go() { throw new Boom(); }
+          public static void main(String[] args) {
+            System.out.println("before");
+            go();
+            System.out.println("after");
+          }
+        }
+      `)
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
+    expect(mock.outputs[0]).toBe('before')
+    expect(mock.outputs.join('\n')).toMatch(/Exception in thread "main" Boom/)
+    expect(mock.outputs).not.toContain('after')
+  })
+
   test('reports an error when the submitted class file is not valid', async () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)

@@ -771,7 +771,8 @@ export function runAthrow(thread: Thread): void {
     return
   }
 
-  thread.offsetPc(1)
+  // The handler is searched for with the pc of the athrow itself, so an athrow that is the last
+  // instruction of a try block (its exception table range ends right after it) is caught
   thread.throwException(exception)
 }
 

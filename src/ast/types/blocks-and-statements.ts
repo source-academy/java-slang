@@ -130,6 +130,8 @@ export interface CatchFormalParameter extends BaseNode {
 export interface CatchType extends BaseNode {
   kind: "CatchType";
   unannClassType: UnannType;
+  /** The other alternatives of a multi-catch (`catch (A | B e)`), as written. */
+  classTypes?: Array<string>;
 }
 
 export interface Finally extends BaseNode {

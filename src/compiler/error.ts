@@ -119,3 +119,30 @@ export class BadOperandTypeError extends CompileError {
     super(`bad operand type ${type} for unary operator '${operator}'`)
   }
 }
+
+export class UnreportedExceptionError extends CompileError {
+  constructor(exception: string) {
+    super(`unreported exception ${exception}; must be caught or declared to be thrown`)
+  }
+}
+
+export class ExceptionNeverThrownError extends CompileError {
+  constructor(exception: string) {
+    super(`exception ${exception} is never thrown in body of corresponding try statement`)
+  }
+}
+
+export class MulticatchAlternativesRelatedError extends CompileError {
+  constructor(subclass: string, superclass: string) {
+    super(
+      `Alternatives in a multi-catch statement cannot be related by subclassing; ` +
+        `Alternative ${subclass} is a subclass of alternative ${superclass}`
+    )
+  }
+}
+
+export class MulticatchParameterAssignedError extends CompileError {
+  constructor(parameter: string) {
+    super(`multi-catch parameter ${parameter} may not be assigned`)
+  }
+}
