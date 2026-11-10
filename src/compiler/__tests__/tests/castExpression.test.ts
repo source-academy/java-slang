@@ -531,6 +531,7 @@ export const castExpressionTest = () => describe("cast expression", () => {
       class Puppy extends Dog {}
       class Cat extends Animal {}
       class Rock {}
+      final class Sealed extends Animal {}
     `;
     const compileWithClasses = (body: string) => {
       const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
@@ -555,6 +556,8 @@ export const castExpressionTest = () => describe("cast expression", () => {
       ["String to Integer", "String s = \"1\"; Integer i = (Integer) s;"],
       ["Integer to String", "Integer i = 1; String s = (String) i;"],
       ["Integer to Long", "Integer i = 1; Long l = (Long) i;"],
+      ["a final class to a sibling class", "Sealed s = new Sealed(); Cat c = (Cat) s;"],
+      ["a final library class to a subclass of its parent", "String s = \"1\"; Number n = (Number) s;"],
     ];
     for (const [comment, body] of rejected) {
       it(`rejects ${comment}`, () =>
@@ -572,6 +575,11 @@ export const castExpressionTest = () => describe("cast expression", () => {
       ["Number to Integer", "Number n = 1; Integer i = (Integer) n;"],
       ["Integer to Number", "Integer i = 1; Number n = (Number) i;"],
       ["null", "Dog d = (Dog) null;"],
+      ["a final class to its superclass", "Sealed s = new Sealed(); Animal a = (Animal) s;"],
+      ["a final class to itself", "Sealed s = new Sealed(); Sealed t = (Sealed) s;"],
+      ["a final class to Object", "Sealed s = new Sealed(); Object o = (Object) s;"],
+      ["a superclass to a final class", "Animal a = new Sealed(); Sealed s = (Sealed) a;"],
+      ["a final library class to Object", "String s = \"1\"; Object o = (Object) s;"],
     ];
     for (const [comment, body] of allowed) {
       it(`allows ${comment}`, () => expect(() => compileWithClasses(body)).not.toThrow());

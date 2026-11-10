@@ -535,6 +535,58 @@ export const classTest = () => describe("fields and methods of class", () => {
         ).toThrow(/O.B is not abstract .* f\(\) in A/));
     });
 
+    describe("final classes", () => {
+      const compileProgram = (declarations: string) => {
+        const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+          allowedStartRules: ["CompilationUnit"],
+        });
+        return compile(
+          parser.parse(`
+            ${declarations}
+            public class Main {
+              public static void main(String[] args) {}
+            }
+          `) as AST
+        );
+      };
+      const rejectedDeclarations: [string, string, RegExp][] = [
+        ["extending a final class", "final class A {} class B extends A {}", /cannot inherit from final A/],
+        [
+          "extending a final class declared after the subclass",
+          "class B extends A {} final class A {}",
+          /cannot inherit from final A/,
+        ],
+        [
+          "extending a final class through an abstract class",
+          "final class A {} abstract class B extends A {}",
+          /cannot inherit from final A/,
+        ],
+        [
+          "extending a nested final class",
+          "class O { static final class A {} static class B extends A {} }",
+          /cannot inherit from final O.A/,
+        ],
+        ["extending a final library class", "class S extends String {}", /cannot inherit from final String/],
+        ["extending a wrapper class", "class I extends Integer {}", /cannot inherit from final Integer/],
+        ["extending an enum", "enum Color { RED } class C extends Color {}", /cannot inherit from final Color/],
+      ];
+      for (const [comment, declarations, message] of rejectedDeclarations) {
+        it(`rejects ${comment}`, () =>
+          expect(() => compileProgram(declarations)).toThrow(message));
+      }
+
+      it("allows a final class extending a non-final class", () =>
+        expect(() => compileProgram("class A {} final class B extends A {}")).not.toThrow());
+      it("allows extending a non-final class that extends a final one's parent", () =>
+        expect(() =>
+          compileProgram("class A {} final class B extends A {} class C extends A {}")
+        ).not.toThrow());
+      it("allows extending a non-final library class", () =>
+        expect(() =>
+          compileProgram("class E extends Exception {} class R extends RuntimeException {}")
+        ).not.toThrow());
+    });
+
     it("still allows a concrete subclass", () =>
       expect(() => compileWithClasses("Shape s = new Square(); Polygon p = new Square();")).not.toThrow());
     it("still allows a concrete library class", () =>

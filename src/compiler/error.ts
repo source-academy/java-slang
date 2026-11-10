@@ -95,3 +95,9 @@ export class MissingAbstractMethodImplementationError extends CompileError {
     )
   }
 }
+
+export class CannotInheritFromFinalClassError extends CompileError {
+  constructor(name: string) {
+    super(`cannot inherit from final ${name}`)
+  }
+}

@@ -456,6 +456,7 @@ function describeType(descriptor: string): string {
 }
 
 const ACC_INTERFACE = 0x0200
+const ACC_FINAL = 0x0010
 const ACC_ABSTRACT = 0x0400
 
 /**
@@ -477,9 +478,9 @@ function isSubclassOf(sub: string, sup: string, cg: CodeGenerator): boolean | un
 }
 
 /**
- * JLS 5.5.1: a cast between two classes is only legal if one is a subclass of the other.
- * Anything that cannot be decided statically (arrays, interfaces, classes the symbol table does
- * not know) is left to the runtime check.
+ * JLS 5.5.1: a cast between two classes is only legal if one is a subclass of the other, and a
+ * final class can only be cast to its superclasses.
+ * Anything that cannot be decided statically is left to the runtime check.
  */
 function assertReferenceCastIsLegal(fromType: string, toType: string, cg: CodeGenerator) {
   if (!fromType || fromType.startsWith('[') || toType.startsWith('[')) return
@@ -491,6 +492,17 @@ function assertReferenceCastIsLegal(fromType: string, toType: string, cg: CodeGe
     if (isInterface(from) || isInterface(to)) return
   } catch (e) {
     return
+  }
+  // JLS 5.5.1: a final class cannot have subclasses, so it can only be cast to itself or to one
+  // of its superclasses
+  let fromIsFinal = false
+  try {
+    fromIsFinal = (cg.symbolTable.queryClass(from).accessFlags & ACC_FINAL) !== 0
+  } catch (e) {
+    // an unknown class is left to the runtime check
+  }
+  if (fromIsFinal && isSubclassOf(from, to, cg) === false) {
+    throw new InconvertibleTypesError(from.replace(/\//g, '.'), to.replace(/\//g, '.'))
   }
   if (isSubclassOf(from, to, cg) === false && isSubclassOf(to, from, cg) === false) {
     throw new InconvertibleTypesError(from.replace(/\//g, '.'), to.replace(/\//g, '.'))

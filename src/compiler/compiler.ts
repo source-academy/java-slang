@@ -12,7 +12,11 @@ import {
 import { AttributeInfo } from '../ClassFile/types/attributes'
 import { FieldInfo } from '../ClassFile/types/fields'
 import { MethodInfo } from '../ClassFile/types/methods'
-import { ConstructNotSupportedError, MissingAbstractMethodImplementationError } from './error'
+import {
+  CannotInheritFromFinalClassError,
+  ConstructNotSupportedError,
+  MissingAbstractMethodImplementationError
+} from './error'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
   generateClassAccessFlags,
@@ -102,9 +106,12 @@ export class Compiler {
       classScopes.set(decl, scope)
     })
 
-    // Every class's members are registered now, so the abstract-method rules can be checked
+    // Every class's members are registered now, so the inheritance rules can be checked
     declarations.forEach(decl => {
-      if (decl.kind === 'NormalClassDeclaration') this.checkAbstractMethods(decl)
+      if (decl.kind === 'NormalClassDeclaration') {
+        this.checkSuperclassIsNotFinal(decl)
+        this.checkAbstractMethods(decl)
+      }
     })
 
     // Pass 2: generate the actual bytecode for every class, re-entering
@@ -123,6 +130,23 @@ export class Compiler {
     // Return in declaration order (top-level types first, then member enums) so
     // the entry class stays at index 0 regardless of compilation order.
     return declarations.map(decl => compiled.get(decl) as Class)
+  }
+
+  /** JLS 8.1.4: a class cannot extend a final class, nor an enum (which is implicitly final). */
+  private checkSuperclassIsNotFinal(classNode: NormalClassDeclaration) {
+    if (!classNode.sclass) return
+    const ACC_FINAL = 0x0010
+    let parent
+    try {
+      parent = this.symbolTable.queryClass(classNode.sclass)
+    } catch (e) {
+      return
+    }
+    if (parent.accessFlags & ACC_FINAL || parent.isEnum) {
+      throw new CannotInheritFromFinalClassError(
+        (parent.name.split('/').pop() as string).replace(/\$/g, '.')
+      )
+    }
   }
 
   /**
