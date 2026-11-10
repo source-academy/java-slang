@@ -67,6 +67,35 @@ describe('JavaEvaluator', () => {
     expect(mock.results).toHaveLength(0)
   })
 
+  test('runs overrides with covariant return types through their superclasses', async () => {
+    const mock = new MockConductor()
+    const ev = new JavaEvaluator(mock as any)
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateChunk(`
+        class X { String who() { return "X"; } }
+        class Y extends X { String who() { return "Y"; } }
+        class A { X make(long n) { return new X(); } }
+        class B extends A { Y make(long n) { return new Y(); } }
+        public class Main {
+          public static void main(String[] args) {
+            A a = new B();
+            X viaBase = a.make(1L);
+            B b = new B();
+            Y viaSub = b.make(2L);
+            System.out.println(viaBase.who());
+            System.out.println(viaSub.who());
+          }
+        }
+      `)
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
+    expect(mock.errors).toHaveLength(0)
+    expect(mock.outputs).toEqual(['Y', 'Y'])
+  })
+
   test('reports an error when the submitted class file is not valid', async () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)

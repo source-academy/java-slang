@@ -419,6 +419,74 @@ const testCases: testCase[] = [
     expectedLines: ["6", "true", "true", "false", "true", "true", "true", "true", "true", "true", "2", "6", "true", "true", "true", "true", "4"],
   },
   {
+    comment: "overrides with covariant return types and wider access dispatch correctly",
+    program: `
+      class Animal { public String name() { return "animal"; } }
+      class Dog extends Animal { public String name() { return "dog"; } }
+      abstract class Shelter {
+        protected abstract Animal adopt();
+        abstract int capacity();
+        public String describe() { Animal a = adopt(); return a.name() + " " + capacity(); }
+      }
+      class DogShelter extends Shelter {
+        public Dog adopt() { return new Dog(); }
+        protected int capacity() { return 3; }
+      }
+      public class Main {
+        public static void main(String[] args) {
+          Shelter s = new DogShelter();
+          System.out.println(s.describe());
+          DogShelter d = new DogShelter();
+          Dog dog = d.adopt();
+          System.out.println(dog.name());
+          Animal viaBase = d.adopt();
+          System.out.println(viaBase.name());
+        }
+      }
+    `,
+    expectedLines: ["dog 3", "dog", "dog"],
+  },
+  {
+    comment: "covariant return types over several levels are reachable through every superclass",
+    program: `
+      class X { String who() { return "X"; } }
+      class Y extends X { String who() { return "Y"; } }
+      class Z extends Y { String who() { return "Z"; } }
+      class A { X make(long a, double b, int[] c, String d) { return new X(); } }
+      class B extends A { Y make(long a, double b, int[] c, String d) { return new Y(); } }
+      class C extends B { Z make(long a, double b, int[] c, String d) { return new Z(); } }
+      abstract class Maker {
+        abstract X build(int n);
+        X buildTwice(int n) { return build(n); }
+      }
+      class YMaker extends Maker { Y build(int n) { return new Y(); } }
+      public class Main {
+        public static void main(String[] args) {
+          int[] arr = {1};
+          A a = new C();
+          B b = new C();
+          C c = new C();
+          X x1 = a.make(1L, 2.0, arr, "s");
+          Y y1 = b.make(1L, 2.0, arr, "s");
+          Z z1 = c.make(1L, 2.0, arr, "s");
+          System.out.println(x1.who() + y1.who() + z1.who());
+          A plain = new A();
+          B mid = new B();
+          X x2 = plain.make(1L, 2.0, arr, "s");
+          X x3 = mid.make(1L, 2.0, arr, "s");
+          Y y3 = mid.make(1L, 2.0, arr, "s");
+          System.out.println(x2.who() + x3.who() + y3.who());
+          Maker m = new YMaker();
+          X built = m.buildTwice(3);
+          YMaker ym = new YMaker();
+          Y direct = ym.build(1);
+          System.out.println(built.who() + direct.who());
+        }
+      }
+    `,
+    expectedLines: ["ZZZ", "XYY", "YY"],
+  },
+  {
     comment: "concrete subclasses of abstract classes can be instantiated",
     program: `
       abstract class Shape {
@@ -457,6 +525,90 @@ export const classTest = () => describe("fields and methods of class", () => {
     const { comment: comment, program: program, expectedLines: expectedLines } = testCase;
     it(comment, () => runTest(program, expectedLines));
   }
+
+  it("declares enough stack for calls with long and double arguments (checked by the verifier)", () => {
+    runTest(
+      `
+      class Pt {
+        long a;
+        double b;
+        Pt(long a, double b) { this.a = a; this.b = b; }
+        Pt(int x) { this.a = x; this.b = x; }
+        Pt() { this.a = 10L; this.b = 20.0; }
+        long sum(long x, double y, long z) { return a + x + z; }
+        double mix(double x, long y, double z, long w) { return x + y + z + w; }
+        static double sfn(long x, double y, double z) { return y + z; }
+        static long id(long x) { return x; }
+        static double dd(double x) { return x; }
+      }
+      class Sub extends Pt {
+        long twice(long q, double r) { return super.sum(q, r, q) + 1L; }
+      }
+      public class Main {
+        static long lf(long a, long b, long c) { return a + b + c; }
+        static double df(double a, double b, double c) { return a + b + c; }
+        public static void main(String[] args) {
+          Pt p = new Pt(1L, 2.0);
+          Pt q = new Pt(3);
+          Sub s = new Sub();
+          long r1 = p.sum(1L, 2.0, 3L);
+          double r2 = p.mix(1.0, 2L, 3.0, 4L);
+          double r3 = Pt.sfn(1L, 2.0, 3.0);
+          long r6 = lf(Pt.id(1L), Pt.id(2L), lf(1L, 2L, 3L));
+          double r7 = df(Pt.dd(1.0), df(1.0, 2.0, 3.0), Pt.dd(Pt.dd(2.0)));
+          long r8 = s.twice(2L, 3.0);
+          double r9 = Math.pow(2.0, 3.0) + Math.max(1.5, 2.5) + Math.hypot(3.0, 4.0);
+          Pt n = new Pt(Pt.id(7L), Pt.dd(1.5));
+          System.out.println(r1 + " " + r2 + " " + r3);
+          System.out.println(r6);
+          System.out.println(r7);
+          System.out.println(r8);
+          System.out.println(r9);
+          System.out.println(n.a);
+          System.out.println(q.b);
+          System.out.println(df(1, 2L, 3.0f));
+          System.out.println(lf(1, 2, 3));
+        }
+      }
+    `,
+      ["5 10.0 5.0", "9", "9.0", "15", "15.5", "7", "3.0", "6.0", "6"],
+      { verify: true }
+    );
+  });
+
+  describe("duplicate declarations", () => {
+    const compileClasses = (declarations: string) => {
+      const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+        allowedStartRules: ["CompilationUnit"],
+      });
+      return compile(
+        parser.parse(`${declarations} public class Main { public static void main(String[] a) {} }`) as AST
+      );
+    };
+
+    const rejected: [string, string, RegExp][] = [
+      ["two methods that differ only in the return type", "class A { int f() { return 1; } long f() { return 1L; } }", /method f\(\) is already defined in class A/],
+      ["two methods with the same signature", "class A { void f(int x) {} void f(int y) {} }", /method f\(int\) is already defined in class A/],
+      ["return types that differ in reference types", "class A { String f(int[] x, String s) { return s; } Object f(int[] y, String t) { return t; } }", /method f\(int\[\],String\) is already defined in class A/],
+      ["a static and an instance method with the same parameters", "class A { static void f() {} void f() {} }", /method f\(\) is already defined in class A/],
+      ["two constructors with the same parameters", "class A { A(int x) {} A(int y) {} }", /constructor A\(int\) is already defined in class A/],
+      ["duplicates in a nested class", "class O { static class A { void f() {} int f() { return 1; } } }", /method f\(\) is already defined in class O.A/],
+    ];
+    for (const [comment, declarations, message] of rejected) {
+      it(`rejects ${comment}`, () => expect(() => compileClasses(declarations)).toThrow(message));
+    }
+
+    const allowed: [string, string][] = [
+      ["overloads with other parameter types", "class A { void f(int x) {} void f(long x) {} void f(String s) {} void f(int x, int y) {} }"],
+      ["overloads that differ in the order of parameters", "class A { void f(int x, String s) {} void f(String s, int x) {} }"],
+      ["a method and a constructor with the same name", "class A { A() {} void A() {} }"],
+      ["the same signature in different classes", "class A { int f() { return 1; } } class B { long f() { return 1L; } }"],
+      ["overloaded constructors", "class A { A() {} A(int x) {} A(String s) {} }"],
+    ];
+    for (const [comment, declarations] of allowed) {
+      it(`allows ${comment}`, () => expect(() => compileClasses(declarations)).not.toThrow());
+    }
+  });
 
   describe("rejects instantiations that Java does not allow", () => {
     const classes = `
@@ -553,12 +705,12 @@ export const classTest = () => describe("fields and methods of class", () => {
         [
           "a static method that does not implement it",
           "abstract class A { abstract void f(); } class B extends A { static void f() {} }",
-          /abstract method f\(\) in A/,
+          /f\(\) in B cannot override f\(\) in A; overriding method is static/,
         ],
         [
           "a private method that does not implement it",
           "abstract class A { abstract void f(); } class B extends A { private void f() {} }",
-          /abstract method f\(\) in A/,
+          /f\(\) in B cannot override f\(\) in A; attempting to assign weaker access privileges; was package-private/,
         ],
         [
           "an unimplemented abstract method of a library class",
@@ -664,6 +816,65 @@ export const classTest = () => describe("fields and methods of class", () => {
         expect(() => compileMember("static void g(T t) {} static void f() { g(this); }")).toThrow(message));
       it("allows this in an instance method", () =>
         expect(() => compileMember("T f() { return this; }")).not.toThrow());
+    });
+
+    describe("method overriding", () => {
+      const compileClasses = (declarations: string) => {
+        const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
+          allowedStartRules: ["CompilationUnit"],
+        });
+        return compile(
+          parser.parse(`${declarations} public class Main { public static void main(String[] a) {} }`) as AST
+        );
+      };
+      const weaker = (was: string) =>
+        new RegExp(`attempting to assign weaker access privileges; was ${was}`);
+
+      const rejected: [string, string, RegExp][] = [
+        ["a different primitive return type", "abstract class A { abstract int f(); } class B extends A { long f() { return 1L; } }", /f\(\) in B cannot override f\(\) in A; return type long is not compatible with int/],
+        ["a void method returning a value", "abstract class A { abstract void f(); } class B extends A { int f() { return 1; } }", /return type int is not compatible with void/],
+        ["a value method returning void", "abstract class A { abstract int f(); } class B extends A { void f() {} }", /return type void is not compatible with int/],
+        ["an unrelated reference return type", "abstract class A { abstract String f(); } class B extends A { Integer f() { return 1; } }", /return type Integer is not compatible with String/],
+        ["a return type that is a superclass", "class X {} class Y extends X {} abstract class A { abstract Y f(); } class B extends A { X f() { return null; } }", /return type X is not compatible with Y/],
+        ["an array returned for an element type", "abstract class A { abstract int[] f(); } class B extends A { int f() { return 1; } }", /return type int is not compatible with int\[\]/],
+        ["a public abstract method implemented as package-private", "abstract class A { public abstract void f(); } class B extends A { void f() {} }", weaker("public")],
+        ["a public abstract method implemented as protected", "abstract class A { public abstract void f(); } class B extends A { protected void f() {} }", weaker("public")],
+        ["a protected abstract method implemented as package-private", "abstract class A { protected abstract void f(); } class B extends A { void f() {} }", weaker("protected")],
+        ["a public method overridden with weaker access", "class A { public void f() {} } class B extends A { void f() {} }", weaker("public")],
+        ["weaker access two levels down", "class A { public void f() {} } class B extends A { public void f() {} } class C extends B { protected void f() {} }", /f\(\) in C cannot override f\(\) in B; .*was public/],
+        ["a different return type for a plain override", "class A { int f() { return 1; } } class B extends A { long f() { return 1L; } }", /return type long is not compatible with int/],
+        ["a static method hiding an instance method", "class A { void f() {} } class B extends A { static void f() {} }", /overriding method is static/],
+        ["an instance method overriding a static method", "class A { static void f() {} } class B extends A { void f() {} }", /overridden method is static/],
+        ["a static method hiding with weaker access", "class A { public static void f() {} } class B extends A { static void f() {} }", /cannot hide f\(\) in A; .*was public/],
+        ["overriding toString without public", "class B { String toString() { return \"b\"; } }", /toString\(\) in B cannot override toString\(\) in Object; .*was public/],
+        ["overriding hashCode with another return type", "class B { public long hashCode() { return 1L; } }", /return type long is not compatible with int/],
+        ["overriding a library method with weaker access", "class E extends Exception { String getMessage() { return \"x\"; } }", /getMessage\(\) in E cannot override getMessage\(\) in Throwable/],
+        ["implementing a library abstract method with weaker access", "class N extends Number { int intValue() { return 1; } public long longValue() { return 1L; } public float floatValue() { return 1f; } public double doubleValue() { return 1.0; } }", /intValue\(\) in N cannot override intValue\(\) in Number/],
+        ["a nested class", "class O { static class A { public int f() { return 1; } } static class B extends A { int f() { return 2; } } }", /f\(\) in O.B cannot override f\(\) in O.A/],
+      ];
+      for (const [comment, declarations, message] of rejected) {
+        it(`rejects ${comment}`, () => expect(() => compileClasses(declarations)).toThrow(message));
+      }
+
+      const allowed: [string, string][] = [
+        ["the same return type and access", "abstract class A { public abstract int f(); } class B extends A { public int f() { return 1; } }"],
+        ["a subclass as the return type", "class X {} class Y extends X {} abstract class A { abstract X f(); } class B extends A { Y f() { return null; } }"],
+        ["a covariant return type, down to Object", "abstract class A { abstract Object f(); } class B extends A { String f() { return null; } }"],
+        ["covariant array element types", "class X {} class Y extends X {} abstract class A { abstract X[] f(); } class B extends A { Y[] f() { return null; } }"],
+        ["more access than a protected method", "abstract class A { protected abstract void f(); } class B extends A { public void f() {} }"],
+        ["protected for a package-private method", "abstract class A { abstract void f(); } class B extends A { protected void f() {} }"],
+        ["an overload with other parameter types", "class A { public int f(int x) { return 1; } } class B extends A { long f(long x) { return 1L; } }"],
+        ["a private method that is not inherited", "class A { private int f() { return 1; } } class B extends A { long f() { return 1L; } }"],
+        ["a static method hiding a static method", "class A { static void f() {} } class B extends A { static void f() {} }"],
+        ["a public toString", "class B { public String toString() { return \"b\"; } }"],
+        ["a public equals and hashCode", "class B { public boolean equals(Object o) { return true; } public int hashCode() { return 1; } }"],
+        ["a protected clone", "class B { protected Object clone() { return null; } }"],
+        ["a public getMessage", "class E extends Exception { public String getMessage() { return \"x\"; } }"],
+        ["a nested class", "class O { static class A { public int f() { return 1; } } static class B extends A { public int f() { return 2; } } }"],
+      ];
+      for (const [comment, declarations] of allowed) {
+        it(`allows ${comment}`, () => expect(() => compileClasses(declarations)).not.toThrow());
+      }
     });
 
     describe("final classes", () => {

@@ -82,6 +82,11 @@ export interface VariableInfo {
   typeDescriptor: string
 }
 
+/** The parameter part of a method descriptor, e.g. `(I[Ljava/lang/String;)`. */
+function parameterPart(descriptor: string): string {
+  return descriptor.slice(0, descriptor.indexOf(')') + 1)
+}
+
 function generateSymbol(name: string, type: SymbolType) {
   const symbol = {
     name: name,
@@ -541,7 +546,14 @@ export class SymbolTable {
         if (node === undefined) return
         for (const method of node.info as MethodInfos) {
           if ((depth > 0 || hideOwnPrivate) && method.accessFlags & ACC_PRIVATE) continue
-          if (merged.some(m => m.typeDescriptor === method.typeDescriptor)) continue
+          // a method hides an inherited one with the same parameters, even if it returns a
+          // subclass of the inherited method's return type
+          if (
+            merged.some(
+              m => parameterPart(m.typeDescriptor) === parameterPart(method.typeDescriptor)
+            )
+          )
+            continue
           merged.push(method)
         }
       })
@@ -562,6 +574,105 @@ export class SymbolTable {
       }
     }
     return undefined
+  }
+
+  /**
+   * Whether `to` is `from`, one of its superclasses, or an interface it implements (directly or
+   * through a superclass or superinterface). Returns `undefined` when `to` was not found but a
+   * class on the way is unknown to the symbol table, so the answer cannot be decided.
+   */
+  classReaches(from: string, to: string): boolean | undefined {
+    if (from === to) return true
+    let target: string
+    try {
+      target = this.queryClass(to).name
+    } catch (e) {
+      return undefined
+    }
+    let complete = true
+    const visited = new Set<string>()
+    const pending = [from]
+    while (pending.length > 0) {
+      let info
+      try {
+        info = this.queryClass(pending.pop() as string)
+      } catch (e) {
+        complete = false
+        continue
+      }
+      if (info.name === target) return true
+      if (visited.has(info.name)) continue
+      visited.add(info.name)
+      if (info.parentClassName) pending.push(info.parentClassName)
+      pending.push(...(info.interfaces ?? []))
+    }
+    return complete ? false : undefined
+  }
+
+  /**
+   * The methods declared by the class itself: not initialisers, and constructors only when
+   * `includeConstructors` is set.
+   */
+  getDeclaredMethods(className: string, includeConstructors = false): MethodInfos {
+    const methods: MethodInfos = []
+    for (const node of this.getClassTable(className).values()) {
+      if (!Array.isArray(node.info)) continue
+      for (const method of node.info as MethodInfos) {
+        if (method.name === '<clinit>' || (method.name === '<init>' && !includeConstructors)) {
+          continue
+        }
+        methods.push(method)
+      }
+    }
+    return methods
+  }
+
+  /**
+   * The methods of the superclasses of `method`'s class that `method` overrides or hides,
+   * nearest first: same name and parameter types, and inherited (JLS 8.4.8: not private, and
+   * not package-private in a library package).
+   */
+  findOverriddenMethods(method: MethodInfo): MethodInfos {
+    const ACC_PUBLIC = 0x0001
+    const ACC_PRIVATE = 0x0002
+    const ACC_PROTECTED = 0x0004
+
+    const overridden: MethodInfos = []
+    const visited = new Set<string>()
+    let name: string | undefined = method.className
+    while (name !== undefined && !visited.has(name)) {
+      visited.add(name)
+      let parent: string | undefined
+      let table: Table
+      try {
+        parent = this.queryClass(name).parentClassName
+        if (parent === undefined) break
+        table = this.getClassTable(parent)
+      } catch (e) {
+        break
+      }
+      const node = table.get(generateSymbol(method.name, SymbolType.METHOD))
+      for (const candidate of node !== undefined && Array.isArray(node.info)
+        ? (node.info as MethodInfos)
+        : []) {
+        const isInherited =
+          !(candidate.accessFlags & ACC_PRIVATE) &&
+          (candidate.accessFlags & (ACC_PUBLIC | ACC_PROTECTED) || !parent.includes('/'))
+        if (
+          isInherited &&
+          parameterPart(candidate.typeDescriptor) === parameterPart(method.typeDescriptor)
+        ) {
+          overridden.push(candidate)
+        }
+      }
+      name = parent
+    }
+    return overridden
+  }
+
+  /** The nearest method that `method` overrides or hides, if any. */
+  findOverriddenMethod(method: MethodInfo): MethodInfo | undefined {
+    return this.findOverriddenMethods(method)[0]
   }
 
   /**
@@ -742,9 +853,12 @@ export class SymbolTable {
     ) as MethodInfos | undefined
     for (const methodInfo of inherited ?? []) {
       if (
-        !(results as Array<MethodInfo>).some(
-          r =>
-            r.className === methodInfo.className && r.typeDescriptor === methodInfo.typeDescriptor
+        !(results as Array<MethodInfo>).some(r =>
+          r.className === methodInfo.className
+            ? r.typeDescriptor === methodInfo.typeDescriptor
+            : // declared nearer, so it hides the inherited method with the same parameters
+              r.name === methodInfo.name &&
+              parameterPart(r.typeDescriptor) === parameterPart(methodInfo.typeDescriptor)
         )
       ) {
         results.push(methodInfo)

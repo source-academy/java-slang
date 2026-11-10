@@ -401,31 +401,7 @@ function areClassTypesCompatible(fromType: string, toType: string, cg: CodeGener
  * class on the way is unknown to the symbol table, so the answer cannot be decided.
  */
 function classReaches(from: string, to: string, cg: CodeGenerator): boolean | undefined {
-  if (from === to) return true
-  let target: string
-  try {
-    target = cg.symbolTable.queryClass(to).name
-  } catch (e) {
-    return undefined
-  }
-  let complete = true
-  const visited = new Set<string>()
-  const pending = [from]
-  while (pending.length > 0) {
-    let info
-    try {
-      info = cg.symbolTable.queryClass(pending.pop() as string)
-    } catch (e) {
-      complete = false
-      continue
-    }
-    if (info.name === target) return true
-    if (visited.has(info.name)) continue
-    visited.add(info.name)
-    if (info.parentClassName) pending.push(info.parentClassName)
-    pending.push(...(info.interfaces ?? []))
-  }
-  return complete ? false : undefined
+  return cg.symbolTable.classReaches(from, to)
 }
 
 /** `className` followed by its superclasses, nearest first (ending with java/lang/Object). */
@@ -458,9 +434,11 @@ function methodsOfClass(
   for (const method of candidates) {
     const depth = chain.indexOf(method.className)
     if (depth < 0) continue
-    const existing = nearest.get(method.typeDescriptor)
+    // an override hides the method with the same parameters even if it returns a subclass
+    const signature = method.typeDescriptor.slice(0, method.typeDescriptor.indexOf(')') + 1)
+    const existing = nearest.get(signature)
     if (existing === undefined || depth < chain.indexOf(existing.className)) {
-      nearest.set(method.typeDescriptor, method)
+      nearest.set(signature, method)
     }
   }
   return [...nearest.values()]
@@ -1778,14 +1756,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     if (chosen) {
       const params = parseParams(chosen.typeDescriptor)
+      // the new object is on the stack twice (NEW, DUP) below the arguments; a long or double
+      // argument takes two slots
+      let pushedSlots = 2
       argLst.forEach((x, i) => {
         const argCompileResult = compile(x, cg)
         const conv = handleImplicitTypeConversion(argCompileResult.resultType, params[i], cg)
         maxStack = Math.max(
           maxStack,
-          i + 2 + argCompileResult.stackSize,
-          i + 2 + slotsOf(params[i]) + conv
+          pushedSlots + argCompileResult.stackSize + conv,
+          pushedSlots + slotsOf(params[i])
         )
+        pushedSlots += slotsOf(params[i])
       })
       const method = cg.constantPoolManager.indexMethodrefInfo(
         chosen.className,
@@ -1798,10 +1780,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     // No applicable constructor found: fall back to matching the raw argument descriptor.
     const rawArgTypes: Array<UnannType> = []
-    argLst.forEach((x, i) => {
+    let rawPushedSlots = 2
+    argLst.forEach(x => {
       const argCompileResult = compile(x, cg)
-      maxStack = Math.max(maxStack, i + 2 + argCompileResult.stackSize)
+      maxStack = Math.max(maxStack, rawPushedSlots + argCompileResult.stackSize)
       rawArgTypes.push(argCompileResult.resultType)
+      rawPushedSlots += slotsOf(argCompileResult.resultType)
     })
     const argDescriptor = '(' + rawArgTypes.join('') + ')'
     for (let i = 0; i < methodInfos.length; i++) {
@@ -1948,10 +1932,18 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const fullDescriptor = selectedMethod.typeDescriptor
     const paramPart = fullDescriptor.slice(1, fullDescriptor.indexOf(')'))
     const params = paramPart.match(/(\[+[BCDFIJSZ])|(\[+L[^;]+;)|[BCDFIJSZ]|L[^;]+;/g) || []
+    // the receiver takes a slot (an over-estimate for a static method), and a long or double
+    // argument takes two slots
+    let pushedSlots = 1
     n.argumentList.forEach((arg, i) => {
       const argRes = compile(arg, cg)
       const conv = handleImplicitTypeConversion(argRes.resultType, params[i] || '', cg)
-      maxStack = Math.max(maxStack, i + 1 + argRes.stackSize + conv)
+      maxStack = Math.max(
+        maxStack,
+        pushedSlots + argRes.stackSize + conv,
+        pushedSlots + slotsOf(params[i] || '')
+      )
+      pushedSlots += slotsOf(params[i] || '')
     })
 
     // Emit the method call.
@@ -1986,6 +1978,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       }
     }
     resultType = selectedMethod.typeDescriptor.slice(selectedMethod.typeDescriptor.indexOf(')') + 1)
+    maxStack = Math.max(maxStack, pushedSlots, slotsOf(resultType))
     return { stackSize: maxStack, resultType: resultType }
   },
 

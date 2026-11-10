@@ -101,3 +101,15 @@ export class CannotInheritFromFinalClassError extends CompileError {
     super(`cannot inherit from final ${name}`)
   }
 }
+
+export class InvalidOverrideError extends CompileError {
+  constructor(overriding: string, overridden: string, verb: 'override' | 'hide', reason: string) {
+    super(`${overriding} cannot ${verb} ${overridden}; ${reason}`)
+  }
+}
+
+export class MethodAlreadyDefinedError extends CompileError {
+  constructor(kind: 'method' | 'constructor', signature: string, className: string) {
+    super(`${kind} ${signature} is already defined in class ${className}`)
+  }
+}
