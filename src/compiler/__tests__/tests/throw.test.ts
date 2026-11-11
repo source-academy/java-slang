@@ -1546,6 +1546,279 @@ export const throwTest = () =>
           '',
           '',
           undefined
+        ],
+        [
+          'catching the same exception class twice',
+          '',
+          'try { s.risky(); } catch (AppEx e) { } catch (AppEx e) { }',
+          '',
+          /exception AppEx has already been caught/
+        ],
+        [
+          'catching the same unchecked exception class twice',
+          '',
+          'try { s.safe(); } catch (RtEx e) { } catch (RtEx e) { }',
+          '',
+          /exception RtEx has already been caught/
+        ],
+        [
+          'catching Exception twice',
+          '',
+          'try { s.safe(); } catch (Exception e) { } catch (Exception e) { }',
+          '',
+          /exception Exception has already been caught/
+        ],
+        [
+          'catching a subclass after its superclass',
+          '',
+          'try { s.risky(); } catch (AppEx e) { } catch (SubEx e) { }',
+          '',
+          /exception SubEx has already been caught/
+        ],
+        [
+          'catching a subclass two levels down after its superclass',
+          'class DeepEx extends SubEx { } class RtSub extends RtEx { } class Deep { void deep() throws DeepEx { } }',
+          'Deep d = new Deep(); try { d.deep(); } catch (AppEx e) { } catch (DeepEx e) { }',
+          '',
+          /exception DeepEx has already been caught/
+        ],
+        [
+          'catching a subclass after its direct superclass',
+          'class DeepEx extends SubEx { } class RtSub extends RtEx { } class Deep { void deep() throws DeepEx { } }',
+          'Deep d = new Deep(); try { d.deep(); } catch (SubEx e) { } catch (DeepEx e) { }',
+          '',
+          /exception DeepEx has already been caught/
+        ],
+        [
+          'catching a class after Exception',
+          '',
+          'try { s.risky(); } catch (Exception e) { } catch (AppEx e) { }',
+          '',
+          /exception AppEx has already been caught/
+        ],
+        [
+          'catching Exception after Throwable',
+          '',
+          'try { s.risky(); } catch (Throwable e) { } catch (Exception e) { }',
+          '',
+          /exception Exception has already been caught/
+        ],
+        [
+          'catching RuntimeException after Exception',
+          '',
+          'try { s.safe(); } catch (Exception e) { } catch (RuntimeException e) { }',
+          '',
+          /exception RuntimeException has already been caught/
+        ],
+        [
+          'catching a user unchecked subclass after its superclass',
+          'class DeepEx extends SubEx { } class RtSub extends RtEx { } class Deep { void deep() throws DeepEx { } }',
+          'try { s.safe(); } catch (RtEx e) { } catch (RtSub e) { }',
+          '',
+          /exception RtSub has already been caught/
+        ],
+        [
+          'catching an error after Throwable',
+          '',
+          'try { s.safe(); } catch (Throwable e) { } catch (MyErr e) { }',
+          '',
+          /exception MyErr has already been caught/
+        ],
+        [
+          'catching a library exception after its superclass',
+          '',
+          'try { s.safe(); } catch (RuntimeException e) { } catch (ArithmeticException e) { }',
+          '',
+          /exception ArithmeticException has already been caught/
+        ],
+        [
+          'catching a library subclass after Exception',
+          '',
+          'try { s.safe(); } catch (Exception e) { } catch (IllegalStateException e) { }',
+          '',
+          /exception IllegalStateException has already been caught/
+        ],
+        [
+          'catching a subclass in the third clause',
+          '',
+          'try { s.two(); } catch (AppEx e) { } catch (OtherEx e) { } catch (SubEx e) { }',
+          '',
+          /exception SubEx has already been caught/
+        ],
+        [
+          'catching a subclass of an earlier clause after an unrelated one',
+          '',
+          'try { s.risky(); } catch (RtEx e) { } catch (AppEx e) { } catch (SubEx e) { }',
+          '',
+          /exception SubEx has already been caught/
+        ],
+        [
+          'catching a subclass of a multi-catch alternative',
+          '',
+          'try { s.two(); } catch (AppEx | OtherEx e) { } catch (SubEx e) { }',
+          '',
+          /exception SubEx has already been caught/
+        ],
+        [
+          'catching an alternative of an earlier multi-catch',
+          '',
+          'try { s.two(); } catch (AppEx | OtherEx e) { } catch (OtherEx e) { }',
+          '',
+          /exception OtherEx has already been caught/
+        ],
+        [
+          'a multi-catch with an alternative that is already caught',
+          '',
+          'try { s.two(); } catch (AppEx e) { } catch (SubEx | OtherEx e) { }',
+          '',
+          /exception SubEx has already been caught/
+        ],
+        [
+          'a multi-catch with a subclass of an earlier unchecked clause',
+          'class DeepEx extends SubEx { } class RtSub extends RtEx { } class Deep { void deep() throws DeepEx { } }',
+          'try { s.safe(); } catch (RtEx | MyErr e) { } catch (RtSub e) { }',
+          '',
+          /exception RtSub has already been caught/
+        ],
+        [
+          'a multi-catch whose alternative repeats an earlier multi-catch',
+          '',
+          'try { s.safe(); } catch (RtEx | MyErr e) { } catch (RtEx | OtherEx e) { }',
+          '',
+          /exception RtEx has already been caught/
+        ],
+        [
+          'an already caught clause with a finally',
+          '',
+          'try { s.risky(); } catch (AppEx e) { } catch (SubEx e) { } finally { }',
+          '',
+          /exception SubEx has already been caught/
+        ],
+        [
+          'an already caught clause in a try inside a catch',
+          '',
+          'try { s.risky(); } catch (AppEx e) { try { s.risky(); } catch (AppEx e2) { } catch (SubEx e2) { } }',
+          '',
+          /exception SubEx has already been caught/
+        ],
+        [
+          'catching a library subclass after its superclass',
+          '',
+          'try { int x = Integer.parseInt("1"); } catch (IllegalArgumentException e) { } catch (NumberFormatException e) { }',
+          '',
+          /exception NumberFormatException has already been caught/
+        ],
+        [
+          'catching a checked library exception after Exception',
+          '',
+          'try { o.wait(); } catch (Exception e) { } catch (InterruptedException e) { }',
+          '',
+          /exception InterruptedException has already been caught/
+        ],
+        [
+          'catching the superclass after the subclass',
+          'class DeepEx extends SubEx { } class RtSub extends RtEx { } class Deep { void deep() throws DeepEx { } }',
+          'Deep d = new Deep(); try { d.deep(); } catch (DeepEx e) { } catch (SubEx e) { } catch (AppEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching the direct superclass after the subclass',
+          '',
+          'try { s.risky(); } catch (SubEx e) { } catch (AppEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching an unchecked superclass after the subclass',
+          'class DeepEx extends SubEx { } class RtSub extends RtEx { } class Deep { void deep() throws DeepEx { } }',
+          'try { s.safe(); } catch (RtSub e) { } catch (RtEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching library exceptions from the most to the least specific',
+          '',
+          'try { s.safe(); } catch (ArithmeticException e) { } catch (RuntimeException e) { } catch (Exception e) { } catch (Throwable t) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching an error before Throwable',
+          '',
+          'try { s.safe(); } catch (MyErr e) { } catch (Error e) { } catch (Throwable t) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching unrelated exceptions',
+          '',
+          'try { s.two(); } catch (AppEx e) { } catch (OtherEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching an unchecked exception and an error',
+          '',
+          'try { s.safe(); } catch (RtEx e) { } catch (MyErr e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching an unchecked exception, an error and then Exception',
+          '',
+          'try { s.safe(); } catch (RtEx e) { } catch (MyErr e) { } catch (Exception e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching an error before an unchecked exception',
+          '',
+          'try { s.safe(); } catch (Error e) { } catch (RuntimeException e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a multi-catch followed by a superclass of its alternatives',
+          '',
+          'try { s.safe(); } catch (RtEx | MyErr e) { } catch (Exception e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a multi-catch followed by a superclass of one alternative',
+          '',
+          'try { s.safe(); } catch (RtEx | MyErr e) { } catch (Error e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a multi-catch of subclasses followed by their superclass',
+          'class DeepEx extends SubEx { } class RtSub extends RtEx { } class Deep { void deep() throws DeepEx { } }',
+          'try { s.safe(); } catch (RtSub | MyErr e) { } catch (RtEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'a multi-catch of subclasses followed by a superclass',
+          '',
+          'try { s.two(); } catch (SubEx | OtherEx e) { } catch (AppEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'the same class in clauses of different try statements',
+          '',
+          'try { s.risky(); } catch (AppEx e) { } try { s.risky(); } catch (AppEx e) { }',
+          '',
+          undefined
+        ],
+        [
+          'catching in an outer try what an inner try already caught',
+          '',
+          'try { try { s.risky(); } catch (AppEx e) { } } catch (AppEx e) { }',
+          '',
+          /exception AppEx is never thrown in body of corresponding try statement/
         ]
       ]
       for (const [comment, extra, body, throwsClause, error] of cases) {

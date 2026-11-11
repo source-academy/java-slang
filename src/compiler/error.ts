@@ -152,3 +152,9 @@ export class LossyConversionError extends CompileError {
     super(`incompatible types: possible lossy conversion from ${from} to ${to}`)
   }
 }
+
+export class ExceptionAlreadyCaughtError extends CompileError {
+  constructor(exception: string) {
+    super(`exception ${exception} has already been caught`)
+  }
+}

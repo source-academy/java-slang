@@ -41,6 +41,7 @@ import {
   BadOperandTypesError,
   ConstructNotSupportedError,
   EnumInstantiationError,
+  ExceptionAlreadyCaughtError,
   ExceptionNeverThrownError,
   InconvertibleTypesError,
   LossyConversionError,
@@ -1132,6 +1133,8 @@ function analyseCatchClauses(
   const reaches = (from: string, to: string) => cg.symbolTable.classReaches(from, to)
   const rethrowTypes: string[][] = []
   let remaining = [...tryThrown]
+  // the exception classes that the clauses before the current one catch
+  const alreadyCaught: string[] = []
 
   for (const { alternatives } of clauses) {
     // JLS 14.20: the type of a catch parameter is a subclass of Throwable
@@ -1153,6 +1156,14 @@ function analyseCatchClauses(
       }
     }
 
+    // JLS 14.21: a catch clause is unreachable if an earlier clause of the same try statement
+    // catches the same class or a superclass of it
+    for (const { binary } of alternatives) {
+      if (alreadyCaught.some(earlier => reaches(binary, earlier) === true)) {
+        throw new ExceptionAlreadyCaughtError(exceptionDisplayName(binary))
+      }
+    }
+
     // JLS 11.2.3: a checked exception class other than Exception and Throwable can only be
     // caught if the try block can throw it, a subclass of it or a superclass of it
     for (const { binary } of alternatives) {
@@ -1169,6 +1180,7 @@ function analyseCatchClauses(
     }
 
     const names = alternatives.map(alternative => alternative.binary)
+    alreadyCaught.push(...names)
     const isCaught = (thrown: string) => names.some(name => reaches(thrown, name) === true)
     rethrowTypes.push(remaining.filter(isCaught))
     remaining = remaining.filter(thrown => !isCaught(thrown))
