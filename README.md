@@ -52,7 +52,7 @@ The Java language in Source Academy is based on the [Java 8 SE](https://docs.ora
 - Implicit type widening
 - Explicit type conversion
 - Basic exception/error messages
-- Many standard libraries including system calls e.g. System.out.println
+- Many standard libraries including system calls e.g. `System.out.println`
 - Static nested classes
 - Switch statements
 - Multiple classes in one file
@@ -64,7 +64,7 @@ The Java language in Source Academy is based on the [Java 8 SE](https://docs.ora
 - Generics
 - Multi-file programs
 - Interfaces
-- Explicit constructor invocation using super(...) and this(...)
+- Explicit constructor invocation using `super(...)` and `this(...)`
 - Possible upgrading to follow newer versions of Java, e.g. 15
 
 ## Testing
