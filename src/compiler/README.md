@@ -22,7 +22,7 @@ This is a bookkeeping of the planned scope of the compiler. It will be updated f
 - Many standard library classes and methods (in import/generated-lib-info.json)
 - Switch statements
 - Enums
-- Static inner classes
+- Static nested classes
 
 
 
@@ -33,8 +33,8 @@ This is a bookkeeping of the planned scope of the compiler. It will be updated f
 - Interfaces
 - Generics
 - Newer keywords, e.g. `yield`
-- Explicit constructors
-- Multi-dimensional arrays & array instantiation using `new` keyword
+- Explicit constructor invocation (`super(...)` and `this(...)`)
+- Multi-dimensional arrays
 
 
 **Testing**
