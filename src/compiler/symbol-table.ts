@@ -1,6 +1,5 @@
 import { UnannType } from '../ast/types/classes'
 import { ImportDeclaration } from '../ast/types/packages-and-modules'
-import { METHOD_FLAGS } from '../ClassFile/types/methods'
 import {
   generateClassAccessFlags,
   generateFieldAccessFlags,
@@ -8,7 +7,6 @@ import {
 } from './compiler-utils'
 import {
   InvalidMethodCallError,
-  OverrideFinalMethodError,
   SymbolCannotBeResolvedError,
   SymbolNotFoundError,
   SymbolRedeclarationError,
@@ -335,24 +333,6 @@ export class SymbolTable {
 
   insertMethodInfo(info: MethodInfo) {
     const key = generateSymbol(info.name, SymbolType.METHOD)
-
-    for (let i = this.curClassIdx - 1; i > 0; i--) {
-      const parentTable = this.tables[i]
-      if (parentTable.has(key)) {
-        const parentMethods = parentTable.get(key)!.info
-        if (Array.isArray(parentMethods)) {
-          for (const m of parentMethods) {
-            if (
-              m.typeDescriptor === info.typeDescriptor &&
-              m.accessFlags & METHOD_FLAGS.ACC_FINAL &&
-              m.className == info.parentClassName
-            ) {
-              throw new OverrideFinalMethodError(info.name)
-            }
-          }
-        }
-      }
-    }
 
     this.curTable = this.tables[this.curIdx]
     if (!this.curTable.has(key)) {

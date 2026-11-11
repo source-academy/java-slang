@@ -163,6 +163,7 @@ export class Compiler {
     const ACC_PROTECTED = 0x0004
     const ACC_STATIC = 0x0008
     const ACC_PRIVATE = 0x0002
+    const ACC_FINAL = 0x0010
     // public > protected > package-private > private
     const accessLevel = (flags: number) =>
       flags & ACC_PUBLIC ? 3 : flags & ACC_PROTECTED ? 2 : flags & ACC_PRIVATE ? 0 : 1
@@ -207,6 +208,20 @@ export class Compiler {
 
       if (isStatic !== wasStatic) {
         fail(isStatic ? 'overriding method is static' : 'overridden method is static')
+      }
+      // JLS 8.4.8.1, 8.4.8.2: a method cannot override or hide a final method of any superclass,
+      // not only of the one it directly extends
+      const finalMethod = this.symbolTable
+        .findOverriddenMethods(method)
+        .find(inherited => inherited.accessFlags & ACC_FINAL)
+      if (finalMethod !== undefined) {
+        const finalIsStatic = (finalMethod.accessFlags & ACC_STATIC) !== 0
+        throw new InvalidOverrideError(
+          describe(method),
+          describe(finalMethod),
+          isStatic && finalIsStatic ? 'hide' : 'override',
+          finalIsStatic ? 'overridden method is static final' : 'overridden method is final'
+        )
       }
       if (accessLevel(method.accessFlags) < accessLevel(overridden.accessFlags)) {
         fail(

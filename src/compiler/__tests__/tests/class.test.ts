@@ -851,6 +851,21 @@ export const classTest = () => describe("fields and methods of class", () => {
         ["overriding a library method with weaker access", "class E extends Exception { String getMessage() { return \"x\"; } }", /getMessage\(\) in E cannot override getMessage\(\) in Throwable/],
         ["implementing a library abstract method with weaker access", "class N extends Number { int intValue() { return 1; } public long longValue() { return 1L; } public float floatValue() { return 1f; } public double doubleValue() { return 1.0; } }", /intValue\(\) in N cannot override intValue\(\) in Number/],
         ["a nested class", "class O { static class A { public int f() { return 1; } } static class B extends A { int f() { return 2; } } }", /f\(\) in O.B cannot override f\(\) in O.A/],
+        ["a method that overrides a final method of its parent", "class A { final void f() { } } class B extends A { void f() { } }", /f\(\) in B cannot override f\(\) in A; overridden method is final/],
+        ["a method that overrides a final method of its grandparent", "class A { final void f() { } } class B extends A { } class C extends B { void f() { } }", /f\(\) in C cannot override f\(\) in A; overridden method is final/],
+        ["a method that overrides a final method three levels up", "class A { final void f() { } } class B extends A { } class C extends B { } class D extends C { void f() { } }", /f\(\) in D cannot override f\(\) in A; overridden method is final/],
+        ["a final method of an ancestor when the parent declares other methods", "class A { final void f() { } } class B extends A { void g() { } } class C extends B { void f() { } }", /f\(\) in C cannot override f\(\) in A; overridden method is final/],
+        ["a final method of an ancestor declared after the subclass", "class C extends B { void f() { } } class B extends A { } class A { final void f() { } }", /f\(\) in C cannot override f\(\) in A; overridden method is final/],
+        ["a method that overrides a final method that overrode a non-final one", "class A { void f() { } } class B extends A { final void f() { } } class C extends B { void f() { } }", /f\(\) in C cannot override f\(\) in B; overridden method is final/],
+        ["a final method declared in a middle class", "class A { void f() { } } class B extends A { final void f() { } } class C extends B { } class D extends C { void f() { } }", /f\(\) in D cannot override f\(\) in B; overridden method is final/],
+        ["a final method in a nested class hierarchy", "class O { static class A { final void f() { } } static class B extends A { } static class C extends B { void f() { } } }", /f\(\) in O.C cannot override f\(\) in O.A; overridden method is final/],
+        ["a static method that hides a final static method", "class A { static final void f() { } } class B extends A { static void f() { } }", /f\(\) in B cannot hide f\(\) in A; overridden method is static final/],
+        ["a static method that hides a final static method of a grandparent", "class A { static final void f() { } } class B extends A { } class C extends B { static void f() { } }", /f\(\) in C cannot hide f\(\) in A; overridden method is static final/],
+        ["overriding Object.notify", "class C { public void notify() { } }", /notify\(\) in C cannot override notify\(\) in Object; overridden method is final/],
+        ["overriding Object.notifyAll", "class C { public void notifyAll() { } }", /notifyAll\(\) in C cannot override notifyAll\(\) in Object; overridden method is final/],
+        ["overriding Object.wait", "class C { public void wait() { } }", /wait\(\) in C cannot override wait\(\) in Object; overridden method is final/],
+        ["overriding a final library method through an intermediate class", "class P { } class C extends P { public void notify() { } }", /notify\(\) in C cannot override notify\(\) in Object; overridden method is final/],
+        ["overriding a final method of a user class that extends a library class", "class C extends Number { public int intValue() { return 1; } public long longValue() { return 1L; } public float floatValue() { return 1f; } public double doubleValue() { return 1.0; } public final int hashCode() { return 1; } } class D extends C { public int hashCode() { return 2; } }", /hashCode\(\) in D cannot override hashCode\(\) in C; overridden method is final/],
       ];
       for (const [comment, declarations, message] of rejected) {
         it(`rejects ${comment}`, () => expect(() => compileClasses(declarations)).toThrow(message));
@@ -871,6 +886,12 @@ export const classTest = () => describe("fields and methods of class", () => {
         ["a protected clone", "class B { protected Object clone() { return null; } }"],
         ["a public getMessage", "class E extends Exception { public String getMessage() { return \"x\"; } }"],
         ["a nested class", "class O { static class A { public int f() { return 1; } } static class B extends A { public int f() { return 2; } } }"],
+        ["an overload of a final method", "class A { final void f() { } } class B extends A { } class C extends B { void f(int x) { } }"],
+        ["another method of a class that has a final method", "class A { final void f() { } void g() { } } class B extends A { } class C extends B { void g() { } }"],
+        ["a private final method that is not inherited", "class A { private final void f() { } } class B extends A { } class C extends B { void f() { } }"],
+        ["a non-final static method hidden two levels down", "class A { static void f() { } } class B extends A { } class C extends B { static void f() { } }"],
+        ["a final method in a class that overrides nothing", "class A { final void f() { } void g() { } }"],
+        ["a non-final library method", "class E1 extends Exception { } class E2 extends E1 { public String getMessage() { return \"x\"; } }"],
       ];
       for (const [comment, declarations] of allowed) {
         it(`allows ${comment}`, () => expect(() => compileClasses(declarations)).not.toThrow());

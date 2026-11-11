@@ -58,12 +58,6 @@ export class AmbiguousMethodCallError extends CompileError {
   }
 }
 
-export class OverrideFinalMethodError extends CompileError {
-  constructor(name: string) {
-    super(`Cannot override final method ${name}`)
-  }
-}
-
 export class InconvertibleTypesError extends CompileError {
   constructor(from: string, to: string) {
     super(`incompatible types: ${from} cannot be converted to ${to}`)
