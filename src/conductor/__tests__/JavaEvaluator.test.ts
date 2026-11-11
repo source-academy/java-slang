@@ -402,6 +402,40 @@ describe('JavaEvaluator', () => {
     expect(mock.outputs).toEqual(['7', '2', 'second 1', '1', '6'])
   })
 
+  test('discards the value of a call or an instantiation used as a statement', async () => {
+    const mock = new MockConductor()
+    const ev = new JavaEvaluator(mock as any)
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateChunk(`
+        class Counter { static int made; Counter() { made = made + 1; } }
+        public class Main {
+          static int total;
+          static int next() { total = total + 1; return total; }
+          static long wide() { total = total + 1; return 5L; }
+          static double real() { total = total + 1; return 1.5; }
+          static String text() { total = total + 1; return "t"; }
+          public static void main(String[] args) {
+            for (int i = 0; i < 100; i++) {
+              next();
+              wide();
+              real();
+              text();
+              new Counter();
+            }
+            System.out.println(total);
+            System.out.println(Counter.made);
+          }
+        }
+      `)
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
+    expect(mock.errors).toHaveLength(0)
+    expect(mock.outputs).toEqual(['400', '100'])
+  })
+
   test('stops the program and reports an exception that is never caught', async () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)

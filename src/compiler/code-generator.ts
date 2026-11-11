@@ -2277,7 +2277,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     if (stmtExp.kind === 'PrefixExpression' || stmtExp.kind === 'PostfixExpression') {
       return codeGenerators['IncrementDecrementExpression'](stmtExp, cg)
     }
-    return compile(stmtExp, cg)
+    const res = compile(stmtExp, cg)
+    // A call or an instantiation leaves its value on the stack, which a statement discards. (A
+    // void call has the type V, and an assignment, which leaves nothing, the empty type.)
+    if (res.resultType !== EMPTY_TYPE && res.resultType !== 'V') {
+      cg.code.push(slotsOf(res.resultType) === 2 ? OPCODE.POP2 : OPCODE.POP)
+    }
+    return res
   },
 
   MethodInvocation: (node: Node, cg: CodeGenerator) => {

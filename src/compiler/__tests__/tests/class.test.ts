@@ -576,6 +576,37 @@ export const classTest = () => describe("fields and methods of class", () => {
     );
   });
 
+  it("discards the value of a call or an instantiation used as a statement (checked by the verifier)", () => {
+    runTest(
+      `
+      class Counter { static int made; Counter() { made = made + 1; } }
+      public class Main {
+        static int total;
+        static int next() { total = total + 1; return total; }
+        static long wide() { total = total + 1; return 5L; }
+        static double real() { total = total + 1; return 1.5; }
+        static String text() { total = total + 1; return "t"; }
+        public static void main(String[] args) {
+          next();
+          next();
+          wide();
+          wide();
+          real();
+          real();
+          text();
+          text();
+          new Counter();
+          new Counter();
+          System.out.println(total);
+          System.out.println(Counter.made);
+        }
+      }
+    `,
+      ["8", "2"],
+      { verify: true }
+    );
+  });
+
   describe("duplicate declarations", () => {
     const compileClasses = (declarations: string) => {
       const parser = peggy.generate(peggyFunctions + javaPegGrammar, {
