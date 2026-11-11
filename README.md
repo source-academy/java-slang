@@ -64,7 +64,7 @@ The Java language in Source Academy is based on the [Java 8 SE](https://docs.ora
 - Generics
 - Multi-file programs
 - Interfaces
-- Explicit constructor invocation (i.e. defining custom constructors)
+- Explicit constructor invocation using super(...) and this(...)
 - Possible upgrading to follow newer versions of Java, e.g. 15
 
 ## Testing
