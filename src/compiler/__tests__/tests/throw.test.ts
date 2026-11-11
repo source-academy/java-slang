@@ -623,6 +623,428 @@ const testCases: testCase[] = [
       'NetworkException: network network',
       'InputException: input'
     ]
+  },
+  {
+    comment:
+      'a finally that completes abruptly discards the exception, and break and continue only run the finally blocks they leave',
+    program: `
+      class First extends RuntimeException { public String getMessage() { return "first"; } }
+      class Second extends RuntimeException { public String getMessage() { return "second"; } }
+      public class Main {
+        static String trace = "";
+        static int count;
+
+        // --- a finally that completes abruptly discards the exception of the try or catch
+        static void tryThrowsFinallyThrows() {
+          try { throw new First(); } finally { throw new Second(); }
+        }
+        static void tryOkFinallyThrows() {
+          try { trace = "ok"; } finally { throw new Second(); }
+        }
+        static void catchThrowsFinallyThrows() {
+          try { throw new First(); } catch (First e) { throw new First(); } finally { throw new Second(); }
+        }
+        static int tryThrowsFinallyReturns() {
+          try { throw new First(); } finally { return 7; }
+        }
+        static int catchThrowsFinallyReturns() {
+          try { throw new First(); } catch (First e) { throw new First(); } finally { return 8; }
+        }
+        static int tryReturnsFinallyReturns() {
+          try { return 1; } finally { return 2; }
+        }
+        static int tryReturnsFinallyThrows() {
+          try { return 1; } finally { throw new Second(); }
+        }
+        static int tryReturnsFinallyNormal() {
+          int x = 1;
+          try { return x; } finally { x = 5; }
+        }
+        static int loopBreak() {
+          int n = 0;
+          for (int i = 0; i < 3; i++) {
+            try { throw new First(); } finally { n = n + 1; break; }
+          }
+          return n;
+        }
+        static int loopContinue() {
+          int n = 0;
+          for (int i = 0; i < 3; i++) {
+            try { throw new First(); } finally { n = n + 10; continue; }
+          }
+          return n;
+        }
+        static void nestedFinally() {
+          try {
+            try { throw new First(); } finally { trace = "inner"; }
+          } finally {
+            throw new Second();
+          }
+        }
+        static void finallyThrowsCaughtOutside() {
+          try {
+            try { throw new First(); } finally { throw new Second(); }
+          } catch (First e) {
+            trace = "caught first";
+          } catch (Second e) {
+            trace = "caught second";
+          }
+        }
+        static int returnInNestedFinally() {
+          try {
+            try { throw new First(); } finally { return 1; }
+          } finally {
+            trace = "outer ran";
+          }
+        }
+        static int outerFinallyOverrides() {
+          try {
+            try { return 1; } finally { trace = "inner ran"; }
+          } finally {
+            return 2;
+          }
+        }
+
+        // --- break and continue only run the finally blocks they leave
+        static int breakInsideTry() {
+          count = 0;
+          try {
+            for (int i = 0; i < 3; i++) {
+              if (i == 1) { break; }
+            }
+            return 1;
+          } finally {
+            count = count + 1;
+          }
+        }
+        static int continueInsideTry() {
+          count = 0;
+          try {
+            for (int i = 0; i < 3; i++) {
+              if (i == 1) { continue; }
+              count = count + 10;
+            }
+            return 1;
+          } finally {
+            count = count + 100;
+          }
+        }
+        static int finallyInsideLoop() {
+          count = 0;
+          for (int i = 0; i < 4; i++) {
+            try {
+              if (i == 1) { continue; }
+              if (i == 3) { break; }
+              count = count + 1;
+            } finally {
+              count = count + 100;
+            }
+          }
+          return count;
+        }
+        static int twoLevels() {
+          count = 0;
+          try {
+            for (int i = 0; i < 3; i++) {
+              try {
+                if (i == 0) { continue; }
+                if (i == 2) { break; }
+                count = count + 1;
+              } finally {
+                count = count + 10;
+              }
+            }
+          } finally {
+            count = count + 1000;
+          }
+          return count;
+        }
+        static int switchInsideTry(int k) {
+          count = 0;
+          try {
+            switch (k) {
+              case 1:
+                count = count + 1;
+                break;
+              default:
+                count = count + 2;
+            }
+            return count;
+          } finally {
+            count = count + 100;
+          }
+        }
+        static int switchWithTryInside(int k) {
+          count = 0;
+          switch (k) {
+            case 1:
+              try {
+                count = count + 1;
+                break;
+              } finally {
+                count = count + 100;
+              }
+            default:
+              count = count + 2;
+          }
+          return count;
+        }
+        static int returnThroughTwo() {
+          count = 0;
+          try {
+            try {
+              return 5;
+            } finally {
+              count = count + 1;
+            }
+          } finally {
+            count = count + 10;
+          }
+        }
+
+        // --- variables declared in a finally block
+        static int variablesInFinally() {
+          int total = 0;
+          try {
+            total = total + 1;
+            return total;
+          } catch (First e) {
+            total = total + 100;
+          } finally {
+            int local = 5;
+            total = total + local;
+            count = total;
+          }
+          return -1;
+        }
+        static int variablesInNestedFinally(int mode) {
+          int sum = 0;
+          try {
+            try {
+              if (mode == 1) { throw new First(); }
+              sum = sum + 1;
+            } catch (First e) {
+              sum = sum + 10;
+            } finally {
+              int a = 2;
+              sum = sum + a;
+            }
+          } finally {
+            int a = 200;
+            sum = sum + a;
+          }
+          return sum;
+        }
+        static int loopWithFinallyVariable() {
+          int sum = 0;
+          for (int i = 0; i < 3; i++) {
+            try {
+              if (i == 1) { continue; }
+              sum = sum + 1;
+            } finally {
+              int bonus = i * 10;
+              sum = sum + bonus;
+            }
+          }
+          return sum;
+        }
+
+        public static void main(String[] args) {
+          try { tryThrowsFinallyThrows(); } catch (RuntimeException e) { System.out.println(e.getMessage()); }
+          try { tryOkFinallyThrows(); } catch (RuntimeException e) { System.out.println(e.getMessage()); }
+          try { catchThrowsFinallyThrows(); } catch (RuntimeException e) { System.out.println(e.getMessage()); }
+          System.out.println(tryThrowsFinallyReturns());
+          System.out.println(catchThrowsFinallyReturns());
+          System.out.println(tryReturnsFinallyReturns());
+          try { tryReturnsFinallyThrows(); } catch (RuntimeException e) { System.out.println(e.getMessage()); }
+          System.out.println(tryReturnsFinallyNormal());
+          System.out.println(loopBreak());
+          System.out.println(loopContinue());
+          try { nestedFinally(); } catch (RuntimeException e) { System.out.println(e.getMessage() + " " + trace); }
+          finallyThrowsCaughtOutside();
+          System.out.println(trace);
+          System.out.println(returnInNestedFinally() + " " + trace);
+          System.out.println(outerFinallyOverrides() + " " + trace);
+
+          System.out.println(breakInsideTry() + " " + count);
+          System.out.println(continueInsideTry() + " " + count);
+          System.out.println(finallyInsideLoop());
+          System.out.println(twoLevels());
+          System.out.println(switchInsideTry(1) + " " + switchInsideTry(2));
+          System.out.println(switchWithTryInside(1) + " " + switchWithTryInside(2));
+          System.out.println(returnThroughTwo() + " " + count);
+
+          System.out.println(variablesInFinally() + " " + count);
+          System.out.println(variablesInNestedFinally(0) + " " + variablesInNestedFinally(1));
+          System.out.println(loopWithFinallyVariable());
+        }
+      }
+    `,
+    expectedLines: [
+      'second',
+      'second',
+      'second',
+      '7',
+      '8',
+      '2',
+      'second',
+      '1',
+      '1',
+      '30',
+      'second inner',
+      'caught second',
+      '1 outer ran',
+      '2 inner ran',
+      '1 1',
+      '1 120',
+      '402',
+      '1031',
+      '1 2',
+      '101 2',
+      '5 11',
+      '1 6',
+      '203 212',
+      '32'
+    ]
+  },
+  {
+    comment:
+      'the copy of a finally that a return, break or continue runs is not covered by the handlers of its own try',
+    program: `
+      class First extends RuntimeException { }
+      class Second extends RuntimeException { }
+      public class Main {
+        static int runs;
+        static String trace = "";
+
+        // the finally runs once on the return path, and its exception is not caught by the same try
+        static int returnThenFinallyThrows() {
+          try {
+            return 1;
+          } catch (Second e) {
+            trace = trace + "caught ";
+            return 2;
+          } finally {
+            runs = runs + 1;
+            throw new Second();
+          }
+        }
+        static int returnThenFinallyThrowsNoCatch() {
+          try {
+            return 1;
+          } finally {
+            runs = runs + 1;
+            throw new Second();
+          }
+        }
+        static int breakThenFinallyThrows() {
+          int n = 0;
+          for (int i = 0; i < 3; i++) {
+            try {
+              break;
+            } catch (Second e) {
+              trace = trace + "caught-break ";
+            } finally {
+              runs = runs + 1;
+              throw new Second();
+            }
+          }
+          return n;
+        }
+        static int continueThenFinallyThrows() {
+          for (int i = 0; i < 3; i++) {
+            try {
+              continue;
+            } catch (Second e) {
+              trace = trace + "caught-continue ";
+            } finally {
+              runs = runs + 1;
+              throw new Second();
+            }
+          }
+          return 0;
+        }
+        // an exception from a finally on a return path is caught by an enclosing try
+        static int enclosingCatches() {
+          try {
+            try {
+              return 1;
+            } finally {
+              runs = runs + 1;
+              throw new First();
+            }
+          } catch (First e) {
+            trace = trace + "outer-caught ";
+            return 9;
+          }
+        }
+        // a return inside a try nested in a try-catch: the inner finally's exception is covered by the outer catch
+        static int innerFinallyThrowsOuterCatches() {
+          try {
+            try {
+              return 1;
+            } finally {
+              runs = runs + 1;
+              throw new Second();
+            }
+          } catch (Second e) {
+            trace = trace + "outer-second ";
+            return 3;
+          } finally {
+            runs = runs + 10;
+          }
+        }
+        // the finally of an outer try is not covered by an inner try's catch
+        static int outerFinallyNotCoveredByInnerCatch() {
+          try {
+            try {
+              return 1;
+            } catch (Second e) {
+              trace = trace + "inner-caught ";
+              return 4;
+            }
+          } finally {
+            runs = runs + 1;
+            throw new Second();
+          }
+        }
+
+        static void run(int which) {
+          runs = 0;
+          trace = "";
+          String result;
+          try {
+            int value = 0;
+            if (which == 0) { value = returnThenFinallyThrows(); }
+            if (which == 1) { value = returnThenFinallyThrowsNoCatch(); }
+            if (which == 2) { value = breakThenFinallyThrows(); }
+            if (which == 3) { value = continueThenFinallyThrows(); }
+            if (which == 4) { value = enclosingCatches(); }
+            if (which == 5) { value = innerFinallyThrowsOuterCatches(); }
+            if (which == 6) { value = outerFinallyNotCoveredByInnerCatch(); }
+            result = "value " + value;
+          } catch (Second e) {
+            result = "second";
+          } catch (First e) {
+            result = "first";
+          }
+          System.out.println(which + ": " + result + " runs=" + runs + " trace=" + trace);
+        }
+
+        public static void main(String[] args) {
+          for (int w = 0; w <= 6; w++) { run(w); }
+        }
+      }
+    `,
+    expectedLines: [
+      '0: second runs=1 trace=',
+      '1: second runs=1 trace=',
+      '2: second runs=1 trace=',
+      '3: second runs=1 trace=',
+      '4: value 9 runs=1 trace=outer-caught ',
+      '5: value 3 runs=11 trace=outer-second ',
+      '6: second runs=1 trace='
+    ]
   }
 ]
 
@@ -1892,5 +2314,74 @@ export const throwTest = () =>
         expect(thrown['Impl.plain()V']).toBeUndefined()
         expect(thrown['Base.plain()V']).toBeUndefined()
       })
+    })
+    describe('every way to end a try, a catch and a finally', () => {
+      // How the try block, the catch block and the finally block each end. Each combination is a
+      // loop whose body is a try statement (single) or a try-catch inside a try-finally (nested),
+      // and the expected output of every program was printed by a JDK 8 JVM.
+      const bodies = (increment: number, last: string) => [
+        ['1', `count = count + ${increment};`],
+        [
+          'T',
+          `count = count + ${increment}; throw new ${increment === 1 ? 'First' : 'Second'}();`
+        ],
+        ['C', `count = count + ${increment}; continue;`],
+        ['B', `count = count + ${increment}; break;`],
+        ['R', `count = count + ${increment}; return ${last};`]
+      ]
+      const expected: { [program: string]: string[] } = JSON.parse(
+        fs.readFileSync(path.join(__dirname, 'finally-combinations.expected.json'), 'utf-8')
+      )
+
+      for (const shape of ['single', 'nested']) {
+        for (const [tryEnd, tryBody] of bodies(1, 'count')) {
+          it(`${shape} try statements that end the try block with ${tryEnd}`, () => {
+            const names: string[] = []
+            const methods: string[] = []
+            for (const [catchEnd, catchBody] of bodies(10, 'count')) {
+              for (const [finallyEnd, finallyBody] of bodies(100, '0 - count')) {
+                const name = `m_${tryEnd}${catchEnd}${finallyEnd}`
+                const body =
+                  shape === 'single'
+                    ? `try { ${tryBody} } catch (First e) { ${catchBody} } finally { ${finallyBody} }`
+                    : `try { try { ${tryBody} } catch (First e) { ${catchBody} } } finally { ${finallyBody} }`
+                methods.push(
+                  `static int ${name}() { count = 0; for (int i = 0; i < 3; i++) { ${body} } return count; }`
+                )
+                names.push(name)
+              }
+            }
+            const program = `
+              class First extends RuntimeException { }
+              class Second extends RuntimeException { }
+              public class Main {
+                static int count;
+                ${methods.join('\n')}
+                static int dispatch(int which) {
+                  switch (which) {
+                    ${names.map((name, i) => `case ${i}: return ${name}();`).join('\n')}
+                    default: return -1;
+                  }
+                }
+                static void run(String name, int which) {
+                  String outcome;
+                  try {
+                    outcome = "returned " + dispatch(which);
+                  } catch (First e) {
+                    outcome = "First";
+                  } catch (Second e) {
+                    outcome = "Second";
+                  }
+                  System.out.println(name + " " + outcome + " count=" + count);
+                }
+                public static void main(String[] args) {
+                  ${names.map((name, i) => `run("${name}", ${i});`).join('\n')}
+                }
+              }
+            `
+            runTest(program, expected[`${shape}_${tryEnd}`])
+          })
+        }
+      }
     })
   })

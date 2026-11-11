@@ -1081,6 +1081,77 @@ function compileArrayInitializer(init: any[], typeName: string, cg: CodeGenerato
   return maxStack
 }
 
+/**
+ * Compiles one copy of a finally block (it is compiled again at each place that can leave its
+ * try statement). The copy is a block of its own, so the variables it declares do not clash
+ * with those of another copy, and only the finally blocks that enclose it are pending while it
+ * is compiled, so a `return`, `break` or `continue` inside it does not run the block again.
+ * `enclosingFinallyBlocks` is the number of finally blocks that enclose the try statement.
+ * Returns the stack size that the copy needs.
+ */
+function compileFinallyCopy(
+  finallyBlock: any,
+  enclosingFinallyBlocks: number,
+  cg: CodeGenerator
+): number {
+  const pending = cg.finallyBlockStack
+  const pendingPositions = cg.finallyTryPositions
+  cg.finallyBlockStack = pending.slice(0, enclosingFinallyBlocks)
+  cg.finallyTryPositions = pendingPositions.slice(0, enclosingFinallyBlocks)
+  cg.symbolTable.extend()
+  let maxStack = 0
+  try {
+    for (const statement of finallyBlock.blockStatements) {
+      maxStack = Math.max(maxStack, compile(statement, cg).stackSize)
+    }
+  } finally {
+    cg.symbolTable.teardown()
+    cg.finallyBlockStack = pending
+    cg.finallyTryPositions = pendingPositions
+  }
+  return maxStack
+}
+
+/**
+ * Runs the finally blocks that a jump out of the current code leaves, from the innermost to the
+ * outermost one: all of the pending ones for a `return`, and only those inside the target loop
+ * or switch for a `break` or `continue` (`firstLeft` is the index of the first block it leaves).
+ */
+function compileLeftFinallyBlocks(firstLeft: number, cg: CodeGenerator): number {
+  let maxStack = 0
+  for (let i = cg.finallyBlockStack.length - 1; i >= firstLeft; i--) {
+    const copyStart = cg.code.length
+    maxStack = Math.max(maxStack, compileFinallyCopy(cg.finallyBlockStack[i], i, cg))
+    // the copy runs after leaving the try statement that the block belongs to, and every try
+    // statement inside it that the jump is in, so none of their handlers cover the copy
+    if (cg.code.length > copyStart) {
+      for (let t = cg.finallyTryPositions[i]; t < cg.tryStack.length; t++) {
+        cg.tryStack[t].gaps.push([copyStart, cg.code.length])
+      }
+    }
+  }
+  return maxStack
+}
+
+/** The parts of the range [start, end) that are not inside any of the gaps. */
+function rangeWithoutGaps(
+  start: number,
+  end: number,
+  gaps: Array<[number, number]>
+): Array<[number, number]> {
+  let segments: Array<[number, number]> = [[start, end]]
+  for (const [gapStart, gapEnd] of gaps) {
+    segments = segments.flatMap(([from, to]): Array<[number, number]> => {
+      if (gapEnd <= from || gapStart >= to) return [[from, to]]
+      const parts: Array<[number, number]> = []
+      if (gapStart > from) parts.push([from, gapStart])
+      if (gapEnd < to) parts.push([gapEnd, to])
+      return parts
+    })
+  }
+  return segments
+}
+
 /** A catch clause, with the exception classes it catches (as written, and as binary names). */
 interface CatchClauseInfo {
   clause: any
@@ -1309,10 +1380,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
           tempIndex
         )
 
-        for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
-          const finallyBlock = cg.finallyBlockStack[i] as any
-          finallyBlock.blockStatements.forEach((stmt: any) => compile(stmt, cg))
-        }
+        stackSize = Math.max(stackSize, compileLeftFinallyBlocks(0, cg))
 
         cg.code.push(
           resultType in normalLoadOp ? normalLoadOp[resultType] : OPCODE.ALOAD,
@@ -1323,43 +1391,34 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       return { stackSize, resultType }
     }
 
-    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
-      const finallyBlock = cg.finallyBlockStack[i] as any
-      finallyBlock.blockStatements.forEach((stmt: any) => compile(stmt, cg))
-    }
+    const finallyStack = compileLeftFinallyBlocks(0, cg)
 
     cg.code.push(OPCODE.RETURN)
-    return { stackSize: 0, resultType: cg.symbolTable.generateFieldDescriptor('void') }
+    return { stackSize: finallyStack, resultType: cg.symbolTable.generateFieldDescriptor('void') }
   },
 
   BreakStatement: (node: Node, cg: CodeGenerator) => {
-    // Emit finally blocks from innermost to outermost before breaking
-    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
-      const finallyBlock = cg.finallyBlockStack[i] as any
-      finallyBlock.blockStatements.forEach((stmt: any) => {
-        compile(stmt, cg)
-      })
-    }
-
     // `break` leaves the innermost enclosing loop *or* switch, whichever is closer
     if (cg.breakLabels.length === 0) {
       throw new Error('Break statement not inside a loop or switch statement')
     }
+    // the finally blocks of the try statements inside that loop or switch run first
+    const finallyStack = compileLeftFinallyBlocks(
+      cg.breakFinallyDepths[cg.breakFinallyDepths.length - 1],
+      cg
+    )
     cg.addBranchInstr(OPCODE.GOTO, cg.breakLabels[cg.breakLabels.length - 1])
-    return { stackSize: 0, resultType: EMPTY_TYPE }
+    return { stackSize: finallyStack, resultType: EMPTY_TYPE }
   },
 
   ContinueStatement: (node: Node, cg: CodeGenerator) => {
-    // Emit finally blocks from innermost to outermost before continuing
-    for (let i = cg.finallyBlockStack.length - 1; i >= 0; i--) {
-      const finallyBlock = cg.finallyBlockStack[i] as any
-      finallyBlock.blockStatements.forEach((stmt: any) => {
-        compile(stmt, cg)
-      })
-    }
-
+    // the finally blocks of the try statements inside the loop run first
+    const finallyStack = compileLeftFinallyBlocks(
+      cg.loopFinallyDepths[cg.loopFinallyDepths.length - 1],
+      cg
+    )
     cg.addBranchInstr(OPCODE.GOTO, cg.loopLabels[cg.loopLabels.length - 1][0])
-    return { stackSize: 0, resultType: EMPTY_TYPE }
+    return { stackSize: finallyStack, resultType: EMPTY_TYPE }
   },
 
   BasicForStatement: (node: Node, cg: CodeGenerator) => {
@@ -1377,7 +1436,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const continueLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
     cg.loopLabels.push([continueLabel, endLabel])
+    cg.loopFinallyDepths.push(cg.finallyBlockStack.length)
     cg.breakLabels.push(endLabel)
+    cg.breakFinallyDepths.push(cg.finallyBlockStack.length)
 
     startLabel.offset = cg.code.length
 
@@ -1394,7 +1455,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     endLabel.offset = cg.code.length
 
     cg.loopLabels.pop()
+    cg.loopFinallyDepths.pop()
     cg.breakLabels.pop()
+    cg.breakFinallyDepths.pop()
     cg.symbolTable.teardown()
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
@@ -1407,7 +1470,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const continueLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
     cg.loopLabels.push([continueLabel, endLabel])
+    cg.loopFinallyDepths.push(cg.finallyBlockStack.length)
     cg.breakLabels.push(endLabel)
+    cg.breakFinallyDepths.push(cg.finallyBlockStack.length)
 
     startLabel.offset = cg.code.length
     maxStack = Math.max(maxStack, compile(body, cg).stackSize)
@@ -1421,7 +1486,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     endLabel.offset = cg.code.length
 
     cg.loopLabels.pop()
+    cg.loopFinallyDepths.pop()
     cg.breakLabels.pop()
+    cg.breakFinallyDepths.pop()
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
 
@@ -1432,7 +1499,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const startLabel = cg.generateNewLabel()
     const endLabel = cg.generateNewLabel()
     cg.loopLabels.push([startLabel, endLabel])
+    cg.loopFinallyDepths.push(cg.finallyBlockStack.length)
     cg.breakLabels.push(endLabel)
+    cg.breakFinallyDepths.push(cg.finallyBlockStack.length)
     startLabel.offset = cg.code.length
 
     maxStack = Math.max(maxStack, compileCondition(condition, cg).stackSize)
@@ -1440,7 +1509,9 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     cg.addBranchInstr(OPCODE.GOTO, startLabel)
     cg.loopLabels.pop()
+    cg.loopFinallyDepths.pop()
     cg.breakLabels.pop()
+    cg.breakFinallyDepths.pop()
     endLabel.offset = cg.code.length
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   },
@@ -1549,8 +1620,12 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }> = []
 
     // Push finally block onto stack so return/break/continue can access it
+    const enclosingFinallyBlocks = cg.finallyBlockStack.length
+    const thisTry: { gaps: Array<[number, number]> } = { gaps: [] }
+    cg.tryStack.push(thisTry)
     if (finallyNode) {
       cg.finallyBlockStack.push(finallyNode.block)
+      cg.finallyTryPositions.push(cg.tryStack.length - 1)
     }
 
     try {
@@ -1572,10 +1647,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
       // For normal path: run finally block if it exists
       if (finallyNode) {
-        finallyNode.block.blockStatements.forEach((stmt: any) => {
-          const { stackSize } = compile(stmt, cg)
-          maxStack = Math.max(maxStack, stackSize)
-        })
+        maxStack = Math.max(
+          maxStack,
+          compileFinallyCopy(finallyNode.block, enclosingFinallyBlocks, cg)
+        )
       }
 
       // jump over handlers when try completes normally
@@ -1665,10 +1740,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
           // For caught path: run finally block if it exists
           if (finallyNode) {
-            finallyNode.block.blockStatements.forEach((stmt: any) => {
-              const { stackSize } = compile(stmt, cg)
-              maxStack = Math.max(maxStack, stackSize)
-            })
+            maxStack = Math.max(
+              maxStack,
+              compileFinallyCopy(finallyNode.block, enclosingFinallyBlocks, cg)
+            )
           }
 
           // after handler, jump to afterHandlers
@@ -1697,10 +1772,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
         cg.code.push(OPCODE.ASTORE, tempIndex)
 
         // compile finally block inside catch-all
-        finallyNode.block.blockStatements.forEach((stmt: any) => {
-          const { stackSize } = compile(stmt, cg)
-          maxStack = Math.max(maxStack, stackSize)
-        })
+        maxStack = Math.max(
+          maxStack,
+          compileFinallyCopy(finallyNode.block, enclosingFinallyBlocks, cg)
+        )
 
         // reload exception and rethrow
         cg.code.push(OPCODE.ALOAD, tempIndex, OPCODE.ATHROW)
@@ -1710,20 +1785,25 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       afterHandlers.offset = cg.code.length
 
       // Now that all labels are resolved, push to cg.exceptionTable
+      // (a handler does not cover the copies of finally blocks that jumps out of the try run)
       localExceptionTable.forEach(entry => {
-        cg.exceptionTable.push({
-          startPc: entry.startPc,
-          endPc: entry.endPc,
-          handlerPc: entry.handlerLabel.offset,
-          catchType: entry.catchType
-        })
+        for (const [startPc, endPc] of rangeWithoutGaps(entry.startPc, entry.endPc, thisTry.gaps)) {
+          cg.exceptionTable.push({
+            startPc,
+            endPc,
+            handlerPc: entry.handlerLabel.offset,
+            catchType: entry.catchType
+          })
+        }
       })
 
       return { stackSize: maxStack, resultType: EMPTY_TYPE }
     } finally {
       // Pop finally block from stack when exiting
+      cg.tryStack.pop()
       if (finallyNode) {
         cg.finallyBlockStack.pop()
+        cg.finallyTryPositions.pop()
       }
     }
   },
@@ -2863,6 +2943,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
 
     // `break` inside the switch jumps to its end label
     cg.breakLabels.push(endLabel)
+    cg.breakFinallyDepths.push(cg.finallyBlockStack.length)
 
     if (['I', 'B', 'S', 'C'].includes(_resultType)) {
       const caseValues: number[] = []
@@ -3231,6 +3312,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     }
 
     cg.breakLabels.pop()
+    cg.breakFinallyDepths.pop()
 
     return { stackSize: maxStack, resultType: EMPTY_TYPE }
   }
@@ -3246,6 +3328,15 @@ class CodeGenerator {
   loopLabels: Label[][] = []
   // end label of every enclosing loop and switch (innermost last), the targets of `break`
   breakLabels: Label[] = []
+  // for each loop and switch, how many finally blocks enclose it (they are not left by a jump)
+  loopFinallyDepths: number[] = []
+  breakFinallyDepths: number[] = []
+  // The try statements that the code being compiled is inside of, innermost last. Each has the
+  // ranges of code that its handlers must not cover: the copies of finally blocks that a
+  // `return`, `break` or `continue` runs after leaving it
+  tryStack: Array<{ gaps: Array<[number, number]> }> = []
+  // for each pending finally block, the position in `tryStack` of the try statement it belongs to
+  finallyTryPositions: number[] = []
   finallyBlockStack: Node[] = []
   code: number[] = []
   currentClass: string

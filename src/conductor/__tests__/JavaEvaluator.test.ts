@@ -331,6 +331,77 @@ describe('JavaEvaluator', () => {
     expect(mock.outputs).toEqual(['5 30', '0.0', 'false', 'true', '15', 'dog', '2', 'negative size'])
   })
 
+  test('runs finally blocks that return, break, continue or throw', async () => {
+    const mock = new MockConductor()
+    const ev = new JavaEvaluator(mock as any)
+    const originalBuffer = (globalThis as any).Buffer
+    delete (globalThis as any).Buffer
+    try {
+      await ev.evaluateChunk(`
+        class First extends RuntimeException { }
+        class Second extends RuntimeException { }
+        public class Main {
+          static int runs;
+          static int count;
+          static int tryThrowsFinallyReturns() {
+            try { throw new First(); } finally { return 7; }
+          }
+          static int tryReturnsFinallyReturns() {
+            try { return 1; } finally { return 2; }
+          }
+          static int returnThenFinallyThrows() {
+            try {
+              return 1;
+            } catch (Second e) {
+              return 2;
+            } finally {
+              runs = runs + 1;
+              throw new Second();
+            }
+          }
+          static int breakInsideTry() {
+            count = 0;
+            try {
+              for (int i = 0; i < 3; i++) {
+                if (i == 1) { break; }
+              }
+              return 1;
+            } finally {
+              count = count + 1;
+            }
+          }
+          static int finallyWithVariable() {
+            int total = 0;
+            try {
+              total = 1;
+              return total;
+            } finally {
+              int local = 5;
+              count = total + local;
+            }
+          }
+          public static void main(String[] args) {
+            System.out.println(tryThrowsFinallyReturns());
+            System.out.println(tryReturnsFinallyReturns());
+            try {
+              returnThenFinallyThrows();
+            } catch (Second e) {
+              System.out.println("second " + runs);
+            }
+            breakInsideTry();
+            System.out.println(count);
+            finallyWithVariable();
+            System.out.println(count);
+          }
+        }
+      `)
+    } finally {
+      ;(globalThis as any).Buffer = originalBuffer
+    }
+    expect(mock.errors).toHaveLength(0)
+    expect(mock.outputs).toEqual(['7', '2', 'second 1', '1', '6'])
+  })
+
   test('stops the program and reports an exception that is never caught', async () => {
     const mock = new MockConductor()
     const ev = new JavaEvaluator(mock as any)
