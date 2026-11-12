@@ -2,23 +2,28 @@ This is a bookkeeping of the planned scope of the compiler. It will be updated f
 
 **Features that are already supported**
 
-- Single source file, single public class, with exactly one main method
-- Methods that have `public static` access flags, return `int/void`, never throw exception
-- `int` variables
-- `int/boolean/String` literals
+- Single source file, multiple classes, with exactly one class named "Main" with a main method
+- Methods that have `public static` access flags
+- Any primitive type and String variables
 - Controls (`if-else`, `while`, `do-while`, basic `for` loop, `break`, `continue`, `return` statements), loops and if-elses can be nested in each other
 - Arithmetic and conditional expressions
 - Assignment statements
 - Method invocation
 - Non-static import statements
 - Single dimension array declaration/initialization
-- Primitive type variables
 - Class fields (with `public static` access flag)
 - Object instantiation (with `new` keyword)
 - Instance fields/methods
 - Class inheritance
 - Method overloading/overriding
-- Type casting
+- Type casting (both implicit and explicit)
+- Abstract classes
+- Exception handling (`throws`, `try`, `catch` and `finally`)
+- Many standard library classes and methods (in import/generated-lib-info.json)
+- Switch statements
+- Enums
+- Static nested classes
+
 
 
 **Features that can possibly be supported in the future**
@@ -27,7 +32,9 @@ This is a bookkeeping of the planned scope of the compiler. It will be updated f
 - Multiple files, modules, packages
 - Interfaces
 - Generics
-- Exceptions
+- Newer keywords, e.g. `yield`
+- Explicit constructor invocation (`super(...)` and `this(...)`)
+- Multi-dimensional arrays
 
 
 **Testing**
