@@ -11,8 +11,8 @@ Open-source Implementation of the Java language in TypeScript. (<https://docs.or
   - [Current Features](#current-features)
   - [Future Features](#future-features)
   - [Testing](#testing)
-  - [Using your java-slang in Source Academy](#using-your-java-slang-in-source-academy)
-  - [Using your java-slang in your local Source Academy](#using-your-java-slang-in-your-local-source-academy)
+  - [How java-slang is used in Source Academy](#how-java-slang-is-used-in-source-academy)
+  - [Using your local java-slang in Source Academy](#using-your-local-java-slang-in-source-academy)
   - [License](#license)
 
 ## Prerequisites
@@ -43,25 +43,29 @@ $ git submodule update --recursive --remote
 
 ## Current Features
 
-The Java language in Source Academy currently supports a host of available features, including:
+The Java language in Source Academy is based on the [Java 8 SE](https://docs.oracle.com/javase/specs/jls/se8/html/index.html) and currently supports a host of available features, including:
 
 - Primitive classes: boolean, byte, short, int, long, char, float and double.
 - Custom (non-primitive) classes
 - Method overloading
-- Implicit type widening for both primitive and non-primitive types (e.g. int to long)
+- Exception handling
+- Implicit type widening
+- Explicit type conversion
 - Basic exception/error messages
-- Basic system calls e.g. System.out.println
-- Explicit type conversion (type narrowing)
-- Implicit type conversion for system calls (e.g. int input to System.out.println)
-- Single nested class
-- Exceptions
+- Many standard libraries including system calls e.g. `System.out.println`
+- Static nested classes
+- Switch statements
+- Multiple classes in one file
+- Inheritance
+- Abstract classes
 
 ## Future Features
 
-- Multiple class declarations in the same file
-- Inheritance (basis for implementation exists but requires multiclass declaration to function)
 - Generics
 - Multi-file programs
+- Interfaces
+- Explicit constructor invocation using `super(...)` and `this(...)`
+- Possible upgrading to follow newer versions of Java, e.g. 15
 
 ## Testing
 
@@ -72,30 +76,31 @@ $ yarn global add jest
 $ yarn test --updateSnapshot
 ```
 
-## Using your java-slang in Source Academy
+## How java-slang is used in Source Academy
 
-java-slang is used by the [Source Academy](https://sourceacademy.org), the immersive online experiential environment for learning programming. For this, java-slang is [deployed as an NPM package](https://www.npmjs.com/package/java-slang). The frontend of the Source Academy then includes the java-slang package in its deployment bundle.
+java-slang is used by the [Source Academy](https://sourceacademy.org), the immersive online experiential environment for learning programming. For this, java-slang is deployed in Conductor. The frontend of the Source Academy then includes the java-slang package in its deployment bundle.
 
-## Using your java-slang in your local Source Academy
+## Using your local java-slang in Source Academy
 
-A common issue when developing modifications to java-slang is how to test it using your own local frontend. Assume that you have built your own frontend locally, here is how you can make it use your own java-slang, instead of the one that the Source Academy team has deployed to npm.
+A common issue when developing modifications to java-slang is how to test it. With the migration to Conductor and consequent deprecation of the npm package, the optimal way to test java-slang now is through creating your own Conductor build and linking it to the live frontend at https://sourceacademy.org/playground. Below are the steps.
 
-First, build and link your local java-slang:
+1. Fork this java-slang repo and all its branches to your own repository.
 
-```bash
-$ cd java-slang
-$ yarn build
-$ yarn link
-```
+2. Go to Settings -> Pages in the forked repo and choose to deploy using Github Actions. 
 
-Then, from your local copy of frontend:
+3. After the initial build is finished (should take a few minutes), check that the repo has been deployed at "{Github Page URL of forked java-slang repo}/index.js". You can find the Github Page URL by clicking on Deployments/github-pages on the right sidebar of the forked repo. Note that you must add "/index.js" to the end when checking at the URL, and it should not display a 404 error there but rather a text dump.
 
-```bash
-$ cd frontend
-$ yarn link path/to/java-slang
-```
+3. Next, fork the [language-directory](https://github.com/source-academy/language-directory) repo and all its branches to your own repository. Similarly choose to deploy using Github Actions.
 
-Replace "path/to/java-slang" with the path to the java-slang repository. After running the command, start the frontend and the new java-slang will be used.
+4. In the src/languages/java/index.ts file of the forked language-directory repo, replace the javaDefault path with the GH Pages URL of your deployed java-slang repo (including the index.js part).
+
+5. Check that the language directory repo has been deployed on Github Pages at "{Github Page URL of forked language-directory repo}/directory.json" by visiting it. You should see a JSON dump instead of a 404 error.
+
+6. In the frontend, go to Settings -> Feature Flags and change the language directory URL to the one in step 5. Do not click the reload button next to the flag, that resets it to the [default language directory](https://source-academy.github.io/language-directory/directory.json).
+
+7. To test local changes, simply push them to your forked java-slang repo and the changes will automatically show up in the frontend within a few minutes (recommended to refresh the page before attempting to test them).
+
+8. If you are utilising a branch other than main in your forked java-slang repo, do note that you will need to add the name of the branch in the build-deploy file in .github/workflows in order for the changes to be reflected in your Conductor build. You only need to do this inside the branch itself, once per branch creation (so that future builds in that branch will recognise that its code should be used).
 
 ## License
 
