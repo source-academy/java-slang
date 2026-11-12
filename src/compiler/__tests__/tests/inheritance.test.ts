@@ -576,4 +576,103 @@ export const inheritanceTest = () =>
           )
         ).toThrow(/non-static/))
     })
+    describe('cyclic inheritance', () => {
+      const rejected: [string, string, string][] = [
+        ['a class that extends itself', 'class A extends A { }', 'A'],
+        ['two classes that extend each other', 'class A extends B { } class B extends A { }', 'A'],
+        [
+          'a cycle of three classes',
+          'class A extends B { } class B extends C { } class C extends A { }',
+          'A'
+        ],
+        [
+          'a cycle declared in another order, naming the first class declared in it',
+          'class C extends A { } class B extends C { } class A extends B { }',
+          'C'
+        ],
+        [
+          'a class that extends into a cycle, naming a class on the cycle',
+          'class A extends B { } class B extends A { } class D extends A { }',
+          'A'
+        ],
+        [
+          'a class that extends into a cycle, declared before it',
+          'class D extends A { } class A extends B { } class B extends A { }',
+          'A'
+        ],
+        [
+          'a cycle after unrelated classes',
+          'class Z { } class Y extends Z { } class A extends B { } class B extends A { }',
+          'A'
+        ],
+        [
+          'a long cycle',
+          'class A extends B { } class B extends C { } class C extends D { } class D extends E { } class E extends A { }',
+          'A'
+        ],
+        [
+          'a cycle whose classes have members',
+          'class A extends B { int x; void f() { } A() { } } class B extends A { int y; void g() { } B() { } }',
+          'A'
+        ],
+        [
+          'a cycle of abstract classes',
+          'abstract class A extends B { abstract void f(); } abstract class B extends A { }',
+          'A'
+        ],
+        ['a cycle with a final class', 'final class A extends B { } class B extends A { }', 'A'],
+        [
+          'a cycle of nested classes',
+          'class O { static class A extends B { } static class B extends A { } }',
+          'A'
+        ],
+        ['a nested class that extends itself', 'class O { static class A extends A { } }', 'A'],
+        [
+          'two separate cycles, naming the first',
+          'class A extends B { } class B extends A { } class X extends Y { } class Y extends X { }',
+          'A'
+        ],
+        [
+          'a cycle among classes that extend library classes elsewhere',
+          'class E extends Exception { } class A extends B { } class B extends A { }',
+          'A'
+        ]
+      ]
+      for (const [comment, classes, involved] of rejected) {
+        it(`rejects ${comment}`, () =>
+          expect(() => compileWithClasses(classes, 'int x = 1;')).toThrow(
+            `cyclic inheritance involving ${involved}`
+          ))
+      }
+
+      const allowed: [string, string][] = [
+        ['a chain of classes', 'class A { } class B extends A { } class C extends B { }'],
+        ['a chain declared backwards', 'class C extends B { } class B extends A { } class A { }'],
+        [
+          'a tree of classes',
+          'class A { } class B extends A { } class C extends A { } class D extends B { }'
+        ],
+        [
+          'a class that extends a library class',
+          'class A extends Exception { } class B extends A { }'
+        ],
+        ['a class that extends Object explicitly', 'class A extends Object { }'],
+        [
+          'a nested class that extends its enclosing class',
+          'class O { static class A extends O { } }'
+        ],
+        [
+          'a nested class that extends a sibling',
+          'class O { static class A { } static class B extends A { } }'
+        ],
+        [
+          'a class that extends a nested class of another class',
+          'class O { static class A { } } class B extends O.A { }'
+        ]
+      ]
+      for (const [comment, classes] of allowed) {
+        it(`allows ${comment}`, () =>
+          expect(() => compileWithClasses(classes, 'int x = 1;')).not.toThrow())
+      }
+    })
   })

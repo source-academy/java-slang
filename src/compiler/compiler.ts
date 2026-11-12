@@ -14,6 +14,7 @@ import { FieldInfo } from '../ClassFile/types/fields'
 import { MethodInfo } from '../ClassFile/types/methods'
 import {
   CannotInheritFromFinalClassError,
+  CyclicInheritanceError,
   ConstructNotSupportedError,
   InconvertibleTypesError,
   InvalidOverrideError,
@@ -95,6 +96,9 @@ export class Compiler {
       this.symbolTable.returnToRoot()
     })
 
+    // JLS 8.1.4: the classes must form a hierarchy, so none may depend on itself
+    this.checkNoCyclicInheritance(declarations)
+
     // Pass 1: register every class's own members (fields, methods,
     // constructors, enum constants and synthetic members) with no bytecode
     // generated yet. This makes member resolution order-independent: a
@@ -134,6 +138,36 @@ export class Compiler {
     // Return in declaration order (top-level types first, then member enums) so
     // the entry class stays at index 0 regardless of compilation order.
     return declarations.map(decl => compiled.get(decl) as Class)
+  }
+
+  /**
+   * JLS 8.1.4: it is a compile-time error if a class depends on itself, directly or through its
+   * superclasses (`class A extends B {}` with `class B extends A {}`), so that the inheritance
+   * relation between the classes of a program is a directed acyclic graph. The class that is
+   * reported is the first one in declaration order that is on a cycle.
+   */
+  private checkNoCyclicInheritance(declarations: Array<EnumDeclaration | NormalClassDeclaration>) {
+    const superclassOf = new Map<string, string>()
+    for (const declaration of declarations) {
+      if (declaration.kind === 'NormalClassDeclaration' && declaration.sclass) {
+        superclassOf.set(declaration.typeIdentifier, declaration.sclass)
+      }
+    }
+
+    for (const declaration of declarations) {
+      const start = declaration.typeIdentifier
+      const visited = new Set<string>([start])
+      let current = superclassOf.get(start)
+      while (current !== undefined) {
+        if (current === start) {
+          throw new CyclicInheritanceError(start.split('$').pop() as string)
+        }
+        // a cycle that this class leads into but is not part of is reported for its own members
+        if (visited.has(current)) break
+        visited.add(current)
+        current = superclassOf.get(current)
+      }
+    }
   }
 
   /** JLS 8.1.4: a class cannot extend a final class, nor an enum (which is implicitly final). */

@@ -152,3 +152,9 @@ export class ExceptionAlreadyCaughtError extends CompileError {
     super(`exception ${exception} has already been caught`)
   }
 }
+
+export class CyclicInheritanceError extends CompileError {
+  constructor(className: string) {
+    super(`cyclic inheritance involving ${className}`)
+  }
+}
