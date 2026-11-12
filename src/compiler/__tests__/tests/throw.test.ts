@@ -2241,6 +2241,468 @@ export const throwTest = () =>
           'try { try { s.risky(); } catch (AppEx e) { } } catch (AppEx e) { }',
           '',
           /exception AppEx is never thrown in body of corresponding try statement/
+        ],
+        [
+          'a finally that returns discards the exception of the try',
+          '',
+          'try { throw new AppEx(); } finally { return; }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that returns discards the exception of a call in the try',
+          '',
+          'try { s.risky(); } finally { return; }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that throws an unchecked exception discards the checked one of the try',
+          '',
+          'try { throw new AppEx(); } finally { throw new RtEx(); }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that throws the same checked exception still needs it declared',
+          '',
+          'try { throw new AppEx(); } finally { throw new AppEx(); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'only the exception of the finally needs to be declared',
+          '',
+          'try { throw new AppEx(); } finally { throw new OtherEx(); }',
+          'throws OtherEx',
+          undefined
+        ],
+        [
+          'the exception of the finally is not covered by declaring the one of the try',
+          '',
+          'try { throw new AppEx(); } finally { throw new OtherEx(); }',
+          'throws AppEx',
+          /unreported exception OtherEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally that returns discards the exception of a catch',
+          '',
+          'try { s.safe(); } catch (RtEx e) { throw new AppEx(); } finally { return; }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that returns discards the exceptions of the try and a catch',
+          '',
+          'try { s.risky(); } catch (AppEx e) { throw new OtherEx(); } finally { return; }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that throws discards the exceptions of calls in the try and a catch',
+          '',
+          'try { s.two(); } catch (AppEx e) { s.risky(); } finally { throw new RtEx(); }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that returns in both branches of an if-else',
+          '',
+          'try { s.risky(); } finally { if (true) { return; } else { return; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that returns inside a nested block',
+          '',
+          'try { s.risky(); } finally { { return; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a nested try whose finally returns',
+          '',
+          'try { s.risky(); } finally { try { s.safe(); } finally { return; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with an infinite while loop',
+          '',
+          'try { s.risky(); } finally { while (true) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with an infinite for loop',
+          '',
+          'try { s.risky(); } finally { for (;;) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a statement and then a return',
+          '',
+          'try { s.risky(); } finally { s.safe(); return; }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a try-catch whose try returns and whose catch returns',
+          '',
+          'try { s.risky(); } finally { try { return; } catch (RtEx e) { return; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a try whose catch and finally return',
+          '',
+          'try { s.risky(); } finally { try { s.safe(); } catch (RtEx e) { s.safe(); } finally { return; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that breaks out of a loop',
+          '',
+          'for (int i = 0; i < 2; i++) { try { s.risky(); } finally { break; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that continues a loop',
+          '',
+          'for (int i = 0; i < 2; i++) { try { s.risky(); } finally { continue; } }',
+          '',
+          undefined
+        ],
+        [
+          'a catch that swallows the exception and a finally that returns',
+          '',
+          'try { s.risky(); } catch (AppEx e) { } finally { return; }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that throws a checked exception when the try is handled',
+          '',
+          'try { s.risky(); } catch (AppEx e) { } finally { throw new OtherEx(); }',
+          '',
+          /unreported exception OtherEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally that throws a checked exception when the try is handled, declared',
+          '',
+          'try { s.risky(); } catch (AppEx e) { } finally { throw new OtherEx(); }',
+          'throws OtherEx',
+          undefined
+        ],
+        [
+          'an inner finally that returns, with an outer finally that completes',
+          '',
+          'try { try { s.risky(); } finally { return; } } finally { s.safe(); }',
+          '',
+          undefined
+        ],
+        [
+          'an outer finally that returns, with an inner try that completes',
+          '',
+          'try { try { s.risky(); } finally { s.safe(); } } finally { return; }',
+          '',
+          undefined
+        ],
+        [
+          'a catch that rethrows and a finally that returns',
+          '',
+          'try { s.risky(); } catch (AppEx e) { throw e; } finally { return; }',
+          '',
+          undefined
+        ],
+        [
+          'a catch of Exception that rethrows and a finally that returns',
+          '',
+          'try { s.risky(); } catch (Exception e) { throw e; } finally { return; }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that returns after a try that returns',
+          '',
+          'try { return; } finally { return; }',
+          '',
+          undefined
+        ],
+        [
+          "a finally that throws a checked exception different from the try's",
+          '',
+          'try { throw new AppEx(); } finally { throw new OtherEx(); }',
+          '',
+          /unreported exception OtherEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with declarations before its return',
+          '',
+          'try { s.risky(); } finally { int x = 1; x = 2; return; }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop that cannot end',
+          '',
+          'try { s.risky(); } finally { while (true) { return; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a while(true) whose break is in a nested loop',
+          '',
+          'try { s.risky(); } finally { while (true) { for (int i = 0; i < 2; i++) { break; } } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a while(true) whose break is in a switch',
+          '',
+          'try { s.risky(); } finally { while (true) { switch (1) { case 1: break; default: break; } } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a do-while(true) without a break',
+          '',
+          'try { s.risky(); } finally { do { s.safe(); } while (true); }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a do-while that returns and can only repeat on a false condition',
+          '',
+          'try { s.risky(); } finally { do { return; } while (false); }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a do-while that returns',
+          '',
+          'try { s.risky(); } finally { do { return; } while (s != null); }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a for(;;) whose break is in a switch',
+          '',
+          'try { s.risky(); } finally { for (;;) { switch (1) { case 1: break; default: break; } } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a for(;true;)',
+          '',
+          'try { s.risky(); } finally { for (;true;) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a switch whose cases all return',
+          '',
+          'try { s.risky(); } finally { switch (1) { case 1: return; default: return; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a switch that falls through to a return',
+          '',
+          'try { s.risky(); } finally { switch (1) { case 1: s.safe(); default: return; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with if-else whose branches throw',
+          '',
+          'try { s.risky(); } finally { if (s != null) { throw new RtEx(); } else { throw new RtEx(); } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with an if-else-if chain that always returns',
+          '',
+          'try { s.risky(); } finally { if (s == null) { return; } else if (s != null) { return; } else { return; } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally that completes normally does not discard the exception of the try',
+          '',
+          'try { throw new AppEx(); } finally { s.safe(); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally that completes normally does not discard the exception of a catch',
+          '',
+          'try { s.safe(); } catch (RtEx e) { throw new AppEx(); } finally { s.safe(); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'an empty finally does not discard the exception of the try',
+          '',
+          'try { s.risky(); } finally { }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop that breaks completes normally',
+          '',
+          'try { s.risky(); } finally { while (true) { break; } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with an if without an else completes normally',
+          '',
+          'try { s.risky(); } finally { if (s != null) { return; } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with an if-else where only one branch returns completes normally',
+          '',
+          'try { s.risky(); } finally { if (s != null) { return; } else { s.safe(); } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a try-catch whose catch completes completes normally',
+          '',
+          'try { s.risky(); } finally { try { return; } catch (RtEx e) { s.safe(); } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a try-catch whose try can complete completes normally',
+          '',
+          'try { s.risky(); } finally { try { return; } catch (RtEx e) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop that does not run completes normally',
+          '',
+          'try { s.risky(); } finally { for (int i = 0; i < 2; i++) { return; } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop that breaks out of itself completes normally',
+          '',
+          'try { s.risky(); } finally { for (int i = 0; i < 2; i++) { break; } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on a condition completes normally',
+          '',
+          'try { s.risky(); } finally { while (s != null) { return; } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a while(true) with a conditional break completes normally',
+          '',
+          'try { s.risky(); } finally { while (true) { if (s != null) { break; } } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a do-while(true) with a break completes normally',
+          '',
+          'try { s.risky(); } finally { do { break; } while (true); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a do-while that can continue completes normally',
+          '',
+          'try { s.risky(); } finally { do { if (s == null) { continue; } return; } while (s != null); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a counting for loop completes normally',
+          '',
+          'try { s.risky(); } finally { for (int i = 0; i < 3; i++) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a switch without a default completes normally',
+          '',
+          'try { s.risky(); } finally { switch (1) { case 1: return; case 2: return; } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a switch that breaks completes normally',
+          '',
+          'try { s.risky(); } finally { switch (1) { case 1: break; default: return; } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a switch whose last group completes normally',
+          '',
+          'try { s.risky(); } finally { switch (1) { case 1: return; default: s.safe(); } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a switch that has a label after the last group completes normally',
+          '',
+          'try { s.risky(); } finally { switch (1) { default: return; case 3: } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with an empty switch completes normally',
+          '',
+          'try { s.risky(); } finally { switch (1) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with if (true) return; completes normally',
+          '',
+          'try { s.risky(); } finally { if (true) return; }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with an if-else-if chain without a final else completes normally',
+          '',
+          'try { s.risky(); } finally { if (s == null) { return; } else if (s != null) { return; } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a try-finally whose finally completes completes normally',
+          '',
+          'try { s.risky(); } finally { try { return; } finally { s.safe(); } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a try-catch that handles a throw completes normally',
+          '',
+          'try { s.risky(); } finally { try { throw new RtEx(); } catch (RtEx e) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a break in a loop does not make a finally that ends a loop iteration abrupt for the exception of the try',
+          '',
+          'for (int i = 0; i < 2; i++) { try { s.risky(); } finally { if (i > 0) { break; } } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
         ]
       ]
       for (const [comment, extra, body, throwsClause, error] of cases) {
@@ -2321,10 +2783,7 @@ export const throwTest = () =>
       // and the expected output of every program was printed by a JDK 8 JVM.
       const bodies = (increment: number, last: string) => [
         ['1', `count = count + ${increment};`],
-        [
-          'T',
-          `count = count + ${increment}; throw new ${increment === 1 ? 'First' : 'Second'}();`
-        ],
+        ['T', `count = count + ${increment}; throw new ${increment === 1 ? 'First' : 'Second'}();`],
         ['C', `count = count + ${increment}; continue;`],
         ['B', `count = count + ${increment}; break;`],
         ['R', `count = count + ${increment}; return ${last};`]

@@ -33,6 +33,7 @@ import {
 } from '../ast/types/blocks-and-statements'
 import { MethodDeclaration, UnannType } from '../ast/types/classes'
 import { unannTypeToString } from '../types/ast/utils'
+import { canCompleteNormally } from './completion'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
   AbstractClassInstantiationError,
@@ -1199,7 +1200,8 @@ function assignsTo(node: any, variable: string): boolean {
 function analyseCatchClauses(
   clauses: CatchClauseInfo[],
   tryThrown: Set<string>,
-  cg: CodeGenerator
+  cg: CodeGenerator,
+  finallyCompletes: boolean
 ): string[][] {
   const reaches = (from: string, to: string) => cg.symbolTable.classReaches(from, to)
   const rethrowTypes: string[][] = []
@@ -1257,7 +1259,9 @@ function analyseCatchClauses(
     remaining = remaining.filter(thrown => !isCaught(thrown))
   }
 
-  cg.recordThrown(remaining)
+  // JLS 11.2.2: what no clause catches is thrown by the try statement, unless a finally block
+  // that cannot complete normally replaces it
+  if (finallyCompletes) cg.recordThrown(remaining)
   return rethrowTypes
 }
 
@@ -1584,6 +1588,10 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
     const finallyNode: any = (node as any).finally
 
     const hasCatches = catches && catches.catchClauses && catches.catchClauses.length > 0
+    // JLS 11.2.2: if the finally block cannot complete normally, the exceptions of the try block
+    // and of the catch blocks are discarded, and the try statement only throws those of the
+    // finally block
+    const finallyCompletes = !finallyNode || canCompleteNormally(finallyNode.block)
 
     if (!hasCatches && !finallyNode) {
       return { stackSize: compile(block, cg).stackSize, resultType: EMPTY_TYPE }
@@ -1637,7 +1645,7 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
       cg.thrownCheckedExceptions.push(new Set())
       maxStack = Math.max(maxStack, compile(block, cg).stackSize)
       const tryThrown = cg.thrownCheckedExceptions.pop() as Set<string>
-      const rethrowTypes = analyseCatchClauses(clauses, tryThrown, cg)
+      const rethrowTypes = analyseCatchClauses(clauses, tryThrown, cg, finallyCompletes)
 
       // end of protected region (first instruction after try block)
       const tryEnd = cg.generateNewLabel()
@@ -1717,10 +1725,13 @@ const codeGenerators: { [type: string]: (node: Node, cg: CodeGenerator) => Compi
             throw new MulticatchParameterAssignedError(varName)
           }
           if (isPreciseRethrow) cg.preciseRethrows.set(varName, rethrowTypes[clauseIndex])
+          cg.thrownCheckedExceptions.push(new Set())
           catchBlock.blockStatements.forEach((stmt: any) => {
             const { stackSize } = compile(stmt, cg)
             maxStack = Math.max(maxStack, stackSize)
           })
+          const catchThrown = cg.thrownCheckedExceptions.pop() as Set<string>
+          if (finallyCompletes) cg.recordThrown([...catchThrown])
           cg.preciseRethrows.delete(varName)
 
           const catchEndOffset = cg.code.length
