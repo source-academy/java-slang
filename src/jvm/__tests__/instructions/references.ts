@@ -6040,6 +6040,81 @@ describe('Athrow', () => {
     expect(exceptionObj === eObj).toBe(true)
   })
 
+  test('ATHROW: is caught when it is the last instruction of the protected range', () => {
+    const ab = new ArrayBuffer(8)
+    const code = new DataView(ab)
+    const testClass = testLoader.createClass({
+      className: 'Test',
+      methods: [
+        {
+          accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
+          name: 'test0',
+          descriptor: '()V',
+          attributes: [],
+          exceptionTable: [
+            {
+              // covers only the athrow at pc 0, as in `try { throw e; } catch (E x) { ... }`
+              startPc: 0,
+              endPc: 1,
+              handlerPc: 99,
+              catchType: 'java/lang/NullPointerException'
+            }
+          ],
+          code: code
+        }
+      ],
+      loader: testLoader
+    })
+    code.setUint8(0, OPCODE.ATHROW)
+    const method = testClass.getMethod('test0()V') as Method
+
+    thread.invokeStackFrame(new JavaStackFrame(testClass, method as Method, 0, []))
+    const eObj = NullPointerException.instantiate()
+    thread.pushStack(eObj)
+    thread.runFor(1)
+    expect(thread.getMethod().getName()).toBe('test0')
+    expect(thread.getPC()).toBe(99)
+    expect((thread.popStack() as SuccessResult<any>).result === eObj).toBe(true)
+  })
+
+  test('ATHROW: is not caught outside the protected range', () => {
+    const ab = new ArrayBuffer(8)
+    const code = new DataView(ab)
+    const testClass = testLoader.createClass({
+      className: 'Test',
+      methods: [
+        {
+          accessFlags: [METHOD_FLAGS.ACC_PUBLIC],
+          name: 'test0',
+          descriptor: '()V',
+          attributes: [],
+          exceptionTable: [
+            {
+              // the athrow at pc 1 is just after the range
+              startPc: 0,
+              endPc: 1,
+              handlerPc: 99,
+              catchType: 'java/lang/NullPointerException'
+            }
+          ],
+          code: code
+        }
+      ],
+      loader: testLoader
+    })
+    code.setUint8(0, OPCODE.NOP)
+    code.setUint8(1, OPCODE.ATHROW)
+    const method = testClass.getMethod('test0()V') as Method
+
+    thread.invokeStackFrame(new JavaStackFrame(testClass, method as Method, 0, []))
+    const eObj = NullPointerException.instantiate()
+    thread.pushStack(eObj)
+    thread.runFor(2)
+    expect(thread.peekStackFrame().method).toBe(
+      threadClass.getMethod('dispatchUncaughtException(Ljava/lang/Throwable;)V')
+    )
+  })
+
   test('ATHROW: clears operand stack and updates PC', () => {
     const ab = new ArrayBuffer(8)
     const code = new DataView(ab)

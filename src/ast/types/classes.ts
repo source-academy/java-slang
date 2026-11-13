@@ -51,6 +51,8 @@ export interface ConstructorDeclaration extends BaseNode {
   constructorModifier: Array<ConstructorModifier>;
   constructorDeclarator: ConstructorDeclarator;
   constructorBody: ConstructorBody;
+  /** The exception classes of the `throws` clause, as written. */
+  throws?: Array<string>;
 }
 
 export type ConstructorModifier =
@@ -87,6 +89,8 @@ export interface MethodHeader {
   result: Result;
   identifier: Identifier;
   formalParameterList: Array<FormalParameter>;
+  /** The exception classes of the `throws` clause, as written. */
+  throws?: Array<string>;
 }
 
 export type Result = "void" | UnannType;

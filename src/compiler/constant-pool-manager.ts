@@ -106,6 +106,19 @@ export class ConstantPoolManager {
     })
   }
 
+  /** An `InterfaceMethodref`, which `invokeinterface` (and `invokestatic` on an interface) needs. */
+  indexInterfaceMethodrefInfo(className: string, methodName: string, descriptor: string) {
+    return this.writeIfAbsent(CONSTANT_TAG.InterfaceMethodref, {
+      class: {
+        name: { value: className }
+      },
+      nameAndType: {
+        name: { value: methodName },
+        descriptor: { value: descriptor }
+      }
+    })
+  }
+
   indexNameAndTypeInfo(name: string, type: string) {
     return this.writeIfAbsent(CONSTANT_TAG.NameAndType, {
       name: { value: name },
@@ -130,7 +143,15 @@ export class ConstantPoolManager {
       tag: tag,
       value: value
     }
-    const key = JSON.stringify(task, (k, v) => (typeof v === 'bigint' ? v.toString() : v))
+    // JSON has no -0, NaN or Infinity (it turns them into 0 / null), so they must be spelled out
+    // or e.g. the constants 0.0 and -0.0 would be treated as the same entry
+    const key = JSON.stringify(task, (k, v) => {
+      if (typeof v === 'bigint') return v.toString()
+      if (typeof v === 'number' && (Object.is(v, -0) || !Number.isFinite(v))) {
+        return `number:${Object.is(v, -0) ? '-0' : v}`
+      }
+      return v
+    })
     let pos = this.objectMap.get(key)
     if (pos !== undefined) {
       return pos
@@ -183,6 +204,9 @@ export class ConstantPoolManager {
         break
       case CONSTANT_TAG.Methodref:
         this.writeMethodrefInfo(task.value as ConstantMethodrefValue)
+        break
+      case CONSTANT_TAG.InterfaceMethodref:
+        this.writeInterfaceMethodrefInfo(task.value as ConstantMethodrefValue)
         break
       case CONSTANT_TAG.NameAndType:
         this.writeNameAndTypeInfo(task.value as ConstantNameAndTypeValue)
@@ -258,6 +282,16 @@ export class ConstantPoolManager {
     const nameAndTypeIndex = this.addNameAndTypeInfo(val.nameAndType)
     this.constantPool.push({
       tag: CONSTANT_TAG.Methodref,
+      classIndex: classIndex,
+      nameAndTypeIndex: nameAndTypeIndex
+    })
+  }
+
+  private writeInterfaceMethodrefInfo(val: ConstantMethodrefValue) {
+    const classIndex = this.addClassInfo(val.class)
+    const nameAndTypeIndex = this.addNameAndTypeInfo(val.nameAndType)
+    this.constantPool.push({
+      tag: CONSTANT_TAG.InterfaceMethodref,
       classIndex: classIndex,
       nameAndTypeIndex: nameAndTypeIndex
     })

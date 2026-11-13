@@ -4,6 +4,7 @@ import {
   AppendFrame,
   AttributeInfo,
   CodeAttribute,
+  ExceptionsAttribute,
   ExceptionHandler,
   ObjectVariableInfo,
   StackMapTableAttribute,
@@ -180,9 +181,10 @@ export class BinaryWriter {
         break
       case CONSTANT_TAG.Long:
         val = (constant as ConstantLongInfo).value
-        const div = 2 ** 32
-        this.write(Number(val / BigInt(div)), u4)
-        this.write(Number(val % BigInt(div)), u4)
+        // two's complement, so that negative values get a high word of 0xFFFFFFFF
+        const bits = BigInt.asUintN(64, val)
+        this.write(Number(bits >> BigInt(32)), u4)
+        this.write(Number(bits & BigInt(0xffffffff)), u4)
         break
       case CONSTANT_TAG.Double:
         val = (constant as ConstantDoubleInfo).value
@@ -240,8 +242,17 @@ export class BinaryWriter {
       case 'StackMapTable':
         this.writeStackMapTableAttribute(attribute as StackMapTableAttribute)
         break
+      case 'Exceptions':
+        this.writeExceptionsAttribute(attribute as ExceptionsAttribute)
+        break
       default:
     }
+  }
+
+  /** JVMS 4.7.5: the classes in the `throws` clause of a method. */
+  private writeExceptionsAttribute(attribute: ExceptionsAttribute) {
+    this.write(attribute.exceptionIndexTable.length, u2)
+    attribute.exceptionIndexTable.forEach(index => this.write(index, u2))
   }
 
   private writeCodeAttribute(attribute: CodeAttribute) {

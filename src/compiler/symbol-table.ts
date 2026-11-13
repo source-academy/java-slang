@@ -1,6 +1,5 @@
 import { UnannType } from '../ast/types/classes'
 import { ImportDeclaration } from '../ast/types/packages-and-modules'
-import { METHOD_FLAGS } from '../ClassFile/types/methods'
 import {
   generateClassAccessFlags,
   generateFieldAccessFlags,
@@ -8,7 +7,6 @@ import {
 } from './compiler-utils'
 import {
   InvalidMethodCallError,
-  OverrideFinalMethodError,
   SymbolCannotBeResolvedError,
   SymbolNotFoundError,
   SymbolRedeclarationError,
@@ -50,6 +48,8 @@ export interface ClassInfo {
   name: string
   accessFlags: number
   parentClassName?: string
+  /** Internal names of the directly implemented interfaces (known for library classes only). */
+  interfaces?: string[]
   isEnum?: boolean
 }
 
@@ -70,6 +70,8 @@ export interface MethodInfo {
   parentClassName: string
   typeDescriptor: string
   className: string
+  /** Binary names of the exception classes in the method's `throws` clause. */
+  exceptions?: string[]
 }
 
 export interface VariableInfo {
@@ -78,6 +80,11 @@ export interface VariableInfo {
   index: number
   typeName: string
   typeDescriptor: string
+}
+
+/** The parameter part of a method descriptor, e.g. `(I[Ljava/lang/String;)`. */
+function parameterPart(descriptor: string): string {
+  return descriptor.slice(0, descriptor.indexOf(')') + 1)
 }
 
 function generateSymbol(name: string, type: SymbolType) {
@@ -177,7 +184,8 @@ export class SymbolTable {
       this.insertClassInfo({
         name: meta.name,
         accessFlags: meta.accessFlags,
-        parentClassName: meta.superClass ?? undefined
+        parentClassName: meta.superClass ?? undefined,
+        interfaces: meta.interfaces
       })
       meta.fields.forEach(f =>
         this.insertFieldInfo({
@@ -194,7 +202,8 @@ export class SymbolTable {
           accessFlags: m.accessFlags,
           parentClassName: meta.name,
           typeDescriptor: m.descriptor,
-          className: meta.name
+          className: meta.name,
+          exceptions: m.exceptions
         })
       )
       this.returnToRoot()
@@ -325,24 +334,6 @@ export class SymbolTable {
   insertMethodInfo(info: MethodInfo) {
     const key = generateSymbol(info.name, SymbolType.METHOD)
 
-    for (let i = this.curClassIdx - 1; i > 0; i--) {
-      const parentTable = this.tables[i]
-      if (parentTable.has(key)) {
-        const parentMethods = parentTable.get(key)!.info
-        if (Array.isArray(parentMethods)) {
-          for (const m of parentMethods) {
-            if (
-              m.typeDescriptor === info.typeDescriptor &&
-              m.accessFlags & METHOD_FLAGS.ACC_FINAL &&
-              m.className == info.parentClassName
-            ) {
-              throw new OverrideFinalMethodError(info.name)
-            }
-          }
-        }
-      }
-    }
-
     this.curTable = this.tables[this.curIdx]
     if (!this.curTable.has(key)) {
       const symbolNode: SymbolNode = {
@@ -465,8 +456,279 @@ export class SymbolTable {
     throw new SymbolNotFoundError(name)
   }
 
+  /** The name of the class whose member table is `table`, if it is a registered class scope. */
+  private classNameOfTable(table: Table): string | undefined {
+    for (const candidate of this.tables) {
+      for (const node of candidate.values()) {
+        if (node.children === table) {
+          const name = (node.info as ClassInfo).name
+          if (name !== undefined && this.hasClass(name)) return name
+        }
+      }
+    }
+    return undefined
+  }
+
+  private hasClass(name: string): boolean {
+    try {
+      this.queryClass(name)
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
+  /**
+   * The member tables of the superclasses of `className`, nearest first (up to and including
+   * `java/lang/Object`). The walk stops at a class the table does not know.
+   */
+  private superclassTables(className: string | undefined): Array<Table> {
+    const tables: Array<Table> = []
+    const visited = new Set<string>()
+    let name = className
+    while (name !== undefined && !visited.has(name)) {
+      visited.add(name)
+      let parent: string | undefined
+      try {
+        parent = this.queryClass(name).parentClassName
+      } catch (e) {
+        break
+      }
+      if (parent === undefined) break
+      try {
+        tables.push(this.getClassTable(parent))
+      } catch (e) {
+        break
+      }
+      name = parent
+    }
+    return tables
+  }
+
+  /**
+   * Looks a member up in the table of a class and then in those of its superclasses (JLS 8.4.8:
+   * a class inherits the non-private members of its superclass). For methods, every overload
+   * visible in the hierarchy is returned, with a method overriding an inherited one hiding it.
+   */
+  private lookupMember(
+    table: Table,
+    className: string | undefined,
+    key: Symbol,
+    symbolType: SymbolType,
+    // true when `table` is a superclass reached through `super`: its private members are not
+    // accessible from the subclass either
+    hideOwnPrivate = false
+  ): SymbolInfo | undefined {
+    const ACC_PRIVATE = 0x0002
+    const inherited = this.superclassTables(className)
+
+    if (symbolType === SymbolType.METHOD) {
+      const merged: MethodInfos = []
+      ;[table, ...inherited].forEach((candidate, depth) => {
+        const node = candidate.get(key)
+        if (node === undefined) return
+        for (const method of node.info as MethodInfos) {
+          if ((depth > 0 || hideOwnPrivate) && method.accessFlags & ACC_PRIVATE) continue
+          // a method hides an inherited one with the same parameters, even if it returns a
+          // subclass of the inherited method's return type
+          if (
+            merged.some(
+              m => parameterPart(m.typeDescriptor) === parameterPart(method.typeDescriptor)
+            )
+          )
+            continue
+          merged.push(method)
+        }
+      })
+      return merged.length > 0 ? merged : undefined
+    }
+
+    const own = table.get(key)
+    if (
+      own !== undefined &&
+      !(hideOwnPrivate && (own.info as FieldInfo).accessFlags & ACC_PRIVATE)
+    ) {
+      return own.info
+    }
+    for (const candidate of inherited) {
+      const node = candidate.get(key)
+      if (node !== undefined && !((node.info as FieldInfo).accessFlags & ACC_PRIVATE)) {
+        return node.info
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Whether `to` is `from`, one of its superclasses, or an interface it implements (directly or
+   * through a superclass or superinterface). Returns `undefined` when `to` was not found but a
+   * class on the way is unknown to the symbol table, so the answer cannot be decided.
+   */
+  classReaches(from: string, to: string): boolean | undefined {
+    if (from === to) return true
+    let target: string
+    try {
+      target = this.queryClass(to).name
+    } catch (e) {
+      return undefined
+    }
+    let complete = true
+    const visited = new Set<string>()
+    const pending = [from]
+    while (pending.length > 0) {
+      let info
+      try {
+        info = this.queryClass(pending.pop() as string)
+      } catch (e) {
+        complete = false
+        continue
+      }
+      if (info.name === target) return true
+      if (visited.has(info.name)) continue
+      visited.add(info.name)
+      if (info.parentClassName) pending.push(info.parentClassName)
+      pending.push(...(info.interfaces ?? []))
+    }
+    return complete ? false : undefined
+  }
+
+  /**
+   * JLS 11.1.1: whether `className` is a checked exception class, which is a subclass of
+   * Throwable that is neither a subclass of RuntimeException nor of Error. Returns `false` for
+   * a class that is not a Throwable, and `undefined` when this cannot be decided because a
+   * class on the way is unknown to the symbol table.
+   */
+  isCheckedException(className: string): boolean | undefined {
+    const isThrowable = this.classReaches(className, 'java/lang/Throwable')
+    if (isThrowable !== true) return isThrowable
+    const isRuntime = this.classReaches(className, 'java/lang/RuntimeException')
+    const isError = this.classReaches(className, 'java/lang/Error')
+    if (isRuntime === true || isError === true) return false
+    if (isRuntime === undefined || isError === undefined) return undefined
+    return true
+  }
+
+  /**
+   * The methods declared by the class itself: not initialisers, and constructors only when
+   * `includeConstructors` is set.
+   */
+  getDeclaredMethods(className: string, includeConstructors = false): MethodInfos {
+    const methods: MethodInfos = []
+    for (const node of this.getClassTable(className).values()) {
+      if (!Array.isArray(node.info)) continue
+      for (const method of node.info as MethodInfos) {
+        if (method.name === '<clinit>' || (method.name === '<init>' && !includeConstructors)) {
+          continue
+        }
+        methods.push(method)
+      }
+    }
+    return methods
+  }
+
+  /**
+   * The methods of the superclasses of `method`'s class that `method` overrides or hides,
+   * nearest first: same name and parameter types, and inherited (JLS 8.4.8: not private, and
+   * not package-private in a library package).
+   */
+  findOverriddenMethods(method: MethodInfo): MethodInfos {
+    const ACC_PUBLIC = 0x0001
+    const ACC_PRIVATE = 0x0002
+    const ACC_PROTECTED = 0x0004
+
+    const overridden: MethodInfos = []
+    const visited = new Set<string>()
+    let name: string | undefined = method.className
+    while (name !== undefined && !visited.has(name)) {
+      visited.add(name)
+      let parent: string | undefined
+      let table: Table
+      try {
+        parent = this.queryClass(name).parentClassName
+        if (parent === undefined) break
+        table = this.getClassTable(parent)
+      } catch (e) {
+        break
+      }
+      const node = table.get(generateSymbol(method.name, SymbolType.METHOD))
+      for (const candidate of node !== undefined && Array.isArray(node.info)
+        ? (node.info as MethodInfos)
+        : []) {
+        const isInherited =
+          !(candidate.accessFlags & ACC_PRIVATE) &&
+          (candidate.accessFlags & (ACC_PUBLIC | ACC_PROTECTED) || !parent.includes('/'))
+        if (
+          isInherited &&
+          parameterPart(candidate.typeDescriptor) === parameterPart(method.typeDescriptor)
+        ) {
+          overridden.push(candidate)
+        }
+      }
+      name = parent
+    }
+    return overridden
+  }
+
+  /** The nearest method that `method` overrides or hides, if any. */
+  findOverriddenMethod(method: MethodInfo): MethodInfo | undefined {
+    return this.findOverriddenMethods(method)[0]
+  }
+
+  /**
+   * The first abstract method that the class `className` inherits without any class between
+   * it and the declaring class (or the class itself) implementing it, if there is one
+   * (JLS 8.1.1.1: a non-abstract class must implement every abstract method it inherits).
+   * Only superclasses are considered because interfaces are not supported.
+   */
+  findUnimplementedAbstractMethod(className: string): MethodInfo | undefined {
+    const ACC_PRIVATE = 0x0002
+    const ACC_STATIC = 0x0008
+    const ACC_ABSTRACT = 0x0400
+
+    const chain: Array<Table> = []
+    const visited = new Set<string>()
+    let name: string | undefined = className
+    while (name !== undefined && !visited.has(name)) {
+      visited.add(name)
+      try {
+        chain.push(this.getClassTable(name))
+        name = this.queryClass(name).parentClassName
+      } catch (e) {
+        break
+      }
+    }
+
+    const methodsIn = (table: Table, methodName: string): MethodInfos => {
+      const node = table.get(generateSymbol(methodName, SymbolType.METHOD))
+      return node !== undefined && Array.isArray(node.info) ? (node.info as MethodInfos) : []
+    }
+    const parameterTypes = (descriptor: string) =>
+      descriptor.slice(1, descriptor.indexOf(')')).match(/\[*(?:[BCDFIJSZ]|L[^;]+;)/g) ?? []
+    // Generics are not supported, so an implementation must repeat the parameter types exactly
+    const overrides = (abstractMethod: MethodInfo, candidate: MethodInfo) =>
+      !(candidate.accessFlags & (ACC_ABSTRACT | ACC_STATIC | ACC_PRIVATE)) &&
+      parameterTypes(abstractMethod.typeDescriptor).join() ===
+        parameterTypes(candidate.typeDescriptor).join()
+
+    for (let depth = 1; depth < chain.length; depth++) {
+      for (const node of chain[depth].values()) {
+        if (!Array.isArray(node.info)) continue
+        for (const method of node.info as MethodInfos) {
+          if (!(method.accessFlags & ACC_ABSTRACT)) continue
+          const implemented = chain
+            .slice(0, depth)
+            .some(table => methodsIn(table, method.name).some(c => overrides(method, c)))
+          if (!implemented) return method
+        }
+      }
+    }
+    return undefined
+  }
+
   private querySymbol(name: string, symbolType: SymbolType): Array<SymbolInfo> {
     let curTable = this.getNewTable()
+    let curClassName: string | undefined
+    let startsAtSuper = false
     const symbolInfos: Array<SymbolInfo> = []
 
     const tokens = name.split('.')
@@ -474,37 +736,78 @@ export class SymbolTable {
     tokens.forEach((token, i) => {
       if (i === 0) {
         const key1 = generateSymbol(token, SymbolType.VARIABLE)
+        let resolved = false
         for (let i = this.curIdx; i >= this.curClassIdx; i--) {
           if (this.tables[i].has(key1)) {
             const node = this.tables[i].get(key1)!
             token = (node.info as VariableInfo).typeName
             symbolInfos.push(node.info)
+            resolved = true
             break
+          }
+        }
+        if (!resolved && token !== 'this' && token !== 'super') {
+          // not a local variable: a field of the current class or one it inherits (which hides
+          // a class of the same name)
+          const classTable = this.tables[this.curClassIdx]
+          const field = this.lookupMember(
+            classTable,
+            this.classNameOfTable(classTable),
+            generateSymbol(token, SymbolType.FIELD),
+            SymbolType.FIELD
+          ) as FieldInfo | undefined
+          if (field !== undefined && len > 1) {
+            symbolInfos.push(field)
+            token = field.typeName
           }
         }
 
         if (token === 'this') {
           curTable = this.tables[this.curClassIdx]
+          curClassName = this.classNameOfTable(curTable)
+        } else if (token === 'super') {
+          // members are looked up starting in the superclass, so `super.x` is the superclass's x
+          // even if the current class declares its own x
+          const parent = this.queryClass(
+            this.classNameOfTable(this.tables[this.curClassIdx]) as string
+          ).parentClassName as string
+          curTable = this.getClassTable(parent)
+          curClassName = parent
+          startsAtSuper = true
         } else {
           curTable = this.getClassTable(token)
+          curClassName = token
         }
       } else if (i < len - 1) {
         const key = generateSymbol(token, SymbolType.FIELD)
-        const node = curTable.get(key)
-        if (node === undefined) {
+        const info = this.lookupMember(
+          curTable,
+          curClassName,
+          key,
+          SymbolType.FIELD,
+          startsAtSuper && i === 1
+        )
+        if (info === undefined) {
           throw new SymbolCannotBeResolvedError(token, name)
         }
-        symbolInfos.push(node.info)
+        symbolInfos.push(info)
 
-        const typeName = (node.info as FieldInfo).typeName
+        const typeName = (info as FieldInfo).typeName
         curTable = this.getClassTable(typeName)
+        curClassName = typeName
       } else {
         const key = generateSymbol(token, symbolType)
-        const node = curTable.get(key)
-        if (node === undefined) {
+        const info = this.lookupMember(
+          curTable,
+          curClassName,
+          key,
+          symbolType,
+          startsAtSuper && i === 1
+        )
+        if (info === undefined) {
           throw new SymbolCannotBeResolvedError(token, name)
         }
-        symbolInfos.push(node.info)
+        symbolInfos.push(info)
       }
     })
 
@@ -539,6 +842,28 @@ export class SymbolTable {
       }
     }
 
+    // Methods inherited from superclasses, which includes those of java/lang/Object
+    const currentClass = this.classNameOfTable(this.tables[this.curClassIdx])
+    const inherited = this.lookupMember(
+      this.tables[this.curClassIdx],
+      currentClass,
+      key2,
+      SymbolType.METHOD
+    ) as MethodInfos | undefined
+    for (const methodInfo of inherited ?? []) {
+      if (
+        !(results as Array<MethodInfo>).some(r =>
+          r.className === methodInfo.className
+            ? r.typeDescriptor === methodInfo.typeDescriptor
+            : // declared nearer, so it hides the inherited method with the same parameters
+              r.name === methodInfo.name &&
+              parameterPart(r.typeDescriptor) === parameterPart(methodInfo.typeDescriptor)
+        )
+      ) {
+        results.push(methodInfo)
+      }
+    }
+
     if (results.length > 0) {
       return results
     }
@@ -561,6 +886,18 @@ export class SymbolTable {
       if (table.has(key2)) {
         return [(table.get(key2) as SymbolNode).info as FieldInfo]
       }
+    }
+
+    // A field inherited from a superclass
+    const classTable = this.tables[this.curClassIdx]
+    const inherited = this.lookupMember(
+      classTable,
+      this.classNameOfTable(classTable),
+      key2,
+      SymbolType.FIELD
+    )
+    if (inherited !== undefined) {
+      return [inherited as FieldInfo]
     }
 
     throw new SymbolNotFoundError(name)

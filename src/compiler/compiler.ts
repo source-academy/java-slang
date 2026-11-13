@@ -12,14 +12,22 @@ import {
 import { AttributeInfo } from '../ClassFile/types/attributes'
 import { FieldInfo } from '../ClassFile/types/fields'
 import { MethodInfo } from '../ClassFile/types/methods'
-import { ConstructNotSupportedError } from './error'
+import {
+  CannotInheritFromFinalClassError,
+  CyclicInheritanceError,
+  ConstructNotSupportedError,
+  InconvertibleTypesError,
+  InvalidOverrideError,
+  MethodAlreadyDefinedError,
+  MissingAbstractMethodImplementationError
+} from './error'
 import { ConstantPoolManager } from './constant-pool-manager'
 import {
   generateClassAccessFlags,
   generateFieldAccessFlags,
   generateMethodAccessFlags
 } from './compiler-utils'
-import { SymbolTable, Table } from './symbol-table'
+import { MethodInfo as MethodInfoOfTable, SymbolTable, Table } from './symbol-table'
 import { generateCode } from './code-generator'
 
 const MAGIC = 0xcafebabe
@@ -69,7 +77,7 @@ export class Compiler {
     // declaration order.
     declarations.forEach(decl => {
       const className = decl.typeIdentifier
-      const parentClassName = 'sclass' in decl && decl.sclass ? decl.sclass : 'java/lang/Object'
+      const parentClassName = this.resolveSuperclassName(decl)
       const accessFlags = generateClassAccessFlags(decl.classModifier)
       // Nested types are registered under both their simple name (so
       // unqualified references from within the compilation unit resolve) and
@@ -88,6 +96,9 @@ export class Compiler {
       this.symbolTable.returnToRoot()
     })
 
+    // JLS 8.1.4: the classes must form a hierarchy, so none may depend on itself
+    this.checkNoCyclicInheritance(declarations)
+
     // Pass 1: register every class's own members (fields, methods,
     // constructors, enum constants and synthetic members) with no bytecode
     // generated yet. This makes member resolution order-independent: a
@@ -100,6 +111,15 @@ export class Compiler {
           ? this.registerEnumSignature(decl)
           : this.registerClassSignature(decl)
       classScopes.set(decl, scope)
+    })
+
+    // Every class's members are registered now, so the inheritance rules can be checked
+    declarations.forEach(decl => {
+      if (decl.kind === 'NormalClassDeclaration') {
+        this.checkSuperclassIsNotFinal(decl)
+        this.checkMethodOverrides(decl)
+        this.checkAbstractMethods(decl)
+      }
     })
 
     // Pass 2: generate the actual bytecode for every class, re-entering
@@ -118,6 +138,183 @@ export class Compiler {
     // Return in declaration order (top-level types first, then member enums) so
     // the entry class stays at index 0 regardless of compilation order.
     return declarations.map(decl => compiled.get(decl) as Class)
+  }
+
+  /**
+   * JLS 8.1.4: it is a compile-time error if a class depends on itself, directly or through its
+   * superclasses (`class A extends B {}` with `class B extends A {}`), so that the inheritance
+   * relation between the classes of a program is a directed acyclic graph. The class that is
+   * reported is the first one in declaration order that is on a cycle.
+   */
+  private checkNoCyclicInheritance(declarations: Array<EnumDeclaration | NormalClassDeclaration>) {
+    const superclassOf = new Map<string, string>()
+    for (const declaration of declarations) {
+      if (declaration.kind === 'NormalClassDeclaration' && declaration.sclass) {
+        superclassOf.set(declaration.typeIdentifier, declaration.sclass)
+      }
+    }
+
+    for (const declaration of declarations) {
+      const start = declaration.typeIdentifier
+      const visited = new Set<string>([start])
+      let current = superclassOf.get(start)
+      while (current !== undefined) {
+        if (current === start) {
+          throw new CyclicInheritanceError(start.split('$').pop() as string)
+        }
+        // a cycle that this class leads into but is not part of is reported for its own members
+        if (visited.has(current)) break
+        visited.add(current)
+        current = superclassOf.get(current)
+      }
+    }
+  }
+
+  /** JLS 8.1.4: a class cannot extend a final class, nor an enum (which is implicitly final). */
+  private checkSuperclassIsNotFinal(classNode: NormalClassDeclaration) {
+    if (!classNode.sclass) return
+    const ACC_FINAL = 0x0010
+    let parent
+    try {
+      parent = this.symbolTable.queryClass(classNode.sclass)
+    } catch (e) {
+      return
+    }
+    if (parent.accessFlags & ACC_FINAL || parent.isEnum) {
+      throw new CannotInheritFromFinalClassError(
+        (parent.name.split('/').pop() as string).replace(/\$/g, '.')
+      )
+    }
+  }
+
+  /**
+   * JLS 8.4.8.3: a method that overrides (or hides) an inherited one must not be less
+   * accessible, must return a compatible type, and must be static exactly when the inherited
+   * method is. This also covers a class implementing an abstract method.
+   */
+  private checkMethodOverrides(classNode: NormalClassDeclaration) {
+    const ACC_PUBLIC = 0x0001
+    const ACC_PROTECTED = 0x0004
+    const ACC_STATIC = 0x0008
+    const ACC_PRIVATE = 0x0002
+    const ACC_FINAL = 0x0010
+    // public > protected > package-private > private
+    const accessLevel = (flags: number) =>
+      flags & ACC_PUBLIC ? 3 : flags & ACC_PROTECTED ? 2 : flags & ACC_PRIVATE ? 0 : 1
+    const accessName = ['private', 'package-private', 'protected', 'public']
+
+    const parameterNames = (descriptor: string) =>
+      (descriptor.slice(1, descriptor.indexOf(')')).match(/\[*(?:[BCDFIJSZ]|L[^;]+;)/g) ?? [])
+        .map(descriptorToSourceName)
+        .join(',')
+    const returnDescriptor = (descriptor: string) => descriptor.slice(descriptor.indexOf(')') + 1)
+    const displayClass = (name: string) => (name.split('/').pop() as string).replace(/\$/g, '.')
+    const describe = (m: MethodInfoOfTable) =>
+      `${m.name}(${parameterNames(m.typeDescriptor)}) in ${displayClass(m.className)}`
+
+    // whether a method returning `overriding` may override one returning `overridden`
+    const isReturnCompatible = (overriding: string, overridden: string): boolean => {
+      if (overriding === overridden) return true
+      const isReference = (d: string) => d.startsWith('L') || d.startsWith('[')
+      if (!isReference(overriding) || !isReference(overridden)) return false
+      if (overridden.startsWith('[')) {
+        // arrays are covariant in their (reference) element type
+        return (
+          overriding.startsWith('[') && isReturnCompatible(overriding.slice(1), overridden.slice(1))
+        )
+      }
+      if (overriding.startsWith('[')) return overridden === 'Ljava/lang/Object;'
+      return (
+        this.symbolTable.classReaches(overriding.slice(1, -1), overridden.slice(1, -1)) !== false
+      )
+    }
+
+    for (const method of this.symbolTable.getDeclaredMethods(classNode.typeIdentifier)) {
+      const overridden = this.symbolTable.findOverriddenMethod(method)
+      if (overridden === undefined) continue
+
+      const isStatic = (method.accessFlags & ACC_STATIC) !== 0
+      const wasStatic = (overridden.accessFlags & ACC_STATIC) !== 0
+      const verb = isStatic && wasStatic ? 'hide' : 'override'
+      const fail = (reason: string): never => {
+        throw new InvalidOverrideError(describe(method), describe(overridden), verb, reason)
+      }
+
+      if (isStatic !== wasStatic) {
+        fail(isStatic ? 'overriding method is static' : 'overridden method is static')
+      }
+      // JLS 8.4.8.1, 8.4.8.2: a method cannot override or hide a final method of any superclass,
+      // not only of the one it directly extends
+      const finalMethod = this.symbolTable
+        .findOverriddenMethods(method)
+        .find(inherited => inherited.accessFlags & ACC_FINAL)
+      if (finalMethod !== undefined) {
+        const finalIsStatic = (finalMethod.accessFlags & ACC_STATIC) !== 0
+        throw new InvalidOverrideError(
+          describe(method),
+          describe(finalMethod),
+          isStatic && finalIsStatic ? 'hide' : 'override',
+          finalIsStatic ? 'overridden method is static final' : 'overridden method is final'
+        )
+      }
+      if (accessLevel(method.accessFlags) < accessLevel(overridden.accessFlags)) {
+        fail(
+          'attempting to assign weaker access privileges; was ' +
+            accessName[accessLevel(overridden.accessFlags)]
+        )
+      }
+      const returned = returnDescriptor(method.typeDescriptor)
+      const expected = returnDescriptor(overridden.typeDescriptor)
+      if (!isReturnCompatible(returned, expected)) {
+        fail(
+          `return type ${descriptorToSourceName(returned)} is not compatible with ${descriptorToSourceName(expected)}`
+        )
+      }
+
+      // JLS 8.4.8.3: the overriding method may only throw the checked exceptions that the
+      // overridden method throws, or subclasses of them
+      for (const thrown of method.exceptions ?? []) {
+        if (this.symbolTable.isCheckedException(thrown) !== true) continue
+        const isAllowed = (overridden.exceptions ?? []).some(
+          allowed => this.symbolTable.classReaches(thrown, allowed) !== false
+        )
+        if (!isAllowed) fail(`overridden method does not throw ${displayClass(thrown)}`)
+      }
+    }
+  }
+
+  /**
+   * JLS 8.1.1.1 / 8.4.3.1: only an abstract class may declare an abstract method, and a
+   * non-abstract class must implement every abstract method it inherits.
+   */
+  private checkAbstractMethods(classNode: NormalClassDeclaration) {
+    if (classNode.classModifier.includes('abstract')) return
+    const displayName = classNode.typeIdentifier.replace(/\$/g, '.')
+
+    for (const member of classNode.classBody) {
+      if (member.kind === 'MethodDeclaration' && member.methodModifier.includes('abstract')) {
+        const params = member.methodHeader.formalParameterList.map(p => p.unannType).join(',')
+        throw new MissingAbstractMethodImplementationError(
+          displayName,
+          `${member.methodHeader.identifier}(${params})`,
+          displayName
+        )
+      }
+    }
+
+    const missing = this.symbolTable.findUnimplementedAbstractMethod(classNode.typeIdentifier)
+    if (missing !== undefined) {
+      const params = (
+        missing.typeDescriptor
+          .slice(1, missing.typeDescriptor.indexOf(')'))
+          .match(/\[*(?:[BCDFIJSZ]|L[^;]+;)/g) ?? []
+      ).map(descriptorToSourceName)
+      throw new MissingAbstractMethodImplementationError(
+        displayName,
+        `${missing.name}(${params.join(',')})`,
+        missing.className.replace(/[/$]/g, '.').split('.').pop() as string
+      )
+    }
   }
 
   /**
@@ -187,14 +384,29 @@ export class Compiler {
   }
 
   /**
+   * The binary name of the class named in a declaration's `extends` clause. A library class
+   * is written by its simple name (`Number`) but the class file must name it in full
+   * (`java/lang/Number`); a class of this compilation unit is already registered under the
+   * name it is written with.
+   */
+  private resolveSuperclassName(decl: { sclass?: string } | object): string {
+    const sclass = 'sclass' in decl ? decl.sclass : undefined
+    if (!sclass) return 'java/lang/Object'
+    try {
+      return this.symbolTable.queryClass(sclass).name
+    } catch (e) {
+      return sclass
+    }
+  }
+
+  /**
    * Pass 1 for a class: registers its own member signatures (fields,
    * methods, constructors) in a fresh scope, with no bytecode generated.
    * Returns that scope so pass 2 can re-enter it via restoreClassScope.
    */
   private registerClassSignature(classNode: ClassDeclaration): Table {
     this.className = classNode.typeIdentifier
-    const sclass = 'sclass' in classNode ? classNode.sclass : undefined
-    this.parentClassName = sclass ? sclass : 'java/lang/Object'
+    this.parentClassName = this.resolveSuperclassName(classNode)
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
     this.symbolTable.extend()
     const scope = this.symbolTable.insertClassInfo({ name: this.className, accessFlags }, [
@@ -213,8 +425,7 @@ export class Compiler {
    */
   private generateClassFile(classNode: ClassDeclaration): ClassFile {
     this.className = classNode.typeIdentifier
-    const sclass = 'sclass' in classNode ? classNode.sclass : undefined
-    this.parentClassName = sclass ? sclass : 'java/lang/Object'
+    this.parentClassName = this.resolveSuperclassName(classNode)
     const accessFlags = generateClassAccessFlags(classNode.classModifier)
 
     const superClassIndex = this.constantPoolManager.indexClassInfo(this.parentClassName)
@@ -694,6 +905,7 @@ export class Compiler {
     staticFields.forEach(f => this.buildFieldEntry(f))
     nonStaticFields.forEach(f => this.buildFieldEntry(f))
     nonStaticMethods.forEach(m => this.compileMethod(m))
+    this.emitBridgeMethods(nonStaticMethods)
     staticMethods.forEach(m => this.compileMethod(m))
     this.compileStaticFieldInitializers(staticFields)
     constructors.forEach(c => this.compileConstructor(c, nonStaticFields))
@@ -781,6 +993,45 @@ export class Compiler {
     })
   }
 
+  /**
+   * JLS 8.4.2: a class cannot declare two methods (or constructors) with the same name and
+   * parameter types; the return type is not part of the signature.
+   */
+  private assertNotAlreadyDefined(
+    kind: 'method' | 'constructor',
+    name: string,
+    descriptor: string
+  ) {
+    const parameters = (d: string) => d.slice(0, d.indexOf(')') + 1)
+    const duplicate = this.symbolTable
+      .getDeclaredMethods(this.className, true)
+      .find(m => m.name === name && parameters(m.typeDescriptor) === parameters(descriptor))
+    if (duplicate === undefined) return
+    const parameterTypes = (
+      descriptor.slice(1, descriptor.indexOf(')')).match(/\[*(?:[BCDFIJSZ]|L[^;]+;)/g) ?? []
+    ).map(descriptorToSourceName)
+    const simpleName = kind === 'constructor' ? (this.className.split('$').pop() as string) : name
+    throw new MethodAlreadyDefinedError(
+      kind,
+      `${simpleName}(${parameterTypes.join(',')})`,
+      this.className.replace(/\$/g, '.')
+    )
+  }
+
+  /**
+   * The binary names of the classes in a `throws` clause, each of which must be a Throwable
+   * (JLS 8.4.6).
+   */
+  private resolveThrows(names: Array<string> | undefined): string[] {
+    return (names ?? []).map(name => {
+      const resolved = this.symbolTable.queryClass(name).name
+      if (this.symbolTable.classReaches(resolved, 'java/lang/Throwable') === false) {
+        throw new InconvertibleTypesError(name, 'java.lang.Throwable')
+      }
+      return resolved
+    })
+  }
+
   private recordMethodInfo(methodNode: MethodDeclaration) {
     const header = methodNode.methodHeader
     const methodName = header.identifier
@@ -788,12 +1039,14 @@ export class Compiler {
     const resultType = header.result
 
     const descriptor = this.symbolTable.generateMethodDescriptor(paramsType, resultType)
+    this.assertNotAlreadyDefined('method', methodName, descriptor)
     this.symbolTable.insertMethodInfo({
       name: methodName,
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
       parentClassName: this.parentClassName,
       typeDescriptor: descriptor,
-      className: this.className
+      className: this.className,
+      exceptions: this.resolveThrows(header.throws)
     })
   }
 
@@ -802,12 +1055,90 @@ export class Compiler {
     const paramsType = declarator.formalParameterList.map(x => x.unannType)
     const descriptor = this.symbolTable.generateMethodDescriptor(paramsType, 'void')
 
+    this.assertNotAlreadyDefined('constructor', '<init>', descriptor)
     this.symbolTable.insertMethodInfo({
       name: '<init>',
       accessFlags: generateMethodAccessFlags(constructor.constructorModifier),
       parentClassName: this.parentClassName,
       typeDescriptor: descriptor,
-      className: this.className
+      className: this.className,
+      exceptions: this.resolveThrows(constructor.throws)
+    })
+  }
+
+  /**
+   * A method that overrides one with a different return type (a subclass of the overridden
+   * method's, JLS 8.4.5) is a different method to the JVM, which looks methods up by name and
+   * full descriptor. For each such overridden descriptor, adds a synthetic bridge method that
+   * has it and calls the overriding method, so that a call through the superclass reaches it.
+   */
+  private emitBridgeMethods(methods: Array<MethodDeclaration>) {
+    const ACC_PRIVATE = 0x0002
+    const ACC_STATIC = 0x0008
+    const declared = this.symbolTable.getDeclaredMethods(this.className)
+    for (const node of methods) {
+      if (node.methodModifier.includes('abstract') || node.methodModifier.includes('private')) {
+        continue
+      }
+      const header = node.methodHeader
+      const descriptor = this.symbolTable.generateMethodDescriptor(
+        header.formalParameterList.map(x => x.unannType),
+        header.result
+      )
+      const method = declared.find(
+        m => m.name === header.identifier && m.typeDescriptor === descriptor
+      )
+      if (method === undefined || method.accessFlags & ACC_PRIVATE) continue
+
+      const emitted = new Set<string>([descriptor])
+      for (const overridden of this.symbolTable.findOverriddenMethods(method)) {
+        if (overridden.accessFlags & ACC_STATIC || emitted.has(overridden.typeDescriptor)) continue
+        emitted.add(overridden.typeDescriptor)
+        this.emitBridgeMethod(method, overridden.typeDescriptor)
+      }
+    }
+  }
+
+  /** `bridgeDescriptor f(args) { return this.f(args); }`, calling `method` (see above). */
+  private emitBridgeMethod(method: MethodInfoOfTable, bridgeDescriptor: string) {
+    const ACC_BRIDGE = 0x0040
+    const ACC_SYNTHETIC = 0x1000
+    const ACCESS_MASK = 0x0007
+    const loadOpcode: { [type: string]: number } = {
+      B: 0x15,
+      C: 0x15,
+      I: 0x15,
+      S: 0x15,
+      Z: 0x15, // iload
+      J: 0x16, // lload
+      F: 0x17, // fload
+      D: 0x18 // dload
+    }
+
+    const bytecode: number[] = [0x2a] // aload_0
+    let slot = 1
+    const parameters =
+      method.typeDescriptor
+        .slice(1, method.typeDescriptor.indexOf(')'))
+        .match(/\[*(?:[BCDFIJSZ]|L[^;]+;)/g) ?? []
+    for (const parameter of parameters) {
+      bytecode.push(loadOpcode[parameter] ?? 0x19, slot) // anything else is a reference: aload
+      slot += parameter === 'J' || parameter === 'D' ? 2 : 1
+    }
+    const target = this.constantPoolManager.indexMethodrefInfo(
+      this.className,
+      method.name,
+      method.typeDescriptor
+    )
+    bytecode.push(0xb6, (target >> 8) & 0xff, target & 0xff) // invokevirtual
+    bytecode.push(0xb0) // areturn: only a reference return type can differ
+
+    this.methods.push({
+      accessFlags: (method.accessFlags & ACCESS_MASK) | ACC_BRIDGE | ACC_SYNTHETIC,
+      nameIndex: this.constantPoolManager.indexUtf8Info(method.name),
+      descriptorIndex: this.constantPoolManager.indexUtf8Info(bridgeDescriptor),
+      attributesCount: 1,
+      attributes: [this.createEnumCodeAttribute(bytecode, Math.max(slot, 1), slot)]
     })
   }
 
@@ -822,9 +1153,25 @@ export class Compiler {
     const descriptorIndex = this.constantPoolManager.indexUtf8Info(descriptor)
 
     const attributes: Array<AttributeInfo> = []
-    attributes.push(
-      generateCode(this.symbolTable, this.constantPoolManager, this.className, methodNode)
-    )
+    // JVMS 4.7.3: abstract and native methods have no body, so they have no Code attribute
+    const hasBody =
+      !methodNode.methodModifier.includes('abstract') &&
+      !methodNode.methodModifier.includes('native')
+    if (hasBody) {
+      attributes.push(
+        generateCode(this.symbolTable, this.constantPoolManager, this.className, methodNode)
+      )
+    }
+
+    // JVMS 4.7.5: the classes in the `throws` clause (abstract and native methods have them too)
+    const thrown = this.resolveThrows(header.throws)
+    if (thrown.length > 0) {
+      attributes.push({
+        attributeNameIndex: this.constantPoolManager.indexUtf8Info('Exceptions'),
+        attributeLength: 2 + 2 * thrown.length,
+        exceptionIndexTable: thrown.map(name => this.constantPoolManager.indexClassInfo(name))
+      })
+    }
 
     this.methods.push({
       accessFlags: generateMethodAccessFlags(methodNode.methodModifier),
@@ -849,7 +1196,8 @@ export class Compiler {
       methodHeader: {
         identifier: '<init>',
         formalParameterList: constructor.constructorDeclarator.formalParameterList,
-        result: 'void'
+        result: 'void',
+        throws: constructor.throws
       },
       methodBody: {
         kind: 'Block',
@@ -859,4 +1207,27 @@ export class Compiler {
 
     this.compileMethod(methodNode)
   }
+}
+
+const PRIMITIVE_SOURCE_NAMES: { [descriptor: string]: string } = {
+  B: 'byte',
+  C: 'char',
+  D: 'double',
+  F: 'float',
+  I: 'int',
+  J: 'long',
+  S: 'short',
+  V: 'void',
+  Z: 'boolean'
+}
+
+/** `[Ljava/lang/String;` -> `String[]`, `I` -> `int` */
+function descriptorToSourceName(descriptor: string): string {
+  const dims = descriptor.length - descriptor.replace(/^\[+/, '').length
+  const element = descriptor.slice(dims)
+  const base =
+    element in PRIMITIVE_SOURCE_NAMES
+      ? PRIMITIVE_SOURCE_NAMES[element]
+      : (element.slice(1, -1).split(/[/$]/).pop() as string)
+  return base + '[]'.repeat(dims)
 }

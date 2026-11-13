@@ -15,13 +15,13 @@ Comment
   = "/*" (!"*/" .)* "*/"
   / "//" (!LineTerminator .)* LineTerminator
 
-// We for now restrict identifier to have only alphanumeric characters.
+// Identifiers consist of letters, digits and underscores (not starting with a digit).
 Identifier
   = !Keyword !BooleanLiteral !NullLiteral @$(Letter LetterOrDigit*) _
 
-Letter = [a-zA-Z]
+Letter = [a-zA-Z_]
 
-LetterOrDigit = [a-zA-Z0-9]
+LetterOrDigit = [a-zA-Z0-9_]
 
 TypeIdentifier
   = !permits !record !sealed !var !yield @Identifier
@@ -51,11 +51,29 @@ IntegerLiteral
     return val;
   }
 
-HexNumeral = ('0x' / '0X') HexDigits
+HexNumeral
+  = value:$(('0x' / '0X') HexDigits) {
+    return {
+      kind: "HexIntegerLiteral",
+      value: value,
+    };
+  }
 
-BinaryNumeral = ('0b' / '0B') [01] ([_]* [01])*
+BinaryNumeral
+  = value:$(('0b' / '0B') [01] ([_]* [01])*) {
+    return {
+      kind: "BinaryIntegerLiteral",
+      value: value,
+    };
+  }
 
-OctalNumeral = '0' ([_]* [0-7])+
+OctalNumeral
+  = value:$('0' ([_]* [0-7])+) {
+    return {
+      kind: "OctalIntegerLiteral",
+      value: value,
+    };
+  }
 
 DecimalNumeral 
   = value:$('0' / [1-9] ([_]* [0-9])*) {
@@ -100,7 +118,7 @@ HexDigits = HexDigit ([_]*HexDigit)*
 HexDigit = [a-fA-F0-9]
 
 BooleanLiteral
-  = value:("true" / "false") {
+  = value:("true" / "false") !LetterOrDigit {
     return {
       kind: "BooleanLiteral",
       value: value,
@@ -151,7 +169,7 @@ UnicodeEscape
    = 'u'+ HexDigit HexDigit HexDigit HexDigit
 
 NullLiteral
-  = "null" {
+  = "null" !LetterOrDigit {
     return {
       kind: "NullLiteral",
       value: "null",
@@ -419,10 +437,10 @@ TypeName
   = Name
 
 ExpressionName
-  = t:(this dot)? n:Name {
+  = t:(@(this / super) dot)? n:Name {
     return addLocInfo({
       kind: "ExpressionName",
-      name: (t ? "this." : "") + n,
+      name: (t ? t + "." : "") + n,
     })
   }
 
@@ -629,10 +647,12 @@ VariableDeclarator
   }
 
 VariableDeclaratorId
-  = id:Identifier Dims? {
+  = id:Identifier d:Dims? {
     return {
       kind: "VariableDeclarator",
       variableDeclaratorId: id,
+      // the dimensions written after the name, as in int a[]
+      dims: d ?? undefined,
     }
   }
 
@@ -665,12 +685,13 @@ MethodModifier
   / strictfp
 
 MethodHeader
-  = r:Result id:Identifier lparen (ReceiverParameter comma)? fpl:FormalParameterList? rparen Throws? {
+  = r:Result id:Identifier lparen (ReceiverParameter comma)? fpl:FormalParameterList? rparen t:Throws? {
     return {
       kind: "MethodHeader",
       result: r,
       identifier: id,
       formalParameterList: fpl ?? [],
+      throws: t ? t.exceptionTypeList : [],
     }
   }
 
@@ -720,12 +741,13 @@ ExceptionType
   / TypeIdentifier
 
 ConstructorDeclaration
-  = cm:ConstructorModifier* cd:ConstructorDeclarator Throws? cb:ConstructorBody {
+  = cm:ConstructorModifier* cd:ConstructorDeclarator t:Throws? cb:ConstructorBody {
     return addLocInfo({
       kind: "ConstructorDeclaration",
       constructorModifier: cm,
       constructorDeclarator: cd,
       constructorBody: cb,
+      throws: t ? t.exceptionTypeList : [],
     })
   }
 
@@ -907,7 +929,12 @@ ReturnStatement
   }
 
 ThrowStatement
-  = throw Expression semicolon
+  = throw e:Expression semicolon {
+    return addLocInfo({
+      kind: "ThrowStatement",
+      expression: e,
+    })
+  }
 
 SynchronizedStatement
   = synchronized lparen Expression rparen Block
@@ -1050,9 +1077,17 @@ StatementExpression
 Primary
   = lparen @Expression rparen
   / ClassInstanceCreationExpression
+  / ArrayCreationExpression
   / MethodInvocation
   / ArrayAccess
+  / ThisExpression
   / Literal 
+
+// A bare this; this.x and this.m() are handled by ExpressionName and MethodInvocation
+ThisExpression
+  = this !dot {
+    return addLocInfo({ kind: "ThisExpression" })
+  }
 
 ClassInstanceCreationExpression
   = u:UnqualifiedClassInstanceCreationExpression {
@@ -1112,13 +1147,30 @@ MethodReference
   =  TO_BE_ADDED
 
 ArrayCreationExpression
-  = new (PrimitiveType / ClassType) (Dims ArrayInitializer / DimExprs Dims?)
+  = new t:(PrimitiveType / ClassType) d:Dims i:ArrayInitializer {
+    return addLocInfo({
+      kind: "ArrayCreationExpression",
+      elementType: t,
+      dims: d,
+      initializer: i,
+    })
+  }
+  / new t:(PrimitiveType / ClassType) dx:DimExprs d:Dims? {
+    return addLocInfo({
+      kind: "ArrayCreationExpression",
+      elementType: t,
+      dimensionExpressions: dx,
+      dims: d ?? "",
+    })
+  }
 
 DimExprs
   = DimExpr+
 
 DimExpr
-  = Annotation* lsquare Expression rsquare
+  = Annotation* lsquare e:Expression rsquare {
+    return e;
+  }
 
 Expression
   = LambdaExpression
@@ -1274,7 +1326,7 @@ CastExpression
       isPrimitiveCast: true,
     });
   }
-  / lparen t:ReferenceType rparen expr:(LambdaExpression / !(PlusMinus) UnaryExpression) {
+  / lparen t:ReferenceType rparen expr:(LambdaExpression / !(PlusMinus) @UnaryExpression) {
     return addLocInfo({
       kind: "CastExpression",
       castType: t,

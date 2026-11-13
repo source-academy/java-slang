@@ -70,7 +70,8 @@ export function runF2i(thread: Thread): void {
   if (Number.isNaN(value)) {
     value = 0
   } else {
-    value = Math.min(MAX_INT, Math.max(MIN_INT, Math.round(asFloat(value))))
+    // Java truncates toward zero; `| 0` normalises -0 to 0 (value is already within int range)
+    value = Math.min(MAX_INT, Math.max(MIN_INT, Math.trunc(asFloat(value)))) | 0
   }
   thread.pushStack(value) && thread.offsetPc(1)
 }
@@ -88,7 +89,7 @@ export function runF2l(thread: Thread): void {
   } else if (value == -Infinity) {
     value = MIN_LONG
   } else {
-    value = BigInt(Math.round(asFloat(value)))
+    value = BigInt(Math.trunc(asFloat(value)))
     value = value > MAX_LONG ? MAX_LONG : value < MIN_LONG ? MIN_LONG : value
   }
   thread.pushStack64(value) && thread.offsetPc(1)
@@ -112,8 +113,9 @@ export function runD2i(thread: Thread): void {
   if (Number.isNaN(value)) {
     value = 0
   } else {
-    // If too large round to largest int, vice versa.
-    value = Math.max(Math.min(Math.round(value), MAX_INT), MIN_INT)
+    // Truncate toward zero; if too large clamp to largest int, vice versa.
+    // `| 0` normalises -0 to 0 (value is already within int range).
+    value = Math.max(Math.min(Math.trunc(value), MAX_INT), MIN_INT) | 0
   }
   thread.pushStack(value) && thread.offsetPc(1)
 }
@@ -132,7 +134,7 @@ export function runD2l(thread: Thread): void {
   } else if (dbl == -Infinity) {
     value = MIN_LONG
   } else {
-    value = BigInt(Math.round(dbl))
+    value = BigInt(Math.trunc(dbl))
     value = value > MAX_LONG ? MAX_LONG : value < MIN_LONG ? MIN_LONG : value
   }
   thread.pushStack64(value) && thread.offsetPc(1)

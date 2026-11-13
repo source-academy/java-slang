@@ -12,6 +12,11 @@ import { classTest } from "./tests/class.test";
 import { enumTest } from "./tests/enum.test";
 import { nestedClassesTest } from "./tests/nestedClasses.test";
 import { typeConversionTest } from "./tests/typeConversion.test";
+import { castExpressionTest } from "./tests/castExpression.test";
+import { literalTest } from "./tests/literals.test";
+import { switchTest } from "./tests/switch.test";
+import { inheritanceTest } from "./tests/inheritance.test";
+import { throwTest } from "./tests/throw.test";
 
 describe("compiler tests", () => {
   printlnTest();
@@ -28,4 +33,9 @@ describe("compiler tests", () => {
   enumTest();
   nestedClassesTest();
   typeConversionTest();
+  castExpressionTest();
+  literalTest();
+  switchTest();
+  inheritanceTest();
+  throwTest();
 })

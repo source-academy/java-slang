@@ -39,6 +39,7 @@ export const SEED_CLASSES: string[] = [
   'java/lang/Float',
   'java/lang/Double',
   'java/lang/Void',
+  'java/lang/Cloneable',
   'java/lang/Comparable',
   'java/lang/CharSequence',
   'java/lang/Iterable',
@@ -47,6 +48,9 @@ export const SEED_CLASSES: string[] = [
   'java/lang/Throwable',
   // java.io
   'java/io/PrintStream',
+  'java/io/IOException',
+  'java/io/FileNotFoundException',
+  'java/io/UnsupportedEncodingException',
   // java.util
   'java/util/Arrays',
   'java/util/Objects'

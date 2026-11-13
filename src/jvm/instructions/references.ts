@@ -771,7 +771,8 @@ export function runAthrow(thread: Thread): void {
     return
   }
 
-  thread.offsetPc(1)
+  // The handler is searched for with the pc of the athrow itself, so an athrow that is the last
+  // instruction of a try block (its exception table range ends right after it) is caught
   thread.throwException(exception)
 }
 
@@ -810,7 +811,12 @@ function _checkCast(thread: Thread, indexbyte: number, isCC: boolean = true): vo
   } else {
     value === 1
       ? thread.pushStack(objectref)
-      : thread.throwNewException('java/lang/ClassCastException', '')
+      : thread.throwNewException(
+          'java/lang/ClassCastException',
+          `class ${objClsS.getName().replace(/\//g, '.')} cannot be cast to class ${targetClsT
+            .getName()
+            .replace(/\//g, '.')}`
+        )
   }
   return
 }

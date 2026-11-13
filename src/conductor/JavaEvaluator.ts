@@ -116,6 +116,28 @@ export class JavaEvaluator extends BasicEvaluator {
       return (parsedStdlibCache[path] = base64ToClassFile(b64))
     }
 
+    // The JVM writes a `println` as the text followed by a separate "\n" chunk, but the host
+    // displays every `sendOutput` message as a line of its own, so a lone "\n" shows up as an
+    // extra empty line. Buffer the output and send one message per completed line instead,
+    // without its line terminator.
+    const lineWriter = (prefix: string) => {
+      let pending = ''
+      return {
+        write: (chunk: string) => {
+          const lines = (pending + chunk).split('\n')
+          pending = lines.pop() as string
+          lines.forEach(line => this.conductor.sendOutput(prefix + line))
+        },
+        // sends a final line that was not terminated by a newline
+        flush: () => {
+          if (pending !== '') this.conductor.sendOutput(prefix + pending)
+          pending = ''
+        }
+      }
+    }
+    const out = lineWriter('')
+    const err = lineWriter('ERR: ')
+
     return new Promise<void>(resolve => {
       const runFn = setupJVM({
         mainClass: mainClassName,
@@ -126,9 +148,15 @@ export class JavaEvaluator extends BasicEvaluator {
         callbacks: {
           readFileSync,
           readFile: () => Promise.reject('readFile not implemented'),
-          stdout: (m: string) => this.conductor.sendOutput(m),
-          stderr: (m: string) => this.conductor.sendOutput(`ERR: ${m}`),
+          stdout: (m: string) => out.write(m),
+          stderr: (m: string) => {
+            // keep the relative order of the two streams
+            out.flush()
+            err.write(m)
+          },
           onFinish: () => {
+            out.flush()
+            err.flush()
             // Resolve with no value: a Java `void main` has no result to
             // report, and the host only suppresses display for `undefined`
             // (see @sourceacademy/conductor's `BasicEvaluator.startEvaluator`,
@@ -143,6 +171,8 @@ export class JavaEvaluator extends BasicEvaluator {
       try {
         runFn()
       } catch (e) {
+        out.flush()
+        err.flush()
         this.conductor.sendError(
           new EvaluatorRuntimeError(e instanceof Error ? e.message : String(e))
         )
