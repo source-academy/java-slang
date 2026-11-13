@@ -1,3 +1,5 @@
+import { isConstantTrue } from './constant-expression'
+
 /**
  * Whether a statement can complete normally (JLS 14.21): control can reach the point after it,
  * rather than every path through it ending in a `return`, a `throw`, a `break` or a `continue`.
@@ -5,7 +7,8 @@
  * whose finally block cannot only throws what the finally block throws (JLS 11.2.2).
  *
  * The analysis follows the JLS rules for the statements the compiler supports. The condition of
- * a loop is only known to be constant when it is the literal `true`.
+ * a loop is constant when it is a constant expression (JLS 15.28) with the value `true`, such as
+ * `!false` or `1 < 2`; the names of constant variables are not evaluated.
  */
 export function canCompleteNormally(statement: any): boolean {
   if (statement === null || typeof statement !== 'object') return true
@@ -66,11 +69,6 @@ export function canCompleteNormally(statement: any): boolean {
       return true
   }
 }
-
-const isConstantTrue = (expression: any): boolean =>
-  expression?.kind === 'Literal' &&
-  expression.literalType?.kind === 'BooleanLiteral' &&
-  expression.literalType.value === 'true'
 
 /** JLS 14.21: a switch statement can complete normally in any of these cases. */
 function switchCanCompleteNormally(statement: any): boolean {

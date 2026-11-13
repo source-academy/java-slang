@@ -2703,6 +2703,797 @@ export const throwTest = () =>
           'for (int i = 0; i < 2; i++) { try { s.risky(); } finally { if (i > 0) { break; } } }',
           '',
           /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition true',
+          '',
+          'try { s.risky(); } finally { while (true) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition !false',
+          '',
+          'try { s.risky(); } finally { while (!false) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition !!true',
+          '',
+          'try { s.risky(); } finally { while (!!true) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition !(!true)',
+          '',
+          'try { s.risky(); } finally { while (!(!true)) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition true && true',
+          '',
+          'try { s.risky(); } finally { while (true && true) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition false || true',
+          '',
+          'try { s.risky(); } finally { while (false || true) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition true & true',
+          '',
+          'try { s.risky(); } finally { while (true & true) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition true | false',
+          '',
+          'try { s.risky(); } finally { while (true | false) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition true ^ false',
+          '',
+          'try { s.risky(); } finally { while (true ^ false) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition true == true',
+          '',
+          'try { s.risky(); } finally { while (true == true) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition true != false',
+          '',
+          'try { s.risky(); } finally { while (true != false) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition ((!false))',
+          '',
+          'try { s.risky(); } finally { while (((!false))) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 < 2',
+          '',
+          'try { s.risky(); } finally { while (1 < 2) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 <= 1',
+          '',
+          'try { s.risky(); } finally { while (1 <= 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 2 > 1',
+          '',
+          'try { s.risky(); } finally { while (2 > 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 5 == 5',
+          '',
+          'try { s.risky(); } finally { while (5 == 5) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition -1 < 0',
+          '',
+          'try { s.risky(); } finally { while (-1 < 0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition ~0 == -1',
+          '',
+          'try { s.risky(); } finally { while (~0 == -1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition ~1 == -2',
+          '',
+          'try { s.risky(); } finally { while (~1 == -2) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 + 1 == 2',
+          '',
+          'try { s.risky(); } finally { while (1 + 1 == 2) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 2 * 3 == 6',
+          '',
+          'try { s.risky(); } finally { while (2 * 3 == 6) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 10 / 3 == 3',
+          '',
+          'try { s.risky(); } finally { while (10 / 3 == 3) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 10 % 3 == 1',
+          '',
+          'try { s.risky(); } finally { while (10 % 3 == 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition -10 / 3 == -3',
+          '',
+          'try { s.risky(); } finally { while (-10 / 3 == -3) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition -10 % 3 == -1',
+          '',
+          'try { s.risky(); } finally { while (-10 % 3 == -1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 / 0 == 0',
+          '',
+          'try { s.risky(); } finally { while (1 / 0 == 0) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition 1 % 0 == 0',
+          '',
+          'try { s.risky(); } finally { while (1 % 0 == 0) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition 1.0 / 0 > 1',
+          '',
+          'try { s.risky(); } finally { while (1.0 / 0 > 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 2147483647 + 1 < 0',
+          '',
+          'try { s.risky(); } finally { while (2147483647 + 1 < 0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 2147483647 + 1L > 0',
+          '',
+          'try { s.risky(); } finally { while (2147483647 + 1L > 0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 2147483647 * 2 < 0',
+          '',
+          'try { s.risky(); } finally { while (2147483647 * 2 < 0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition -2147483648 - 1 > 0',
+          '',
+          'try { s.risky(); } finally { while (-2147483648 - 1 > 0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 9223372036854775807L + 1 < 0',
+          '',
+          'try { s.risky(); } finally { while (9223372036854775807L + 1 < 0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1L << 63 < 0',
+          '',
+          'try { s.risky(); } finally { while (1L << 63 < 0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 << 31 < 0',
+          '',
+          'try { s.risky(); } finally { while (1 << 31 < 0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 << 32 == 1',
+          '',
+          'try { s.risky(); } finally { while (1 << 32 == 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 << 33 == 2',
+          '',
+          'try { s.risky(); } finally { while (1 << 33 == 2) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1L << 64 == 1',
+          '',
+          'try { s.risky(); } finally { while (1L << 64 == 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition -8 >> 1 == -4',
+          '',
+          'try { s.risky(); } finally { while (-8 >> 1 == -4) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition -8 >>> 28 == 15',
+          '',
+          'try { s.risky(); } finally { while (-8 >>> 28 == 15) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition -8L >>> 60 == 15',
+          '',
+          'try { s.risky(); } finally { while (-8L >>> 60 == 15) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (5 & 4) == 4',
+          '',
+          'try { s.risky(); } finally { while ((5 & 4) == 4) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (5 | 2) == 7',
+          '',
+          'try { s.risky(); } finally { while ((5 | 2) == 7) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (5 ^ 1) == 4',
+          '',
+          'try { s.risky(); } finally { while ((5 ^ 1) == 4) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 0x10 == 16',
+          '',
+          'try { s.risky(); } finally { while (0x10 == 16) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 010 == 8',
+          '',
+          'try { s.risky(); } finally { while (010 == 8) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 0b101 == 5',
+          '',
+          'try { s.risky(); } finally { while (0b101 == 5) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1_000 == 1000',
+          '',
+          'try { s.risky(); } finally { while (1_000 == 1000) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 0xFFFFFFFF == -1',
+          '',
+          'try { s.risky(); } finally { while (0xFFFFFFFF == -1) { } }',
+          '',
+          undefined
+        ],
+        [
+          "a finally with a loop on the condition 'a' < 'b'",
+          '',
+          "try { s.risky(); } finally { while ('a' < 'b') { } }",
+          '',
+          undefined
+        ],
+        [
+          "a finally with a loop on the condition 'a' == 97",
+          '',
+          "try { s.risky(); } finally { while ('a' == 97) { } }",
+          '',
+          undefined
+        ],
+        [
+          "a finally with a loop on the condition 'a' + 1 == 98",
+          '',
+          "try { s.risky(); } finally { while ('a' + 1 == 98) { } }",
+          '',
+          undefined
+        ],
+        [
+          "a finally with a loop on the condition (char) 65 == 'A'",
+          '',
+          "try { s.risky(); } finally { while ((char) 65 == 'A') { } }",
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (byte) 200 == -56',
+          '',
+          'try { s.risky(); } finally { while ((byte) 200 == -56) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (byte) 128 == -128',
+          '',
+          'try { s.risky(); } finally { while ((byte) 128 == -128) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (short) 70000 == 4464',
+          '',
+          'try { s.risky(); } finally { while ((short) 70000 == 4464) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (int) 3.9 == 3',
+          '',
+          'try { s.risky(); } finally { while ((int) 3.9 == 3) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (int) -3.9 == -3',
+          '',
+          'try { s.risky(); } finally { while ((int) -3.9 == -3) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (long) 1e19 == 9223372036854775807L',
+          '',
+          'try { s.risky(); } finally { while ((long) 1e19 == 9223372036854775807L) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (int) (0.0 / 0) == 0',
+          '',
+          'try { s.risky(); } finally { while ((int) (0.0 / 0) == 0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (char) -1 == 65535',
+          '',
+          'try { s.risky(); } finally { while ((char) -1 == 65535) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (int) 1e10 == 2147483647',
+          '',
+          'try { s.risky(); } finally { while ((int) 1e10 == 2147483647) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1.5 < 2',
+          '',
+          'try { s.risky(); } finally { while (1.5 < 2) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 0.5 + 0.25 == 0.75',
+          '',
+          'try { s.risky(); } finally { while (0.5 + 0.25 == 0.75) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1.0f == 1.0',
+          '',
+          'try { s.risky(); } finally { while (1.0f == 1.0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 0.1f + 0.2f == 0.3f',
+          '',
+          'try { s.risky(); } finally { while (0.1f + 0.2f == 0.3f) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (float) 0.1 == 0.1f',
+          '',
+          'try { s.risky(); } finally { while ((float) 0.1 == 0.1f) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1e3 == 1000',
+          '',
+          'try { s.risky(); } finally { while (1e3 == 1000) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 == 1.0',
+          '',
+          'try { s.risky(); } finally { while (1 == 1.0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 3 / 2 == 1',
+          '',
+          'try { s.risky(); } finally { while (3 / 2 == 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 3 / 2.0 == 1.5',
+          '',
+          'try { s.risky(); } finally { while (3 / 2.0 == 1.5) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 5.5 % 2 == 1.5',
+          '',
+          'try { s.risky(); } finally { while (5.5 % 2 == 1.5) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1L < 2',
+          '',
+          'try { s.risky(); } finally { while (1L < 2) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1L == 1',
+          '',
+          'try { s.risky(); } finally { while (1L == 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 5000000000L > 1',
+          '',
+          'try { s.risky(); } finally { while (5000000000L > 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition true ? true : false',
+          '',
+          'try { s.risky(); } finally { while (true ? true : false) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition false ? false : true',
+          '',
+          'try { s.risky(); } finally { while (false ? false : true) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (1 < 2 ? 3 : 4) == 3',
+          '',
+          'try { s.risky(); } finally { while ((1 < 2 ? 3 : 4) == 3) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (1 > 2 ? 3 : 4) == 4',
+          '',
+          'try { s.risky(); } finally { while ((1 > 2 ? 3 : 4) == 4) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (true ? 1 : 2.0) == 1.0',
+          '',
+          'try { s.risky(); } finally { while ((true ? 1 : 2.0) == 1.0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition "a" == "a"',
+          '',
+          'try { s.risky(); } finally { while ("a" == "a") { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition "a" + "b" == "ab"',
+          '',
+          'try { s.risky(); } finally { while ("a" + "b" == "ab") { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition true && 1 < 2',
+          '',
+          'try { s.risky(); } finally { while (true && 1 < 2) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 < 2 && 2 < 3',
+          '',
+          'try { s.risky(); } finally { while (1 < 2 && 2 < 3) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition 1 < 2 || 1 / 0 == 0',
+          '',
+          'try { s.risky(); } finally { while (1 < 2 || 1 / 0 == 0) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition 1 > 2 && 1 / 0 == 0',
+          '',
+          'try { s.risky(); } finally { while (1 > 2 && 1 / 0 == 0) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition !(1 > 2)',
+          '',
+          'try { s.risky(); } finally { while (!(1 > 2)) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition !(1 < 2) || !(2 < 1)',
+          '',
+          'try { s.risky(); } finally { while (!(1 < 2) || !(2 < 1)) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (int) 1L == 1',
+          '',
+          'try { s.risky(); } finally { while ((int) 1L == 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (double) 1 == 1.0',
+          '',
+          'try { s.risky(); } finally { while ((double) 1 == 1.0) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition (boolean) true',
+          '',
+          'try { s.risky(); } finally { while ((boolean) true) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition +1 == 1',
+          '',
+          'try { s.risky(); } finally { while (+1 == 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition -(-1) == 1',
+          '',
+          'try { s.risky(); } finally { while (-(-1) == 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition - -1 == 1',
+          '',
+          'try { s.risky(); } finally { while (- -1 == 1) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition -(1 + 1) == -2',
+          '',
+          'try { s.risky(); } finally { while (-(1 + 1) == -2) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a loop on the condition b',
+          '',
+          'try { s.risky(); } finally { while (b) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition !b',
+          '',
+          'try { s.risky(); } finally { while (!b) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition b || true',
+          '',
+          'try { s.risky(); } finally { while (b || true) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition true || b',
+          '',
+          'try { s.risky(); } finally { while (true || b) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition b && false',
+          '',
+          'try { s.risky(); } finally { while (b && false) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition s == null',
+          '',
+          'try { s.risky(); } finally { while (s == null) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition true && b',
+          '',
+          'try { s.risky(); } finally { while (true && b) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a loop on the condition (b ? 1 : 2) == 1',
+          '',
+          'try { s.risky(); } finally { while ((b ? 1 : 2) == 1) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a do-while loop on the condition true',
+          '',
+          'try { s.risky(); } finally { do { } while (true); }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a for loop on the condition true',
+          '',
+          'try { s.risky(); } finally { for (;true;) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a do-while loop on the condition !false',
+          '',
+          'try { s.risky(); } finally { do { } while (!false); }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a for loop on the condition !false',
+          '',
+          'try { s.risky(); } finally { for (;!false;) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a do-while loop on the condition 1 < 2',
+          '',
+          'try { s.risky(); } finally { do { } while (1 < 2); }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a for loop on the condition 1 < 2',
+          '',
+          'try { s.risky(); } finally { for (;1 < 2;) { } }',
+          '',
+          undefined
+        ],
+        [
+          'a finally with a do-while loop on the condition false',
+          '',
+          'try { s.risky(); } finally { do { } while (false); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a do-while loop on the condition 1 > 2',
+          '',
+          'try { s.risky(); } finally { do { } while (1 > 2); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a do-while loop on the condition b',
+          '',
+          'try { s.risky(); } finally { do { } while (b); }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
+        ],
+        [
+          'a finally with a for loop on the condition b',
+          '',
+          'try { s.risky(); } finally { for (;b;) { } }',
+          '',
+          /unreported exception AppEx; must be caught or declared to be thrown/
         ]
       ]
       for (const [comment, extra, body, throwsClause, error] of cases) {
