@@ -13,6 +13,7 @@ Open-source Implementation of the Java language in TypeScript. (<https://docs.or
   - [Testing](#testing)
   - [How java-slang is used in Source Academy](#how-java-slang-is-used-in-source-academy)
   - [Using your local java-slang in Source Academy](#using-your-local-java-slang-in-source-academy)
+  - [Visualizer plugin](#visualizer-plugin)
   - [License](#license)
 
 ## Prerequisites
@@ -101,6 +102,10 @@ A common issue when developing modifications to java-slang is how to test it. Wi
 7. To test local changes, simply push them to your forked java-slang repo and the changes will automatically show up in the frontend within a few minutes (recommended to refresh the page before attempting to test them).
 
 8. If you are utilising a branch other than main in your forked java-slang repo, do note that you will need to add the name of the branch in the build-deploy file in .github/workflows in order for the changes to be reflected in your Conductor build. You only need to do this inside the branch itself, once per branch creation (so that future builds in that branch will recognise that its code should be used).
+
+## Visualizer plugin
+
+A tool that shows a Java program's execution in the Source Academy workspace is a plugin, found through the plugin directory, not a part of the frontend. How to write one (the parts, the trace protocol, the host contract, building and releasing) is described in [Writing a visualizer plugin](https://github.com/source-academy/documentation/blob/main/app/docs/developers/writing-a-visualizer-plugin.md).
 
 ## License
 
