@@ -105,7 +105,7 @@ A common issue when developing modifications to java-slang is how to test it. Wi
 
 ## Visualizer plugin
 
-A tool that shows a Java program's execution in the Source Academy workspace is a plugin, found through the plugin directory, not a part of the frontend. How to write one (the parts, the trace protocol, the host contract, building and releasing) is described in [Writing a visualizer plugin](https://docs.sourceacademy.org/developers/docs/developers/writing-a-visualizer-plugin).
+A tool that shows a Java program's execution in the Source Academy workspace is a plugin, found through the plugin directory, not a part of the frontend. How to write one (the parts, the trace protocol, the host contract, building and releasing) is described in [Writing a visualizer plugin](https://docs.sourceacademy.org/developer/writing-a-visualizer-plugin).
 
 ## License
 
